@@ -64,42 +64,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Build for 1.21.10
-        run: |
-          ./gradlew clean build --no-daemon \
-            -Pminecraft_version=1.21.10 \
-            -Pyarn_mappings="1.21.10+build.3" \
-            -Pfabric_api_version="0.138.4+1.21.10" \
-            -Ploader_version=0.17.0 \
-            -Pmod_version=${{ steps.version.outputs.version }}
-          cp app/build/libs/floydaddons-${{ steps.version.outputs.version }}.jar \
-             floydaddons-${{ steps.version.outputs.version }}-mc1.21.10.jar
-
-      - name: Build for 1.21.11
-        run: |
-          ./gradlew clean build --no-daemon \
-            -Pminecraft_version=1.21.11 \
-            -Pyarn_mappings="1.21.11+build.4" \
-            -Pfabric_api_version="0.141.3+1.21.11" \
-            -Ploader_version=0.18.4 \
-            -Pmod_version=${{ steps.version.outputs.version }}
-          cp app/build/libs/floydaddons-${{ steps.version.outputs.version }}.jar \
-             floydaddons-${{ steps.version.outputs.version }}-mc1.21.11.jar
+        run: ./gradlew clean build --no-daemon -Pmod_version=${{ steps.version.outputs.version }}
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: FloydAddons v${{ steps.version.outputs.version }}
+          tag_name: v${{ steps.version.outputs.version }}-mc1.21.10
+          name: FloydAddons v${{ steps.version.outputs.version }} (MC 1.21.10)
           body: |
             ${{ github.event.head_commit.message }}
 
             ---
-            **Downloads:**
-            - `floydaddons-${{ steps.version.outputs.version }}-mc1.21.10.jar` — Minecraft 1.21.10
-            - `floydaddons-${{ steps.version.outputs.version }}-mc1.21.11.jar` — Minecraft 1.21.11
-          files: |
-            floydaddons-${{ steps.version.outputs.version }}-mc1.21.10.jar
-            floydaddons-${{ steps.version.outputs.version }}-mc1.21.11.jar
+            **Minecraft 1.21.10**
+          files: app/build/libs/floydaddons-${{ steps.version.outputs.version }}.jar
           draft: false
           prerelease: false
