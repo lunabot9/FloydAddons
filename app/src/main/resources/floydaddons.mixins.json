@@ -3,9 +3,6 @@
   "package": "floydaddons.not.dogshit.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "NickHiderChatHudMixin",
-    "NickHiderPlayerListHudMixin",
-    "NickHiderScoreboardEntryMixin",
     "NickHiderTextRendererMixin",
     "PlayerEntityRendererMixin",
     "BrandSpoofMixin",
