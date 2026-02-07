@@ -1,0 +1,49 @@
+{
+  "minecraft:recipes/decorations/composter": {
+    "criteria": {
+      "has_wood_slab": "2026-02-06 19:30:11 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/decorations/crafting_table": {
+    "criteria": {
+      "unlock_right_away": "2026-02-06 19:30:11 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/building_blocks/spruce_planks": {
+    "criteria": {
+      "has_logs": "2026-02-06 19:30:11 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/building_blocks/jungle_planks": {
+    "criteria": {
+      "has_logs": "2026-02-06 19:30:11 -0600"
+    },
+    "done": true
+  },
+  "minecraft:recipes/misc/charcoal": {
+    "criteria": {
+      "has_log": "2026-02-06 19:30:11 -0600"
+    },
+    "done": true
+  },
+  "minecraft:adventure/adventuring_time": {
+    "criteria": {
+      "minecraft:savanna_plateau": "2026-02-06 19:30:59 -0600",
+      "minecraft:forest": "2026-02-06 19:30:55 -0600",
+      "minecraft:river": "2026-02-06 19:30:41 -0600",
+      "minecraft:savanna": "2026-02-06 19:31:08 -0600",
+      "minecraft:plains": "2026-02-06 19:30:12 -0600"
+    },
+    "done": false
+  },
+  "minecraft:recipes/decorations/barrel": {
+    "criteria": {
+      "has_wood_slab": "2026-02-06 19:30:11 -0600"
+    },
+    "done": true
+  },
+  "DataVersion": 4556
+}

@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "package": "floydaddons.not.dogshit.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "NickHiderChatHudMixin",
+    "NickHiderPlayerListHudMixin",
+    "NickHiderScoreboardEntryMixin",
+    "PlayerEntityRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

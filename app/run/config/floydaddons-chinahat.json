@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "chroma": true,
+  "color": -1,
+  "radius": 1.5,
+  "height": 0.35,
+  "thickness": 0.05,
+  "segments": 32,
+  "chromaSpeed": 1.0
+}
