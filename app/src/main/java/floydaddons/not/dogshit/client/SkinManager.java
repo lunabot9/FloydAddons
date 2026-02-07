@@ -1,6 +1,5 @@
 package floydaddons.not.dogshit.client;
 
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
@@ -18,8 +17,7 @@ import java.util.stream.Stream;
 public final class SkinManager {
     private static final Identifier BUILTIN_SKIN = Identifier.of(FloydAddonsClient.MOD_ID, "textures/skin/custom.png");
     private static final String DEFAULT_SKIN_NAME = "george-floyd.png";
-    private static final Path SKIN_DIR = FabricLoader.getInstance()
-            .getConfigDir().resolve("floydaddons");
+    private static final Path SKIN_DIR = FloydAddonsConfig.getConfigDir().resolve("skins");
     private static Identifier cachedTexture = null;
     private static long lastLoad = 0;
     private static final long RELOAD_MS = 5_000;

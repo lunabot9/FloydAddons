@@ -9,6 +9,7 @@ import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -110,10 +111,21 @@ public final class NickTextUtil {
 
         OrderedText result = replaceInOrderedText(original, username, NickHiderConfig.getNickname());
 
-        if (NickHiderConfig.isHideOthers()) {
-            String othersNick = NickHiderConfig.getOthersNickname();
+        NickHiderConfig.HideOthersMode mode = NickHiderConfig.getHideOthersMode();
+        if (mode != NickHiderConfig.HideOthersMode.OFF) {
+            Map<String, String> mappingsLower = NickHiderConfig.getNameMappingsLower();
+            String defaultNick = NickHiderConfig.getOthersNickname();
+
             for (String name : NickHiderConfig.getCachedOtherNames()) {
-                result = replaceInOrderedText(result, name, othersNick);
+                String mapped = mappingsLower.get(name.toLowerCase());
+                if (mapped != null) {
+                    // Player has an explicit mapping in the config file
+                    result = replaceInOrderedText(result, name, mapped);
+                } else if (mode == NickHiderConfig.HideOthersMode.CONFIG_AND_DEFAULT) {
+                    // No mapping, but mode includes default replacement
+                    result = replaceInOrderedText(result, name, defaultNick);
+                }
+                // CONFIG_ONLY with no mapping: skip this player
             }
         }
 
@@ -136,10 +148,18 @@ public final class NickTextUtil {
 
         String result = caseInsensitiveReplace(text, username, NickHiderConfig.getNickname());
 
-        if (NickHiderConfig.isHideOthers()) {
-            String othersNick = NickHiderConfig.getOthersNickname();
+        NickHiderConfig.HideOthersMode mode = NickHiderConfig.getHideOthersMode();
+        if (mode != NickHiderConfig.HideOthersMode.OFF) {
+            Map<String, String> mappingsLower = NickHiderConfig.getNameMappingsLower();
+            String defaultNick = NickHiderConfig.getOthersNickname();
+
             for (String name : NickHiderConfig.getCachedOtherNames()) {
-                result = caseInsensitiveReplace(result, name, othersNick);
+                String mapped = mappingsLower.get(name.toLowerCase());
+                if (mapped != null) {
+                    result = caseInsensitiveReplace(result, name, mapped);
+                } else if (mode == NickHiderConfig.HideOthersMode.CONFIG_AND_DEFAULT) {
+                    result = caseInsensitiveReplace(result, name, defaultNick);
+                }
             }
         }
 
@@ -158,10 +178,19 @@ public final class NickTextUtil {
             if (username == null || username.isEmpty()) return text;
 
             Text result = replaceLiteralTextIgnoreCase(t, username, NickHiderConfig.getNickname());
-            if (NickHiderConfig.isHideOthers()) {
-                String othersNick = NickHiderConfig.getOthersNickname();
+
+            NickHiderConfig.HideOthersMode mode = NickHiderConfig.getHideOthersMode();
+            if (mode != NickHiderConfig.HideOthersMode.OFF) {
+                Map<String, String> mappingsLower = NickHiderConfig.getNameMappingsLower();
+                String defaultNick = NickHiderConfig.getOthersNickname();
+
                 for (String name : NickHiderConfig.getCachedOtherNames()) {
-                    result = replaceLiteralTextIgnoreCase(result, name, othersNick);
+                    String mapped = mappingsLower.get(name.toLowerCase());
+                    if (mapped != null) {
+                        result = replaceLiteralTextIgnoreCase(result, name, mapped);
+                    } else if (mode == NickHiderConfig.HideOthersMode.CONFIG_AND_DEFAULT) {
+                        result = replaceLiteralTextIgnoreCase(result, name, defaultNick);
+                    }
                 }
             }
             return result;

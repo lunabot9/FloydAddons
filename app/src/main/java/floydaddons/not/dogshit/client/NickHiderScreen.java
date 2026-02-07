@@ -7,7 +7,6 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
-import floydaddons.not.dogshit.client.NickTextUtil;
 
 /**
  * Simple configuration screen for the Nick Hider feature.
@@ -19,10 +18,12 @@ public class NickHiderScreen extends Screen {
     private ButtonWidget toggleButton;
     private TextFieldWidget othersNickField;
     private ButtonWidget toggleOthersButton;
+    private ButtonWidget editNamesButton;
+    private ButtonWidget reloadNamesButton;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 260;
-    private static final int BOX_HEIGHT = 180;
+    private static final int BOX_HEIGHT = 230;
     private static final long FADE_DURATION_MS = 90;
     private static final float SCALE_START = 0.85f;
     private static final int DRAG_BAR_HEIGHT = 18;
@@ -77,19 +78,36 @@ public class NickHiderScreen extends Screen {
         othersNickField.setCentered(true);
 
         toggleOthersButton = ButtonWidget.builder(Text.literal(toggleOthersLabel()), button -> {
-            NickHiderConfig.setHideOthers(!NickHiderConfig.isHideOthers());
+            NickHiderConfig.setHideOthersMode(NickHiderConfig.getHideOthersMode().next());
             button.setMessage(Text.literal(toggleOthersLabel()));
             NickHiderConfig.save();
         }).dimensions(cx, panelY + 92, 220, 20).build();
 
+        editNamesButton = ButtonWidget.builder(Text.literal("Edit Names File"), button -> {
+            try {
+                java.nio.file.Path path = NickHiderConfig.getNamesConfigPath();
+                if (!java.nio.file.Files.exists(path)) {
+                    NickHiderConfig.loadNameMappings(); // creates template
+                }
+                openFileInEditor(path);
+            } catch (Exception ignored) {
+            }
+        }).dimensions(cx, panelY + 116, 107, 20).build();
+
+        reloadNamesButton = ButtonWidget.builder(Text.literal("Reload Names"), button -> {
+            NickHiderConfig.loadNameMappings();
+        }).dimensions(cx + 113, panelY + 116, 107, 20).build();
+
         doneButton = ButtonWidget.builder(Text.literal("Done"), button -> close())
-                .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + 152, 100, 20)
+                .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + 200, 100, 20)
                 .build();
 
         addSelectableChild(nickField);
         addDrawableChild(toggleButton);
         addSelectableChild(othersNickField);
         addDrawableChild(toggleOthersButton);
+        addDrawableChild(editNamesButton);
+        addDrawableChild(reloadNamesButton);
         addDrawableChild(doneButton);
     }
 
@@ -98,7 +116,7 @@ public class NickHiderScreen extends Screen {
     }
 
     private String toggleOthersLabel() {
-        return "Hide Others: " + (NickHiderConfig.isHideOthers() ? "ON" : "OFF");
+        return "Hide Others: " + NickHiderConfig.getHideOthersMode().getLabel();
     }
 
     @Override
@@ -161,6 +179,10 @@ public class NickHiderScreen extends Screen {
         // Toggle others button
         styleButtonFlat(context, toggleOthersButton, chromaFast, guiAlpha, mouseX, mouseY);
 
+        // Edit/Reload names buttons
+        styleButtonFlat(context, editNamesButton, chromaSlow, guiAlpha, mouseX, mouseY);
+        styleButtonFlat(context, reloadNamesButton, chromaSlow, guiAlpha, mouseX, mouseY);
+
         // Done button chroma outline + text, flat fill
         styleButtonFlat(context, doneButton, chromaSlow, guiAlpha, mouseX, mouseY);
 
@@ -206,8 +228,12 @@ public class NickHiderScreen extends Screen {
             othersNickField.setY(panelY + 68);
             toggleOthersButton.setX(cx);
             toggleOthersButton.setY(panelY + 92);
+            editNamesButton.setX(cx);
+            editNamesButton.setY(panelY + 116);
+            reloadNamesButton.setX(cx + 113);
+            reloadNamesButton.setY(panelY + 116);
             doneButton.setX(panelX + (BOX_WIDTH - 100) / 2);
-            doneButton.setY(panelY + 152);
+            doneButton.setY(panelY + 200);
             return true;
         }
         return super.mouseDragged(click, deltaX, deltaY);
@@ -300,6 +326,22 @@ public class NickHiderScreen extends Screen {
     private int applyAlpha(int color, float alpha) {
         int a = Math.round(((color >>> 24) & 0xFF) * alpha);
         return (a << 24) | (color & 0x00FFFFFF);
+    }
+
+    private static void openFileInEditor(java.nio.file.Path path) {
+        String file = path.toAbsolutePath().toString();
+        String os = System.getProperty("os.name", "").toLowerCase();
+        try {
+            if (os.contains("win")) {
+                new ProcessBuilder("cmd", "/c", "start", "", file).start();
+            } else if (os.contains("mac")) {
+                new ProcessBuilder("open", file).start();
+            } else {
+                // Linux / FreeBSD / etc.
+                new ProcessBuilder("xdg-open", file).start();
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private int chromaColor(float offset) {
