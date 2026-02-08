@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "floydaddons",
+  "version": "${version}",
+  "name": "Floyd Addons",
+  "description": "Client-side fabric mod for the Floyd Addons GUI prototype.",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "floydaddons.not.dogshit.client.FloydAddonsClient"
+    ]
+  },
+  "mixins": [
+    "floydaddons.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.17.0",
+    "minecraft": ">=1.21.10",
+    "fabric-api": "*"
+  },
+  "license": "MIT",
+  "custom": {
+    "modmenu": {
+      "hidden": true,
+      "parent": "minecraft",
+      "badges": [
+        "library"
+      ]
+    }
+  }
+}

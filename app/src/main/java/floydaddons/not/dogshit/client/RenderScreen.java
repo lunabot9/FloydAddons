@@ -52,15 +52,19 @@ public class RenderScreen extends Screen {
         panelX = savedX;
         panelY = savedY;
 
+        int buttonX = panelX + (BOX_WIDTH - 220) / 2;
+        int buttonY = panelY + 28;
+
         inventoryToggle = ButtonWidget.builder(Text.literal(inventoryLabel()), b -> {
             RenderConfig.setInventoryHudEnabled(!RenderConfig.isInventoryHudEnabled());
             b.setMessage(Text.literal(inventoryLabel()));
             RenderConfig.save();
-        }).dimensions(panelX + (BOX_WIDTH - 220) / 2, panelY + 28, 220, 20).build();
+        }).dimensions(buttonX, buttonY, 220, 20).build();
 
+        buttonY += 30;
         moveButton = ButtonWidget.builder(Text.literal("Move Inventory"), b -> {
             if (client != null) client.setScreen(new MoveInventoryScreen(this));
-        }).dimensions(panelX + (BOX_WIDTH - 220) / 2, panelY + 58, 220, 20).build();
+        }).dimensions(buttonX, buttonY, 220, 20).build();
 
         scoreboardToggle = ButtonWidget.builder(Text.literal(scoreboardLabel()), b -> {
             RenderConfig.setCustomScoreboardEnabled(!RenderConfig.isCustomScoreboardEnabled());
@@ -188,9 +192,10 @@ public class RenderScreen extends Screen {
                 panelX = savedX = newX;
                 panelY = savedY = newY;
                 // Move buttons with panel
-                inventoryToggle.setX(panelX + (BOX_WIDTH - 220) / 2);
+                int buttonX = panelX + (BOX_WIDTH - 220) / 2;
+                inventoryToggle.setX(buttonX);
                 inventoryToggle.setY(panelY + 28);
-                moveButton.setX(panelX + (BOX_WIDTH - 220) / 2);
+                moveButton.setX(buttonX);
                 moveButton.setY(panelY + 58);
                 scoreboardToggle.setX(panelX + (BOX_WIDTH - 220) / 2);
                 scoreboardToggle.setY(panelY + 88);
@@ -246,4 +251,5 @@ public class RenderScreen extends Screen {
     }
 
     private int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }
+
 }

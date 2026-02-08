@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "package": "floydaddons.not.dogshit.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "NickHiderTextRendererMixin",
+    "PlayerEntityRendererMixin",
+    "BrandSpoofMixin",
+    "FabricLoaderImplMixin",
+    "ScoreboardSidebarMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
