@@ -7,7 +7,15 @@
     "PlayerEntityRendererMixin",
     "BrandSpoofMixin",
     "FabricLoaderImplMixin",
-    "ScoreboardSidebarMixin"
+    "ScoreboardSidebarMixin",
+    "WorldRendererAccessor",
+    "XrayRenderLayersMixin",
+    "XrayIndigoMixin",
+    "XraySodiumAlphaMixin",
+    "XraySodiumFaceCullMixin",
+    "XraySodiumFluidAlphaMixin",
+    "XrayChunkOcclusionMixin",
+    "XrayLightmapMixin"
   ],
   "injectors": {
     "defaultRequire": 1
