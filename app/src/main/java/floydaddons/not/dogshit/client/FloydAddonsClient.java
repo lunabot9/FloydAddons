@@ -17,6 +17,7 @@ public class FloydAddonsClient implements ClientModInitializer {
 
     private KeyBinding openGuiKey;
     private KeyBinding xrayToggleKey;
+    private KeyBinding mobEspToggleKey;
     private static final KeyBinding.Category KEY_CATEGORY =
             KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
 
@@ -26,6 +27,7 @@ public class FloydAddonsClient implements ClientModInitializer {
         InventoryHudRenderer.register();
         ScoreboardHudRenderer.register();
         StalkRenderer.register();
+        MobEspRenderer.register();
         FloydAddonsCommand.register();
 
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
@@ -42,8 +44,17 @@ public class FloydAddonsClient implements ClientModInitializer {
                 KEY_CATEGORY
         ));
 
+        mobEspToggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.floydaddons.toggle_mob_esp",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_M,
+                KEY_CATEGORY
+        ));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             SkinManager.extractDefaultSkin(client);
+            ServerIdTracker.tick(client);
+            NpcTracker.tick();
             if (client.player == null) {
                 return;
             }
@@ -52,6 +63,9 @@ public class FloydAddonsClient implements ClientModInitializer {
             }
             while (xrayToggleKey.wasPressed()) {
                 RenderConfig.toggleXray();
+            }
+            while (mobEspToggleKey.wasPressed()) {
+                RenderConfig.toggleMobEsp();
             }
         });
 

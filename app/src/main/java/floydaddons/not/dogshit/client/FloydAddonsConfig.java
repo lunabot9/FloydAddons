@@ -32,6 +32,7 @@ public final class FloydAddonsConfig {
     private static final Path CONFIG_PATH = CONFIG_DIR.resolve("config.json");
     private static final Path NAMES_PATH = CONFIG_DIR.resolve("name-mappings.json");
     private static final Path XRAY_OPAQUE_PATH = CONFIG_DIR.resolve("xray-opaque.json");
+    private static final Path MOB_ESP_PATH = CONFIG_DIR.resolve("mob-esp.json");
 
     private FloydAddonsConfig() {}
 
@@ -45,6 +46,10 @@ public final class FloydAddonsConfig {
 
     public static Path getXrayOpaquePath() {
         return XRAY_OPAQUE_PATH;
+    }
+
+    public static Path getMobEspPath() {
+        return MOB_ESP_PATH;
     }
 
     /** Loads all settings from the unified config file and the name mappings file. */
@@ -63,6 +68,7 @@ public final class FloydAddonsConfig {
         }
         loadNameMappings();
         loadXrayOpaque();
+        loadMobEsp();
     }
 
     /** Saves all settings to the unified config file. */
@@ -93,6 +99,10 @@ public final class FloydAddonsConfig {
         data.serverIdHiderEnabled = RenderConfig.isServerIdHiderEnabled();
         data.serverIdReplacement = RenderConfig.getServerIdReplacement();
         data.xrayOpacity = RenderConfig.getXrayOpacity();
+        data.mobEspEnabled = RenderConfig.isMobEspEnabled();
+        data.mobEspTracers = RenderConfig.isMobEspTracers();
+        data.mobEspHitboxes = RenderConfig.isMobEspHitboxes();
+        data.mobEspStarMobs = RenderConfig.isMobEspStarMobs();
 
         try {
             try (Writer w = Files.newBufferedWriter(CONFIG_PATH)) {
@@ -149,6 +159,31 @@ public final class FloydAddonsConfig {
         } catch (IOException ignored) {}
     }
 
+    /** Loads mob ESP filter entries. Creates a template if missing. */
+    public static void loadMobEsp() {
+        ensureDir();
+        if (!Files.exists(MOB_ESP_PATH)) {
+            try {
+                List<Map<String, String>> example = List.of(
+                        Map.of("name", "Vanquisher"),
+                        Map.of("mob", "minecraft:ghast")
+                );
+                try (Writer w = Files.newBufferedWriter(MOB_ESP_PATH)) {
+                    GSON.toJson(example, w);
+                }
+            } catch (IOException ignored) {}
+            MobEspManager.loadFilters(Collections.emptyList());
+            return;
+        }
+        try (Reader r = Files.newBufferedReader(MOB_ESP_PATH)) {
+            Type type = new TypeToken<List<Map<String, String>>>() {}.getType();
+            List<Map<String, String>> loaded = GSON.fromJson(r, type);
+            MobEspManager.loadFilters(loaded);
+        } catch (IOException ignored) {
+            MobEspManager.loadFilters(Collections.emptyList());
+        }
+    }
+
     private static void ensureDir() {
         try { Files.createDirectories(CONFIG_DIR); } catch (IOException ignored) {}
     }
@@ -181,6 +216,10 @@ public final class FloydAddonsConfig {
         RenderConfig.setServerIdHiderEnabled(data.serverIdHiderEnabled);
         if (data.serverIdReplacement != null) RenderConfig.setServerIdReplacement(data.serverIdReplacement);
         if (data.xrayOpacity > 0) RenderConfig.setXrayOpacity(data.xrayOpacity);
+        RenderConfig.setMobEspEnabled(data.mobEspEnabled);
+        RenderConfig.setMobEspTracers(data.mobEspTracers);
+        RenderConfig.setMobEspHitboxes(data.mobEspHitboxes);
+        RenderConfig.setMobEspStarMobs(data.mobEspStarMobs);
     }
 
     private static class Data {
@@ -208,5 +247,9 @@ public final class FloydAddonsConfig {
         boolean serverIdHiderEnabled;
         String serverIdReplacement;
         float xrayOpacity;
+        boolean mobEspEnabled;
+        boolean mobEspTracers = true;
+        boolean mobEspHitboxes = true;
+        boolean mobEspStarMobs = true;
     }
 }

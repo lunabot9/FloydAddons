@@ -29,6 +29,10 @@ public final class RenderConfig {
     private static volatile boolean xrayEnabled = false;
     private static float xrayOpacity = 0.3f;
     private static volatile Set<String> xrayOpaqueBlocks = defaultXrayOpaqueBlocks();
+    private static volatile boolean mobEspEnabled = false;
+    private static boolean mobEspTracers = true;
+    private static boolean mobEspHitboxes = true;
+    private static boolean mobEspStarMobs = true;
 
     private RenderConfig() {}
 
@@ -83,6 +87,19 @@ public final class RenderConfig {
         xrayEnabled = !xrayEnabled;
         rebuildChunks();
     }
+
+    public static boolean isMobEspEnabled() { return mobEspEnabled; }
+    public static void setMobEspEnabled(boolean v) { mobEspEnabled = v; }
+    public static void toggleMobEsp() { mobEspEnabled = !mobEspEnabled; }
+
+    public static boolean isMobEspTracers() { return mobEspTracers; }
+    public static void setMobEspTracers(boolean v) { mobEspTracers = v; }
+
+    public static boolean isMobEspHitboxes() { return mobEspHitboxes; }
+    public static void setMobEspHitboxes(boolean v) { mobEspHitboxes = v; }
+
+    public static boolean isMobEspStarMobs() { return mobEspStarMobs; }
+    public static void setMobEspStarMobs(boolean v) { mobEspStarMobs = v; }
 
     /** Forces a full chunk rebuild for both vanilla and Sodium renderers. */
     public static void rebuildChunks() {

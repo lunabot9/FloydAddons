@@ -25,10 +25,12 @@ public class RenderScreen extends Screen {
     private SliderWidget opacitySlider;
     private ButtonWidget openFileButton;
     private ButtonWidget reloadBlocksButton;
+    private ButtonWidget mobEspToggle;
+    private ButtonWidget mobEspConfigButton;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 246;
+    private static final int BOX_HEIGHT = 272;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;
@@ -156,6 +158,17 @@ public class RenderScreen extends Screen {
             }
         }).dimensions(le + HALF_W + PAIR_GAP, rowY(6), HALF_W, ROW_HEIGHT).build();
 
+        // Row 7: Mob ESP toggle + Config
+        mobEspToggle = ButtonWidget.builder(Text.literal(mobEspLabel()), b -> {
+            RenderConfig.toggleMobEsp();
+            b.setMessage(Text.literal(mobEspLabel()));
+            RenderConfig.save();
+        }).dimensions(le, rowY(7), MAIN_W, ROW_HEIGHT).build();
+
+        mobEspConfigButton = ButtonWidget.builder(Text.literal("Config"), b -> {
+            if (client != null) client.setScreen(new MobEspScreen(this));
+        }).dimensions(le + MAIN_W + PAIR_GAP, rowY(7), SECONDARY_W, ROW_HEIGHT).build();
+
         // Done
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
                 .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + BOX_HEIGHT - 30, 100, ROW_HEIGHT)
@@ -172,6 +185,8 @@ public class RenderScreen extends Screen {
         addDrawableChild(opacitySlider);
         addDrawableChild(openFileButton);
         addDrawableChild(reloadBlocksButton);
+        addDrawableChild(mobEspToggle);
+        addDrawableChild(mobEspConfigButton);
         addDrawableChild(doneButton);
     }
 
@@ -181,6 +196,7 @@ public class RenderScreen extends Screen {
     private String serverIdLabel() { return "Server ID Hider: " + (RenderConfig.isServerIdHiderEnabled() ? "ON" : "OFF"); }
     private String xrayLabel() { return "X-Ray: " + (RenderConfig.isXrayEnabled() ? "ON" : "OFF"); }
     private String opacityLabel() { return "X-Ray Opacity: " + Math.round(RenderConfig.getXrayOpacity() * 100) + "%"; }
+    private String mobEspLabel() { return "Mob ESP: " + (RenderConfig.isMobEspEnabled() ? "ON" : "OFF"); }
 
     private double opacityToSlider(float opacity) {
         return (opacity - 0.05f) / 0.95f;
@@ -249,6 +265,8 @@ public class RenderScreen extends Screen {
         styleSlider(context, opacitySlider, guiAlpha, mouseX, mouseY);
         styleButton(context, openFileButton, guiAlpha, mouseX, mouseY);
         styleButton(context, reloadBlocksButton, guiAlpha, mouseX, mouseY);
+        styleButton(context, mobEspToggle, guiAlpha, mouseX, mouseY);
+        styleButton(context, mobEspConfigButton, guiAlpha, mouseX, mouseY);
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
         // Title
@@ -315,6 +333,8 @@ public class RenderScreen extends Screen {
         opacitySlider.setX(le);                opacitySlider.setY(rowY(5));
         openFileButton.setX(le);               openFileButton.setY(rowY(6));
         reloadBlocksButton.setX(le + HALF_W + PAIR_GAP); reloadBlocksButton.setY(rowY(6));
+        mobEspToggle.setX(le);                 mobEspToggle.setY(rowY(7));
+        mobEspConfigButton.setX(le + MAIN_W + PAIR_GAP); mobEspConfigButton.setY(rowY(7));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 
