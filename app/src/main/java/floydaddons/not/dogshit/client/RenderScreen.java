@@ -16,6 +16,8 @@ public class RenderScreen extends Screen {
 
     private ButtonWidget inventoryToggle;
     private ButtonWidget inventoryMoveButton;
+    private ButtonWidget coneHatToggle;
+    private ButtonWidget coneHatConfigButton;
     private ButtonWidget scoreboardToggle;
     private ButtonWidget scoreboardMoveButton;
     private ButtonWidget serverIdToggle;
@@ -23,10 +25,12 @@ public class RenderScreen extends Screen {
     private SliderWidget opacitySlider;
     private ButtonWidget openFileButton;
     private ButtonWidget reloadBlocksButton;
+    private ButtonWidget mobEspToggle;
+    private ButtonWidget mobEspConfigButton;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 220;
+    private static final int BOX_HEIGHT = 272;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;
@@ -78,33 +82,44 @@ public class RenderScreen extends Screen {
             if (client != null) client.setScreen(new MoveInventoryScreen(this));
         }).dimensions(le + MAIN_W + PAIR_GAP, rowY(0), SECONDARY_W, ROW_HEIGHT).build();
 
-        // Row 1: Scoreboard toggle + Move
+        // Row 1: Cone Hat toggle + Config
+        coneHatToggle = ButtonWidget.builder(Text.literal(coneHatLabel()), b -> {
+            RenderConfig.setFloydHatEnabled(!RenderConfig.isFloydHatEnabled());
+            b.setMessage(Text.literal(coneHatLabel()));
+            RenderConfig.save();
+        }).dimensions(le, rowY(1), MAIN_W, ROW_HEIGHT).build();
+
+        coneHatConfigButton = ButtonWidget.builder(Text.literal("Config"), b -> {
+            if (client != null) client.setScreen(new ConeHatScreen(this));
+        }).dimensions(le + MAIN_W + PAIR_GAP, rowY(1), SECONDARY_W, ROW_HEIGHT).build();
+
+        // Row 2: Scoreboard toggle + Move
         scoreboardToggle = ButtonWidget.builder(Text.literal(scoreboardLabel()), b -> {
             RenderConfig.setCustomScoreboardEnabled(!RenderConfig.isCustomScoreboardEnabled());
             b.setMessage(Text.literal(scoreboardLabel()));
             RenderConfig.save();
-        }).dimensions(le, rowY(1), MAIN_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(2), MAIN_W, ROW_HEIGHT).build();
 
         scoreboardMoveButton = ButtonWidget.builder(Text.literal("Move"), b -> {
             if (client != null) client.setScreen(new MoveScoreboardScreen(this));
-        }).dimensions(le + MAIN_W + PAIR_GAP, rowY(1), SECONDARY_W, ROW_HEIGHT).build();
+        }).dimensions(le + MAIN_W + PAIR_GAP, rowY(2), SECONDARY_W, ROW_HEIGHT).build();
 
-        // Row 2: Server ID Hider
+        // Row 3: Server ID Hider
         serverIdToggle = ButtonWidget.builder(Text.literal(serverIdLabel()), b -> {
             RenderConfig.setServerIdHiderEnabled(!RenderConfig.isServerIdHiderEnabled());
             b.setMessage(Text.literal(serverIdLabel()));
             RenderConfig.save();
-        }).dimensions(le, rowY(2), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(3), FULL_W, ROW_HEIGHT).build();
 
-        // Row 3: X-Ray toggle
+        // Row 4: X-Ray toggle
         xrayToggle = ButtonWidget.builder(Text.literal(xrayLabel()), b -> {
             RenderConfig.toggleXray();
             b.setMessage(Text.literal(xrayLabel()));
-        }).dimensions(le, rowY(3), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(4), FULL_W, ROW_HEIGHT).build();
 
-        // Row 4: Opacity slider
+        // Row 5: Opacity slider
         opacitySlider = new SliderWidget(
-                le, rowY(4), FULL_W, ROW_HEIGHT,
+                le, rowY(5), FULL_W, ROW_HEIGHT,
                 Text.literal(opacityLabel()),
                 opacityToSlider(RenderConfig.getXrayOpacity())
         ) {
@@ -125,7 +140,7 @@ public class RenderScreen extends Screen {
             }
         };
 
-        // Row 5: Open File + Reload Blocks
+        // Row 6: Open File + Reload Blocks
         openFileButton = ButtonWidget.builder(Text.literal("Open File"), b -> {
             try {
                 java.nio.file.Path path = FloydAddonsConfig.getXrayOpaquePath();
@@ -134,14 +149,25 @@ public class RenderScreen extends Screen {
                 }
                 openFileInEditor(path);
             } catch (Exception ignored) {}
-        }).dimensions(le, rowY(5), HALF_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(6), HALF_W, ROW_HEIGHT).build();
 
         reloadBlocksButton = ButtonWidget.builder(Text.literal("Reload Blocks"), b -> {
             FloydAddonsConfig.loadXrayOpaque();
             if (RenderConfig.isXrayEnabled()) {
                 RenderConfig.rebuildChunks();
             }
-        }).dimensions(le + HALF_W + PAIR_GAP, rowY(5), HALF_W, ROW_HEIGHT).build();
+        }).dimensions(le + HALF_W + PAIR_GAP, rowY(6), HALF_W, ROW_HEIGHT).build();
+
+        // Row 7: Mob ESP toggle + Config
+        mobEspToggle = ButtonWidget.builder(Text.literal(mobEspLabel()), b -> {
+            RenderConfig.toggleMobEsp();
+            b.setMessage(Text.literal(mobEspLabel()));
+            RenderConfig.save();
+        }).dimensions(le, rowY(7), MAIN_W, ROW_HEIGHT).build();
+
+        mobEspConfigButton = ButtonWidget.builder(Text.literal("Config"), b -> {
+            if (client != null) client.setScreen(new MobEspScreen(this));
+        }).dimensions(le + MAIN_W + PAIR_GAP, rowY(7), SECONDARY_W, ROW_HEIGHT).build();
 
         // Done
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
@@ -150,6 +176,8 @@ public class RenderScreen extends Screen {
 
         addDrawableChild(inventoryToggle);
         addDrawableChild(inventoryMoveButton);
+        addDrawableChild(coneHatToggle);
+        addDrawableChild(coneHatConfigButton);
         addDrawableChild(scoreboardToggle);
         addDrawableChild(scoreboardMoveButton);
         addDrawableChild(serverIdToggle);
@@ -157,14 +185,18 @@ public class RenderScreen extends Screen {
         addDrawableChild(opacitySlider);
         addDrawableChild(openFileButton);
         addDrawableChild(reloadBlocksButton);
+        addDrawableChild(mobEspToggle);
+        addDrawableChild(mobEspConfigButton);
         addDrawableChild(doneButton);
     }
 
     private String inventoryLabel() { return "Inventory HUD: " + (RenderConfig.isInventoryHudEnabled() ? "ON" : "OFF"); }
+    private String coneHatLabel() { return "Cone Hat: " + (RenderConfig.isFloydHatEnabled() ? "ON" : "OFF"); }
     private String scoreboardLabel() { return "Scoreboard: " + (RenderConfig.isCustomScoreboardEnabled() ? "ON" : "OFF"); }
     private String serverIdLabel() { return "Server ID Hider: " + (RenderConfig.isServerIdHiderEnabled() ? "ON" : "OFF"); }
     private String xrayLabel() { return "X-Ray: " + (RenderConfig.isXrayEnabled() ? "ON" : "OFF"); }
     private String opacityLabel() { return "X-Ray Opacity: " + Math.round(RenderConfig.getXrayOpacity() * 100) + "%"; }
+    private String mobEspLabel() { return "Mob ESP: " + (RenderConfig.isMobEspEnabled() ? "ON" : "OFF"); }
 
     private double opacityToSlider(float opacity) {
         return (opacity - 0.05f) / 0.95f;
@@ -224,6 +256,8 @@ public class RenderScreen extends Screen {
 
         styleButton(context, inventoryToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, inventoryMoveButton, guiAlpha, mouseX, mouseY);
+        styleButton(context, coneHatToggle, guiAlpha, mouseX, mouseY);
+        styleButton(context, coneHatConfigButton, guiAlpha, mouseX, mouseY);
         styleButton(context, scoreboardToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, scoreboardMoveButton, guiAlpha, mouseX, mouseY);
         styleButton(context, serverIdToggle, guiAlpha, mouseX, mouseY);
@@ -231,6 +265,8 @@ public class RenderScreen extends Screen {
         styleSlider(context, opacitySlider, guiAlpha, mouseX, mouseY);
         styleButton(context, openFileButton, guiAlpha, mouseX, mouseY);
         styleButton(context, reloadBlocksButton, guiAlpha, mouseX, mouseY);
+        styleButton(context, mobEspToggle, guiAlpha, mouseX, mouseY);
+        styleButton(context, mobEspConfigButton, guiAlpha, mouseX, mouseY);
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
         // Title
@@ -288,13 +324,17 @@ public class RenderScreen extends Screen {
         int le = leftEdge();
         inventoryToggle.setX(le);              inventoryToggle.setY(rowY(0));
         inventoryMoveButton.setX(le + MAIN_W + PAIR_GAP); inventoryMoveButton.setY(rowY(0));
-        scoreboardToggle.setX(le);             scoreboardToggle.setY(rowY(1));
-        scoreboardMoveButton.setX(le + MAIN_W + PAIR_GAP); scoreboardMoveButton.setY(rowY(1));
-        serverIdToggle.setX(le);               serverIdToggle.setY(rowY(2));
-        xrayToggle.setX(le);                   xrayToggle.setY(rowY(3));
-        opacitySlider.setX(le);                opacitySlider.setY(rowY(4));
-        openFileButton.setX(le);               openFileButton.setY(rowY(5));
-        reloadBlocksButton.setX(le + HALF_W + PAIR_GAP); reloadBlocksButton.setY(rowY(5));
+        coneHatToggle.setX(le);                coneHatToggle.setY(rowY(1));
+        coneHatConfigButton.setX(le + MAIN_W + PAIR_GAP); coneHatConfigButton.setY(rowY(1));
+        scoreboardToggle.setX(le);             scoreboardToggle.setY(rowY(2));
+        scoreboardMoveButton.setX(le + MAIN_W + PAIR_GAP); scoreboardMoveButton.setY(rowY(2));
+        serverIdToggle.setX(le);               serverIdToggle.setY(rowY(3));
+        xrayToggle.setX(le);                   xrayToggle.setY(rowY(4));
+        opacitySlider.setX(le);                opacitySlider.setY(rowY(5));
+        openFileButton.setX(le);               openFileButton.setY(rowY(6));
+        reloadBlocksButton.setX(le + HALF_W + PAIR_GAP); reloadBlocksButton.setY(rowY(6));
+        mobEspToggle.setX(le);                 mobEspToggle.setY(rowY(7));
+        mobEspConfigButton.setX(le + MAIN_W + PAIR_GAP); mobEspConfigButton.setY(rowY(7));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 
