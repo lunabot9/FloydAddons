@@ -8,8 +8,6 @@ import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 
-import floydaddons.not.dogshit.client.MapOverrideManager;
-
 /**
  * Render settings screen with compact paired-button layout.
  * HUD settings (inventory, scoreboard) have moved to HudScreen.
@@ -24,12 +22,10 @@ public class RenderScreen extends Screen {
     private ButtonWidget reloadBlocksButton;
     private ButtonWidget mobEspToggle;
     private ButtonWidget mobEspConfigButton;
-    private ButtonWidget mapOverrideToggle;
-    private ButtonWidget mapFolderButton;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 286;
+    private static final int BOX_HEIGHT = 260;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;
@@ -129,16 +125,6 @@ public class RenderScreen extends Screen {
             if (client != null) client.setScreen(new MobEspScreen(this));
         }).dimensions(le + MAIN_W + PAIR_GAP, rowY(4), SECONDARY_W, ROW_HEIGHT).build();
 
-        // Row 5: Map override toggle + folder
-        mapOverrideToggle = ButtonWidget.builder(Text.literal(mapOverrideLabel()), b -> {
-            RenderConfig.setMapOverrideEnabled(!RenderConfig.isMapOverrideEnabled());
-            b.setMessage(Text.literal(mapOverrideLabel()));
-            RenderConfig.save();
-        }).dimensions(le, rowY(5), MAIN_W, ROW_HEIGHT).build();
-
-        mapFolderButton = ButtonWidget.builder(Text.literal("Open Folder"), b -> openMapFolder())
-                .dimensions(le + MAIN_W + PAIR_GAP, rowY(5), SECONDARY_W, ROW_HEIGHT).build();
-
         // Done
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
                 .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + BOX_HEIGHT - 30, 100, ROW_HEIGHT)
@@ -151,8 +137,6 @@ public class RenderScreen extends Screen {
         addDrawableChild(reloadBlocksButton);
         addDrawableChild(mobEspToggle);
         addDrawableChild(mobEspConfigButton);
-        addDrawableChild(mapOverrideToggle);
-        addDrawableChild(mapFolderButton);
         addDrawableChild(doneButton);
     }
 
@@ -160,7 +144,6 @@ public class RenderScreen extends Screen {
     private String xrayLabel() { return "X-Ray: " + (RenderConfig.isXrayEnabled() ? "ON" : "OFF"); }
     private String opacityLabel() { return "X-Ray Opacity: " + Math.round(RenderConfig.getXrayOpacity() * 100) + "%"; }
     private String mobEspLabel() { return "Mob ESP: " + (RenderConfig.isMobEspEnabled() ? "ON" : "OFF"); }
-    private String mapOverrideLabel() { return "Map Override (Hypixel): " + (RenderConfig.isMapOverrideEnabled() ? "ON" : "OFF"); }
 
     private double opacityToSlider(float opacity) {
         return (opacity - 0.05f) / 0.95f;
@@ -225,8 +208,6 @@ public class RenderScreen extends Screen {
         styleButton(context, reloadBlocksButton, guiAlpha, mouseX, mouseY);
         styleButton(context, mobEspToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, mobEspConfigButton, guiAlpha, mouseX, mouseY);
-        styleButton(context, mapOverrideToggle, guiAlpha, mouseX, mouseY);
-        styleButton(context, mapFolderButton, guiAlpha, mouseX, mouseY);
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
         // Title
@@ -289,8 +270,6 @@ public class RenderScreen extends Screen {
         reloadBlocksButton.setX(le + HALF_W + PAIR_GAP); reloadBlocksButton.setY(rowY(3));
         mobEspToggle.setX(le);                 mobEspToggle.setY(rowY(4));
         mobEspConfigButton.setX(le + MAIN_W + PAIR_GAP); mobEspConfigButton.setY(rowY(4));
-        mapOverrideToggle.setX(le);            mapOverrideToggle.setY(rowY(5));
-        mapFolderButton.setX(le + MAIN_W + PAIR_GAP); mapFolderButton.setY(rowY(5));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 
@@ -350,15 +329,4 @@ public class RenderScreen extends Screen {
 
     private int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }
 
-    private void openMapFolder() {
-        var dir = MapOverrideManager.ensureDir();
-        try {
-            String os = System.getProperty("os.name", "").toLowerCase();
-            ProcessBuilder pb;
-            if (os.contains("win")) pb = new ProcessBuilder("explorer", dir.toString());
-            else if (os.contains("mac")) pb = new ProcessBuilder("open", dir.toString());
-            else pb = new ProcessBuilder("xdg-open", dir.toString());
-            pb.start();
-        } catch (Exception ignored) {}
-    }
 }

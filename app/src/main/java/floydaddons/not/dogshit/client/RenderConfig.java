@@ -34,10 +34,6 @@ public final class RenderConfig {
     private static int customScoreboardX = -1;
     private static int customScoreboardY = -1;
     private static boolean serverIdHiderEnabled = false;
-    private static boolean mapOverrideEnabled = false;
-    // Default grid for Hypixel hub board: 7x7
-    private static int mapOverrideCols = 7;
-    private static int mapOverrideRows = 7;
     private static volatile boolean xrayEnabled = false;
     private static float xrayOpacity = 0.3f;
     private static volatile Set<String> xrayOpaqueBlocks = defaultXrayOpaqueBlocks();
@@ -104,10 +100,6 @@ public final class RenderConfig {
     public static void setSelectedConeImage(String v) { selectedConeImage = v != null ? v : ""; }
     public static String getSelectedCapeImage() { return selectedCapeImage; }
     public static void setSelectedCapeImage(String v) { selectedCapeImage = v != null ? v : ""; }
-    public static int getMapOverrideCols() { return mapOverrideCols; }
-    public static int getMapOverrideRows() { return mapOverrideRows; }
-    public static void setMapOverrideCols(int v) { mapOverrideCols = Math.max(0, v); }
-    public static void setMapOverrideRows(int v) { mapOverrideRows = Math.max(0, v); }
 
     public static boolean isCustomScoreboardEnabled() { return customScoreboardEnabled; }
     public static void setCustomScoreboardEnabled(boolean v) { customScoreboardEnabled = v; }
@@ -120,8 +112,6 @@ public final class RenderConfig {
 
     public static boolean isServerIdHiderEnabled() { return serverIdHiderEnabled; }
     public static void setServerIdHiderEnabled(boolean v) { serverIdHiderEnabled = v; }
-    public static boolean isMapOverrideEnabled() { return mapOverrideEnabled; }
-    public static void setMapOverrideEnabled(boolean v) { mapOverrideEnabled = v; }
 
 
     public static boolean isXrayEnabled() { return xrayEnabled; }

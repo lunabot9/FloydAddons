@@ -101,9 +101,6 @@ public final class FloydAddonsConfig {
         data.guiBorderColor = RenderConfig.getGuiBorderColor();
         data.buttonBorderColor = RenderConfig.getButtonBorderColor();
         data.buttonTextColor = RenderConfig.getButtonTextColor();
-        data.mapOverrideCols = RenderConfig.getMapOverrideCols();
-        data.mapOverrideRows = RenderConfig.getMapOverrideRows();
-        data.mapOverrideEnabled = RenderConfig.isMapOverrideEnabled();
         data.selectedCapeImage = RenderConfig.getSelectedCapeImage();
         data.selectedConeImage = RenderConfig.getSelectedConeImage();
         data.customScoreboardEnabled = RenderConfig.isCustomScoreboardEnabled();
@@ -258,12 +255,6 @@ public final class FloydAddonsConfig {
         RenderConfig.setGuiBorderColor(data.guiBorderColor);
         RenderConfig.setButtonBorderColor(data.buttonBorderColor);
         RenderConfig.setButtonTextColor(data.buttonTextColor);
-        RenderConfig.setMapOverrideCols(data.mapOverrideCols);
-        RenderConfig.setMapOverrideRows(data.mapOverrideRows);
-        RenderConfig.setMapOverrideEnabled(data.mapOverrideEnabled);
-        // Default to 7x7 if config missing or zeroed
-        if (RenderConfig.getMapOverrideCols() <= 0) RenderConfig.setMapOverrideCols(7);
-        if (RenderConfig.getMapOverrideRows() <= 0) RenderConfig.setMapOverrideRows(7);
         if (data.selectedCapeImage != null) RenderConfig.setSelectedCapeImage(data.selectedCapeImage);
         if (data.selectedConeImage != null) RenderConfig.setSelectedConeImage(data.selectedConeImage);
         RenderConfig.setCustomScoreboardEnabled(data.customScoreboardEnabled);
@@ -308,9 +299,6 @@ public final class FloydAddonsConfig {
         int guiBorderColor = RenderConfig.getGuiBorderColor();
         int buttonBorderColor = RenderConfig.getButtonBorderColor();
         int buttonTextColor = RenderConfig.getButtonTextColor();
-        int mapOverrideCols;
-        int mapOverrideRows;
-        boolean mapOverrideEnabled;
         String selectedCapeImage;
         String selectedConeImage;
         boolean customScoreboardEnabled;
