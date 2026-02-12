@@ -1,4 +1,4 @@
-name: Build and Release
+name: "Release: MC 1.21.10"
 
 on:
   push:
@@ -40,14 +40,19 @@ jobs:
       - name: Calculate next version
         id: version
         run: |
-          # Find latest vX.Y.Z tag from releases, ignore non-semver tags
+          # Find latest vX.Y.Z-mc1.21.10 tag, extract the version number
           LATEST=$(gh release list --limit 50 --json tagName -q '.[].tagName' 2>/dev/null \
-            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || echo "")
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+-mc1\.21\.10$' | head -1 || echo "")
+          if [ -z "$LATEST" ]; then
+            # Fallback: check plain vX.Y.Z tags too (legacy)
+            LATEST=$(gh release list --limit 50 --json tagName -q '.[].tagName' 2>/dev/null \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || echo "")
+          fi
           if [ -z "$LATEST" ]; then
             echo "version=1.0.1" >> "$GITHUB_OUTPUT"
             echo "First release: v1.0.1"
           else
-            VER="${LATEST#v}"
+            VER=$(echo "$LATEST" | sed 's/^v//' | sed 's/-mc.*//')
             IFS='.' read -r MAJOR MINOR PATCH <<< "$VER"
             PATCH=$((PATCH + 1))
             if [ "$PATCH" -ge 10 ]; then
