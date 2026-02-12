@@ -26,7 +26,7 @@ public class CameraScreen extends Screen {
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 370;
+    private static final int BOX_HEIGHT = 304;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;

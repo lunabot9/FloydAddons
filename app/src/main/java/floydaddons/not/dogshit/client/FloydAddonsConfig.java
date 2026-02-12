@@ -123,6 +123,7 @@ public final class FloydAddonsConfig {
         data.defaultEspChromaEnabled = RenderConfig.isDefaultEspChromaEnabled();
         data.stalkTracerColor = RenderConfig.getStalkTracerColor();
         data.stalkTracerChromaEnabled = RenderConfig.isStalkTracerChromaEnabled();
+        data.hudCornerRadius = RenderConfig.getHudCornerRadius();
         // Camera
         data.freecamSpeed = CameraConfig.getFreecamSpeed();
         data.freelookDistance = CameraConfig.getFreelookDistance();
@@ -334,6 +335,7 @@ public final class FloydAddonsConfig {
         RenderConfig.setDefaultEspChromaEnabled(data.defaultEspChromaEnabled);
         RenderConfig.setStalkTracerColor(data.stalkTracerColor);
         RenderConfig.setStalkTracerChromaEnabled(data.stalkTracerChromaEnabled);
+        RenderConfig.setHudCornerRadius(data.hudCornerRadius);
     }
 
     private static void loadAnimation(Data data) {
@@ -407,6 +409,7 @@ public final class FloydAddonsConfig {
         boolean defaultEspChromaEnabled = true;
         int stalkTracerColor = 0xFFFFFFFF;
         boolean stalkTracerChromaEnabled = true;
+        int hudCornerRadius;
         // Camera
         float freecamSpeed = 1.0f;
         float freelookDistance = 4.0f;

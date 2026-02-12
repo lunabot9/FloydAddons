@@ -65,15 +65,23 @@ public final class InventoryHudRenderer implements HudRenderCallback {
      */
     public static void renderInventory(DrawContext context, PlayerInventory inv, int x, int y, float alpha, boolean showMoveHint) {
         int bg = applyAlpha(BACKGROUND_COLOR, alpha);
-        context.fill(x, y, x + getHudWidth(), y + getHudHeight(), bg);
-        drawChromaBorder(context, x - 1, y - 1, x + getHudWidth() + 1, y + getHudHeight() + 1, alpha);
+        int radius = RenderConfig.getHudCornerRadius();
+        int w = getHudWidth();
+        int h = getHudHeight();
+        if (radius > 0) {
+            fillRoundedRect(context, x, y, w, h, radius, bg);
+            drawRoundedChromaBorder(context, x - 1, y - 1, w + 2, h + 2, radius, alpha);
+        } else {
+            context.fill(x, y, x + w, y + h, bg);
+            drawChromaBorder(context, x - 1, y - 1, x + w + 1, y + h + 1, alpha);
+        }
 
         if (inv != null) {
             drawSlots(context, inv, x, y, alpha);
         }
 
         if (showMoveHint) {
-            String hint = "Drag while Move Inventory is ON";
+            String hint = "Drag to move | Scroll to resize";
             var tr = MinecraftClient.getInstance().textRenderer;
             int hintWidth = tr.getWidth(hint);
             int hx = x + (getHudWidth() - hintWidth) / 2;
@@ -191,6 +199,96 @@ public final class InventoryHudRenderer implements HudRenderCallback {
         context.fill(left, top, left + 1, bottom, c);
         // Right
         context.fill(right - 1, top, right, bottom, c);
+    }
+
+    /**
+     * Fill a rounded rectangle by drawing rows with insets computed from a circle equation.
+     */
+    public static void fillRoundedRect(DrawContext ctx, int x, int y, int w, int h, int radius, int color) {
+        if (radius <= 0) {
+            ctx.fill(x, y, x + w, y + h, color);
+            return;
+        }
+        radius = Math.min(radius, Math.min(w / 2, h / 2));
+        // Top rounded region
+        for (int row = 0; row < radius; row++) {
+            int inset = radius - (int) Math.round(Math.sqrt(radius * radius - (radius - row) * (radius - row)));
+            ctx.fill(x + inset, y + row, x + w - inset, y + row + 1, color);
+        }
+        // Middle
+        ctx.fill(x, y + radius, x + w, y + h - radius, color);
+        // Bottom rounded region
+        for (int row = 0; row < radius; row++) {
+            int inset = radius - (int) Math.round(Math.sqrt(radius * radius - (radius - row) * (radius - row)));
+            ctx.fill(x + inset, y + h - radius + row, x + w - inset, y + h - radius + row + 1, color);
+        }
+    }
+
+    /**
+     * Draw a 1px rounded border using per-row insets from a circle equation.
+     */
+    public static void drawRoundedBorder(DrawContext ctx, int x, int y, int w, int h, int radius, int color) {
+        if (radius <= 0) {
+            drawSolidBorder(ctx, x, y, x + w, y + h, color, 1f);
+            return;
+        }
+        radius = Math.min(radius, Math.min(w / 2, h / 2));
+        // Top and bottom rounded arcs
+        for (int row = 0; row < radius; row++) {
+            int inset = radius - (int) Math.round(Math.sqrt(radius * radius - (radius - row) * (radius - row)));
+            // Top row pixels
+            ctx.fill(x + inset, y + row, x + w - inset, y + row + 1, color);
+            // Bottom row pixels
+            ctx.fill(x + inset, y + h - 1 - row, x + w - inset, y + h - row, color);
+        }
+        // Left and right straight edges
+        ctx.fill(x, y + radius, x + 1, y + h - radius, color);
+        ctx.fill(x + w - 1, y + radius, x + w, y + h - radius, color);
+    }
+
+    /**
+     * Draw a chroma-colored rounded border.
+     */
+    public static void drawRoundedChromaBorder(DrawContext ctx, int x, int y, int w, int h, int radius, float alpha) {
+        if (radius <= 0) {
+            drawChromaBorder(ctx, x, y, x + w, y + h, alpha);
+            return;
+        }
+        radius = Math.min(radius, Math.min(w / 2, h / 2));
+        int perimeter = w * 2 + h * 2;
+        if (perimeter <= 0) return;
+
+        // Draw each pixel along the rounded border path with chroma offset
+        int pos = 0;
+        // Top arc
+        for (int row = 0; row < radius; row++) {
+            int inset = radius - (int) Math.round(Math.sqrt(radius * radius - (radius - row) * (radius - row)));
+            int lineW = w - inset * 2;
+            int c = applyAlpha(chromaColor(pos / (float) perimeter), alpha);
+            ctx.fill(x + inset, y + row, x + w - inset, y + row + 1, c);
+            pos += lineW;
+        }
+        // Right edge
+        int straightH = h - radius * 2;
+        for (int row = 0; row < straightH; row++) {
+            int c = applyAlpha(chromaColor(pos / (float) perimeter), alpha);
+            ctx.fill(x + w - 1, y + radius + row, x + w, y + radius + row + 1, c);
+            pos++;
+        }
+        // Bottom arc
+        for (int row = radius - 1; row >= 0; row--) {
+            int inset = radius - (int) Math.round(Math.sqrt(radius * radius - (radius - row) * (radius - row)));
+            int lineW = w - inset * 2;
+            int c = applyAlpha(chromaColor(pos / (float) perimeter), alpha);
+            ctx.fill(x + inset, y + h - 1 - row, x + w - inset, y + h - row, c);
+            pos += lineW;
+        }
+        // Left edge
+        for (int row = straightH - 1; row >= 0; row--) {
+            int c = applyAlpha(chromaColor(pos / (float) perimeter), alpha);
+            ctx.fill(x, y + radius + row, x + 1, y + radius + row + 1, c);
+            pos++;
+        }
     }
 
     private static int applyAlpha(int color, float alpha) {

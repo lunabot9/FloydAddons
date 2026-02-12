@@ -22,10 +22,13 @@ public class RenderScreen extends Screen {
     private ButtonWidget reloadBlocksButton;
     private ButtonWidget mobEspToggle;
     private ButtonWidget mobEspConfigButton;
+    private ButtonWidget hidersButton;
+    private ButtonWidget animationsButton;
+    private ButtonWidget stalkButton;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 310;
+    private static final int BOX_HEIGHT = 330;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;
@@ -127,6 +130,24 @@ public class RenderScreen extends Screen {
             if (client != null) client.setScreen(new MobEspScreen(this));
         }).dimensions(le + MAIN_W + PAIR_GAP, rowY(6), SECONDARY_W, ROW_HEIGHT).build();
 
+        // Row 7: "Other" header (drawn in render)
+        // Row 8: Hiders + Attack Animation
+        hidersButton = ButtonWidget.builder(Text.literal("Hiders"), b -> {
+            if (client != null) client.setScreen(new HidersScreen(this));
+        }).dimensions(le, rowY(8), HALF_W, ROW_HEIGHT).build();
+
+        animationsButton = ButtonWidget.builder(Text.literal("Attack Animation"), b -> {
+            if (client != null) client.setScreen(new AnimationsScreen(this));
+        }).dimensions(le + HALF_W + PAIR_GAP, rowY(8), HALF_W, ROW_HEIGHT).build();
+
+        // Row 9: Stalk Player
+        stalkButton = ButtonWidget.builder(Text.literal(stalkLabel()), b -> {
+            if (StalkManager.isEnabled()) {
+                StalkManager.disable();
+            }
+            b.setMessage(Text.literal(stalkLabel()));
+        }).dimensions(le, rowY(9), FULL_W, ROW_HEIGHT).build();
+
         // Done
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
                 .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + BOX_HEIGHT - 30, 100, ROW_HEIGHT)
@@ -139,6 +160,9 @@ public class RenderScreen extends Screen {
         addDrawableChild(reloadBlocksButton);
         addDrawableChild(mobEspToggle);
         addDrawableChild(mobEspConfigButton);
+        addDrawableChild(hidersButton);
+        addDrawableChild(animationsButton);
+        addDrawableChild(stalkButton);
         addDrawableChild(doneButton);
     }
 
@@ -146,6 +170,10 @@ public class RenderScreen extends Screen {
     private String xrayLabel() { return "X-Ray: " + (RenderConfig.isXrayEnabled() ? "ON" : "OFF"); }
     private String opacityLabel() { return "X-Ray Opacity: " + Math.round(RenderConfig.getXrayOpacity() * 100) + "%"; }
     private String mobEspLabel() { return "Mob ESP: " + (RenderConfig.isMobEspEnabled() ? "ON" : "OFF"); }
+    private String stalkLabel() {
+        if (StalkManager.isEnabled()) return "Stalk: " + StalkManager.getTargetName() + " (click to disable)";
+        return "Stalk: OFF (use /fa stalk <name>)";
+    }
 
     private double opacityToSlider(float opacity) {
         return (opacity - 0.05f) / 0.95f;
@@ -210,11 +238,16 @@ public class RenderScreen extends Screen {
         styleButton(context, reloadBlocksButton, guiAlpha, mouseX, mouseY);
         styleButton(context, mobEspToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, mobEspConfigButton, guiAlpha, mouseX, mouseY);
+        styleButton(context, hidersButton, guiAlpha, mouseX, mouseY);
+        styleButton(context, animationsButton, guiAlpha, mouseX, mouseY);
+        stalkButton.setMessage(Text.literal(stalkLabel()));
+        styleButton(context, stalkButton, guiAlpha, mouseX, mouseY);
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
         // Section headers
         drawSectionHeader(context, "X-Ray", rowY(1), guiAlpha);
         drawSectionHeader(context, "Mob ESP", rowY(5), guiAlpha);
+        drawSectionHeader(context, "Other", rowY(7), guiAlpha);
 
         // Title
         String title = "Render";
@@ -276,6 +309,9 @@ public class RenderScreen extends Screen {
         reloadBlocksButton.setX(le + HALF_W + PAIR_GAP); reloadBlocksButton.setY(rowY(4));
         mobEspToggle.setX(le);                 mobEspToggle.setY(rowY(6));
         mobEspConfigButton.setX(le + MAIN_W + PAIR_GAP); mobEspConfigButton.setY(rowY(6));
+        hidersButton.setX(le);                 hidersButton.setY(rowY(8));
+        animationsButton.setX(le + HALF_W + PAIR_GAP); animationsButton.setY(rowY(8));
+        stalkButton.setX(le);                  stalkButton.setY(rowY(9));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 

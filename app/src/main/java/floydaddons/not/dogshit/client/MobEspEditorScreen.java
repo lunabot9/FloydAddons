@@ -7,6 +7,10 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.SpawnEggItem;
+import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
@@ -28,7 +32,7 @@ public class MobEspEditorScreen extends Screen {
     private static final int BOX_HEIGHT = 320;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
-    private static final int ENTRY_HEIGHT = 16;
+    private static final int ENTRY_HEIGHT = 20;
     private static final int CONTENT_PADDING = 4;
     private static final int BUTTON_SIZE_W = 18;
     private static final int BUTTON_SIZE_H = 16;
@@ -264,8 +268,13 @@ public class MobEspEditorScreen extends Screen {
     private int renderActiveEntry(DrawContext context, String key, String kind, int y,
                                    int contentLeft, int contentRight, int contentTop, int contentBottom,
                                    int contentWidth, float guiAlpha, int mouseX, int mouseY, float chromaOffset) {
-        // Color preview square
-        int colorSqX = contentLeft + 4;
+        // Entity icon (spawn egg for types, player head for names)
+        int iconX = contentLeft + 2;
+        int iconY = y + (ENTRY_HEIGHT - 16) / 2;
+        renderEntityIcon(context, key, kind, iconX, iconY);
+
+        // Color preview square (shifted right for icon)
+        int colorSqX = contentLeft + 22;
         int colorSqY = y + (ENTRY_HEIGHT - COLOR_SQUARE_SIZE) / 2;
         int previewColor = resolveFilterColor(key);
         context.fill(colorSqX, colorSqY, colorSqX + COLOR_SQUARE_SIZE, colorSqY + COLOR_SQUARE_SIZE,
@@ -280,7 +289,7 @@ public class MobEspEditorScreen extends Screen {
         // Text label
         String label = key;
         int labelStartX = colorSqX + COLOR_SQUARE_SIZE + 4;
-        int maxLabelWidth = contentWidth - BUTTON_SIZE_W - COLOR_SQUARE_SIZE - 16;
+        int maxLabelWidth = contentWidth - BUTTON_SIZE_W - COLOR_SQUARE_SIZE - 34;
         if (textRenderer.getWidth(label) > maxLabelWidth) {
             label = textRenderer.trimToWidth(label, maxLabelWidth - textRenderer.getWidth("...")) + "...";
         }
@@ -315,12 +324,18 @@ public class MobEspEditorScreen extends Screen {
     private int renderSuggestionEntry(DrawContext context, String key, HitType addType, int y,
                                        int contentLeft, int contentRight, int contentTop, int contentBottom,
                                        int contentWidth, float guiAlpha, int mouseX, int mouseY, float chromaOffset) {
+        // Entity icon
+        String kind = (addType == HitType.ADD_TYPE) ? "type" : "name";
+        int sugIconX = contentLeft + 2;
+        int sugIconY = y + (ENTRY_HEIGHT - 16) / 2;
+        renderEntityIcon(context, key, kind, sugIconX, sugIconY);
+
         String label = key;
-        int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 8;
+        int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 26;
         if (textRenderer.getWidth(label) > maxLabelWidth) {
             label = textRenderer.trimToWidth(label, maxLabelWidth - textRenderer.getWidth("...")) + "...";
         }
-        context.drawTextWithShadow(textRenderer, label, contentLeft + 4,
+        context.drawTextWithShadow(textRenderer, label, contentLeft + 22,
                 y + (ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
                 applyAlpha(0xFFAAAAAA, guiAlpha));
 
@@ -345,6 +360,21 @@ public class MobEspEditorScreen extends Screen {
         }
 
         return y + ENTRY_HEIGHT;
+    }
+
+    private void renderEntityIcon(DrawContext context, String key, String kind, int x, int y) {
+        try {
+            if ("type".equals(kind)) {
+                EntityType<?> entityType = Registries.ENTITY_TYPE.get(Identifier.of(key));
+                SpawnEggItem eggItem = SpawnEggItem.forEntity(entityType);
+                if (eggItem != null) {
+                    context.drawItem(new ItemStack(eggItem), x, y);
+                    return;
+                }
+            }
+            // For name filters or types without spawn eggs, use a player head
+            context.drawItem(new ItemStack(Items.PLAYER_HEAD), x, y);
+        } catch (Exception ignored) {}
     }
 
     private int resolveFilterColor(String filterKey) {

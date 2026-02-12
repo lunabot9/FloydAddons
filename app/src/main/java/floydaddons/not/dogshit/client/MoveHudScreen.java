@@ -76,7 +76,7 @@ public class MoveHudScreen extends Screen {
         context.drawTextWithShadow(textRenderer, label, sbX + (sbW - labelWidth) / 2, sbY + sbH / 2 - textRenderer.fontHeight / 2, 0xFFFFFFFF);
 
         // --- Instruction text ---
-        String instr = "Drag to move HUD elements.";
+        String instr = "Drag to move | Scroll to resize";
         int tw = textRenderer.getWidth(instr);
         context.drawTextWithShadow(textRenderer, instr, (width - tw) / 2, doneButton.getY() - 18, 0xFFFFFFFF);
 
@@ -146,6 +146,22 @@ public class MoveHudScreen extends Screen {
             return true;
         }
         return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        // Check if cursor is over inventory HUD
+        int invX = RenderConfig.getInventoryHudX();
+        int invY = RenderConfig.getInventoryHudY();
+        int invW = InventoryHudRenderer.getHudWidth();
+        int invH = InventoryHudRenderer.getHudHeight();
+        if (mouseX >= invX && mouseX <= invX + invW && mouseY >= invY && mouseY <= invY + invH) {
+            float newScale = RenderConfig.getInventoryHudScale() + (float) verticalAmount * 0.1f;
+            RenderConfig.setInventoryHudScale(newScale);
+            RenderConfig.save();
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     private int clamp(int v, int min, int max) { return Math.max(min, Math.min(max, v)); }

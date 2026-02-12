@@ -45,8 +45,12 @@ public final class RenderConfig {
     private static boolean defaultEspChromaEnabled = true;
     private static int stalkTracerColor = 0xFFFFFFFF;
     private static boolean stalkTracerChromaEnabled = true;
+    private static int hudCornerRadius = 0;
 
     private RenderConfig() {}
+
+    public static int getHudCornerRadius() { return hudCornerRadius; }
+    public static void setHudCornerRadius(int r) { hudCornerRadius = Math.max(0, Math.min(12, r)); }
 
     public static boolean isInventoryHudEnabled() { return inventoryHudEnabled; }
     public static void setInventoryHudEnabled(boolean enabled) { inventoryHudEnabled = enabled; }
@@ -56,7 +60,7 @@ public final class RenderConfig {
     public static void setInventoryHudX(int x) { inventoryHudX = x; }
     public static void setInventoryHudY(int y) { inventoryHudY = y; }
     public static float getInventoryHudScale() { return inventoryHudScale; }
-    public static void setInventoryHudScale(float scale) { inventoryHudScale = 1.1f; }
+    public static void setInventoryHudScale(float scale) { inventoryHudScale = Math.max(0.5f, Math.min(2.0f, scale)); }
 
     public static boolean isFloydHatEnabled() { return floydHatEnabled; }
     public static void setFloydHatEnabled(boolean v) { floydHatEnabled = v; }

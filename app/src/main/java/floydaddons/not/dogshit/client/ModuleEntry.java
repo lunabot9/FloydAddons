@@ -194,4 +194,18 @@ public class ModuleEntry {
         public String getValue() { return getter.get(); }
         public void setValue(String value) { setter.accept(value); }
     }
+
+    /**
+     * An inline expandable block filter list (for X-Ray blocks).
+     */
+    public static class BlockFilterSetting extends SubSetting {
+        public BlockFilterSetting(String label) { super(label); }
+    }
+
+    /**
+     * An inline expandable mob filter list (for Mob ESP filters).
+     */
+    public static class MobFilterSetting extends SubSetting {
+        public MobFilterSetting(String label) { super(label); }
+    }
 }

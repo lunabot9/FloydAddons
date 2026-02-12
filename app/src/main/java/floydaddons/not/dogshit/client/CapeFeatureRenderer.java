@@ -71,11 +71,11 @@ public class CapeFeatureRenderer extends FeatureRenderer<PlayerEntityRenderState
         float vTop = 0f;
         float vBottom = 1f;
 
-        // back face (full image)
-        consumer.vertex(entry, x0, y0, zBack).color(255,255,255,255).texture(0f, 0f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
-        consumer.vertex(entry, x1, y0, zBack).color(255,255,255,255).texture(1f, 0f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
-        consumer.vertex(entry, x1, y1, zBack).color(255,255,255,255).texture(1f, 1f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
-        consumer.vertex(entry, x0, y1, zBack).color(255,255,255,255).texture(0f, 1f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
+        // back face (full image, U flipped so PNG reads correctly from behind)
+        consumer.vertex(entry, x0, y0, zBack).color(255,255,255,255).texture(1f, 0f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
+        consumer.vertex(entry, x1, y0, zBack).color(255,255,255,255).texture(0f, 0f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
+        consumer.vertex(entry, x1, y1, zBack).color(255,255,255,255).texture(0f, 1f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
+        consumer.vertex(entry, x0, y1, zBack).color(255,255,255,255).texture(1f, 1f).overlay(overlay).light(light).normal(entry, 0, 0, 1);
 
         // front face (repeat image)
         consumer.vertex(entry, x0, y1, zFront).color(255,255,255,255).texture(0f, 1f).overlay(overlay).light(light).normal(entry, 0, 0, -1);

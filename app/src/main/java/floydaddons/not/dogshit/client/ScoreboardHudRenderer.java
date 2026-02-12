@@ -136,10 +136,14 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
         int y = clamp(RenderConfig.getCustomScoreboardY(), 0, sh - boxHeight);
 
         // Background
-        context.fill(x, y, x + boxWidth, y + boxHeight, BACKGROUND_COLOR);
-
-        // Chroma border
-        InventoryHudRenderer.drawChromaBorder(context, x - 1, y - 1, x + boxWidth + 1, y + boxHeight + 1, 1f);
+        int radius = RenderConfig.getHudCornerRadius();
+        if (radius > 0) {
+            InventoryHudRenderer.fillRoundedRect(context, x, y, boxWidth, boxHeight, radius, BACKGROUND_COLOR);
+            InventoryHudRenderer.drawRoundedChromaBorder(context, x - 1, y - 1, boxWidth + 2, boxHeight + 2, radius, 1f);
+        } else {
+            context.fill(x, y, x + boxWidth, y + boxHeight, BACKGROUND_COLOR);
+            InventoryHudRenderer.drawChromaBorder(context, x - 1, y - 1, x + boxWidth + 1, y + boxHeight + 1, 1f);
+        }
 
         // Title (chroma colored, centered)
         int titleX = x + (boxWidth - titleWidth) / 2;

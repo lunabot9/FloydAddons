@@ -1,13 +1,16 @@
 package floydaddons.not.dogshit.client;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 
@@ -28,7 +31,7 @@ public class XrayEditorScreen extends Screen {
     private static final int BOX_HEIGHT = 300;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
-    private static final int ENTRY_HEIGHT = 16;
+    private static final int ENTRY_HEIGHT = 20;
     private static final int CONTENT_PADDING = 4;
     private static final int BUTTON_SIZE_W = 18;
     private static final int BUTTON_SIZE_H = 16;
@@ -189,13 +192,18 @@ public class XrayEditorScreen extends Screen {
         // --- Active block entries ---
         for (String id : activeBlocks) {
             int entryY = y;
-            // Text label
+            // Block item icon
+            int iconX = contentLeft + 2;
+            int iconY = entryY + (ENTRY_HEIGHT - 16) / 2;
+            renderBlockItem(context, id, iconX, iconY);
+            // Text label (shifted right for icon)
             String label = id;
-            int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 8;
+            int labelX = contentLeft + 22;
+            int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 26;
             if (textRenderer.getWidth(label) > maxLabelWidth) {
                 label = textRenderer.trimToWidth(label, maxLabelWidth - textRenderer.getWidth("...")) + "...";
             }
-            context.drawTextWithShadow(textRenderer, label, contentLeft + 4, entryY + (ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+            context.drawTextWithShadow(textRenderer, label, labelX, entryY + (ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
                     applyAlpha(0xFFCCCCCC, guiAlpha));
 
             // [-] button
@@ -230,13 +238,18 @@ public class XrayEditorScreen extends Screen {
         // --- Nearby block entries ---
         for (String id : nearbyBlocks) {
             int entryY = y;
-            // Text label
+            // Block item icon
+            int nearIconX = contentLeft + 2;
+            int nearIconY = entryY + (ENTRY_HEIGHT - 16) / 2;
+            renderBlockItem(context, id, nearIconX, nearIconY);
+            // Text label (shifted right for icon)
             String label = id;
-            int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 8;
+            int nearLabelX = contentLeft + 22;
+            int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 26;
             if (textRenderer.getWidth(label) > maxLabelWidth) {
                 label = textRenderer.trimToWidth(label, maxLabelWidth - textRenderer.getWidth("...")) + "...";
             }
-            context.drawTextWithShadow(textRenderer, label, contentLeft + 4, entryY + (ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+            context.drawTextWithShadow(textRenderer, label, nearLabelX, entryY + (ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
                     applyAlpha(0xFFAAAAAA, guiAlpha));
 
             // [+] button
@@ -357,6 +370,16 @@ public class XrayEditorScreen extends Screen {
     private int applyAlpha(int color, float alpha) {
         int a = Math.round(((color >>> 24) & 0xFF) * alpha);
         return (a << 24) | (color & 0x00FFFFFF);
+    }
+
+    private void renderBlockItem(DrawContext context, String blockId, int x, int y) {
+        try {
+            Block block = Registries.BLOCK.get(Identifier.of(blockId));
+            ItemStack stack = new ItemStack(block.asItem());
+            if (!stack.isEmpty()) {
+                context.drawItem(stack, x, y);
+            }
+        } catch (Exception ignored) {}
     }
 
     private int chromaColor(float offset) {
