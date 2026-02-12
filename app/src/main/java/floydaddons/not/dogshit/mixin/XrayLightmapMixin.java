@@ -1,6 +1,5 @@
 package floydaddons.not.dogshit.mixin;
 
-import floydaddons.not.dogshit.client.HidersConfig;
 import floydaddons.not.dogshit.client.RenderConfig;
 import net.minecraft.client.option.SimpleOption;
 import net.minecraft.client.render.LightmapTextureManager;
@@ -15,7 +14,7 @@ public class XrayLightmapMixin {
                        target = "Lnet/minecraft/client/option/SimpleOption;getValue()Ljava/lang/Object;",
                        ordinal = 0))
     private Object floydaddons$overrideGamma(SimpleOption<?> instance) {
-        if (RenderConfig.isXrayEnabled() || HidersConfig.isFullbrightEnabled()) {
+        if (RenderConfig.isXrayEnabled()) {
             return 15.0;
         }
         return instance.getValue();

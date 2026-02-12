@@ -111,8 +111,8 @@ public class CapeFeatureRenderer extends FeatureRenderer<PlayerEntityRenderState
     private static void applyVanillaCapeRotation(MatrixStack matrices, PlayerEntityRenderState state) {
         // Flip the X tilt so it swings backward instead of forward, while keeping vanilla sway.
         float xRotDeg = -(6.0f + (state.field_53537 / 2.0f) + state.field_53536);
-        float zRotDeg = state.field_53538 / 2.0f;
-        float yRotDeg = 180.0f - (state.field_53538 / 2.0f);
+        float zRotDeg = -(state.field_53538 / 2.0f);
+        float yRotDeg = 180.0f + (state.field_53538 / 2.0f);
 
         matrices.multiply(RotationAxis.NEGATIVE_Y.rotationDegrees(180f));
         matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(xRotDeg));

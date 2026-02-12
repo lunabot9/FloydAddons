@@ -79,6 +79,9 @@ public class FloydAddonsScreen extends Screen {
         labels.add(new LabelItem("Cosmetic", 0, 0));
         labels.add(new LabelItem("Render", 0, 0));
         labels.add(new LabelItem("Neck Hider", 0, 0));
+        labels.add(new LabelItem("Camera", 0, 0));
+        labels.add(new LabelItem("Hiders", 0, 0));
+        labels.add(new LabelItem("Animations", 0, 0));
     }
 
     @Override
@@ -319,6 +322,21 @@ public class FloydAddonsScreen extends Screen {
                     }} else if ("Cosmetic".equals(label.text)) {
                     if (client != null) {
                         client.setScreen(new SkinScreen(this));
+                        return true;
+                    }
+                } else if ("Camera".equals(label.text)) {
+                    if (client != null) {
+                        client.setScreen(new CameraScreen(this));
+                        return true;
+                    }
+                } else if ("Hiders".equals(label.text)) {
+                    if (client != null) {
+                        client.setScreen(new HidersScreen(this));
+                        return true;
+                    }
+                } else if ("Animations".equals(label.text)) {
+                    if (client != null) {
+                        client.setScreen(new AnimationsScreen(this));
                         return true;
                     }
                 }

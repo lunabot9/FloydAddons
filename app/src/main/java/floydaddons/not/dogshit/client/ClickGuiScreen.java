@@ -1,5 +1,6 @@
 package floydaddons.not.dogshit.client;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -16,6 +17,7 @@ import java.util.Map;
 /**
  * OdinClient-style ClickGUI with draggable vertical panels, one per category.
  * Left-click toggles modules, right-click expands sub-settings.
+ * All config is accessible inline — no need for separate screens.
  */
 public class ClickGuiScreen extends Screen {
     private static final int PANEL_WIDTH = 200;
@@ -32,7 +34,6 @@ public class ClickGuiScreen extends Screen {
     private static final int COLOR_MODULE_ENABLED = 0xFF2A3A2A;
     private static final int COLOR_SETTING_BG = 0xFF222222;
     private static final int COLOR_SLIDER_BG = 0xFF333333;
-    private static final int COLOR_SLIDER_FILL = 0xFF4488FF;
 
     private final Map<ModuleCategory, List<ModuleEntry>> modules = new LinkedHashMap<>();
     private ModuleCategory draggingPanel = null;
@@ -42,6 +43,10 @@ public class ClickGuiScreen extends Screen {
     private boolean searchFocused = false;
     private ModuleEntry.SliderSetting draggingSlider = null;
     private int draggingSliderX, draggingSliderWidth;
+
+    // Inline text editing state
+    private ModuleEntry.TextSetting editingText = null;
+    private String textEditBuffer = "";
 
     private long openStartMs;
     private long closeStartMs;
@@ -59,20 +64,30 @@ public class ClickGuiScreen extends Screen {
         searchQuery = "";
         searchFocused = false;
         draggingSlider = null;
+        editingText = null;
+        textEditBuffer = "";
         initModules();
     }
 
     private void initModules() {
         modules.clear();
+        ClickGuiScreen self = this;
 
-        // --- RENDER ---
+        // ═══════════════════════ RENDER ═══════════════════════
+
         List<ModuleEntry> render = new ArrayList<>();
+
         render.add(new ModuleEntry("X-Ray", "Toggle X-Ray vision",
                 RenderConfig::isXrayEnabled, RenderConfig::toggleXray,
-                List.of(new ModuleEntry.SliderSetting("Opacity", RenderConfig::getXrayOpacity,
-                        RenderConfig::setXrayOpacity, 0.05f, 1.0f, "%.0f%%") {
-                    @Override public String getFormattedValue() { return String.format("%.0f%%", getValue() * 100); }
-                })));
+                List.of(
+                        new ModuleEntry.SliderSetting("Opacity", RenderConfig::getXrayOpacity,
+                                RenderConfig::setXrayOpacity, 0.05f, 1.0f, "%.0f%%") {
+                            @Override public String getFormattedValue() { return String.format("%.0f%%", getValue() * 100); }
+                        },
+                        new ModuleEntry.ButtonSetting("Edit Blocks",
+                                () -> MinecraftClient.getInstance().setScreen(new XrayEditorScreen(self)))
+                )));
+
         render.add(new ModuleEntry("Mob ESP", "Highlight mobs through walls",
                 RenderConfig::isMobEspEnabled, RenderConfig::toggleMobEsp,
                 List.of(
@@ -81,96 +96,239 @@ public class ClickGuiScreen extends Screen {
                         new ModuleEntry.BooleanSetting("Hitboxes", RenderConfig::isMobEspHitboxes,
                                 () -> RenderConfig.setMobEspHitboxes(!RenderConfig.isMobEspHitboxes())),
                         new ModuleEntry.BooleanSetting("Star Mobs", RenderConfig::isMobEspStarMobs,
-                                () -> RenderConfig.setMobEspStarMobs(!RenderConfig.isMobEspStarMobs()))
+                                () -> RenderConfig.setMobEspStarMobs(!RenderConfig.isMobEspStarMobs())),
+                        new ModuleEntry.ColorSetting("Default ESP Color",
+                                RenderConfig::getDefaultEspColor, RenderConfig::setDefaultEspColor,
+                                RenderConfig::isDefaultEspChromaEnabled, RenderConfig::setDefaultEspChromaEnabled),
+                        new ModuleEntry.ColorSetting("Stalk Tracer Color",
+                                RenderConfig::getStalkTracerColor, RenderConfig::setStalkTracerColor,
+                                RenderConfig::isStalkTracerChromaEnabled, RenderConfig::setStalkTracerChromaEnabled),
+                        new ModuleEntry.ButtonSetting("Edit Filters",
+                                () -> MinecraftClient.getInstance().setScreen(new MobEspEditorScreen(self)))
                 )));
+
+        render.add(new ModuleEntry("Cape", "Custom cape cosmetic",
+                RenderConfig::isCapeEnabled,
+                () -> { RenderConfig.setCapeEnabled(!RenderConfig.isCapeEnabled()); FloydAddonsConfig.save(); },
+                List.of(
+                        new ModuleEntry.CycleSetting("Image",
+                                () -> CapeManager.listAvailableImages(true),
+                                RenderConfig::getSelectedCapeImage,
+                                img -> { RenderConfig.setSelectedCapeImage(img); RenderConfig.save(); }),
+                        new ModuleEntry.ButtonSetting("Open Folder",
+                                () -> openPath(CapeManager.ensureDir()))
+                )));
+
         render.add(new ModuleEntry("Cone Hat", "Floyd cone hat cosmetic",
                 RenderConfig::isFloydHatEnabled,
-                () -> RenderConfig.setFloydHatEnabled(!RenderConfig.isFloydHatEnabled())));
+                () -> RenderConfig.setFloydHatEnabled(!RenderConfig.isFloydHatEnabled()),
+                List.of(
+                        new ModuleEntry.SliderSetting("Height", RenderConfig::getConeHatHeight,
+                                RenderConfig::setConeHatHeight, 0.1f, 1.5f, "%.2f"),
+                        new ModuleEntry.SliderSetting("Radius", RenderConfig::getConeHatRadius,
+                                RenderConfig::setConeHatRadius, 0.05f, 0.8f, "%.2f"),
+                        new ModuleEntry.SliderSetting("Y Offset", RenderConfig::getConeHatYOffset,
+                                RenderConfig::setConeHatYOffset, -1.5f, 0.5f, "%.2f"),
+                        new ModuleEntry.SliderSetting("Rotation", RenderConfig::getConeHatRotation,
+                                RenderConfig::setConeHatRotation, 0f, 360f, "%.0f"),
+                        new ModuleEntry.SliderSetting("Spin Speed", RenderConfig::getConeHatRotationSpeed,
+                                RenderConfig::setConeHatRotationSpeed, 0f, 360f, "%.0f"),
+                        new ModuleEntry.CycleSetting("Image",
+                                ConeHatManager::listAvailableImages,
+                                RenderConfig::getSelectedConeImage,
+                                img -> { RenderConfig.setSelectedConeImage(img); RenderConfig.save(); ConeHatManager.clearCache(); }),
+                        new ModuleEntry.ButtonSetting("Open Folder",
+                                () -> openPath(ConeHatManager.ensureDir()))
+                )));
+
         render.add(new ModuleEntry("Server ID Hider", "Hide server address display",
                 RenderConfig::isServerIdHiderEnabled,
                 () -> RenderConfig.setServerIdHiderEnabled(!RenderConfig.isServerIdHiderEnabled())));
+
         render.add(new ModuleEntry("Inventory HUD", "Show inventory overlay",
                 RenderConfig::isInventoryHudEnabled,
-                () -> RenderConfig.setInventoryHudEnabled(!RenderConfig.isInventoryHudEnabled())));
+                () -> RenderConfig.setInventoryHudEnabled(!RenderConfig.isInventoryHudEnabled()),
+                List.of(
+                        new ModuleEntry.ButtonSetting("Edit Layout",
+                                () -> MinecraftClient.getInstance().setScreen(new MoveHudScreen(self)))
+                )));
+
         render.add(new ModuleEntry("Custom Scoreboard", "Styled scoreboard sidebar",
                 RenderConfig::isCustomScoreboardEnabled,
-                () -> RenderConfig.setCustomScoreboardEnabled(!RenderConfig.isCustomScoreboardEnabled())));
+                () -> RenderConfig.setCustomScoreboardEnabled(!RenderConfig.isCustomScoreboardEnabled()),
+                List.of(
+                        new ModuleEntry.ButtonSetting("Edit Layout",
+                                () -> MinecraftClient.getInstance().setScreen(new MoveHudScreen(self)))
+                )));
+
+        render.add(new ModuleEntry("GUI Style", "Customize UI colors and chroma",
+                () -> RenderConfig.isButtonTextChromaEnabled() || RenderConfig.isButtonBorderChromaEnabled() || RenderConfig.isGuiBorderChromaEnabled(),
+                () -> {},
+                List.of(
+                        new ModuleEntry.ColorSetting("Text Color",
+                                RenderConfig::getButtonTextColor, RenderConfig::setButtonTextColor,
+                                RenderConfig::isButtonTextChromaEnabled, RenderConfig::setButtonTextChromaEnabled),
+                        new ModuleEntry.ColorSetting("Button Border Color",
+                                RenderConfig::getButtonBorderColor, RenderConfig::setButtonBorderColor,
+                                RenderConfig::isButtonBorderChromaEnabled, RenderConfig::setButtonBorderChromaEnabled),
+                        new ModuleEntry.ColorSetting("GUI Border Color",
+                                RenderConfig::getGuiBorderColor, RenderConfig::setGuiBorderColor,
+                                RenderConfig::isGuiBorderChromaEnabled, RenderConfig::setGuiBorderChromaEnabled)
+                )));
+
+        // Hiders (merged into Render panel)
+        addHiderToggle(render, "No Hurt Camera", "Remove damage camera shake", HidersConfig::isNoHurtCameraEnabled,
+                () -> HidersConfig.setNoHurtCameraEnabled(!HidersConfig.isNoHurtCameraEnabled()));
+        addHiderToggle(render, "Remove Fire Overlay", "Hide fire screen overlay", HidersConfig::isRemoveFireOverlayEnabled,
+                () -> HidersConfig.setRemoveFireOverlayEnabled(!HidersConfig.isRemoveFireOverlayEnabled()));
+        addHiderToggle(render, "Disable Hunger Bar", "Hide hunger display", HidersConfig::isDisableHungerBarEnabled,
+                () -> HidersConfig.setDisableHungerBarEnabled(!HidersConfig.isDisableHungerBarEnabled()));
+        addHiderToggle(render, "Hide Potion Effects", "Hide potion effect icons", HidersConfig::isHidePotionEffectsEnabled,
+                () -> HidersConfig.setHidePotionEffectsEnabled(!HidersConfig.isHidePotionEffectsEnabled()));
+        addHiderToggle(render, "3rd Person Crosshair", "Show crosshair in 3rd person", HidersConfig::isThirdPersonCrosshairEnabled,
+                () -> HidersConfig.setThirdPersonCrosshairEnabled(!HidersConfig.isThirdPersonCrosshairEnabled()));
+        addHiderToggle(render, "Hide Entity Fire", "Hide fire on entities", HidersConfig::isHideEntityFireEnabled,
+                () -> HidersConfig.setHideEntityFireEnabled(!HidersConfig.isHideEntityFireEnabled()));
+        addHiderToggle(render, "Disable Arrows", "Hide arrows stuck in models", HidersConfig::isDisableAttachedArrowsEnabled,
+                () -> HidersConfig.setDisableAttachedArrowsEnabled(!HidersConfig.isDisableAttachedArrowsEnabled()));
+        addHiderToggle(render, "Remove Falling Blocks", "Hide falling block entities", HidersConfig::isRemoveFallingBlocksEnabled,
+                () -> HidersConfig.setRemoveFallingBlocksEnabled(!HidersConfig.isRemoveFallingBlocksEnabled()));
+        addHiderToggle(render, "No Explosion Particles", "Hide explosion particles", HidersConfig::isRemoveExplosionParticlesEnabled,
+                () -> HidersConfig.setRemoveExplosionParticlesEnabled(!HidersConfig.isRemoveExplosionParticlesEnabled()));
+        addHiderToggle(render, "Remove Tab Ping", "Hide ping icons in tab list", HidersConfig::isRemoveTabPingEnabled,
+                () -> HidersConfig.setRemoveTabPingEnabled(!HidersConfig.isRemoveTabPingEnabled()));
+        addHiderToggle(render, "Hide Ground Arrows", "Hide arrows stuck in ground", HidersConfig::isHideGroundedArrowsEnabled,
+                () -> HidersConfig.setHideGroundedArrowsEnabled(!HidersConfig.isHideGroundedArrowsEnabled()));
+
+        // Attack Animation (merged into Render panel)
+        render.add(new ModuleEntry("Attack Animation", "Custom held item animations",
+                AnimationConfig::isEnabled,
+                () -> AnimationConfig.setEnabled(!AnimationConfig.isEnabled()),
+                List.of(
+                        new ModuleEntry.SliderSetting("Pos X", () -> (float) AnimationConfig.getPosX(),
+                                v -> AnimationConfig.setPosX(Math.round(v)), -150f, 150f, "%.0f"),
+                        new ModuleEntry.SliderSetting("Pos Y", () -> (float) AnimationConfig.getPosY(),
+                                v -> AnimationConfig.setPosY(Math.round(v)), -150f, 150f, "%.0f"),
+                        new ModuleEntry.SliderSetting("Pos Z", () -> (float) AnimationConfig.getPosZ(),
+                                v -> AnimationConfig.setPosZ(Math.round(v)), -150f, 50f, "%.0f"),
+                        new ModuleEntry.SliderSetting("Rot X", () -> (float) AnimationConfig.getRotX(),
+                                v -> AnimationConfig.setRotX(Math.round(v)), -180f, 180f, "%.0f"),
+                        new ModuleEntry.SliderSetting("Rot Y", () -> (float) AnimationConfig.getRotY(),
+                                v -> AnimationConfig.setRotY(Math.round(v)), -180f, 180f, "%.0f"),
+                        new ModuleEntry.SliderSetting("Rot Z", () -> (float) AnimationConfig.getRotZ(),
+                                v -> AnimationConfig.setRotZ(Math.round(v)), -180f, 180f, "%.0f"),
+                        new ModuleEntry.SliderSetting("Scale", AnimationConfig::getScale,
+                                AnimationConfig::setScale, 0.1f, 2.0f, "%.2f"),
+                        new ModuleEntry.SliderSetting("Swing Duration", () -> (float) AnimationConfig.getSwingDuration(),
+                                v -> AnimationConfig.setSwingDuration(Math.round(v)), 1f, 100f, "%.0f"),
+                        new ModuleEntry.BooleanSetting("Cancel Re-Equip", AnimationConfig::isCancelReEquip,
+                                () -> AnimationConfig.setCancelReEquip(!AnimationConfig.isCancelReEquip())),
+                        new ModuleEntry.BooleanSetting("Hide Hand", AnimationConfig::isHidePlayerHand,
+                                () -> AnimationConfig.setHidePlayerHand(!AnimationConfig.isHidePlayerHand())),
+                        new ModuleEntry.BooleanSetting("Classic Click", AnimationConfig::isClassicClick,
+                                () -> AnimationConfig.setClassicClick(!AnimationConfig.isClassicClick()))
+                )));
+
         modules.put(ModuleCategory.RENDER, render);
 
-        // --- HIDERS ---
-        List<ModuleEntry> hiders = new ArrayList<>();
-        addHiderToggle(hiders, "Fullbright", "Maximum gamma", HidersConfig::isFullbrightEnabled,
-                () -> HidersConfig.setFullbrightEnabled(!HidersConfig.isFullbrightEnabled()));
-        addHiderToggle(hiders, "Disable Fog", "Remove fog rendering", HidersConfig::isDisableFogEnabled,
-                () -> HidersConfig.setDisableFogEnabled(!HidersConfig.isDisableFogEnabled()));
-        addHiderToggle(hiders, "Disable Blindness", "Remove blindness effect", HidersConfig::isDisableBlindnessEnabled,
-                () -> HidersConfig.setDisableBlindnessEnabled(!HidersConfig.isDisableBlindnessEnabled()));
-        addHiderToggle(hiders, "No Hurt Camera", "Remove damage camera shake", HidersConfig::isNoHurtCameraEnabled,
-                () -> HidersConfig.setNoHurtCameraEnabled(!HidersConfig.isNoHurtCameraEnabled()));
-        addHiderToggle(hiders, "Remove Fire Overlay", "Hide fire screen overlay", HidersConfig::isRemoveFireOverlayEnabled,
-                () -> HidersConfig.setRemoveFireOverlayEnabled(!HidersConfig.isRemoveFireOverlayEnabled()));
-        addHiderToggle(hiders, "Remove Water Overlay", "Hide underwater overlay", HidersConfig::isRemoveWaterOverlayEnabled,
-                () -> HidersConfig.setRemoveWaterOverlayEnabled(!HidersConfig.isRemoveWaterOverlayEnabled()));
-        addHiderToggle(hiders, "Remove Suffocation", "Hide suffocation overlay", HidersConfig::isRemoveSuffocationOverlayEnabled,
-                () -> HidersConfig.setRemoveSuffocationOverlayEnabled(!HidersConfig.isRemoveSuffocationOverlayEnabled()));
-        addHiderToggle(hiders, "Disable Vignette", "Remove screen edge darkening", HidersConfig::isDisableVignetteEnabled,
-                () -> HidersConfig.setDisableVignetteEnabled(!HidersConfig.isDisableVignetteEnabled()));
-        addHiderToggle(hiders, "Disable Hunger Bar", "Hide hunger display", HidersConfig::isDisableHungerBarEnabled,
-                () -> HidersConfig.setDisableHungerBarEnabled(!HidersConfig.isDisableHungerBarEnabled()));
-        addHiderToggle(hiders, "Hide Potion Effects", "Hide potion effect icons", HidersConfig::isHidePotionEffectsEnabled,
-                () -> HidersConfig.setHidePotionEffectsEnabled(!HidersConfig.isHidePotionEffectsEnabled()));
-        addHiderToggle(hiders, "3rd Person Crosshair", "Show crosshair in 3rd person", HidersConfig::isThirdPersonCrosshairEnabled,
-                () -> HidersConfig.setThirdPersonCrosshairEnabled(!HidersConfig.isThirdPersonCrosshairEnabled()));
-        addHiderToggle(hiders, "Hide Entity Fire", "Hide fire on entities", HidersConfig::isHideEntityFireEnabled,
-                () -> HidersConfig.setHideEntityFireEnabled(!HidersConfig.isHideEntityFireEnabled()));
-        addHiderToggle(hiders, "Disable Arrows", "Hide arrows stuck in models", HidersConfig::isDisableAttachedArrowsEnabled,
-                () -> HidersConfig.setDisableAttachedArrowsEnabled(!HidersConfig.isDisableAttachedArrowsEnabled()));
-        addHiderToggle(hiders, "No Death Animation", "Remove entity death tilt", HidersConfig::isNoDeathAnimationEnabled,
-                () -> HidersConfig.setNoDeathAnimationEnabled(!HidersConfig.isNoDeathAnimationEnabled()));
-        addHiderToggle(hiders, "Remove Falling Blocks", "Hide falling block entities", HidersConfig::isRemoveFallingBlocksEnabled,
-                () -> HidersConfig.setRemoveFallingBlocksEnabled(!HidersConfig.isRemoveFallingBlocksEnabled()));
-        addHiderToggle(hiders, "Remove Lightning", "Hide lightning bolts", HidersConfig::isRemoveLightningEnabled,
-                () -> HidersConfig.setRemoveLightningEnabled(!HidersConfig.isRemoveLightningEnabled()));
-        addHiderToggle(hiders, "No Block Particles", "Hide block break particles", HidersConfig::isRemoveBlockBreakParticlesEnabled,
-                () -> HidersConfig.setRemoveBlockBreakParticlesEnabled(!HidersConfig.isRemoveBlockBreakParticlesEnabled()));
-        addHiderToggle(hiders, "No Explosion Particles", "Hide explosion particles", HidersConfig::isRemoveExplosionParticlesEnabled,
-                () -> HidersConfig.setRemoveExplosionParticlesEnabled(!HidersConfig.isRemoveExplosionParticlesEnabled()));
-        addHiderToggle(hiders, "Remove Tab Ping", "Hide ping icons in tab list", HidersConfig::isRemoveTabPingEnabled,
-                () -> HidersConfig.setRemoveTabPingEnabled(!HidersConfig.isRemoveTabPingEnabled()));
-        addHiderToggle(hiders, "No Nametag BG", "Remove nametag background", HidersConfig::isDisableNametagBackgroundEnabled,
-                () -> HidersConfig.setDisableNametagBackgroundEnabled(!HidersConfig.isDisableNametagBackgroundEnabled()));
-        addHiderToggle(hiders, "Remove Glow", "Remove entity glow outlines", HidersConfig::isRemoveGlowEffectEnabled,
-                () -> HidersConfig.setRemoveGlowEffectEnabled(!HidersConfig.isRemoveGlowEffectEnabled()));
-        addHiderToggle(hiders, "Hide Ground Arrows", "Hide arrow entities", HidersConfig::isHideGroundedArrowsEnabled,
-                () -> HidersConfig.setHideGroundedArrowsEnabled(!HidersConfig.isHideGroundedArrowsEnabled()));
-        addHiderToggle(hiders, "Cancel Bad Sound", "Mute incorrect action sound", HidersConfig::isCancelIncorrectSoundEnabled,
-                () -> HidersConfig.setCancelIncorrectSoundEnabled(!HidersConfig.isCancelIncorrectSoundEnabled()));
-        modules.put(ModuleCategory.HIDERS, hiders);
+        // ═══════════════════════ PLAYER ═══════════════════════
 
-        // --- PLAYER ---
         List<ModuleEntry> player = new ArrayList<>();
-        player.add(new ModuleEntry("Nick Hider", "Hide/replace player names",
+
+        player.add(new ModuleEntry("Neck Hider", "Hide/replace player names",
                 NickHiderConfig::isEnabled,
-                () -> NickHiderConfig.setEnabled(!NickHiderConfig.isEnabled())));
-        player.add(new ModuleEntry("Skin Swap", "Use custom player skin",
-                () -> SkinConfig.selfEnabled() || SkinConfig.othersEnabled(),
-                () -> {
-                    boolean newState = !(SkinConfig.selfEnabled() || SkinConfig.othersEnabled());
-                    SkinConfig.setSelfEnabled(newState);
-                    SkinConfig.setOthersEnabled(newState);
-                },
+                () -> NickHiderConfig.setEnabled(!NickHiderConfig.isEnabled()),
+                List.of(
+                        new ModuleEntry.TextSetting("Default Nick", NickHiderConfig::getNickname,
+                                nick -> { NickHiderConfig.setNickname(nick); NickHiderConfig.save(); }),
+                        new ModuleEntry.ButtonSetting("Edit Names",
+                                () -> MinecraftClient.getInstance().setScreen(new NameMappingsEditorScreen(self))),
+                        new ModuleEntry.ButtonSetting("Reload Names",
+                                () -> NickHiderConfig.loadNameMappings())
+                )));
+
+        player.add(new ModuleEntry("Custom Skin", "Enable custom skin system",
+                SkinConfig::customEnabled,
+                () -> { SkinConfig.setCustomEnabled(!SkinConfig.customEnabled()); FloydAddonsConfig.save(); },
                 List.of(
                         new ModuleEntry.BooleanSetting("Self", SkinConfig::selfEnabled,
                                 () -> SkinConfig.setSelfEnabled(!SkinConfig.selfEnabled())),
                         new ModuleEntry.BooleanSetting("Others", SkinConfig::othersEnabled,
-                                () -> SkinConfig.setOthersEnabled(!SkinConfig.othersEnabled()))
+                                () -> SkinConfig.setOthersEnabled(!SkinConfig.othersEnabled())),
+                        new ModuleEntry.CycleSetting("Skin",
+                                SkinManager::listAvailableSkins,
+                                SkinConfig::getSelectedSkin,
+                                skin -> { SkinConfig.setSelectedSkin(skin); SkinConfig.save(); SkinManager.clearCache(); }),
+                        new ModuleEntry.ButtonSetting("Open Folder",
+                                () -> openPath(SkinManager.ensureExternalDir()))
                 )));
+
+        player.add(new ModuleEntry("Player Size", "Change player model scale (XYZ)",
+                () -> SkinConfig.getPlayerScaleX() != 1.0f || SkinConfig.getPlayerScaleY() != 1.0f || SkinConfig.getPlayerScaleZ() != 1.0f,
+                () -> {
+                    if (SkinConfig.getPlayerScaleX() != 1.0f || SkinConfig.getPlayerScaleY() != 1.0f || SkinConfig.getPlayerScaleZ() != 1.0f) {
+                        SkinConfig.setPlayerScale(1.0f);
+                    } else {
+                        SkinConfig.setPlayerScale(2.0f);
+                    }
+                },
+                List.of(
+                        new ModuleEntry.SliderSetting("X", SkinConfig::getPlayerScaleX,
+                                SkinConfig::setPlayerScaleX, -1.0f, 5.0f, "%.1f"),
+                        new ModuleEntry.SliderSetting("Y", SkinConfig::getPlayerScaleY,
+                                SkinConfig::setPlayerScaleY, -1.0f, 5.0f, "%.1f"),
+                        new ModuleEntry.SliderSetting("Z", SkinConfig::getPlayerScaleZ,
+                                SkinConfig::setPlayerScaleZ, -1.0f, 5.0f, "%.1f")
+                )));
+
         modules.put(ModuleCategory.PLAYER, player);
+
+        // ═══════════════════════ CAMERA ═══════════════════════
+
+        List<ModuleEntry> camera = new ArrayList<>();
+        camera.add(new ModuleEntry("Freecam", "Detached spectator camera",
+                CameraConfig::isFreecamEnabled, CameraConfig::toggleFreecam,
+                List.of(new ModuleEntry.SliderSetting("Speed", CameraConfig::getFreecamSpeed,
+                        CameraConfig::setFreecamSpeed, 0.1f, 10.0f, "%.1f"))));
+        camera.add(new ModuleEntry("Freelook", "Orbit camera around player",
+                CameraConfig::isFreelookEnabled, CameraConfig::toggleFreelook,
+                List.of(new ModuleEntry.SliderSetting("Distance", CameraConfig::getFreelookDistance,
+                        CameraConfig::setFreelookDistance, 1.0f, 20.0f, "%.1f"))));
+        camera.add(new ModuleEntry("F5 Customizer", "Customize third-person camera",
+                () -> CameraConfig.isF5DisableFront() || CameraConfig.isF5DisableBack()
+                        || CameraConfig.getF5CameraDistance() != 4.0f || CameraConfig.isF5ScrollEnabled(),
+                () -> {},
+                List.of(
+                        new ModuleEntry.BooleanSetting("Disable Front Cam", CameraConfig::isF5DisableFront,
+                                () -> { CameraConfig.setF5DisableFront(!CameraConfig.isF5DisableFront()); FloydAddonsConfig.save(); }),
+                        new ModuleEntry.BooleanSetting("Disable Back Cam", CameraConfig::isF5DisableBack,
+                                () -> { CameraConfig.setF5DisableBack(!CameraConfig.isF5DisableBack()); FloydAddonsConfig.save(); }),
+                        new ModuleEntry.BooleanSetting("Scrolling Changes Distance", CameraConfig::isF5ScrollEnabled,
+                                () -> { CameraConfig.setF5ScrollEnabled(!CameraConfig.isF5ScrollEnabled()); FloydAddonsConfig.save(); }),
+                        new ModuleEntry.BooleanSetting("Reset F5 Scrolling", CameraConfig::isF5ResetOnToggle,
+                                () -> { CameraConfig.setF5ResetOnToggle(!CameraConfig.isF5ResetOnToggle()); FloydAddonsConfig.save(); }),
+                        new ModuleEntry.SliderSetting("Camera Distance", CameraConfig::getF5CameraDistance,
+                                CameraConfig::setF5CameraDistance, 1.0f, 20.0f, "%.1f")
+                )));
+        modules.put(ModuleCategory.CAMERA, camera);
     }
 
     private static void addHiderToggle(List<ModuleEntry> list, String name, String desc,
                                         java.util.function.BooleanSupplier getter, Runnable toggle) {
         list.add(new ModuleEntry(name, desc, getter, toggle));
+    }
+
+    // --- Text Edit Support ---
+
+    private void finishTextEdit() {
+        if (editingText != null) {
+            if (!textEditBuffer.isEmpty()) {
+                editingText.setValue(textEditBuffer);
+            }
+            FloydAddonsConfig.save();
+            editingText = null;
+            textEditBuffer = "";
+        }
     }
 
     // --- Rendering ---
@@ -257,9 +415,8 @@ public class ClickGuiScreen extends Screen {
         int headerColor = applyAlpha(hover ? 0xFF222222 : COLOR_HEADER, alpha);
         context.fill(x, y, x + PANEL_WIDTH, y + HEADER_HEIGHT, headerColor);
 
-        // Category name in chroma
         String name = category.getDisplayName() + (collapsed ? " [+]" : "");
-        int textColor = applyAlpha(chromaColor(0f), alpha);
+        int textColor = applyAlpha(resolveTextColor(0f), alpha);
         int textX = x + (PANEL_WIDTH - textRenderer.getWidth(name)) / 2;
         int textY = y + (HEADER_HEIGHT - textRenderer.fontHeight) / 2;
         context.drawTextWithShadow(textRenderer, name, textX, textY, textColor);
@@ -277,11 +434,11 @@ public class ClickGuiScreen extends Screen {
         }
         context.fill(px, y, px + PANEL_WIDTH, y + MODULE_HEIGHT, bgColor);
 
-        // Module name
-        int nameColor = enabled ? applyAlpha(chromaColor(0f), alpha) : applyAlpha(0xFFCCCCCC, alpha);
+        // Module name — respects text color settings
+        int nameColor = enabled ? applyAlpha(resolveTextColor(0f), alpha) : applyAlpha(0xFFCCCCCC, alpha);
         context.drawTextWithShadow(textRenderer, entry.getName(), px + 8, y + (MODULE_HEIGHT - textRenderer.fontHeight) / 2, nameColor);
 
-        // Status indicator
+        // Status indicator (functional colors, always green/gray)
         String status = enabled ? "ON" : "OFF";
         int statusColor = enabled ? applyAlpha(0xFF44FF44, alpha) : applyAlpha(0xFF666666, alpha);
         int statusX = px + PANEL_WIDTH - textRenderer.getWidth(status) - 8;
@@ -300,10 +457,9 @@ public class ClickGuiScreen extends Screen {
         context.fill(px, y, px + PANEL_WIDTH, y + SETTING_HEIGHT, applyAlpha(COLOR_SETTING_BG, alpha));
 
         if (setting instanceof ModuleEntry.BooleanSetting boolSetting) {
-            // Indented boolean toggle
             String label = "  " + setting.getLabel();
             boolean on = boolSetting.isEnabled();
-            int labelColor = on ? applyAlpha(0xFF88FF88, alpha) : applyAlpha(0xFFAAAAAA, alpha);
+            int labelColor = on ? applyAlpha(resolveTextColor(0f), alpha) : applyAlpha(0xFFAAAAAA, alpha);
             context.drawTextWithShadow(textRenderer, label, px + 14, y + (SETTING_HEIGHT - textRenderer.fontHeight) / 2, labelColor);
 
             String val = on ? "ON" : "OFF";
@@ -312,7 +468,6 @@ public class ClickGuiScreen extends Screen {
                     y + (SETTING_HEIGHT - textRenderer.fontHeight) / 2, valColor);
 
         } else if (setting instanceof ModuleEntry.SliderSetting slider) {
-            // Indented slider
             String label = "  " + setting.getLabel() + ": " + slider.getFormattedValue();
             context.drawTextWithShadow(textRenderer, label, px + 14, y + 2, applyAlpha(0xFFAAAAAA, alpha));
 
@@ -321,13 +476,86 @@ public class ClickGuiScreen extends Screen {
             int barW = PANEL_WIDTH - 28;
             context.fill(barX, barY, barX + barW, barY + 3, applyAlpha(COLOR_SLIDER_BG, alpha));
             int fillW = (int) (barW * slider.getNormalized());
-            context.fill(barX, barY, barX + fillW, barY + 3, applyAlpha(chromaColor(0f), alpha));
+            context.fill(barX, barY, barX + fillW, barY + 3, applyAlpha(resolveTextColor(0f), alpha));
+
+        } else if (setting instanceof ModuleEntry.ColorSetting colorSetting) {
+            // Label on left, clickable color preview square on right (where ON/OFF would be)
+            String label = "  " + setting.getLabel();
+            boolean hover = mouseX >= px && mouseX <= px + PANEL_WIDTH && mouseY >= y && mouseY <= y + SETTING_HEIGHT;
+            int labelColor = hover ? applyAlpha(resolveTextColor(0f), alpha) : applyAlpha(0xFFAAAAAA, alpha);
+            context.drawTextWithShadow(textRenderer, label, px + 14, y + (SETTING_HEIGHT - textRenderer.fontHeight) / 2, labelColor);
+
+            // Color preview square (10x10, right-aligned)
+            int sqSize = 10;
+            int sqX = px + PANEL_WIDTH - sqSize - 8;
+            int sqY = y + (SETTING_HEIGHT - sqSize) / 2;
+            int previewColor = applyAlpha(colorSetting.getDisplayColor(), alpha);
+            context.fill(sqX, sqY, sqX + sqSize, sqY + sqSize, previewColor);
+            InventoryHudRenderer.drawButtonBorder(context, sqX - 1, sqY - 1, sqX + sqSize + 1, sqY + sqSize + 1, alpha);
 
         } else if (setting instanceof ModuleEntry.ButtonSetting) {
             String label = "  [" + setting.getLabel() + "]";
             boolean hover = mouseX >= px && mouseX <= px + PANEL_WIDTH && mouseY >= y && mouseY <= y + SETTING_HEIGHT;
-            int color = hover ? applyAlpha(chromaColor(0f), alpha) : applyAlpha(0xFFAAAAAA, alpha);
+            int color = hover ? applyAlpha(resolveTextColor(0f), alpha) : applyAlpha(0xFFAAAAAA, alpha);
             context.drawTextWithShadow(textRenderer, label, px + 14, y + (SETTING_HEIGHT - textRenderer.fontHeight) / 2, color);
+
+        } else if (setting instanceof ModuleEntry.CycleSetting cycleSetting) {
+            // Show label on left, current value on right — click to cycle
+            String label = "  " + setting.getLabel();
+            String value = cycleSetting.getSelected();
+            if (value == null || value.isEmpty()) value = "None";
+
+            // Truncate value if too long
+            int labelWidth = textRenderer.getWidth(label);
+            int maxValueW = PANEL_WIDTH - labelWidth - 28;
+            if (maxValueW < 20) maxValueW = 20;
+            while (textRenderer.getWidth(value) > maxValueW && value.length() > 3) {
+                value = value.substring(0, value.length() - 1);
+            }
+            if (textRenderer.getWidth(value) > maxValueW) value = "..";
+
+            boolean hover = mouseX >= px && mouseX <= px + PANEL_WIDTH && mouseY >= y && mouseY <= y + SETTING_HEIGHT;
+            int labelColor = applyAlpha(0xFFAAAAAA, alpha);
+            int valueColor = hover ? applyAlpha(resolveTextColor(0f), alpha) : applyAlpha(0xFFCCCCCC, alpha);
+
+            int textY = y + (SETTING_HEIGHT - textRenderer.fontHeight) / 2;
+            context.drawTextWithShadow(textRenderer, label, px + 14, textY, labelColor);
+            int valueX = px + PANEL_WIDTH - textRenderer.getWidth(value) - 8;
+            context.drawTextWithShadow(textRenderer, value, valueX, textY, valueColor);
+
+        } else if (setting instanceof ModuleEntry.TextSetting textSetting) {
+            // Show label on left, editable value on right — click to edit
+            String label = "  " + setting.getLabel() + ": ";
+            boolean editing = textSetting == editingText;
+            String displayValue = editing ? textEditBuffer : textSetting.getValue();
+            if (displayValue == null) displayValue = "";
+
+            // Truncate display value from the left if too long
+            int labelWidth = textRenderer.getWidth(label);
+            int maxValW = PANEL_WIDTH - labelWidth - 22;
+            if (maxValW < 20) maxValW = 20;
+            String suffix = editing ? "_" : "";
+            while (textRenderer.getWidth(displayValue + suffix) > maxValW && displayValue.length() > 0) {
+                displayValue = displayValue.substring(1);
+            }
+            displayValue = displayValue + suffix;
+
+            boolean hover = mouseX >= px && mouseX <= px + PANEL_WIDTH && mouseY >= y && mouseY <= y + SETTING_HEIGHT;
+            int labelColor = applyAlpha(0xFFAAAAAA, alpha);
+            int valueColor = editing
+                    ? applyAlpha(0xFFFFFFFF, alpha)
+                    : (hover ? applyAlpha(resolveTextColor(0f), alpha) : applyAlpha(0xFFCCCCCC, alpha));
+
+            int textY = y + (SETTING_HEIGHT - textRenderer.fontHeight) / 2;
+            context.drawTextWithShadow(textRenderer, label, px + 14, textY, labelColor);
+            int valueX = px + 14 + labelWidth;
+            context.drawTextWithShadow(textRenderer, displayValue, valueX, textY, valueColor);
+
+            if (editing) {
+                // Chroma underline to show active edit
+                int lineY = y + SETTING_HEIGHT - 2;
+                context.fill(valueX, lineY, px + PANEL_WIDTH - 8, lineY + 1, applyAlpha(resolveTextColor(0f), alpha));
+            }
         }
     }
 
@@ -338,6 +566,11 @@ public class ClickGuiScreen extends Screen {
         double mx = click.x();
         double my = click.y();
         int button = click.button();
+
+        // Finish any pending text edit on left click
+        if (button == 0 && editingText != null) {
+            finishTextEdit();
+        }
 
         // Search bar click
         int searchX = (width - SEARCH_BAR_WIDTH) / 2;
@@ -424,8 +657,20 @@ public class ClickGuiScreen extends Screen {
             draggingSliderX = barX;
             draggingSliderWidth = barW;
             FloydAddonsConfig.save();
+        } else if (setting instanceof ModuleEntry.ColorSetting colorSetting) {
+            MinecraftClient.getInstance().setScreen(new ColorPickerScreen(this, setting.getLabel(),
+                    colorSetting.getColor(), colorSetting::setColor,
+                    colorSetting::isChroma, colorSetting::setChroma));
         } else if (setting instanceof ModuleEntry.ButtonSetting btnSetting) {
             btnSetting.click();
+        } else if (setting instanceof ModuleEntry.CycleSetting cycleSetting) {
+            cycleSetting.cycleForward();
+            FloydAddonsConfig.save();
+        } else if (setting instanceof ModuleEntry.TextSetting textSetting) {
+            editingText = textSetting;
+            String val = textSetting.getValue();
+            textEditBuffer = val != null ? val : "";
+            searchFocused = false;
         }
     }
 
@@ -490,6 +735,23 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        // Text setting editing takes priority
+        if (editingText != null) {
+            if (input.key() == 259 && !textEditBuffer.isEmpty()) { // Backspace
+                textEditBuffer = textEditBuffer.substring(0, textEditBuffer.length() - 1);
+                return true;
+            }
+            if (input.isEnter()) {
+                finishTextEdit();
+                return true;
+            }
+            if (input.isEscape()) {
+                editingText = null;
+                textEditBuffer = "";
+                return true;
+            }
+            return true; // consume all keys while editing
+        }
         if (searchFocused) {
             if (input.key() == 259 && !searchQuery.isEmpty()) { // Backspace
                 searchQuery = searchQuery.substring(0, searchQuery.length() - 1);
@@ -507,6 +769,10 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public boolean charTyped(CharInput input) {
+        if (editingText != null && input.codepoint() >= 32) {
+            textEditBuffer += input.asString();
+            return true;
+        }
         if (searchFocused && input.codepoint() >= 32) {
             searchQuery += input.asString();
             return true;
@@ -517,6 +783,7 @@ public class ClickGuiScreen extends Screen {
     @Override
     public void close() {
         if (closing) return;
+        finishTextEdit();
         FloydAddonsConfig.save();
         closing = true;
         closeStartMs = Util.getMeasuringTimeMs();
@@ -558,10 +825,29 @@ public class ClickGuiScreen extends Screen {
         return (a << 24) | (color & 0x00FFFFFF);
     }
 
-    private int chromaColor(float offset) {
+    /** Returns the appropriate text color, respecting the user's chroma/color settings. */
+    private int resolveTextColor(float offset) {
+        if (!RenderConfig.isButtonTextChromaEnabled()) return RenderConfig.getButtonTextColor();
         double time = (System.currentTimeMillis() % 4000) / 4000.0;
         float hue = (float) ((time + offset) % 1.0);
         int rgb = java.awt.Color.HSBtoRGB(hue, 1.0f, 1.0f);
         return 0xFF000000 | (rgb & 0xFFFFFF);
+    }
+
+    /** Opens a folder path in the OS file manager. */
+    private static void openPath(java.nio.file.Path path) {
+        String target = path.toAbsolutePath().toString();
+        String os = System.getProperty("os.name", "").toLowerCase();
+        try {
+            ProcessBuilder pb;
+            if (os.contains("win")) {
+                pb = new ProcessBuilder("cmd", "/c", "start", "", target);
+            } else if (os.contains("mac")) {
+                pb = new ProcessBuilder("open", target);
+            } else {
+                pb = new ProcessBuilder("xdg-open", target);
+            }
+            pb.start();
+        } catch (Exception ignored) {}
     }
 }

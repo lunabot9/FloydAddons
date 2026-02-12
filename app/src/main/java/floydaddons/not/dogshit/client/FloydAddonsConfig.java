@@ -63,6 +63,8 @@ public final class FloydAddonsConfig {
                     loadSkin(data);
                     loadRender(data);
                     loadHiders(data);
+                    loadCamera(data);
+                    loadAnimation(data);
                     ClickGuiConfig.loadFromData(data.clickGuiPanels);
                 }
             } catch (IOException ignored) {
@@ -85,6 +87,9 @@ public final class FloydAddonsConfig {
         data.skinSelfEnabled = SkinConfig.selfEnabled();
         data.skinOthersEnabled = SkinConfig.othersEnabled();
         data.selectedSkin = SkinConfig.getSelectedSkin();
+        data.playerScaleX = SkinConfig.getPlayerScaleX();
+        data.playerScaleY = SkinConfig.getPlayerScaleY();
+        data.playerScaleZ = SkinConfig.getPlayerScaleZ();
         // Render
         data.inventoryHudEnabled = RenderConfig.isInventoryHudEnabled();
         data.inventoryHudX = RenderConfig.getInventoryHudX();
@@ -118,30 +123,39 @@ public final class FloydAddonsConfig {
         data.defaultEspChromaEnabled = RenderConfig.isDefaultEspChromaEnabled();
         data.stalkTracerColor = RenderConfig.getStalkTracerColor();
         data.stalkTracerChromaEnabled = RenderConfig.isStalkTracerChromaEnabled();
+        // Camera
+        data.freecamSpeed = CameraConfig.getFreecamSpeed();
+        data.freelookDistance = CameraConfig.getFreelookDistance();
+        data.f5DisableFront = CameraConfig.isF5DisableFront();
+        data.f5DisableBack = CameraConfig.isF5DisableBack();
+        data.f5CameraDistance = CameraConfig.getF5CameraDistance();
+        data.f5ScrollEnabled = CameraConfig.isF5ScrollEnabled();
+        data.f5ResetOnToggle = CameraConfig.isF5ResetOnToggle();
         // Hiders
-        data.fullbright = HidersConfig.isFullbrightEnabled();
-        data.hiderDisableFog = HidersConfig.isDisableFogEnabled();
-        data.hiderDisableBlindness = HidersConfig.isDisableBlindnessEnabled();
         data.hiderNoHurtCamera = HidersConfig.isNoHurtCameraEnabled();
         data.hiderRemoveFireOverlay = HidersConfig.isRemoveFireOverlayEnabled();
-        data.hiderRemoveWaterOverlay = HidersConfig.isRemoveWaterOverlayEnabled();
-        data.hiderRemoveSuffocationOverlay = HidersConfig.isRemoveSuffocationOverlayEnabled();
-        data.hiderDisableVignette = HidersConfig.isDisableVignetteEnabled();
         data.hiderDisableHungerBar = HidersConfig.isDisableHungerBarEnabled();
         data.hiderHidePotionEffects = HidersConfig.isHidePotionEffectsEnabled();
         data.hiderThirdPersonCrosshair = HidersConfig.isThirdPersonCrosshairEnabled();
         data.hiderHideEntityFire = HidersConfig.isHideEntityFireEnabled();
         data.hiderDisableAttachedArrows = HidersConfig.isDisableAttachedArrowsEnabled();
-        data.hiderNoDeathAnimation = HidersConfig.isNoDeathAnimationEnabled();
         data.hiderRemoveFallingBlocks = HidersConfig.isRemoveFallingBlocksEnabled();
-        data.hiderRemoveLightning = HidersConfig.isRemoveLightningEnabled();
-        data.hiderRemoveBlockBreakParticles = HidersConfig.isRemoveBlockBreakParticlesEnabled();
         data.hiderRemoveExplosionParticles = HidersConfig.isRemoveExplosionParticlesEnabled();
         data.hiderRemoveTabPing = HidersConfig.isRemoveTabPingEnabled();
-        data.hiderDisableNametagBackground = HidersConfig.isDisableNametagBackgroundEnabled();
-        data.hiderRemoveGlowEffect = HidersConfig.isRemoveGlowEffectEnabled();
         data.hiderHideGroundedArrows = HidersConfig.isHideGroundedArrowsEnabled();
-        data.hiderCancelIncorrectSound = HidersConfig.isCancelIncorrectSoundEnabled();
+        // Animations
+        data.animEnabled = AnimationConfig.isEnabled();
+        data.animPosX = AnimationConfig.getPosX();
+        data.animPosY = AnimationConfig.getPosY();
+        data.animPosZ = AnimationConfig.getPosZ();
+        data.animRotX = AnimationConfig.getRotX();
+        data.animRotY = AnimationConfig.getRotY();
+        data.animRotZ = AnimationConfig.getRotZ();
+        data.animScale = AnimationConfig.getScale();
+        data.animSwingDuration = AnimationConfig.getSwingDuration();
+        data.animCancelReEquip = AnimationConfig.isCancelReEquip();
+        data.animHidePlayerHand = AnimationConfig.isHidePlayerHand();
+        data.animClassicClick = AnimationConfig.isClassicClick();
         // ClickGUI panel positions
         data.clickGuiPanels = ClickGuiConfig.toData();
 
@@ -263,32 +277,28 @@ public final class FloydAddonsConfig {
         SkinConfig.setSelfEnabled(data.skinSelfEnabled);
         SkinConfig.setOthersEnabled(data.skinOthersEnabled);
         if (data.selectedSkin != null) SkinConfig.setSelectedSkin(data.selectedSkin);
+        // Backward compat: if XYZ are all default but old playerScale was set, apply uniformly
+        if (data.playerScaleX != 1.0f || data.playerScaleY != 1.0f || data.playerScaleZ != 1.0f) {
+            SkinConfig.setPlayerScaleX(data.playerScaleX);
+            SkinConfig.setPlayerScaleY(data.playerScaleY);
+            SkinConfig.setPlayerScaleZ(data.playerScaleZ);
+        } else if (data.playerScale != 1.0f && data.playerScale > 0) {
+            SkinConfig.setPlayerScale(data.playerScale);
+        }
     }
 
     private static void loadHiders(Data data) {
-        HidersConfig.setFullbrightEnabled(data.fullbright);
-        HidersConfig.setDisableFogEnabled(data.hiderDisableFog);
-        HidersConfig.setDisableBlindnessEnabled(data.hiderDisableBlindness);
         HidersConfig.setNoHurtCameraEnabled(data.hiderNoHurtCamera);
         HidersConfig.setRemoveFireOverlayEnabled(data.hiderRemoveFireOverlay);
-        HidersConfig.setRemoveWaterOverlayEnabled(data.hiderRemoveWaterOverlay);
-        HidersConfig.setRemoveSuffocationOverlayEnabled(data.hiderRemoveSuffocationOverlay);
-        HidersConfig.setDisableVignetteEnabled(data.hiderDisableVignette);
         HidersConfig.setDisableHungerBarEnabled(data.hiderDisableHungerBar);
         HidersConfig.setHidePotionEffectsEnabled(data.hiderHidePotionEffects);
         HidersConfig.setThirdPersonCrosshairEnabled(data.hiderThirdPersonCrosshair);
         HidersConfig.setHideEntityFireEnabled(data.hiderHideEntityFire);
         HidersConfig.setDisableAttachedArrowsEnabled(data.hiderDisableAttachedArrows);
-        HidersConfig.setNoDeathAnimationEnabled(data.hiderNoDeathAnimation);
         HidersConfig.setRemoveFallingBlocksEnabled(data.hiderRemoveFallingBlocks);
-        HidersConfig.setRemoveLightningEnabled(data.hiderRemoveLightning);
-        HidersConfig.setRemoveBlockBreakParticlesEnabled(data.hiderRemoveBlockBreakParticles);
         HidersConfig.setRemoveExplosionParticlesEnabled(data.hiderRemoveExplosionParticles);
         HidersConfig.setRemoveTabPingEnabled(data.hiderRemoveTabPing);
-        HidersConfig.setDisableNametagBackgroundEnabled(data.hiderDisableNametagBackground);
-        HidersConfig.setRemoveGlowEffectEnabled(data.hiderRemoveGlowEffect);
         HidersConfig.setHideGroundedArrowsEnabled(data.hiderHideGroundedArrows);
-        HidersConfig.setCancelIncorrectSoundEnabled(data.hiderCancelIncorrectSound);
     }
 
     private static void loadRender(Data data) {
@@ -326,6 +336,31 @@ public final class FloydAddonsConfig {
         RenderConfig.setStalkTracerChromaEnabled(data.stalkTracerChromaEnabled);
     }
 
+    private static void loadAnimation(Data data) {
+        AnimationConfig.setEnabled(data.animEnabled);
+        AnimationConfig.setPosX(data.animPosX);
+        AnimationConfig.setPosY(data.animPosY);
+        AnimationConfig.setPosZ(data.animPosZ);
+        AnimationConfig.setRotX(data.animRotX);
+        AnimationConfig.setRotY(data.animRotY);
+        AnimationConfig.setRotZ(data.animRotZ);
+        if (data.animScale > 0) AnimationConfig.setScale(data.animScale);
+        if (data.animSwingDuration > 0) AnimationConfig.setSwingDuration(data.animSwingDuration);
+        AnimationConfig.setCancelReEquip(data.animCancelReEquip);
+        AnimationConfig.setHidePlayerHand(data.animHidePlayerHand);
+        AnimationConfig.setClassicClick(data.animClassicClick);
+    }
+
+    private static void loadCamera(Data data) {
+        if (data.freecamSpeed > 0) CameraConfig.setFreecamSpeed(data.freecamSpeed);
+        if (data.freelookDistance > 0) CameraConfig.setFreelookDistance(data.freelookDistance);
+        CameraConfig.setF5DisableFront(data.f5DisableFront);
+        CameraConfig.setF5DisableBack(data.f5DisableBack);
+        if (data.f5CameraDistance > 0) CameraConfig.setF5CameraDistance(data.f5CameraDistance);
+        CameraConfig.setF5ScrollEnabled(data.f5ScrollEnabled);
+        CameraConfig.setF5ResetOnToggle(data.f5ResetOnToggle);
+    }
+
     private static class Data {
         // Nick hider
         boolean nickHiderEnabled;
@@ -335,6 +370,10 @@ public final class FloydAddonsConfig {
         boolean skinSelfEnabled;
         boolean skinOthersEnabled;
         String selectedSkin;
+        float playerScale = 1.0f; // legacy, kept for backward compat
+        float playerScaleX = 1.0f;
+        float playerScaleY = 1.0f;
+        float playerScaleZ = 1.0f;
         // Render
         boolean inventoryHudEnabled;
         int inventoryHudX;
@@ -368,30 +407,39 @@ public final class FloydAddonsConfig {
         boolean defaultEspChromaEnabled = true;
         int stalkTracerColor = 0xFFFFFFFF;
         boolean stalkTracerChromaEnabled = true;
+        // Camera
+        float freecamSpeed = 1.0f;
+        float freelookDistance = 4.0f;
+        boolean f5DisableFront;
+        boolean f5DisableBack;
+        float f5CameraDistance = 4.0f;
+        boolean f5ScrollEnabled = true;
+        boolean f5ResetOnToggle = true;
         // Hiders
-        boolean fullbright;
-        boolean hiderDisableFog;
-        boolean hiderDisableBlindness;
         boolean hiderNoHurtCamera;
         boolean hiderRemoveFireOverlay;
-        boolean hiderRemoveWaterOverlay;
-        boolean hiderRemoveSuffocationOverlay;
-        boolean hiderDisableVignette;
         boolean hiderDisableHungerBar;
         boolean hiderHidePotionEffects;
         boolean hiderThirdPersonCrosshair;
         boolean hiderHideEntityFire;
         boolean hiderDisableAttachedArrows;
-        boolean hiderNoDeathAnimation;
         boolean hiderRemoveFallingBlocks;
-        boolean hiderRemoveLightning;
-        boolean hiderRemoveBlockBreakParticles;
         boolean hiderRemoveExplosionParticles;
         boolean hiderRemoveTabPing;
-        boolean hiderDisableNametagBackground;
-        boolean hiderRemoveGlowEffect;
         boolean hiderHideGroundedArrows;
-        boolean hiderCancelIncorrectSound;
+        // Animations
+        boolean animEnabled;
+        int animPosX;
+        int animPosY;
+        int animPosZ;
+        int animRotX;
+        int animRotY;
+        int animRotZ;
+        float animScale = 1.0f;
+        int animSwingDuration = 6;
+        boolean animCancelReEquip;
+        boolean animHidePlayerHand;
+        boolean animClassicClick;
         // ClickGUI
         Map<String, int[]> clickGuiPanels;
     }

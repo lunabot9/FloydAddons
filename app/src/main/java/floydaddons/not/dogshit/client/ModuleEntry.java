@@ -106,4 +106,92 @@ public class ModuleEntry {
 
         public void click() { action.run(); }
     }
+
+    /**
+     * A cycle sub-setting that cycles through a list of string options on click.
+     */
+    public static class CycleSetting extends SubSetting {
+        private final java.util.function.Supplier<java.util.List<String>> optionsSupplier;
+        private final java.util.function.Supplier<String> getter;
+        private final java.util.function.Consumer<String> setter;
+
+        public CycleSetting(String label,
+                            java.util.function.Supplier<java.util.List<String>> optionsSupplier,
+                            java.util.function.Supplier<String> getter,
+                            java.util.function.Consumer<String> setter) {
+            super(label);
+            this.optionsSupplier = optionsSupplier;
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        public java.util.List<String> getOptions() { return optionsSupplier.get(); }
+        public String getSelected() {
+            String sel = getter.get();
+            return sel != null ? sel : "";
+        }
+
+        public void cycleForward() {
+            java.util.List<String> opts = getOptions();
+            if (opts.isEmpty()) return;
+            int idx = opts.indexOf(getSelected());
+            setter.accept(opts.get((idx + 1) % opts.size()));
+        }
+    }
+
+    /**
+     * A color picker sub-setting that shows a clickable color preview square.
+     * Clicking opens ColorPickerScreen (which includes chroma toggle).
+     */
+    public static class ColorSetting extends SubSetting {
+        private final java.util.function.Supplier<Integer> colorGetter;
+        private final java.util.function.Consumer<Integer> colorSetter;
+        private final java.util.function.BooleanSupplier chromaGetter;
+        private final java.util.function.Consumer<Boolean> chromaSetter;
+
+        public ColorSetting(String label,
+                            java.util.function.Supplier<Integer> colorGetter,
+                            java.util.function.Consumer<Integer> colorSetter,
+                            java.util.function.BooleanSupplier chromaGetter,
+                            java.util.function.Consumer<Boolean> chromaSetter) {
+            super(label);
+            this.colorGetter = colorGetter;
+            this.colorSetter = colorSetter;
+            this.chromaGetter = chromaGetter;
+            this.chromaSetter = chromaSetter;
+        }
+
+        public int getColor() { return colorGetter.get(); }
+        public void setColor(int color) { colorSetter.accept(color); }
+        public boolean isChroma() { return chromaGetter.getAsBoolean(); }
+        public void setChroma(boolean v) { chromaSetter.accept(v); }
+
+        /** Returns the live display color (animated chroma or static). */
+        public int getDisplayColor() {
+            if (isChroma()) {
+                float hue = (float) ((System.currentTimeMillis() % 4000) / 4000.0);
+                return 0xFF000000 | (java.awt.Color.HSBtoRGB(hue, 1.0f, 1.0f) & 0xFFFFFF);
+            }
+            return getColor();
+        }
+    }
+
+    /**
+     * A text input sub-setting for editable string values.
+     */
+    public static class TextSetting extends SubSetting {
+        private final java.util.function.Supplier<String> getter;
+        private final java.util.function.Consumer<String> setter;
+
+        public TextSetting(String label,
+                           java.util.function.Supplier<String> getter,
+                           java.util.function.Consumer<String> setter) {
+            super(label);
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        public String getValue() { return getter.get(); }
+        public void setValue(String value) { setter.accept(value); }
+    }
 }

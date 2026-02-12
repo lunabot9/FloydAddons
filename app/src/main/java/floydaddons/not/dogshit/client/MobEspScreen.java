@@ -24,7 +24,7 @@ public class MobEspScreen extends Screen {
     private static final int COLOR_PREVIEW_SIZE = 16;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 264;
+    private static final int BOX_HEIGHT = 320;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;
@@ -67,33 +67,36 @@ public class MobEspScreen extends Screen {
 
         int le = leftEdge();
 
-        // Row 0: Tracers toggle
+        // Row 0: "Toggles" header (drawn in render)
+
+        // Row 1: Tracers toggle
         tracersToggle = ButtonWidget.builder(Text.literal(tracersLabel()), b -> {
             RenderConfig.setMobEspTracers(!RenderConfig.isMobEspTracers());
             b.setMessage(Text.literal(tracersLabel()));
             RenderConfig.save();
-        }).dimensions(le, rowY(0), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(1), FULL_W, ROW_HEIGHT).build();
 
-        // Row 1: Hitboxes toggle
+        // Row 2: Hitboxes toggle
         hitboxesToggle = ButtonWidget.builder(Text.literal(hitboxesLabel()), b -> {
             RenderConfig.setMobEspHitboxes(!RenderConfig.isMobEspHitboxes());
             b.setMessage(Text.literal(hitboxesLabel()));
             RenderConfig.save();
-        }).dimensions(le, rowY(1), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(2), FULL_W, ROW_HEIGHT).build();
 
-        // Row 2: Star Mobs toggle
+        // Row 3: Star Mobs toggle
         starMobsToggle = ButtonWidget.builder(Text.literal(starMobsLabel()), b -> {
             RenderConfig.setMobEspStarMobs(!RenderConfig.isMobEspStarMobs());
             b.setMessage(Text.literal(starMobsLabel()));
             RenderConfig.save();
-        }).dimensions(le, rowY(2), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(3), FULL_W, ROW_HEIGHT).build();
 
-        // Rows 3-4: color pickers drawn manually
+        // Row 4: "Colors" header (drawn in render)
+        // Rows 5-6: color pickers drawn manually
 
-        // Row 5: Edit Filters
+        // Row 7: Edit Filters
         editFiltersButton = ButtonWidget.builder(Text.literal("Edit Filters"), b -> {
             if (client != null) client.setScreen(new MobEspEditorScreen(this));
-        }).dimensions(le, rowY(5), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(7), FULL_W, ROW_HEIGHT).build();
 
         // Done
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
@@ -156,14 +159,18 @@ public class MobEspScreen extends Screen {
         styleButton(context, hitboxesToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, starMobsToggle, guiAlpha, mouseX, mouseY);
 
-        // Row 3: Default ESP Color
+        // Section headers
+        drawSectionHeader(context, "Toggles", rowY(0), guiAlpha);
+        drawSectionHeader(context, "Colors", rowY(4), guiAlpha);
+
+        // Row 5: Default ESP Color
         int le = leftEdge();
-        espColorRowY = rowY(3);
+        espColorRowY = rowY(5);
         drawColorRow(context, "Default ESP Color", RenderConfig.getDefaultEspColor(),
                 RenderConfig.isDefaultEspChromaEnabled(), le, espColorRowY, guiAlpha, mouseX, mouseY);
 
-        // Row 4: Stalk Tracer Color
-        stalkColorRowY = rowY(4);
+        // Row 6: Stalk Tracer Color
+        stalkColorRowY = rowY(6);
         drawColorRow(context, "Stalk Tracer Color", RenderConfig.getStalkTracerColor(),
                 RenderConfig.isStalkTracerChromaEnabled(), le, stalkColorRowY, guiAlpha, mouseX, mouseY);
 
@@ -284,11 +291,23 @@ public class MobEspScreen extends Screen {
 
     private void repositionWidgets() {
         int le = leftEdge();
-        tracersToggle.setX(le);    tracersToggle.setY(rowY(0));
-        hitboxesToggle.setX(le);   hitboxesToggle.setY(rowY(1));
-        starMobsToggle.setX(le);   starMobsToggle.setY(rowY(2));
-        editFiltersButton.setX(le); editFiltersButton.setY(rowY(5));
+        tracersToggle.setX(le);    tracersToggle.setY(rowY(1));
+        hitboxesToggle.setX(le);   hitboxesToggle.setY(rowY(2));
+        starMobsToggle.setX(le);   starMobsToggle.setY(rowY(3));
+        editFiltersButton.setX(le); editFiltersButton.setY(rowY(7));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
+    }
+
+    private void drawSectionHeader(DrawContext context, String text, int y, float alpha) {
+        int le = leftEdge();
+        int tw = textRenderer.getWidth(text);
+        int tx = le + (FULL_W - tw) / 2;
+        int ty = y + (ROW_HEIGHT - textRenderer.fontHeight) / 2;
+        int lineY = ty + textRenderer.fontHeight / 2;
+        int lineColor = applyAlpha(0xFF555555, alpha);
+        context.fill(le, lineY, tx - 4, lineY + 1, lineColor);
+        context.fill(tx + tw + 4, lineY, le + FULL_W, lineY + 1, lineColor);
+        context.drawTextWithShadow(textRenderer, text, tx, ty, applyAlpha(chromaColor(0f), alpha));
     }
 
     private void styleButton(DrawContext context, ButtonWidget button, float alpha, int mouseX, int mouseY) {

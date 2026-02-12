@@ -6,7 +6,8 @@ package floydaddons.not.dogshit.client;
 public enum ModuleCategory {
     RENDER("Render"),
     HIDERS("Hiders"),
-    PLAYER("Player");
+    PLAYER("Player"),
+    CAMERA("Camera");
 
     private final String displayName;
 

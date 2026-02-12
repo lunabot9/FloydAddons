@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Cancels fire, water, and suffocation overlays when the corresponding hider is enabled.
+ * Cancels fire overlay when the corresponding hider is enabled.
  */
 @Mixin(InGameOverlayRenderer.class)
 public class HiderOverlayMixin {
@@ -16,15 +16,5 @@ public class HiderOverlayMixin {
     @Inject(method = "renderFireOverlay", at = @At("HEAD"), cancellable = true, require = 0)
     private static void floydaddons$removeFireOverlay(CallbackInfo ci) {
         if (HidersConfig.isRemoveFireOverlayEnabled()) ci.cancel();
-    }
-
-    @Inject(method = "renderUnderwaterOverlay", at = @At("HEAD"), cancellable = true, require = 0)
-    private static void floydaddons$removeWaterOverlay(CallbackInfo ci) {
-        if (HidersConfig.isRemoveWaterOverlayEnabled()) ci.cancel();
-    }
-
-    @Inject(method = "renderInWallOverlay", at = @At("HEAD"), cancellable = true, require = 0)
-    private static void floydaddons$removeSuffocationOverlay(CallbackInfo ci) {
-        if (HidersConfig.isRemoveSuffocationOverlayEnabled()) ci.cancel();
     }
 }

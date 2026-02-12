@@ -19,6 +19,8 @@ public class FloydAddonsClient implements ClientModInitializer {
     private KeyBinding clickGuiKey;
     private KeyBinding xrayToggleKey;
     private KeyBinding mobEspToggleKey;
+    private KeyBinding freecamToggleKey;
+    private KeyBinding freelookToggleKey;
     private static final KeyBinding.Category KEY_CATEGORY =
             KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
 
@@ -60,6 +62,20 @@ public class FloydAddonsClient implements ClientModInitializer {
                 KEY_CATEGORY
         ));
 
+        freecamToggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.floydaddons.toggle_freecam",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_F,
+                KEY_CATEGORY
+        ));
+
+        freelookToggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.floydaddons.toggle_freelook",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_V,
+                KEY_CATEGORY
+        ));
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             SkinManager.extractDefaultSkin(client);
             ServerIdTracker.tick(client);
@@ -80,6 +96,12 @@ public class FloydAddonsClient implements ClientModInitializer {
             }
             while (mobEspToggleKey.wasPressed()) {
                 RenderConfig.toggleMobEsp();
+            }
+            while (freecamToggleKey.wasPressed()) {
+                CameraConfig.toggleFreecam();
+            }
+            while (freelookToggleKey.wasPressed()) {
+                CameraConfig.toggleFreelook();
             }
         });
 

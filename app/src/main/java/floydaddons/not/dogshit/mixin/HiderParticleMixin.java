@@ -11,7 +11,7 @@ import net.minecraft.client.particle.Particle;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Filters out block break and explosion particles when the corresponding hider is enabled.
+ * Filters out explosion particles when the corresponding hider is enabled.
  */
 @Mixin(ParticleManager.class)
 public class HiderParticleMixin {
@@ -22,13 +22,6 @@ public class HiderParticleMixin {
                                               double vx, double vy, double vz, CallbackInfoReturnable<Particle> ci) {
         if (effect == null) return;
         var type = effect.getType();
-        if (HidersConfig.isRemoveBlockBreakParticlesEnabled()) {
-            if (type == ParticleTypes.BLOCK || type == ParticleTypes.DUST
-                    || type == ParticleTypes.BLOCK_CRUMBLE) {
-                ci.setReturnValue(null);
-                return;
-            }
-        }
         if (HidersConfig.isRemoveExplosionParticlesEnabled()) {
             if (type == ParticleTypes.EXPLOSION || type == ParticleTypes.EXPLOSION_EMITTER) {
                 ci.setReturnValue(null);

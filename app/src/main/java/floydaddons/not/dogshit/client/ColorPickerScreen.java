@@ -201,42 +201,59 @@ public class ColorPickerScreen extends Screen {
         int x0 = svX();
         int y0 = svY();
 
-        for (int x = 0; x < SV_SIZE; x++) {
-            float s = x / (float) (SV_SIZE - 1);
-            int topColor = applyAlpha(Color.HSBtoRGB(hue, s, 1.0f) | 0xFF000000, alpha);
-            int bottomColor = applyAlpha(0xFF000000, alpha);
-            context.fillGradient(x0 + x, y0, x0 + x + 1, y0 + SV_SIZE, topColor, bottomColor);
+        if (chromaEnabled) {
+            // Grayed out with pulsing chroma overlay
+            context.fill(x0, y0, x0 + SV_SIZE, y0 + SV_SIZE, applyAlpha(0xFF222222, alpha));
+            int chromaFlash = RenderConfig.chromaColor((System.currentTimeMillis() % 4000) / 4000f);
+            context.fill(x0, y0, x0 + SV_SIZE, y0 + SV_SIZE, applyAlpha(chromaFlash, alpha * 0.15f));
+        } else {
+            for (int x = 0; x < SV_SIZE; x++) {
+                float s = x / (float) (SV_SIZE - 1);
+                int topColor = applyAlpha(Color.HSBtoRGB(hue, s, 1.0f) | 0xFF000000, alpha);
+                int bottomColor = applyAlpha(0xFF000000, alpha);
+                context.fillGradient(x0 + x, y0, x0 + x + 1, y0 + SV_SIZE, topColor, bottomColor);
+            }
+
+            int hx = x0 + (int) (sat * (SV_SIZE - 1));
+            int hy = y0 + (int) ((1.0f - val) * (SV_SIZE - 1));
+            context.fill(hx - 3, hy - 3, hx + 4, hy + 4, applyAlpha(0xFF000000, alpha));
+            context.fill(hx - 2, hy - 2, hx + 3, hy + 3, applyAlpha(0xFFFFFFFF, alpha));
         }
 
         InventoryHudRenderer.drawButtonBorder(context, x0 - 1, y0 - 1, x0 + SV_SIZE + 1, y0 + SV_SIZE + 1, alpha);
-
-        int hx = x0 + (int) (sat * (SV_SIZE - 1));
-        int hy = y0 + (int) ((1.0f - val) * (SV_SIZE - 1));
-        context.fill(hx - 3, hy - 3, hx + 4, hy + 4, applyAlpha(0xFF000000, alpha));
-        context.fill(hx - 2, hy - 2, hx + 3, hy + 3, applyAlpha(0xFFFFFFFF, alpha));
     }
 
     private void drawHueBar(DrawContext context, float alpha) {
         int x0 = hueBarX();
         int y0 = hueBarY();
 
-        for (int y = 0; y < HUE_BAR_H; y++) {
-            float h = y / (float) (HUE_BAR_H - 1);
-            int c = applyAlpha(Color.HSBtoRGB(h, 1.0f, 1.0f) | 0xFF000000, alpha);
-            context.fill(x0, y0 + y, x0 + HUE_BAR_W, y0 + y + 1, c);
+        if (chromaEnabled) {
+            // Grayed out with pulsing chroma overlay
+            context.fill(x0, y0, x0 + HUE_BAR_W, y0 + HUE_BAR_H, applyAlpha(0xFF222222, alpha));
+            int chromaFlash = RenderConfig.chromaColor((System.currentTimeMillis() % 4000) / 4000f);
+            context.fill(x0, y0, x0 + HUE_BAR_W, y0 + HUE_BAR_H, applyAlpha(chromaFlash, alpha * 0.15f));
+        } else {
+            for (int y = 0; y < HUE_BAR_H; y++) {
+                float h = y / (float) (HUE_BAR_H - 1);
+                int c = applyAlpha(Color.HSBtoRGB(h, 1.0f, 1.0f) | 0xFF000000, alpha);
+                context.fill(x0, y0 + y, x0 + HUE_BAR_W, y0 + y + 1, c);
+            }
+
+            int sy = y0 + (int) (hue * (HUE_BAR_H - 1));
+            context.fill(x0 - 2, sy - 1, x0 + HUE_BAR_W + 2, sy + 2, applyAlpha(0xFF000000, alpha));
+            context.fill(x0 - 1, sy, x0 + HUE_BAR_W + 1, sy + 1, applyAlpha(0xFFFFFFFF, alpha));
         }
 
         InventoryHudRenderer.drawButtonBorder(context, x0 - 1, y0 - 1, x0 + HUE_BAR_W + 1, y0 + HUE_BAR_H + 1, alpha);
-
-        int sy = y0 + (int) (hue * (HUE_BAR_H - 1));
-        context.fill(x0 - 2, sy - 1, x0 + HUE_BAR_W + 2, sy + 2, applyAlpha(0xFF000000, alpha));
-        context.fill(x0 - 1, sy, x0 + HUE_BAR_W + 1, sy + 1, applyAlpha(0xFFFFFFFF, alpha));
     }
 
     private void drawPreview(DrawContext context, float alpha) {
         int px = hueBarX() + HUE_BAR_W + 10;
         int py = hueBarY();
-        context.fill(px, py, px + PREVIEW_SIZE, py + PREVIEW_SIZE, applyAlpha(currentColor(), alpha));
+        int previewColor = chromaEnabled
+                ? RenderConfig.chromaColor((System.currentTimeMillis() % 4000) / 4000f)
+                : currentColor();
+        context.fill(px, py, px + PREVIEW_SIZE, py + PREVIEW_SIZE, applyAlpha(previewColor, alpha));
         InventoryHudRenderer.drawButtonBorder(context, px - 1, py - 1,
                 px + PREVIEW_SIZE + 1, py + PREVIEW_SIZE + 1, alpha);
     }
@@ -300,19 +317,21 @@ public class ColorPickerScreen extends Screen {
                 dragStartPanelY = panelY;
                 return true;
             }
-            int sx = svX(), sy = svY();
-            if (mx >= sx && mx <= sx + SV_SIZE && my >= sy && my <= sy + SV_SIZE) {
-                draggingSV = true;
-                updateSV(mx - sx, my - sy);
-                updateHexFromColor();
-                return true;
-            }
-            int hbx = hueBarX(), hby = hueBarY();
-            if (mx >= hbx && mx <= hbx + HUE_BAR_W && my >= hby && my <= hby + HUE_BAR_H) {
-                draggingHue = true;
-                updateHue(my - hby);
-                updateHexFromColor();
-                return true;
+            if (!chromaEnabled) {
+                int sx = svX(), sy = svY();
+                if (mx >= sx && mx <= sx + SV_SIZE && my >= sy && my <= sy + SV_SIZE) {
+                    draggingSV = true;
+                    updateSV(mx - sx, my - sy);
+                    updateHexFromColor();
+                    return true;
+                }
+                int hbx = hueBarX(), hby = hueBarY();
+                if (mx >= hbx && mx <= hbx + HUE_BAR_W && my >= hby && my <= hby + HUE_BAR_H) {
+                    draggingHue = true;
+                    updateHue(my - hby);
+                    updateHexFromColor();
+                    return true;
+                }
             }
             if (hitButton(chromaButton, mx, my)) {
                 toggleChroma();
