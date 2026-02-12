@@ -1,4 +1,14 @@
 package floydaddons.not.dogshit.client;
+import floydaddons.not.dogshit.client.*;
+import floydaddons.not.dogshit.client.config.*;
+import floydaddons.not.dogshit.client.gui.*;
+import floydaddons.not.dogshit.client.features.hud.*;
+import floydaddons.not.dogshit.client.features.visual.*;
+import floydaddons.not.dogshit.client.features.cosmetic.*;
+import floydaddons.not.dogshit.client.features.misc.*;
+import floydaddons.not.dogshit.client.esp.*;
+import floydaddons.not.dogshit.client.skin.*;
+import floydaddons.not.dogshit.client.util.*;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.StringArgumentType;

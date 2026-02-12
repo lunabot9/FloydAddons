@@ -1,0 +1,40 @@
+// SOURCE: https://github.com/Noamm9/NoammAddons/blob/master/src/main/kotlin/noammaddons/features/impl/misc/SmoothBossBar.kt
+package noammaddons.features.impl.misc
+
+import net.minecraft.client.gui.Gui
+import net.minecraft.entity.boss.BossStatus
+import noammaddons.features.Feature
+import noammaddons.utils.MathUtils.lerp
+import noammaddons.utils.RenderHelper
+import noammaddons.utils.RenderHelper.getWidth
+import noammaddons.utils.RenderUtils.drawTexturedModalRect
+import java.awt.Color
+import kotlin.math.pow
+
+object SmoothBossBar: Feature("Animate the boss health change") {
+    private var smoothBossBarHealth = .0
+    private fun resetBossBar() { smoothBossBarHealth = .0 }
+
+    @JvmStatic
+    fun renderCustomBossBar() {
+        if (!enabled) return resetBossBar()
+        val name = BossStatus.bossName ?: return resetBossBar()
+        if (BossStatus.statusBarTime-- <= 0) return resetBossBar()
+
+        val targetHealth = BossStatus.healthScale
+        val screenWidth = mc.getWidth()
+        val barX = (screenWidth - 182) / 2
+        val t = ((System.currentTimeMillis() % 1000) / 1000.0).coerceIn(0.0, 1.0)
+        val easedT = if (t < 0.5) 4 * t * t * t else 1 - (-2 * t + 2).pow(3) / 2
+
+        smoothBossBarHealth = lerp(smoothBossBarHealth, targetHealth, easedT)
+        val barWidth = (smoothBossBarHealth * 184).toInt()
+
+        mc.textureManager.bindTexture(Gui.icons)
+        drawTexturedModalRect(barX, 12, 0, 74, 182, 5)
+        if (barWidth > 0) drawTexturedModalRect(barX, 12, 0, 79, barWidth, 5)
+        mc.fontRendererObj.drawStringWithShadow(name, (screenWidth / 2f) - RenderHelper.getStringWidth(name) / 2, 2f, Color.WHITE.rgb)
+        RenderHelper.bindColor(Color.WHITE)
+        mc.textureManager.bindTexture(Gui.icons)
+    }
+}

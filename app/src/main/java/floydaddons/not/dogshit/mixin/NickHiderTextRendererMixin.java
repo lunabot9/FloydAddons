@@ -1,6 +1,6 @@
 package floydaddons.not.dogshit.mixin;
 
-import floydaddons.not.dogshit.client.NickTextUtil;
+import floydaddons.not.dogshit.client.util.NickTextUtil;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.StringVisitable;

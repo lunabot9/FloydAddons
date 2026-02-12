@@ -1,6 +1,6 @@
 package floydaddons.not.dogshit.mixin;
 
-import floydaddons.not.dogshit.client.RenderConfig;
+import floydaddons.not.dogshit.client.config.RenderConfig;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.render.BlockRenderLayer;
 import net.minecraft.client.render.RenderLayers;

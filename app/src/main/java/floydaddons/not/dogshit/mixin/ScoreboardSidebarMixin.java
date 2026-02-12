@@ -1,7 +1,7 @@
 package floydaddons.not.dogshit.mixin;
 
-import floydaddons.not.dogshit.client.RenderConfig;
-import floydaddons.not.dogshit.client.ScoreboardHudRenderer;
+import floydaddons.not.dogshit.client.config.RenderConfig;
+import floydaddons.not.dogshit.client.features.hud.ScoreboardHudRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.scoreboard.ScoreboardObjective;

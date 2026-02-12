@@ -1,7 +1,7 @@
 package floydaddons.not.dogshit.mixin;
 
-import floydaddons.not.dogshit.client.SkinConfig;
-import floydaddons.not.dogshit.client.SkinManager;
+import floydaddons.not.dogshit.client.config.SkinConfig;
+import floydaddons.not.dogshit.client.skin.SkinManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;

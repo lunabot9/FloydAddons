@@ -1,6 +1,6 @@
 package floydaddons.not.dogshit.mixin;
 
-import floydaddons.not.dogshit.client.SkinConfig;
+import floydaddons.not.dogshit.client.config.SkinConfig;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import org.spongepowered.asm.mixin.Mixin;
 
