@@ -72,10 +72,6 @@ public class HidersScreen extends Screen {
                 HidersConfig::isDisableAttachedArrowsEnabled,
                 () -> HidersConfig.setDisableAttachedArrowsEnabled(!HidersConfig.isDisableAttachedArrowsEnabled())));
 
-        toggleButtons.add(addToggle(le, row++, "Hide Ground Arrows",
-                HidersConfig::isHideGroundedArrowsEnabled,
-                () -> HidersConfig.setHideGroundedArrowsEnabled(!HidersConfig.isHideGroundedArrowsEnabled())));
-
         toggleButtons.add(addToggle(le, row++, "No Explosion Particles",
                 HidersConfig::isRemoveExplosionParticlesEnabled,
                 () -> HidersConfig.setRemoveExplosionParticlesEnabled(!HidersConfig.isRemoveExplosionParticlesEnabled())));

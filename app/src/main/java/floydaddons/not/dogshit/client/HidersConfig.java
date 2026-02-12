@@ -15,7 +15,6 @@ public final class HidersConfig {
     private static boolean removeFallingBlocks;
     private static boolean removeExplosionParticles;
     private static boolean removeTabPing;
-    private static boolean hideGroundedArrows;
 
     private HidersConfig() {}
 
@@ -48,9 +47,6 @@ public final class HidersConfig {
 
     public static boolean isRemoveTabPingEnabled() { return removeTabPing; }
     public static void setRemoveTabPingEnabled(boolean v) { removeTabPing = v; }
-
-    public static boolean isHideGroundedArrowsEnabled() { return hideGroundedArrows; }
-    public static void setHideGroundedArrowsEnabled(boolean v) { hideGroundedArrows = v; }
 
     /** Convenience: delegates to the unified config. */
     public static void save() { FloydAddonsConfig.save(); }

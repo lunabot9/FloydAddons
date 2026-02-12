@@ -243,8 +243,6 @@ public class ClickGuiScreen extends Screen {
                 HidersConfig::isRemoveExplosionParticlesEnabled, () -> HidersConfig.setRemoveExplosionParticlesEnabled(!HidersConfig.isRemoveExplosionParticlesEnabled())));
         hiders.add(new ModuleEntry("Remove Tab Ping", "Hide ping icons in tab list",
                 HidersConfig::isRemoveTabPingEnabled, () -> HidersConfig.setRemoveTabPingEnabled(!HidersConfig.isRemoveTabPingEnabled())));
-        hiders.add(new ModuleEntry("Hide Ground Arrows", "Hide arrows stuck in ground",
-                HidersConfig::isHideGroundedArrowsEnabled, () -> HidersConfig.setHideGroundedArrowsEnabled(!HidersConfig.isHideGroundedArrowsEnabled())));
         modules.put(ModuleCategory.HIDERS, hiders);
 
         // ═══════════════════════ PLAYER ═══════════════════════

@@ -143,7 +143,6 @@ public final class FloydAddonsConfig {
         data.hiderRemoveFallingBlocks = HidersConfig.isRemoveFallingBlocksEnabled();
         data.hiderRemoveExplosionParticles = HidersConfig.isRemoveExplosionParticlesEnabled();
         data.hiderRemoveTabPing = HidersConfig.isRemoveTabPingEnabled();
-        data.hiderHideGroundedArrows = HidersConfig.isHideGroundedArrowsEnabled();
         // Animations
         data.animEnabled = AnimationConfig.isEnabled();
         data.animPosX = AnimationConfig.getPosX();
@@ -299,7 +298,6 @@ public final class FloydAddonsConfig {
         HidersConfig.setRemoveFallingBlocksEnabled(data.hiderRemoveFallingBlocks);
         HidersConfig.setRemoveExplosionParticlesEnabled(data.hiderRemoveExplosionParticles);
         HidersConfig.setRemoveTabPingEnabled(data.hiderRemoveTabPing);
-        HidersConfig.setHideGroundedArrowsEnabled(data.hiderHideGroundedArrows);
     }
 
     private static void loadRender(Data data) {
@@ -429,7 +427,6 @@ public final class FloydAddonsConfig {
         boolean hiderRemoveFallingBlocks;
         boolean hiderRemoveExplosionParticles;
         boolean hiderRemoveTabPing;
-        boolean hiderHideGroundedArrows;
         // Animations
         boolean animEnabled;
         int animPosX;
