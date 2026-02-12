@@ -61,21 +61,21 @@ public class FloydAddonsClient implements ClientModInitializer {
         xrayToggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.floydaddons.toggle_xray",
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_X,
+                GLFW.GLFW_KEY_UNKNOWN,
                 KEY_CATEGORY
         ));
 
         mobEspToggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.floydaddons.toggle_mob_esp",
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_M,
+                GLFW.GLFW_KEY_UNKNOWN,
                 KEY_CATEGORY
         ));
 
         freecamToggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.floydaddons.toggle_freecam",
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_F,
+                GLFW.GLFW_KEY_UNKNOWN,
                 KEY_CATEGORY
         ));
 

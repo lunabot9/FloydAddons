@@ -424,8 +424,9 @@ public final class FloydAddonsConfig {
         boolean f5DisableFront;
         boolean f5DisableBack;
         float f5CameraDistance = 4.0f;
-        boolean f5ScrollEnabled = true;
-        boolean f5ResetOnToggle = true;
+        // F5 Customizer toggles default to off
+        boolean f5ScrollEnabled;
+        boolean f5ResetOnToggle;
         // Hiders
         boolean hiderNoHurtCamera;
         boolean hiderRemoveFireOverlay;

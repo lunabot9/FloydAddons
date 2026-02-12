@@ -1,5 +1,10 @@
 {
   "key.floydaddons.open_gui": "Open FloydAddons menu",
   "key.floydaddons.toggle_xray": "Toggle X-Ray",
+  "key.floydaddons.click_gui": "Click GUI",
+  "key.floydaddons.toggle_freecam": "Toggle Freecam",
+  "key.floydaddons.toggle_freelook": "Toggle Freelook",
+  "key.floydaddons.toggle_mob_esp": "Toggle Mob ESP",
+  "key.category.floydaddons.category": "FloydAddons",
   "category.floydaddons": "Floyd Addons"
 }

@@ -16,7 +16,25 @@
     "XraySodiumFluidAlphaMixin",
     "XrayChunkOcclusionMixin",
     "XrayLightmapMixin",
-    "TitleScreenBackgroundMixin"
+    "TitleScreenBackgroundMixin",
+    "HiderOverlayMixin",
+    "HiderGameRendererMixin",
+    "HiderInGameHudMixin",
+    "HiderFallingBlockMixin",
+    "HiderParticleMixin",
+    "HiderPlayerListMixin",
+    "HiderArrowMixin",
+    "HiderFireEntityMixin",
+    "CameraAccessor",
+    "CameraMixin",
+    "CameraMouseMixin",
+    "CameraMovementMixin",
+    "CameraClientMixin",
+    "CameraPerspectiveMixin",
+    "PlayerSizeMixin",
+    "ItemInHandRendererMixin",
+    "SwingDurationMixin",
+    "ClassicClickMixin"
   ],
   "injectors": {
     "defaultRequire": 1
