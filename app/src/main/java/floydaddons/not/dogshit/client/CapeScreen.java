@@ -38,7 +38,7 @@ public class CapeScreen extends Screen {
         closing = false;
         panelX = (width - BOX_W) / 2;
         panelY = (height - BOX_H) / 2;
-        images = CapeManager.listAvailableImages();
+        images = CapeManager.listAvailableImages(true);
         index = Math.max(0, images.indexOf(RenderConfig.getSelectedCapeImage()));
         if (index < 0) index = 0;
 

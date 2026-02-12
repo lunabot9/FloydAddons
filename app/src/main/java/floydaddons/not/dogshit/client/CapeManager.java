@@ -10,8 +10,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Stream;
 
 /**
  * Handles loading cape textures from config/capes.
@@ -19,6 +21,12 @@ import java.util.concurrent.ConcurrentMap;
 public final class CapeManager {
     private static final ConcurrentMap<String, Identifier> CACHE = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, Float> ASPECT_CACHE = new ConcurrentHashMap<>();
+    private static final Identifier FALLBACK = Identifier.of("textures/entity/cape/vanilla");
+    private static final long IMAGE_SCAN_CACHE_MS = 3_000L;
+
+    private static volatile List<String> cachedImages = List.of();
+    private static volatile long lastImageScanMs = 0L;
+    private static volatile String lastSelectionKey = "";
 
     private CapeManager() {}
 
@@ -29,35 +37,57 @@ public final class CapeManager {
     }
 
     public static List<String> listAvailableImages() {
+        return listAvailableImages(false);
+    }
+
+    public static List<String> listAvailableImages(boolean forceRefresh) {
         Path dir = ensureDir();
+        long now = System.currentTimeMillis();
+        if (!forceRefresh && now - lastImageScanMs < IMAGE_SCAN_CACHE_MS && !cachedImages.isEmpty()) {
+            return cachedImages;
+        }
+
         List<String> names = new ArrayList<>();
-        try {
-            Files.list(dir).filter(p -> p.getFileName().toString().toLowerCase().endsWith(".png"))
-                    .sorted()
-                    .forEach(p -> names.add(p.getFileName().toString()));
+        // Cache directory scans to avoid hammering the filesystem during render ticks.
+        try (Stream<Path> stream = Files.list(dir)) {
+            stream.filter(p -> Files.isRegularFile(p) && p.getFileName().toString().toLowerCase().endsWith(".png"))
+                  .map(p -> p.getFileName().toString())
+                  .sorted(String.CASE_INSENSITIVE_ORDER)
+                  .forEach(names::add);
         } catch (IOException ignored) {}
-        return names;
+
+        cachedImages = names;
+        lastImageScanMs = now;
+        return cachedImages;
     }
 
     public static Identifier getTexture(MinecraftClient mc) {
         String selected = resolveSelection();
-        final String sel = selected;
-        return CACHE.computeIfAbsent(sel.toLowerCase(), k -> loadTexture(mc, sel));
+        String key = selected.toLowerCase(Locale.ROOT);
+        lastSelectionKey = key;
+        return CACHE.computeIfAbsent(key, k -> loadTexture(mc, selected));
     }
 
     /** Aspect ratio width/height of the current cape texture (fallback 2.0). */
     public static float getAspectRatio() {
-        String selected = resolveSelection().toLowerCase();
-        return ASPECT_CACHE.getOrDefault(selected, 2.0f);
+        String key = lastSelectionKey;
+        if (key == null || key.isEmpty()) {
+            key = resolveSelection().toLowerCase(Locale.ROOT);
+            lastSelectionKey = key;
+        }
+        return ASPECT_CACHE.getOrDefault(key, 2.0f);
     }
 
     private static String resolveSelection() {
-        List<String> images = listAvailableImages();
         String selected = RenderConfig.getSelectedCapeImage();
-        if (selected != null && !selected.isEmpty() && images.contains(selected)) {
-            return selected;
+        if (selected != null && !selected.isEmpty()) {
+            Path file = ensureDir().resolve(selected);
+            if (Files.isRegularFile(file)) {
+                return selected;
+            }
         }
 
+        List<String> images = listAvailableImages(true);
         if (!images.isEmpty()) {
             String choice = images.get(0);
             if (!choice.equals(selected)) {
@@ -72,11 +102,11 @@ public final class CapeManager {
 
     private static Identifier loadTexture(MinecraftClient mc, String fileName) {
         if (fileName == null || fileName.isEmpty()) {
-            return Identifier.of("textures/entity/cape/vanilla"); // fallback
+            return FALLBACK;
         }
         Path path = ensureDir().resolve(fileName);
         if (!Files.exists(path)) {
-            return Identifier.of("textures/entity/cape/vanilla"); // fallback
+            return FALLBACK;
         }
         try {
             NativeImage img = NativeImage.read(Files.newInputStream(path));
@@ -89,7 +119,7 @@ public final class CapeManager {
             ASPECT_CACHE.put(fileName.toLowerCase(), aspect > 0 ? aspect : 2.0f);
             return id;
         } catch (IOException e) {
-            return Identifier.of("textures/entity/cape/vanilla"); // fallback
+            return FALLBACK;
         }
     }
 }
