@@ -1,5 +1,6 @@
 package floydaddons.not.dogshit.client;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.ArmorStandEntity;
@@ -8,6 +9,7 @@ import net.minecraft.util.Identifier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +37,11 @@ public final class MobEspManager {
     private static long debugLabelsExpireMs = 0;
 
     private static final String STAR_CHAR = "\u272F"; // ✯
+
+    // Cached real player names from the tab list, refreshed every 1s
+    private static volatile Set<String> tabListNames = Collections.emptySet();
+    private static long lastTabListRefreshMs = 0;
+    private static final long TAB_LIST_CACHE_MS = 1_000L;
 
     private MobEspManager() {}
 
@@ -249,7 +256,30 @@ public final class MobEspManager {
      * For armor stands: checks star name and name filters on custom name.
      * For non-armor-stands: checks type ID, display name, custom name, NPC cache name.
      */
+    private static boolean isRealPlayer(Entity entity) {
+        refreshTabListNames();
+        String name = stripColorCodes(entity.getName().getString()).toLowerCase();
+        return tabListNames.contains(name);
+    }
+
+    private static void refreshTabListNames() {
+        long now = System.currentTimeMillis();
+        if (now - lastTabListRefreshMs < TAB_LIST_CACHE_MS) return;
+        lastTabListRefreshMs = now;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.getNetworkHandler() == null) { tabListNames = Collections.emptySet(); return; }
+        Set<String> names = new HashSet<>();
+        for (var entry : mc.getNetworkHandler().getPlayerList()) {
+            String n = entry.getProfile().name();
+            if (n != null && n.matches("[a-zA-Z0-9_]{3,16}")) {
+                names.add(n.toLowerCase());
+            }
+        }
+        tabListNames = names;
+    }
+
     public static boolean matches(Entity entity) {
+        if (isRealPlayer(entity)) return false;
         if (entity instanceof ArmorStandEntity as) {
             if (!as.hasCustomName() || as.getCustomName() == null) return false;
             String stripped = stripColorCodes(as.getCustomName().getString());
