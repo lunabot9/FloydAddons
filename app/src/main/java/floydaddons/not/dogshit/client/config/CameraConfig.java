@@ -43,7 +43,6 @@ public final class CameraConfig {
     private static boolean f5DisableFront;
     private static boolean f5DisableBack;
     private static float f5CameraDistance = 4.0f;
-    // F5 scrolling features are opt-in; start disabled by default
     private static boolean f5ScrollEnabled = false;
     private static boolean f5ResetOnToggle = false;
     private static final float F5_DEFAULT_DISTANCE = 4.0f;

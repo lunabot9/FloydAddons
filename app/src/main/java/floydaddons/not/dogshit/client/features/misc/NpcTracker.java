@@ -155,6 +155,18 @@ public final class NpcTracker {
         return runtimeCache.get(entity.getId());
     }
 
+    /** Reverse lookup: find the entity whose cached NPC name matches (case-insensitive). */
+    public static Entity findEntityByName(String name) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null || mc.world == null || name == null) return null;
+        for (Map.Entry<Integer, String> entry : runtimeCache.entrySet()) {
+            if (entry.getValue().equalsIgnoreCase(name)) {
+                return mc.world.getEntityById(entry.getKey());
+            }
+        }
+        return null;
+    }
+
     /** Clears all runtime state. */
     public static void clear() {
         runtimeCache.clear();

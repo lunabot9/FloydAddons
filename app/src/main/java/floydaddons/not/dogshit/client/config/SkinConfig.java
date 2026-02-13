@@ -11,13 +11,14 @@ import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
 
 public final class SkinConfig {
-    private static boolean customEnabled = true;
-    private static boolean selfEnabled = true;
+    private static boolean customEnabled = false;
+    private static boolean selfEnabled = false;
     private static boolean othersEnabled = false;
     private static String selectedSkin = "george-floyd.png";
     private static float playerScaleX = 1.0f;
     private static float playerScaleY = 1.0f;
     private static float playerScaleZ = 1.0f;
+    private static String playerSizeTarget = "Self";
 
     private SkinConfig() {}
 
@@ -39,6 +40,11 @@ public final class SkinConfig {
 
     public static float getPlayerScaleZ() { return playerScaleZ; }
     public static void setPlayerScaleZ(float v) { playerScaleZ = Math.max(-1.0f, Math.min(5.0f, v)); }
+
+    public static String getPlayerSizeTarget() { return playerSizeTarget; }
+    public static void setPlayerSizeTarget(String v) {
+        if ("Self".equals(v) || "Real Players".equals(v) || "All".equals(v)) playerSizeTarget = v;
+    }
 
     /** Backward compat: set all axes uniformly. */
     public static void setPlayerScale(float v) {

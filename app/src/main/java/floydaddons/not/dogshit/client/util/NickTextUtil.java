@@ -31,6 +31,10 @@ import java.util.regex.Pattern;
 public final class NickTextUtil {
     private static final String SERVER_ID_REPLACEMENT = "fL0YD";
 
+    private static volatile boolean suppressNickReplacement = false;
+
+    public static void setSuppressNickReplacement(boolean v) { suppressNickReplacement = v; }
+
     private NickTextUtil() {}
 
     public static Text replaceLiteralText(Text original, String find, String replace) {
@@ -121,7 +125,7 @@ public final class NickTextUtil {
 
         OrderedText result = original;
 
-        if (nickEnabled) {
+        if (nickEnabled && !suppressNickReplacement) {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client != null && client.getSession() != null) {
                 String username = client.getSession().getUsername();
@@ -159,7 +163,7 @@ public final class NickTextUtil {
 
         String result = text;
 
-        if (nickEnabled) {
+        if (nickEnabled && !suppressNickReplacement) {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client != null && client.getSession() != null) {
                 String username = client.getSession().getUsername();
@@ -196,7 +200,7 @@ public final class NickTextUtil {
         if (text instanceof Text t) {
             Text result = t;
 
-            if (nickEnabled) {
+            if (nickEnabled && !suppressNickReplacement) {
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client != null && client.getSession() != null) {
                     String username = client.getSession().getUsername();

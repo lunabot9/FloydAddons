@@ -97,9 +97,10 @@ public class XrayEditorScreen extends Screen {
 
     private void recalcMaxScroll() {
         int totalEntries = 0;
-        // "Active Blocks" header
-        totalEntries++;
-        totalEntries += activeBlocks.size();
+        // "Active Blocks" header + entries (only if non-empty)
+        if (!activeBlocks.isEmpty()) {
+            totalEntries += 1 + activeBlocks.size();
+        }
         // "Nearby Blocks" header
         totalEntries++;
         totalEntries += nearbyBlocks.size();
@@ -194,49 +195,50 @@ public class XrayEditorScreen extends Screen {
         int y = contentTop + CONTENT_PADDING - scrollOffset;
         float chromaOffset = (System.currentTimeMillis() % 4000) / 4000f;
 
-        // --- Active Blocks header ---
-        context.drawTextWithShadow(textRenderer, "Active Blocks", contentLeft + 2, y + 2,
-                applyAlpha(chromaColor(chromaOffset), guiAlpha));
-        y += ENTRY_HEIGHT;
-
-        // --- Active block entries ---
-        for (String id : activeBlocks) {
-            int entryY = y;
-            // Block item icon
-            int iconX = contentLeft + 2;
-            int iconY = entryY + (ENTRY_HEIGHT - 16) / 2;
-            renderBlockItem(context, id, iconX, iconY);
-            // Text label (shifted right for icon)
-            String label = id;
-            int labelX = contentLeft + 22;
-            int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 26;
-            if (textRenderer.getWidth(label) > maxLabelWidth) {
-                label = textRenderer.trimToWidth(label, maxLabelWidth - textRenderer.getWidth("...")) + "...";
-            }
-            context.drawTextWithShadow(textRenderer, label, labelX, entryY + (ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
-                    applyAlpha(0xFFCCCCCC, guiAlpha));
-
-            // [-] button
-            int btnX = contentRight - BUTTON_SIZE_W - 2;
-            int btnY = entryY;
-            boolean hover = mouseX >= btnX && mouseX <= btnX + BUTTON_SIZE_W
-                    && mouseY >= btnY && mouseY <= btnY + BUTTON_SIZE_H
-                    && mouseY >= contentTop && mouseY <= contentBottom;
-            int fill = applyAlpha(hover ? 0xFF993333 : 0xFF773333, guiAlpha);
-            context.fill(btnX, btnY, btnX + BUTTON_SIZE_W, btnY + BUTTON_SIZE_H, fill);
-            InventoryHudRenderer.drawButtonBorder(context, btnX - 1, btnY - 1, btnX + BUTTON_SIZE_W + 1, btnY + BUTTON_SIZE_H + 1, guiAlpha);
-            String btnLabel = "-";
-            int btnTw = textRenderer.getWidth(btnLabel);
-            context.drawTextWithShadow(textRenderer, btnLabel, btnX + (BUTTON_SIZE_W - btnTw) / 2,
-                    btnY + (BUTTON_SIZE_H - textRenderer.fontHeight) / 2,
+        // --- Active Blocks header + entries (only if non-empty) ---
+        if (!activeBlocks.isEmpty()) {
+            context.drawTextWithShadow(textRenderer, "Active Blocks", contentLeft + 2, y + 2,
                     applyAlpha(chromaColor(chromaOffset), guiAlpha));
-
-            // Record button region for click handling
-            if (entryY + BUTTON_SIZE_H > contentTop && entryY < contentBottom) {
-                buttonEntries.add(new ButtonEntry(btnX, btnY, BUTTON_SIZE_W, BUTTON_SIZE_H, id, false));
-            }
-
             y += ENTRY_HEIGHT;
+
+            for (String id : activeBlocks) {
+                int entryY = y;
+                // Block item icon
+                int iconX = contentLeft + 2;
+                int iconY = entryY + (ENTRY_HEIGHT - 16) / 2;
+                renderBlockItem(context, id, iconX, iconY);
+                // Text label (shifted right for icon)
+                String label = id;
+                int labelX = contentLeft + 22;
+                int maxLabelWidth = contentWidth - BUTTON_SIZE_W - 26;
+                if (textRenderer.getWidth(label) > maxLabelWidth) {
+                    label = textRenderer.trimToWidth(label, maxLabelWidth - textRenderer.getWidth("...")) + "...";
+                }
+                context.drawTextWithShadow(textRenderer, label, labelX, entryY + (ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+                        applyAlpha(0xFFCCCCCC, guiAlpha));
+
+                // [-] button
+                int btnX = contentRight - BUTTON_SIZE_W - 2;
+                int btnY = entryY;
+                boolean hover = mouseX >= btnX && mouseX <= btnX + BUTTON_SIZE_W
+                        && mouseY >= btnY && mouseY <= btnY + BUTTON_SIZE_H
+                        && mouseY >= contentTop && mouseY <= contentBottom;
+                int fill = applyAlpha(hover ? 0xFF993333 : 0xFF773333, guiAlpha);
+                context.fill(btnX, btnY, btnX + BUTTON_SIZE_W, btnY + BUTTON_SIZE_H, fill);
+                InventoryHudRenderer.drawButtonBorder(context, btnX - 1, btnY - 1, btnX + BUTTON_SIZE_W + 1, btnY + BUTTON_SIZE_H + 1, guiAlpha);
+                String btnLabel = "-";
+                int btnTw = textRenderer.getWidth(btnLabel);
+                context.drawTextWithShadow(textRenderer, btnLabel, btnX + (BUTTON_SIZE_W - btnTw) / 2,
+                        btnY + (BUTTON_SIZE_H - textRenderer.fontHeight) / 2,
+                        applyAlpha(chromaColor(chromaOffset), guiAlpha));
+
+                // Record button region for click handling
+                if (entryY + BUTTON_SIZE_H > contentTop && entryY < contentBottom) {
+                    buttonEntries.add(new ButtonEntry(btnX, btnY, BUTTON_SIZE_W, BUTTON_SIZE_H, id, false));
+                }
+
+                y += ENTRY_HEIGHT;
+            }
         }
 
         // --- Nearby Blocks header ---

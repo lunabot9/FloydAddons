@@ -142,14 +142,12 @@ public class NameMappingsEditorScreen extends Screen {
     /** Total content height for scroll calculations. */
     private int computeContentHeight() {
         int h = 0;
-        // "Active Mappings" header
-        h += HEADER_HEIGHT + 4;
-        if (activeMappings.isEmpty()) {
-            h += ROW_SPACING; // "No mappings" text
-        } else {
+        // "Active Mappings" header + entries (only if non-empty)
+        if (!activeMappings.isEmpty()) {
+            h += HEADER_HEIGHT + 4;
             h += activeMappings.size() * ROW_SPACING;
+            h += 8; // gap between sections
         }
-        h += 8; // gap between sections
         // "Online Players" header
         h += HEADER_HEIGHT + 4;
         if (onlinePlayers.isEmpty()) {
@@ -240,7 +238,12 @@ public class NameMappingsEditorScreen extends Screen {
         int cRight = panelX + BOX_WIDTH - CONTENT_PADDING;
 
         context.enableScissor(cLeft, cTop, cRight, cBottom);
-        renderContent(context, cLeft, cTop, cRight, guiAlpha, mouseX, mouseY, delta);
+        NickTextUtil.setSuppressNickReplacement(true);
+        try {
+            renderContent(context, cLeft, cTop, cRight, guiAlpha, mouseX, mouseY, delta);
+        } finally {
+            NickTextUtil.setSuppressNickReplacement(false);
+        }
         context.disableScissor();
 
         matrices.popMatrix();
@@ -250,14 +253,11 @@ public class NameMappingsEditorScreen extends Screen {
         int y = cTop - scrollOffset;
         int contentWidth = cRight - cLeft;
 
-        // -- Active Mappings Header --
-        context.drawTextWithShadow(textRenderer, "Active Mappings", cLeft, y + 2, applyAlpha(chromaColor(0.2f), guiAlpha));
-        y += HEADER_HEIGHT + 4;
+        // -- Active Mappings Header + entries (only if non-empty) --
+        if (!activeMappings.isEmpty()) {
+            context.drawTextWithShadow(textRenderer, "Active Mappings", cLeft, y + 2, applyAlpha(chromaColor(0.2f), guiAlpha));
+            y += HEADER_HEIGHT + 4;
 
-        if (activeMappings.isEmpty()) {
-            context.drawTextWithShadow(textRenderer, "No mappings configured", cLeft + 4, y + 2, applyAlpha(0xFF888888, guiAlpha));
-            y += ROW_SPACING;
-        } else {
             for (var entry : activeMappings) {
                 String ign = entry.getKey();
                 String fakeName = entry.getValue();
@@ -294,9 +294,9 @@ public class NameMappingsEditorScreen extends Screen {
 
                 y += ROW_SPACING;
             }
-        }
 
-        y += 8; // gap
+            y += 8; // gap
+        }
 
         // -- Online Players Header --
         context.drawTextWithShadow(textRenderer, "Online Players", cLeft, y + 2, applyAlpha(chromaColor(0.5f), guiAlpha));
@@ -403,12 +403,11 @@ public class NameMappingsEditorScreen extends Screen {
         int cRight = panelX + BOX_WIDTH - CONTENT_PADDING;
         int y = contentTop() - scrollOffset;
 
-        // Skip "Active Mappings" header
-        y += HEADER_HEIGHT + 4;
+        // Active Mappings (only if non-empty)
+        if (!activeMappings.isEmpty()) {
+            // Skip header
+            y += HEADER_HEIGHT + 4;
 
-        if (activeMappings.isEmpty()) {
-            y += ROW_SPACING;
-        } else {
             for (var entry : activeMappings) {
                 // [-] remove button hit test
                 int removeBtnX = cRight - BUTTON_SIZE - 4;
@@ -424,9 +423,9 @@ public class NameMappingsEditorScreen extends Screen {
                 }
                 y += ROW_SPACING;
             }
-        }
 
-        y += 8; // gap
+            y += 8; // gap
+        }
 
         // Skip "Online Players" header
         y += HEADER_HEIGHT + 4;

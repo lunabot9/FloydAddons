@@ -14,9 +14,12 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.SpawnEggItem;
@@ -25,6 +28,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -68,6 +72,13 @@ public class MobEspEditorScreen extends Screen {
     private List<String> nearbyTypes = new ArrayList<>();
 
     private final List<HitEntry> hitEntries = new ArrayList<>();
+    private final java.util.HashMap<String, LivingEntity> cachedNameEntities = new java.util.HashMap<>();
+
+    // Inline color picker state
+    private String expandedColorKey = null;
+    private float pickerHue, pickerSat, pickerVal;
+    private boolean pickerDraggingSV, pickerDraggingHue;
+    private static final int PICKER_HEIGHT = 110;
 
     public MobEspEditorScreen(Screen parent) {
         super(Text.literal("Mob ESP Filters"));
@@ -91,6 +102,7 @@ public class MobEspEditorScreen extends Screen {
     }
 
     private void refreshLists() {
+        cachedNameEntities.clear();
         activeNames = new ArrayList<>(MobEspManager.getNameFilters());
         activeTypes = new ArrayList<>();
         for (Identifier id : MobEspManager.getTypeFilters()) {
@@ -104,10 +116,14 @@ public class MobEspEditorScreen extends Screen {
 
     private void recalcMaxScroll() {
         int totalEntries = 0;
-        // Active Names header + entries
-        totalEntries += 1 + activeNames.size();
-        // Active Types header + entries
-        totalEntries += 1 + activeTypes.size();
+        // Active Names header + entries (only if non-empty)
+        if (!activeNames.isEmpty()) {
+            totalEntries += 1 + activeNames.size();
+        }
+        // Active Types header + entries (only if non-empty)
+        if (!activeTypes.isEmpty()) {
+            totalEntries += 1 + activeTypes.size();
+        }
         // gap
         totalEntries += 1;
         // Nearby Entities header + entries
@@ -117,7 +133,18 @@ public class MobEspEditorScreen extends Screen {
 
         int contentAreaHeight = BOX_HEIGHT - 26 - 40;
         int totalContentHeight = totalEntries * ENTRY_HEIGHT + CONTENT_PADDING * 2;
+        // Add picker height if expanded
+        if (expandedColorKey != null) {
+            totalContentHeight += PICKER_HEIGHT;
+        }
         maxScroll = Math.max(0, totalContentHeight - contentAreaHeight);
+    }
+
+    private boolean isRealPlayer(Entity entity) {
+        if (!(entity instanceof PlayerEntity pe)) return false;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.getNetworkHandler() == null) return false;
+        return mc.getNetworkHandler().getPlayerListEntry(pe.getUuid()) != null;
     }
 
     private List<String> suggestNearbyEntityNames() {
@@ -127,6 +154,7 @@ public class MobEspEditorScreen extends Screen {
         Set<String> found = new LinkedHashSet<>();
         for (Entity entity : mc.world.getEntities()) {
             if (entity == mc.player) continue;
+            if (isRealPlayer(entity)) continue;
             String name = entity.getName().getString().replaceAll("\u00a7.", "").trim();
             if (!name.isEmpty() && !active.contains(name)) {
                 found.add(name);
@@ -153,6 +181,7 @@ public class MobEspEditorScreen extends Screen {
         Set<String> found = new LinkedHashSet<>();
         for (Entity entity : mc.world.getEntities()) {
             if (entity == mc.player) continue;
+            if (isRealPlayer(entity)) continue;
             Identifier typeId = EntityType.getId(entity.getType());
             if (!active.contains(typeId)) {
                 found.add(typeId.toString());
@@ -225,25 +254,29 @@ public class MobEspEditorScreen extends Screen {
         int y = contentTop + CONTENT_PADDING - scrollOffset;
         float chromaOffset = (System.currentTimeMillis() % 4000) / 4000f;
 
-        // --- Active Names ---
-        context.drawTextWithShadow(textRenderer, "Active Names", contentLeft + 2, y + 2,
-                applyAlpha(chromaColor(chromaOffset), guiAlpha));
-        y += ENTRY_HEIGHT;
+        // --- Active Names (only if non-empty) ---
+        if (!activeNames.isEmpty()) {
+            context.drawTextWithShadow(textRenderer, "Active Names", contentLeft + 2, y + 2,
+                    applyAlpha(chromaColor(chromaOffset), guiAlpha));
+            y += ENTRY_HEIGHT;
 
-        for (String name : activeNames) {
-            y = renderActiveEntry(context, name, "name", y, contentLeft, contentRight, contentTop, contentBottom,
-                    contentWidth, guiAlpha, mouseX, mouseY, chromaOffset);
+            for (String name : activeNames) {
+                y = renderActiveEntry(context, name, "name", y, contentLeft, contentRight, contentTop, contentBottom,
+                        contentWidth, guiAlpha, mouseX, mouseY, chromaOffset);
+            }
         }
 
-        // --- Active Types ---
-        y += 4;
-        context.drawTextWithShadow(textRenderer, "Active Types", contentLeft + 2, y + 2,
-                applyAlpha(chromaColor(chromaOffset + 0.15f), guiAlpha));
-        y += ENTRY_HEIGHT;
+        // --- Active Types (only if non-empty) ---
+        if (!activeTypes.isEmpty()) {
+            y += 4;
+            context.drawTextWithShadow(textRenderer, "Active Types", contentLeft + 2, y + 2,
+                    applyAlpha(chromaColor(chromaOffset + 0.15f), guiAlpha));
+            y += ENTRY_HEIGHT;
 
-        for (String typeId : activeTypes) {
-            y = renderActiveEntry(context, typeId, "type", y, contentLeft, contentRight, contentTop, contentBottom,
-                    contentWidth, guiAlpha, mouseX, mouseY, chromaOffset);
+            for (String typeId : activeTypes) {
+                y = renderActiveEntry(context, typeId, "type", y, contentLeft, contentRight, contentTop, contentBottom,
+                        contentWidth, guiAlpha, mouseX, mouseY, chromaOffset);
+            }
         }
 
         // --- Gap ---
@@ -328,7 +361,15 @@ public class MobEspEditorScreen extends Screen {
             hitEntries.add(new HitEntry(btnX, btnY, BUTTON_SIZE_W, BUTTON_SIZE_H, key, removeType));
         }
 
-        return y + ENTRY_HEIGHT;
+        int nextY = y + ENTRY_HEIGHT;
+
+        // Inline color picker if this entry is expanded
+        if (key.equals(expandedColorKey)) {
+            nextY = renderInlineFilterColorPicker(context, key, nextY, contentLeft, contentRight,
+                    contentTop, contentBottom, guiAlpha, mouseX, mouseY);
+        }
+
+        return nextY;
     }
 
     private int renderSuggestionEntry(DrawContext context, String key, HitType addType, int y,
@@ -381,8 +422,39 @@ public class MobEspEditorScreen extends Screen {
                     context.drawItem(new ItemStack(eggItem), x, y);
                     return;
                 }
+            } else {
+                // For name filters, find the actual entity in the world by name
+                LivingEntity entity = cachedNameEntities.get(key);
+                MinecraftClient mc = MinecraftClient.getInstance();
+                if (entity == null && mc != null && mc.world != null) {
+                    // Try NpcTracker first (armor-stand-paired NPCs)
+                    Entity npcEntity = NpcTracker.findEntityByName(key);
+                    if (npcEntity instanceof LivingEntity le) {
+                        cachedNameEntities.put(key, le);
+                        entity = le;
+                    } else {
+                        // Search world entities by display name or custom name
+                        for (Entity e : mc.world.getEntities()) {
+                            if (!(e instanceof LivingEntity le)) continue;
+                            String displayName = e.getName().getString().replaceAll("\u00a7.", "").trim();
+                            if (displayName.equalsIgnoreCase(key)) { cachedNameEntities.put(key, le); entity = le; break; }
+                            if (e.hasCustomName() && e.getCustomName() != null) {
+                                String custom = e.getCustomName().getString().replaceAll("\u00a7.", "").trim();
+                                if (custom.equalsIgnoreCase(key)) { cachedNameEntities.put(key, le); entity = le; break; }
+                            }
+                        }
+                    }
+                }
+                if (entity != null) {
+                    int iconW = 14, iconH = ENTRY_HEIGHT;
+                    context.enableScissor(x, y, x + iconW, y + iconH);
+                    InventoryScreen.drawEntity(context, x, y, x + iconW, y + iconH,
+                            6, 0.0625f, (float)(x + iconW / 2), (float)y, entity);
+                    context.disableScissor();
+                    return;
+                }
             }
-            // For name filters or types without spawn eggs, use a player head
+            // Fallback: player head
             context.drawItem(new ItemStack(Items.PLAYER_HEAD), x, y);
         } catch (Exception ignored) {}
     }
@@ -401,19 +473,82 @@ public class MobEspEditorScreen extends Screen {
         return RenderConfig.getDefaultEspColor();
     }
 
-    private void openColorPickerForFilter(String filterKey) {
-        int[] colorInfo = MobEspManager.getColorForFilter(filterKey);
-        int initColor = colorInfo != null ? colorInfo[0] : RenderConfig.getDefaultEspColor();
-        boolean initChroma = colorInfo != null && colorInfo[1] == 1;
-        final int[] pendingColor = {initColor};
-        final boolean[] pendingChroma = {initChroma};
+    private void toggleColorPicker(String filterKey) {
+        if (filterKey.equals(expandedColorKey)) {
+            expandedColorKey = null;
+        } else {
+            expandedColorKey = filterKey;
+            int[] colorInfo = MobEspManager.getColorForFilter(filterKey);
+            int initColor = colorInfo != null ? colorInfo[0] : RenderConfig.getDefaultEspColor();
+            float[] hsv = Color.RGBtoHSB((initColor >> 16) & 0xFF, (initColor >> 8) & 0xFF, initColor & 0xFF, null);
+            pickerHue = hsv[0];
+            pickerSat = hsv[1];
+            pickerVal = hsv[2];
+        }
+        recalcMaxScroll();
+    }
 
-        client.setScreen(new ColorPickerScreen(
-                this, "ESP: " + filterKey, initColor,
-                color -> { pendingColor[0] = color; MobEspManager.setFilterColor(filterKey, color, pendingChroma[0]); },
-                () -> pendingChroma[0],
-                chroma -> { pendingChroma[0] = chroma; MobEspManager.setFilterColor(filterKey, pendingColor[0], chroma); }
-        ));
+    private int renderInlineFilterColorPicker(DrawContext context, String key, int y,
+                                               int contentLeft, int contentRight, int contentTop, int contentBottom,
+                                               float guiAlpha, int mouseX, int mouseY) {
+        int[] colorInfo = MobEspManager.getColorForFilter(key);
+        boolean isChroma = colorInfo != null && colorInfo[1] == 1;
+
+        int svSize = 80, hueBarW = 8, hueBarH = 80;
+        int svX = contentLeft + 6, svY = y + 4;
+        int hbX = svX + svSize + 6, hbY = svY;
+
+        if (isChroma) {
+            int flash = RenderConfig.chromaColor((System.currentTimeMillis() % 4000) / 4000f);
+            context.fill(svX, svY, svX + svSize, svY + svSize, applyAlpha(0xFF222222, guiAlpha));
+            context.fill(svX, svY, svX + svSize, svY + svSize, applyAlpha(flash, guiAlpha * 0.15f));
+            context.fill(hbX, hbY, hbX + hueBarW, hbY + hueBarH, applyAlpha(0xFF222222, guiAlpha));
+            context.fill(hbX, hbY, hbX + hueBarW, hbY + hueBarH, applyAlpha(flash, guiAlpha * 0.15f));
+        } else {
+            for (int x = 0; x < svSize; x++) {
+                float s = x / (float) (svSize - 1);
+                int topC = applyAlpha(Color.HSBtoRGB(pickerHue, s, 1.0f) | 0xFF000000, guiAlpha);
+                int botC = applyAlpha(0xFF000000, guiAlpha);
+                context.fillGradient(svX + x, svY, svX + x + 1, svY + svSize, topC, botC);
+            }
+            int cx = svX + (int) (pickerSat * (svSize - 1));
+            int cy = svY + (int) ((1.0f - pickerVal) * (svSize - 1));
+            context.fill(cx - 2, cy - 2, cx + 3, cy + 3, applyAlpha(0xFF000000, guiAlpha));
+            context.fill(cx - 1, cy - 1, cx + 2, cy + 2, applyAlpha(0xFFFFFFFF, guiAlpha));
+            for (int yy = 0; yy < hueBarH; yy++) {
+                float h = yy / (float) (hueBarH - 1);
+                context.fill(hbX, hbY + yy, hbX + hueBarW, hbY + yy + 1,
+                        applyAlpha(Color.HSBtoRGB(h, 1.0f, 1.0f) | 0xFF000000, guiAlpha));
+            }
+            int hyCursor = hbY + (int) (pickerHue * (hueBarH - 1));
+            context.fill(hbX - 1, hyCursor - 1, hbX + hueBarW + 1, hyCursor + 2, applyAlpha(0xFFFFFFFF, guiAlpha));
+        }
+
+        InventoryHudRenderer.drawButtonBorder(context, svX - 1, svY - 1, svX + svSize + 1, svY + svSize + 1, guiAlpha);
+        InventoryHudRenderer.drawButtonBorder(context, hbX - 1, hbY - 1, hbX + hueBarW + 1, hbY + hueBarH + 1, guiAlpha);
+
+        // Info row: preview + hex + chroma toggle
+        int infoY = svY + svSize + 4;
+        int previewColor = isChroma ? RenderConfig.chromaColor((System.currentTimeMillis() % 4000) / 4000f)
+                : (Color.HSBtoRGB(pickerHue, pickerSat, pickerVal) | 0xFF000000);
+        context.fill(svX, infoY, svX + 12, infoY + 12, applyAlpha(previewColor, guiAlpha));
+        String hex = "#" + String.format("%06X", previewColor & 0xFFFFFF);
+        context.drawTextWithShadow(textRenderer, hex, svX + 16, infoY + 2, applyAlpha(0xFFCCCCCC, guiAlpha));
+        String chromaLabel = isChroma ? "Chroma: ON" : "Chroma: OFF";
+        int chromaX = contentRight - textRenderer.getWidth(chromaLabel) - 8;
+        boolean hoverChroma = mouseX >= chromaX && mouseX <= contentRight - 4 && mouseY >= infoY && mouseY <= infoY + 12;
+        context.drawTextWithShadow(textRenderer, chromaLabel, chromaX, infoY + 2,
+                hoverChroma ? applyAlpha(chromaColor((System.currentTimeMillis() % 4000) / 4000f), guiAlpha)
+                        : applyAlpha(0xFFAAAAAA, guiAlpha));
+
+        // Register hit entries for SV, hue, and chroma
+        if (y + PICKER_HEIGHT > contentTop && y < contentBottom) {
+            hitEntries.add(new HitEntry(svX, svY, svSize, svSize, key, HitType.PICKER_SV));
+            hitEntries.add(new HitEntry(hbX, hbY, hueBarW, hueBarH, key, HitType.PICKER_HUE));
+            hitEntries.add(new HitEntry(chromaX, infoY, contentRight - 4 - chromaX, 12, key, HitType.PICKER_CHROMA));
+        }
+
+        return y + PICKER_HEIGHT;
     }
 
     @Override
@@ -442,9 +577,28 @@ public class MobEspEditorScreen extends Screen {
                         && my >= contentTop && my <= contentBottom) {
                     switch (entry.type) {
                         case COLOR:
-                            openColorPickerForFilter(entry.key);
+                            toggleColorPicker(entry.key);
+                            return true;
+                        case PICKER_SV:
+                            if (!isChromaForKey(entry.key)) {
+                                pickerDraggingSV = true;
+                                updatePickerSV(mx - entry.x, my - entry.y, entry.w);
+                            }
+                            return true;
+                        case PICKER_HUE:
+                            if (!isChromaForKey(entry.key)) {
+                                pickerDraggingHue = true;
+                                updatePickerHue(my - entry.y, entry.h);
+                            }
+                            return true;
+                        case PICKER_CHROMA: {
+                            int[] ci = MobEspManager.getColorForFilter(entry.key);
+                            boolean wasChroma = ci != null && ci[1] == 1;
+                            int color = ci != null ? ci[0] : (Color.HSBtoRGB(pickerHue, pickerSat, pickerVal) | 0xFF000000);
+                            MobEspManager.setFilterColor(entry.key, color, !wasChroma);
                             FloydAddonsConfig.saveMobEsp();
                             return true;
+                        }
                         case ADD_NAME:
                             MobEspManager.addNameFilter(entry.key);
                             FloydAddonsConfig.saveMobEsp();
@@ -453,6 +607,7 @@ public class MobEspEditorScreen extends Screen {
                         case REMOVE_NAME:
                             MobEspManager.removeNameFilter(entry.key);
                             FloydAddonsConfig.saveMobEsp();
+                            if (entry.key.equals(expandedColorKey)) expandedColorKey = null;
                             refreshLists();
                             return true;
                         case ADD_TYPE:
@@ -463,6 +618,7 @@ public class MobEspEditorScreen extends Screen {
                         case REMOVE_TYPE:
                             MobEspManager.removeTypeFilter(entry.key);
                             FloydAddonsConfig.saveMobEsp();
+                            if (entry.key.equals(expandedColorKey)) expandedColorKey = null;
                             refreshLists();
                             return true;
                     }
@@ -485,14 +641,34 @@ public class MobEspEditorScreen extends Screen {
             repositionWidgets();
             return true;
         }
+        if (pickerDraggingSV && expandedColorKey != null && click.button() == 0) {
+            // Find the SV hit entry to get coordinates
+            for (HitEntry entry : hitEntries) {
+                if (entry.type == HitType.PICKER_SV && entry.key.equals(expandedColorKey)) {
+                    updatePickerSV(click.x() - entry.x, click.y() - entry.y, entry.w);
+                    return true;
+                }
+            }
+            return true;
+        }
+        if (pickerDraggingHue && expandedColorKey != null && click.button() == 0) {
+            for (HitEntry entry : hitEntries) {
+                if (entry.type == HitType.PICKER_HUE && entry.key.equals(expandedColorKey)) {
+                    updatePickerHue(click.y() - entry.y, entry.h);
+                    return true;
+                }
+            }
+            return true;
+        }
         return super.mouseDragged(click, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseReleased(Click click) {
-        if (click.button() == 0 && dragging) {
-            dragging = false;
-            return true;
+        if (click.button() == 0) {
+            if (dragging) { dragging = false; return true; }
+            if (pickerDraggingSV) { pickerDraggingSV = false; return true; }
+            if (pickerDraggingHue) { pickerDraggingHue = false; return true; }
         }
         return super.mouseReleased(click);
     }
@@ -530,8 +706,32 @@ public class MobEspEditorScreen extends Screen {
         return RenderConfig.chromaColor(offset);
     }
 
+    private boolean isChromaForKey(String key) {
+        int[] ci = MobEspManager.getColorForFilter(key);
+        return ci != null && ci[1] == 1;
+    }
+
+    private void updatePickerSV(double localX, double localY, int svSize) {
+        pickerSat = (float) Math.max(0, Math.min(1, localX / (svSize - 1)));
+        pickerVal = (float) Math.max(0, Math.min(1, 1.0 - localY / (svSize - 1)));
+        if (expandedColorKey != null) {
+            int color = Color.HSBtoRGB(pickerHue, pickerSat, pickerVal) | 0xFF000000;
+            MobEspManager.setFilterColor(expandedColorKey, color, false);
+            FloydAddonsConfig.saveMobEsp();
+        }
+    }
+
+    private void updatePickerHue(double localY, int hueBarH) {
+        pickerHue = (float) Math.max(0, Math.min(1, localY / (hueBarH - 1)));
+        if (expandedColorKey != null) {
+            int color = Color.HSBtoRGB(pickerHue, pickerSat, pickerVal) | 0xFF000000;
+            MobEspManager.setFilterColor(expandedColorKey, color, false);
+            FloydAddonsConfig.saveMobEsp();
+        }
+    }
+
     private enum HitType {
-        ADD_NAME, REMOVE_NAME, ADD_TYPE, REMOVE_TYPE, COLOR
+        ADD_NAME, REMOVE_NAME, ADD_TYPE, REMOVE_TYPE, COLOR, PICKER_SV, PICKER_HUE, PICKER_CHROMA
     }
 
     private static class HitEntry {
