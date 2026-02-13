@@ -218,4 +218,11 @@ public class ModuleEntry {
     public static class MobFilterSetting extends SubSetting {
         public MobFilterSetting(String label) { super(label); }
     }
+
+    /**
+     * An inline expandable name mapping filter list (for Neck Hider name mappings).
+     */
+    public static class NameFilterSetting extends SubSetting {
+        public NameFilterSetting(String label) { super(label); }
+    }
 }

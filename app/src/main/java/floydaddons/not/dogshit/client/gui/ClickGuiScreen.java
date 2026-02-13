@@ -10,8 +10,11 @@ import floydaddons.not.dogshit.client.esp.*;
 import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -20,6 +23,7 @@ import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -36,6 +40,7 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -89,12 +94,16 @@ public class ClickGuiScreen extends Screen {
     private boolean filterSearchFocused = false;
     private int filterScrollOffset = 0;
     private int filterMaxScroll = 0;
+    private String pendingNameMappingOriginal = null;
     private List<String> cachedActiveBlocks = new ArrayList<>();
     private List<String> cachedNearbyBlocks = new ArrayList<>();
     private List<String> cachedMobActiveNames = new ArrayList<>();
     private List<String> cachedMobActiveTypes = new ArrayList<>();
     private List<String> cachedMobNearbyNames = new ArrayList<>();
     private List<String> cachedMobNearbyTypes = new ArrayList<>();
+    private List<Map.Entry<String, String>> cachedNameMappings = new ArrayList<>();
+    private List<String> cachedOnlinePlayers = new ArrayList<>();
+    private final Map<String, LivingEntity> cachedMobEntities = new HashMap<>();
     private final List<FilterHitEntry> filterHitEntries = new ArrayList<>();
     private int filterListTop, filterListBottom, filterListLeft, filterListRight;
 
@@ -122,6 +131,7 @@ public class ClickGuiScreen extends Screen {
         filterSearchQuery = "";
         filterSearchFocused = false;
         filterScrollOffset = 0;
+        pendingNameMappingOriginal = null;
         initModules();
     }
 
@@ -299,8 +309,7 @@ public class ClickGuiScreen extends Screen {
                 List.of(
                         new ModuleEntry.TextSetting("Default Nick", NickHiderConfig::getNickname,
                                 nick -> { NickHiderConfig.setNickname(nick); NickHiderConfig.save(); }),
-                        new ModuleEntry.ButtonSetting("Edit Names",
-                                () -> MinecraftClient.getInstance().setScreen(new NameMappingsEditorScreen(self))),
+                        new ModuleEntry.NameFilterSetting("Edit Names"),
                         new ModuleEntry.ButtonSetting("Reload Names",
                                 () -> NickHiderConfig.loadNameMappings())
                 )));
@@ -416,7 +425,7 @@ public class ClickGuiScreen extends Screen {
         if (s instanceof ModuleEntry.SliderSetting) return POPUP_SLIDER_HEIGHT;
         if (s instanceof ModuleEntry.ColorSetting cs)
             return cs == expandedColorSetting ? POPUP_COLOR_EXPANDED_HEIGHT : POPUP_COLOR_COLLAPSED_HEIGHT;
-        if ((s instanceof ModuleEntry.BlockFilterSetting || s instanceof ModuleEntry.MobFilterSetting) && s == expandedFilterSetting)
+        if ((s instanceof ModuleEntry.BlockFilterSetting || s instanceof ModuleEntry.MobFilterSetting || s instanceof ModuleEntry.NameFilterSetting) && s == expandedFilterSetting)
             return POPUP_SETTING_HEIGHT + FILTER_SEARCH_HEIGHT + getFilterVisibleHeight();
         return POPUP_SETTING_HEIGHT;
     }
@@ -432,6 +441,11 @@ public class ClickGuiScreen extends Screen {
         } else if (expandedFilterSetting instanceof ModuleEntry.MobFilterSetting) {
             int count = 1 + filterBySearch(cachedMobActiveNames).size() + 1 + filterBySearch(cachedMobActiveTypes).size()
                     + 1 + filterBySearch(cachedMobNearbyNames).size() + 1 + filterBySearch(cachedMobNearbyTypes).size();
+            return count * FILTER_ENTRY_HEIGHT;
+        } else if (expandedFilterSetting instanceof ModuleEntry.NameFilterSetting) {
+            List<String> activeKeys = new ArrayList<>();
+            for (var e : cachedNameMappings) activeKeys.add(e.getKey());
+            int count = 1 + filterBySearch(activeKeys).size() + 1 + filterBySearch(cachedOnlinePlayers).size();
             return count * FILTER_ENTRY_HEIGHT;
         }
         return 0;
@@ -506,12 +520,13 @@ public class ClickGuiScreen extends Screen {
 
     private void renderHeader(DrawContext context, ModuleCategory category, int x, int y, int pw,
                                int mouseX, int mouseY, float alpha, boolean collapsed) {
-        // Header background = button border accent color (inverted style)
+        boolean hover = mouseX >= x && mouseX <= x + pw && mouseY >= y && mouseY <= y + HEADER_HEIGHT;
         context.fill(x, y, x + pw, y + HEADER_HEIGHT, applyAlpha(getButtonBorderAccent(), alpha));
         String name = category.getDisplayName() + (collapsed ? " [+]" : "");
-        // Header text = text accent color
+        // White normally, text accent on hover
+        int textColor = hover ? applyAlpha(getTextAccent(), alpha) : applyAlpha(0xFFFFFFFF, alpha);
         context.drawTextWithShadow(textRenderer, name, x + 8,
-                y + (HEADER_HEIGHT - textRenderer.fontHeight) / 2, applyAlpha(getTextAccent(), alpha));
+                y + (HEADER_HEIGHT - textRenderer.fontHeight) / 2, textColor);
     }
 
     private void renderModule(DrawContext context, ModuleEntry entry, int px, int y, int pw,
@@ -519,8 +534,11 @@ public class ClickGuiScreen extends Screen {
         boolean hover = mouseX >= px && mouseX <= px + pw && mouseY >= y && mouseY <= y + MODULE_HEIGHT;
         if (hover) context.fill(px, y, px + pw, y + MODULE_HEIGHT, applyAlpha(0xFF1A1A1A, alpha));
 
-        // White text normally, text accent when hovered
-        int nameColor = hover ? applyAlpha(getTextAccent(), alpha) : applyAlpha(0xFFFFFFFF, alpha);
+        // Enabled modules use text accent color, disabled use white, hover always accent
+        int nameColor;
+        if (hover) nameColor = applyAlpha(getTextAccent(), alpha);
+        else if (entry.isEnabled()) nameColor = applyAlpha(getTextAccent(), alpha);
+        else nameColor = applyAlpha(0xFFFFFFFF, alpha);
         context.drawTextWithShadow(textRenderer, entry.getName(), px + 8,
                 y + (MODULE_HEIGHT - textRenderer.fontHeight) / 2, nameColor);
 
@@ -564,6 +582,8 @@ public class ClickGuiScreen extends Screen {
         filterSearchQuery = "";
         filterSearchFocused = false;
         filterScrollOffset = 0;
+        pendingNameMappingOriginal = null;
+        cachedMobEntities.clear();
         draggingSV = false;
         draggingHue = false;
     }
@@ -573,7 +593,7 @@ public class ClickGuiScreen extends Screen {
         boolean hasFilter = false;
         for (ModuleEntry.SubSetting s : module.getSettings()) {
             max = Math.max(max, textRenderer.getWidth(s.getLabel()) + 80);
-            if (s instanceof ModuleEntry.BlockFilterSetting || s instanceof ModuleEntry.MobFilterSetting) hasFilter = true;
+            if (s instanceof ModuleEntry.BlockFilterSetting || s instanceof ModuleEntry.MobFilterSetting || s instanceof ModuleEntry.NameFilterSetting) hasFilter = true;
         }
         return Math.max(max, hasFilter ? 250 : 180);
     }
@@ -678,7 +698,7 @@ public class ClickGuiScreen extends Screen {
             if (editing) context.fill(px + 10 + labelW, y + h - 2, px + pw - 10, y + h - 1,
                     applyAlpha(getButtonBorderAccent(), alpha));
 
-        } else if (setting instanceof ModuleEntry.BlockFilterSetting || setting instanceof ModuleEntry.MobFilterSetting) {
+        } else if (setting instanceof ModuleEntry.BlockFilterSetting || setting instanceof ModuleEntry.MobFilterSetting || setting instanceof ModuleEntry.NameFilterSetting) {
             boolean expanded = setting == expandedFilterSetting;
             String label = "[" + setting.getLabel() + (expanded ? " \u25BE" : " \u25B8") + "]";
             int color = hover ? applyAlpha(getTextAccent(), alpha) : applyAlpha(0xFFAAAAAA, alpha);
@@ -687,8 +707,10 @@ public class ClickGuiScreen extends Screen {
                 int filterY = y + POPUP_SETTING_HEIGHT;
                 if (setting instanceof ModuleEntry.BlockFilterSetting)
                     renderInlineBlockFilter(context, px, filterY, pw, alpha, mouseX, mouseY);
-                else
+                else if (setting instanceof ModuleEntry.MobFilterSetting)
                     renderInlineMobFilter(context, px, filterY, pw, alpha, mouseX, mouseY);
+                else
+                    renderInlineNameFilter(context, px, filterY, pw, alpha, mouseX, mouseY);
             }
         }
     }
@@ -744,7 +766,7 @@ public class ClickGuiScreen extends Screen {
     // --- Inline Block Filter ---
 
     private void renderInlineBlockFilter(DrawContext context, int px, int y, int pw, float alpha, int mouseX, int mouseY) {
-        renderFilterSearchBar(context, px, y, pw, alpha);
+        renderFilterSearchBar(context, px, y, pw, alpha, mouseX, mouseY);
         int listY = y + FILTER_SEARCH_HEIGHT + 2;
         int visibleH = getFilterVisibleHeight();
         filterListTop = listY; filterListBottom = listY + visibleH; filterListLeft = px; filterListRight = px + pw;
@@ -761,11 +783,13 @@ public class ClickGuiScreen extends Screen {
         int entryLeft = px + 6, entryRight = px + pw - 6;
         int accent = getButtonBorderAccent();
 
-        context.drawTextWithShadow(textRenderer, "Active Blocks", entryLeft, entryY + 2, applyAlpha(accent, alpha));
+        context.drawTextWithShadow(textRenderer, "Active Blocks", entryLeft, entryY + 2, applyAlpha(0xFFFFFFFF, alpha));
         entryY += FILTER_ENTRY_HEIGHT;
         for (String id : activeF) {
-            String label = truncateLabel(id, entryRight - entryLeft - FILTER_BTN_W - 6);
-            context.drawTextWithShadow(textRenderer, label, entryLeft, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+            renderBlockIcon(context, id, entryLeft, entryY);
+            int textX = entryLeft + 18;
+            String label = truncateLabel(id, entryRight - textX - FILTER_BTN_W - 6);
+            context.drawTextWithShadow(textRenderer, label, textX, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
                     applyAlpha(0xFFCCCCCC, alpha));
             int btnX = entryRight - FILTER_BTN_W - 2;
             boolean bh = mouseX >= btnX && mouseX <= btnX + FILTER_BTN_W && mouseY >= entryY && mouseY <= entryY + FILTER_BTN_H
@@ -779,11 +803,13 @@ public class ClickGuiScreen extends Screen {
         }
 
         entryY += 2;
-        context.drawTextWithShadow(textRenderer, "Nearby Blocks", entryLeft, entryY + 2, applyAlpha(accent, alpha));
+        context.drawTextWithShadow(textRenderer, "Nearby Blocks", entryLeft, entryY + 2, applyAlpha(0xFFFFFFFF, alpha));
         entryY += FILTER_ENTRY_HEIGHT;
         for (String id : nearbyF) {
-            String label = truncateLabel(id, entryRight - entryLeft - FILTER_BTN_W - 6);
-            context.drawTextWithShadow(textRenderer, label, entryLeft, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+            renderBlockIcon(context, id, entryLeft, entryY);
+            int textX = entryLeft + 18;
+            String label = truncateLabel(id, entryRight - textX - FILTER_BTN_W - 6);
+            context.drawTextWithShadow(textRenderer, label, textX, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
                     applyAlpha(0xFFAAAAAA, alpha));
             int btnX = entryRight - FILTER_BTN_W - 2;
             boolean bh = mouseX >= btnX && mouseX <= btnX + FILTER_BTN_W && mouseY >= entryY && mouseY <= entryY + FILTER_BTN_H
@@ -801,7 +827,7 @@ public class ClickGuiScreen extends Screen {
     // --- Inline Mob Filter ---
 
     private void renderInlineMobFilter(DrawContext context, int px, int y, int pw, float alpha, int mouseX, int mouseY) {
-        renderFilterSearchBar(context, px, y, pw, alpha);
+        renderFilterSearchBar(context, px, y, pw, alpha, mouseX, mouseY);
         int listY = y + FILTER_SEARCH_HEIGHT + 2;
         int visibleH = getFilterVisibleHeight();
         filterListTop = listY; filterListBottom = listY + visibleH; filterListLeft = px; filterListRight = px + pw;
@@ -834,11 +860,18 @@ public class ClickGuiScreen extends Screen {
     private int renderFilterSection(DrawContext context, String header, List<String> items, int entryY,
                                      int entryLeft, int entryRight, int listY, int accent, float alpha,
                                      int mouseX, int mouseY, FilterAction action, boolean isSuggestion) {
-        context.drawTextWithShadow(textRenderer, header, entryLeft, entryY + 2, applyAlpha(accent, alpha));
+        boolean isTypeAction = action == FilterAction.ADD_MOB_TYPE || action == FilterAction.REMOVE_MOB_TYPE;
+        boolean isNameAction = action == FilterAction.ADD_MOB_NAME || action == FilterAction.REMOVE_MOB_NAME;
+        context.drawTextWithShadow(textRenderer, header, entryLeft, entryY + 2, applyAlpha(0xFFFFFFFF, alpha));
         entryY += FILTER_ENTRY_HEIGHT;
         for (String key : items) {
-            String label = truncateLabel(key, entryRight - entryLeft - FILTER_BTN_W - 6);
-            context.drawTextWithShadow(textRenderer, label, entryLeft, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+            int textX = entryLeft;
+            if (isTypeAction || isNameAction) {
+                renderMobIcon(context, key, isTypeAction, entryLeft, entryY);
+                textX = entryLeft + 18;
+            }
+            String label = truncateLabel(key, entryRight - textX - FILTER_BTN_W - 6);
+            context.drawTextWithShadow(textRenderer, label, textX, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
                     applyAlpha(isSuggestion ? 0xFFAAAAAA : 0xFFCCCCCC, alpha));
             int btnX = entryRight - FILTER_BTN_W - 2;
             boolean bh = mouseX >= btnX && mouseX <= btnX + FILTER_BTN_W && mouseY >= entryY && mouseY <= entryY + FILTER_BTN_H
@@ -856,13 +889,171 @@ public class ClickGuiScreen extends Screen {
         return entryY;
     }
 
-    private void renderFilterSearchBar(DrawContext context, int px, int y, int pw, float alpha) {
-        context.fill(px + 6, y, px + pw - 6, y + FILTER_SEARCH_HEIGHT, applyAlpha(0xFF0A0A0A, alpha));
-        drawSolidBorder(context, px + 5, y - 1, px + pw - 5, y + FILTER_SEARCH_HEIGHT + 1,
+    private void renderFilterSearchBar(DrawContext context, int px, int y, int pw, float alpha, int mouseX, int mouseY) {
+        int addBtnW = FILTER_BTN_W + 2;
+        int addBtnX = px + pw - 6 - addBtnW;
+        int textFieldRight = addBtnX - 2;
+        context.fill(px + 6, y, textFieldRight, y + FILTER_SEARCH_HEIGHT, applyAlpha(0xFF0A0A0A, alpha));
+        drawSolidBorder(context, px + 5, y - 1, textFieldRight + 1, y + FILTER_SEARCH_HEIGHT + 1,
                 applyAlpha(getButtonBorderAccent(), alpha));
-        String display = filterSearchQuery.isEmpty() && !filterSearchFocused ? "Filter..." : filterSearchQuery + (filterSearchFocused ? "_" : "");
+        String placeholder = pendingNameMappingOriginal != null && expandedFilterSetting instanceof ModuleEntry.NameFilterSetting
+                ? "Fake name for " + pendingNameMappingOriginal + "..." : "Filter...";
+        String display = filterSearchQuery.isEmpty() && !filterSearchFocused ? placeholder : filterSearchQuery + (filterSearchFocused ? "_" : "");
         int textColor = filterSearchQuery.isEmpty() && !filterSearchFocused ? applyAlpha(0xFF888888, alpha) : applyAlpha(0xFFFFFFFF, alpha);
         context.drawTextWithShadow(textRenderer, display, px + 10, y + (FILTER_SEARCH_HEIGHT - textRenderer.fontHeight) / 2, textColor);
+        // [+] add button
+        boolean addHover = mouseX >= addBtnX && mouseX <= addBtnX + addBtnW && mouseY >= y && mouseY <= y + FILTER_SEARCH_HEIGHT;
+        context.fill(addBtnX, y, addBtnX + addBtnW, y + FILTER_SEARCH_HEIGHT, applyAlpha(addHover ? 0xFF339933 : 0xFF337733, alpha));
+        drawSolidBorder(context, addBtnX - 1, y - 1, addBtnX + addBtnW + 1, y + FILTER_SEARCH_HEIGHT + 1,
+                applyAlpha(getButtonBorderAccent(), alpha));
+        context.drawTextWithShadow(textRenderer, "+", addBtnX + (addBtnW - textRenderer.getWidth("+")) / 2,
+                y + (FILTER_SEARCH_HEIGHT - textRenderer.fontHeight) / 2, applyAlpha(0xFFFFFFFF, alpha));
+    }
+
+    // --- Inline Name Filter ---
+
+    private void renderInlineNameFilter(DrawContext context, int px, int y, int pw, float alpha, int mouseX, int mouseY) {
+        renderFilterSearchBar(context, px, y, pw, alpha, mouseX, mouseY);
+        int listY = y + FILTER_SEARCH_HEIGHT + 2;
+        int visibleH = getFilterVisibleHeight();
+        filterListTop = listY; filterListBottom = listY + visibleH; filterListLeft = px; filterListRight = px + pw;
+        filterHitEntries.clear();
+
+        List<String> mappingKeys = new ArrayList<>();
+        for (var e : cachedNameMappings) mappingKeys.add(e.getKey());
+        List<String> activeMappingsF = filterBySearch(mappingKeys);
+        List<String> onlineF = filterBySearch(cachedOnlinePlayers);
+        int totalH = (1 + activeMappingsF.size() + 1 + onlineF.size()) * FILTER_ENTRY_HEIGHT;
+        filterMaxScroll = Math.max(0, totalH - FILTER_MAX_VISIBLE_HEIGHT);
+        filterScrollOffset = Math.max(0, Math.min(filterScrollOffset, filterMaxScroll));
+
+        context.enableScissor(px + 4, listY, px + pw - 4, filterListBottom);
+        int entryY = listY - filterScrollOffset;
+        int entryLeft = px + 6, entryRight = px + pw - 6;
+        int accent = getButtonBorderAccent();
+
+        // Active Mappings header
+        context.drawTextWithShadow(textRenderer, "Active Mappings", entryLeft, entryY + 2, applyAlpha(0xFFFFFFFF, alpha));
+        entryY += FILTER_ENTRY_HEIGHT;
+        for (String key : activeMappingsF) {
+            String fakeName = "";
+            for (var e : cachedNameMappings) {
+                if (e.getKey().equals(key)) { fakeName = e.getValue(); break; }
+            }
+            // Player head
+            Identifier skin = getPlayerSkinTexture(key);
+            if (skin != null) {
+                drawPlayerHead(context, skin, entryLeft, entryY + (FILTER_ENTRY_HEIGHT - 8) / 2, 8);
+            }
+            String label = truncateLabel(key + " \u2192 " + fakeName, entryRight - entryLeft - FILTER_BTN_W - 16);
+            context.drawTextWithShadow(textRenderer, label, entryLeft + 10, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+                    applyAlpha(0xFFCCCCCC, alpha));
+            int btnX = entryRight - FILTER_BTN_W - 2;
+            boolean bh = mouseX >= btnX && mouseX <= btnX + FILTER_BTN_W && mouseY >= entryY && mouseY <= entryY + FILTER_BTN_H
+                    && mouseY >= listY && mouseY <= filterListBottom;
+            context.fill(btnX, entryY, btnX + FILTER_BTN_W, entryY + FILTER_BTN_H, applyAlpha(bh ? 0xFF993333 : 0xFF553333, alpha));
+            context.drawTextWithShadow(textRenderer, "-", btnX + (FILTER_BTN_W - textRenderer.getWidth("-")) / 2,
+                    entryY + (FILTER_BTN_H - textRenderer.fontHeight) / 2, applyAlpha(0xFFFFFFFF, alpha));
+            if (entryY + FILTER_BTN_H > listY && entryY < filterListBottom)
+                filterHitEntries.add(new FilterHitEntry(btnX, entryY, FILTER_BTN_W, FILTER_BTN_H, key, FilterAction.REMOVE_NAME_MAPPING));
+            entryY += FILTER_ENTRY_HEIGHT;
+        }
+
+        entryY += 2;
+        // Online Players header
+        context.drawTextWithShadow(textRenderer, "Online Players", entryLeft, entryY + 2, applyAlpha(0xFFFFFFFF, alpha));
+        entryY += FILTER_ENTRY_HEIGHT;
+        for (String name : onlineF) {
+            // Player head
+            Identifier skin = getPlayerSkinTexture(name);
+            if (skin != null) {
+                drawPlayerHead(context, skin, entryLeft, entryY + (FILTER_ENTRY_HEIGHT - 8) / 2, 8);
+            }
+            String label = truncateLabel(name, entryRight - entryLeft - FILTER_BTN_W - 16);
+            context.drawTextWithShadow(textRenderer, label, entryLeft + 10, entryY + (FILTER_ENTRY_HEIGHT - textRenderer.fontHeight) / 2,
+                    applyAlpha(0xFFAAAAAA, alpha));
+            int btnX = entryRight - FILTER_BTN_W - 2;
+            boolean bh = mouseX >= btnX && mouseX <= btnX + FILTER_BTN_W && mouseY >= entryY && mouseY <= entryY + FILTER_BTN_H
+                    && mouseY >= listY && mouseY <= filterListBottom;
+            context.fill(btnX, entryY, btnX + FILTER_BTN_W, entryY + FILTER_BTN_H, applyAlpha(bh ? 0xFF339933 : 0xFF335533, alpha));
+            context.drawTextWithShadow(textRenderer, "+", btnX + (FILTER_BTN_W - textRenderer.getWidth("+")) / 2,
+                    entryY + (FILTER_BTN_H - textRenderer.fontHeight) / 2, applyAlpha(0xFFFFFFFF, alpha));
+            if (entryY + FILTER_BTN_H > listY && entryY < filterListBottom)
+                filterHitEntries.add(new FilterHitEntry(btnX, entryY, FILTER_BTN_W, FILTER_BTN_H, name, FilterAction.ADD_NAME_MAPPING));
+            entryY += FILTER_ENTRY_HEIGHT;
+        }
+        context.disableScissor();
+    }
+
+    private Identifier getPlayerSkinTexture(String playerName) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.getNetworkHandler() == null) return null;
+        for (var entry : mc.getNetworkHandler().getPlayerList()) {
+            if (entry.getProfile().name().equalsIgnoreCase(playerName)) {
+                return entry.getSkinTextures().body().texturePath();
+            }
+        }
+        return null;
+    }
+
+    private void drawPlayerHead(DrawContext context, Identifier skinTexture, int x, int y, int size) {
+        RenderPipeline pipeline = RenderPipelines.GUI_TEXTURED;
+        context.drawTexture(pipeline, skinTexture, x, y, 8.0f, 8.0f, size, size, 8, 8, 64, 64);
+    }
+
+    private void renderBlockIcon(DrawContext context, String blockId, int x, int y) {
+        try {
+            Block block = Registries.BLOCK.get(Identifier.of(blockId));
+            ItemStack stack = new ItemStack(block.asItem());
+            if (!stack.isEmpty()) {
+                context.getMatrices().pushMatrix();
+                float scale = 0.75f;
+                context.getMatrices().translate(x, y);
+                context.getMatrices().scale(scale, scale);
+                context.drawItem(stack, 0, 0);
+                context.getMatrices().popMatrix();
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private void renderMobIcon(DrawContext context, String key, boolean isType, int x, int y) {
+        try {
+            if (isType) {
+                LivingEntity entity = cachedMobEntities.get(key);
+                if (entity == null && client != null && client.world != null) {
+                    EntityType<?> entityType = Registries.ENTITY_TYPE.get(Identifier.of(key));
+                    Entity created = entityType.create(client.world, net.minecraft.entity.SpawnReason.COMMAND);
+                    if (created instanceof LivingEntity le) {
+                        cachedMobEntities.put(key, le);
+                        entity = le;
+                    }
+                }
+                if (entity != null) {
+                    int iconW = 14, iconH = FILTER_ENTRY_HEIGHT;
+                    context.enableScissor(x, y, x + iconW, y + iconH);
+                    InventoryScreen.drawEntity(context, x, y, x + iconW, y + iconH,
+                            6, 0.0625f, (float)(x + iconW / 2), (float)y, entity);
+                    context.disableScissor();
+                } else {
+                    // Fallback to spawn egg for non-LivingEntity types
+                    EntityType<?> entityType = Registries.ENTITY_TYPE.get(Identifier.of(key));
+                    SpawnEggItem egg = SpawnEggItem.forEntity(entityType);
+                    if (egg != null) {
+                        ItemStack stack = new ItemStack(egg);
+                        context.getMatrices().pushMatrix();
+                        context.getMatrices().translate(x, y);
+                        context.getMatrices().scale(0.75f, 0.75f);
+                        context.drawItem(stack, 0, 0);
+                        context.getMatrices().popMatrix();
+                    }
+                }
+            } else {
+                Identifier skin = getPlayerSkinTexture(key);
+                if (skin != null) {
+                    drawPlayerHead(context, skin, x, y + (FILTER_ENTRY_HEIGHT - 8) / 2, 8);
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     // --- Player Preview ---
@@ -1082,22 +1273,28 @@ public class ClickGuiScreen extends Screen {
         } else if (setting instanceof ModuleEntry.TextSetting ts) {
             editingText = ts; textEditBuffer = ts.getValue() != null ? ts.getValue() : "";
             searchFocused = false; filterSearchFocused = false;
-        } else if (setting instanceof ModuleEntry.BlockFilterSetting || setting instanceof ModuleEntry.MobFilterSetting) {
+        } else if (setting instanceof ModuleEntry.BlockFilterSetting || setting instanceof ModuleEntry.MobFilterSetting || setting instanceof ModuleEntry.NameFilterSetting) {
             // Check if clicking the label area or the expanded area
             if (my < settingY + POPUP_SETTING_HEIGHT) {
                 // Toggle expansion
                 if (setting == expandedFilterSetting) {
-                    expandedFilterSetting = null; filterSearchQuery = ""; filterSearchFocused = false; filterScrollOffset = 0;
+                    expandedFilterSetting = null; filterSearchQuery = ""; filterSearchFocused = false; filterScrollOffset = 0; pendingNameMappingOriginal = null;
                 } else {
                     expandedFilterSetting = setting; expandedColorSetting = null;
                     filterSearchQuery = ""; filterSearchFocused = false; filterScrollOffset = 0;
                     if (setting instanceof ModuleEntry.BlockFilterSetting) refreshBlockFilterData();
-                    else refreshMobFilterData();
+                    else if (setting instanceof ModuleEntry.MobFilterSetting) refreshMobFilterData();
+                    else refreshNameFilterData();
                 }
             } else if (setting == expandedFilterSetting) {
                 int filterAreaY = settingY + POPUP_SETTING_HEIGHT;
                 // Search bar click
-                if (my < filterAreaY + FILTER_SEARCH_HEIGHT && mx >= popupX + 6 && mx <= popupX + popupWidth - 6) {
+                if (my >= filterAreaY && my < filterAreaY + FILTER_SEARCH_HEIGHT && mx >= popupX + 6 && mx <= popupX + popupWidth - 6) {
+                    int addBtnW = FILTER_BTN_W + 2;
+                    int addBtnX = popupX + popupWidth - 6 - addBtnW;
+                    if (mx >= addBtnX && !filterSearchQuery.isEmpty()) {
+                        executeSearchAdd(setting); return;
+                    }
                     filterSearchFocused = true; searchFocused = false; return;
                 }
                 // Filter list button clicks
@@ -1211,7 +1408,12 @@ public class ClickGuiScreen extends Screen {
         }
         if (filterSearchFocused) {
             if (input.key() == 259 && !filterSearchQuery.isEmpty()) { filterSearchQuery = filterSearchQuery.substring(0, filterSearchQuery.length() - 1); return true; }
-            if (input.isEscape()) { filterSearchFocused = false; filterSearchQuery = ""; return true; }
+            if (input.isEnter() && expandedFilterSetting != null && !filterSearchQuery.isEmpty()) { executeSearchAdd(expandedFilterSetting); return true; }
+            if (input.isEscape()) {
+                if (pendingNameMappingOriginal != null) { pendingNameMappingOriginal = null; filterSearchQuery = ""; }
+                else { filterSearchFocused = false; filterSearchQuery = ""; }
+                return true;
+            }
             return true;
         }
         if (searchFocused) {
@@ -1248,11 +1450,32 @@ public class ClickGuiScreen extends Screen {
     }
 
     private void refreshMobFilterData() {
+        cachedMobEntities.clear();
         cachedMobActiveNames = new ArrayList<>(MobEspManager.getNameFilters());
         cachedMobActiveTypes = new ArrayList<>();
         for (Identifier id : MobEspManager.getTypeFilters()) cachedMobActiveTypes.add(id.toString());
         cachedMobNearbyNames = suggestNearbyEntityNames();
         cachedMobNearbyTypes = suggestNearbyEntityTypes();
+    }
+
+    private void refreshNameFilterData() {
+        cachedNameMappings = new ArrayList<>(NickHiderConfig.getNameMappings().entrySet());
+        cachedOnlinePlayers = suggestOnlinePlayers();
+    }
+
+    private List<String> suggestOnlinePlayers() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null || mc.getNetworkHandler() == null) return Collections.emptyList();
+        Map<String, String> active = NickHiderConfig.getNameMappings();
+        List<String> result = new ArrayList<>();
+        for (var entry : mc.getNetworkHandler().getPlayerList()) {
+            String name = entry.getProfile().name();
+            if (name == null || name.isEmpty()) continue;
+            if (name.startsWith("!")) continue;
+            if (!active.containsKey(name)) result.add(name);
+        }
+        result.sort(String.CASE_INSENSITIVE_ORDER);
+        return result;
     }
 
     private List<String> suggestNearbyBlocks() {
@@ -1304,6 +1527,39 @@ public class ClickGuiScreen extends Screen {
         return new ArrayList<>(found);
     }
 
+    private void executeSearchAdd(ModuleEntry.SubSetting setting) {
+        String query = filterSearchQuery.trim();
+        if (query.isEmpty()) return;
+        if (setting instanceof ModuleEntry.BlockFilterSetting) {
+            RenderConfig.addXrayOpaqueBlock(query);
+            FloydAddonsConfig.saveXrayOpaque();
+            refreshBlockFilterData();
+        } else if (setting instanceof ModuleEntry.MobFilterSetting) {
+            if (query.contains(":")) {
+                MobEspManager.addTypeFilter(query);
+            } else {
+                MobEspManager.addNameFilter(query);
+            }
+            FloydAddonsConfig.saveMobEsp();
+            refreshMobFilterData();
+        } else if (setting instanceof ModuleEntry.NameFilterSetting) {
+            if (pendingNameMappingOriginal != null) {
+                // Step 2: query is the fake name
+                NickHiderConfig.addNameMapping(pendingNameMappingOriginal, query);
+                FloydAddonsConfig.saveNameMappings();
+                pendingNameMappingOriginal = null;
+                refreshNameFilterData();
+            } else {
+                // Step 1: query is the original name, prompt for fake name
+                pendingNameMappingOriginal = query;
+                filterSearchQuery = "";
+                filterSearchFocused = true;
+                return;
+            }
+        }
+        filterSearchQuery = "";
+    }
+
     private void executeFilterAction(FilterHitEntry entry) {
         switch (entry.action) {
             case ADD_BLOCK -> { RenderConfig.addXrayOpaqueBlock(entry.key); FloydAddonsConfig.saveXrayOpaque(); refreshBlockFilterData(); }
@@ -1312,6 +1568,8 @@ public class ClickGuiScreen extends Screen {
             case REMOVE_MOB_NAME -> { MobEspManager.removeNameFilter(entry.key); FloydAddonsConfig.saveMobEsp(); refreshMobFilterData(); }
             case ADD_MOB_TYPE -> { MobEspManager.addTypeFilter(entry.key); FloydAddonsConfig.saveMobEsp(); refreshMobFilterData(); }
             case REMOVE_MOB_TYPE -> { MobEspManager.removeTypeFilter(entry.key); FloydAddonsConfig.saveMobEsp(); refreshMobFilterData(); }
+            case ADD_NAME_MAPPING -> { pendingNameMappingOriginal = entry.key; filterSearchQuery = ""; filterSearchFocused = true; }
+            case REMOVE_NAME_MAPPING -> { NickHiderConfig.removeNameMapping(entry.key); FloydAddonsConfig.saveNameMappings(); refreshNameFilterData(); }
         }
     }
 
@@ -1365,7 +1623,8 @@ public class ClickGuiScreen extends Screen {
     }
 
     private enum FilterAction {
-        ADD_BLOCK, REMOVE_BLOCK, ADD_MOB_NAME, REMOVE_MOB_NAME, ADD_MOB_TYPE, REMOVE_MOB_TYPE
+        ADD_BLOCK, REMOVE_BLOCK, ADD_MOB_NAME, REMOVE_MOB_NAME, ADD_MOB_TYPE, REMOVE_MOB_TYPE,
+        ADD_NAME_MAPPING, REMOVE_NAME_MAPPING
     }
 
     private static class FilterHitEntry {

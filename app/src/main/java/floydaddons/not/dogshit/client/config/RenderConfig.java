@@ -32,9 +32,9 @@ public final class RenderConfig {
     private static float coneHatYOffset = -0.5f;
     private static float coneHatRotation = 0.0f;
     private static float coneHatRotationSpeed = 0.0f;
-    private static boolean buttonTextChromaEnabled = true;
-    private static boolean buttonBorderChromaEnabled = true;
-    private static boolean guiBorderChromaEnabled = true;
+    private static boolean buttonTextChromaEnabled = false;
+    private static boolean buttonBorderChromaEnabled = false;
+    private static boolean guiBorderChromaEnabled = false;
     private static int guiBorderColor = 0xFFFFFFFF;
     private static int buttonBorderColor = 0xFFFFFFFF;
     private static int buttonTextColor = 0xFFFFFFFF;
@@ -48,13 +48,13 @@ public final class RenderConfig {
     private static float xrayOpacity = 0.3f;
     private static volatile Set<String> xrayOpaqueBlocks = defaultXrayOpaqueBlocks();
     private static volatile boolean mobEspEnabled = false;
-    private static boolean mobEspTracers = true;
-    private static boolean mobEspHitboxes = true;
-    private static boolean mobEspStarMobs = true;
+    private static boolean mobEspTracers = false;
+    private static boolean mobEspHitboxes = false;
+    private static boolean mobEspStarMobs = false;
     private static int defaultEspColor = 0xFFFFFFFF;
-    private static boolean defaultEspChromaEnabled = true;
+    private static boolean defaultEspChromaEnabled = false;
     private static int stalkTracerColor = 0xFFFFFFFF;
-    private static boolean stalkTracerChromaEnabled = true;
+    private static boolean stalkTracerChromaEnabled = false;
     private static int hudCornerRadius = 0;
 
     private RenderConfig() {}

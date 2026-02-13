@@ -34,6 +34,7 @@ When porting from 1.21.10 to 1.21.11, these MC API changes require code fixes:
 - `TextRenderer.prepare()` descriptor changed from `FFIZI` to `FFIZZI` (NickHiderTextRendererMixin)
 - `NativeImageBackedTexture.setFilter()` removed (CapeManager GIF textures)
 - `InventoryScreen.drawEntity()` Quaternionf overload removed; use `getAndUpdateRenderState()` + `context.addEntity()` directly (ClickGuiScreen)
+- `Camera.update()` first parameter changed from `BlockView` to `World` (CameraMixin)
 
 ## Build Commands
 
