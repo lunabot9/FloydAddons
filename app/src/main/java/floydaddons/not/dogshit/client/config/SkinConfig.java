@@ -11,8 +11,8 @@ import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
 
 public final class SkinConfig {
-    private static boolean customEnabled = true;
-    private static boolean selfEnabled = true;
+    private static boolean customEnabled = false;
+    private static boolean selfEnabled = false;
     private static boolean othersEnabled = false;
     private static String selectedSkin = "george-floyd.png";
     private static float playerScaleX = 1.0f;
