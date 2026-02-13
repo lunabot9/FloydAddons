@@ -43,6 +43,7 @@ public class FloydAddonsClient implements ClientModInitializer {
         MobEspRenderer.register();
         FloydAddonsCommand.register();
         DiscordPresenceManager.start();
+        UpdateChecker.init();
 
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.floydaddons.open_gui",
@@ -95,6 +96,7 @@ public class FloydAddonsClient implements ClientModInitializer {
             if (client.player == null) {
                 return;
             }
+            UpdateChecker.tick(client);
             while (openGuiKey.wasPressed()) {
                 client.setScreen(new FloydAddonsScreen(Text.literal("FloydAddons")));
             }
