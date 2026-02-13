@@ -25,6 +25,7 @@ public final class HidersConfig {
     private static boolean removeFallingBlocks;
     private static boolean removeExplosionParticles;
     private static boolean removeTabPing;
+    private static String noArmorMode = "OFF";
 
     private HidersConfig() {}
 
@@ -57,6 +58,10 @@ public final class HidersConfig {
 
     public static boolean isRemoveTabPingEnabled() { return removeTabPing; }
     public static void setRemoveTabPingEnabled(boolean v) { removeTabPing = v; }
+
+    public static String getNoArmorMode() { return noArmorMode; }
+    public static void setNoArmorMode(String v) { noArmorMode = v; }
+    public static boolean isNoArmorEnabled() { return !"OFF".equals(noArmorMode); }
 
     /** Convenience: delegates to the unified config. */
     public static void save() { FloydAddonsConfig.save(); }

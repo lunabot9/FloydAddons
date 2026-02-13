@@ -298,6 +298,18 @@ public class ClickGuiScreen extends Screen {
                 HidersConfig::isRemoveExplosionParticlesEnabled, () -> HidersConfig.setRemoveExplosionParticlesEnabled(!HidersConfig.isRemoveExplosionParticlesEnabled())));
         hiders.add(new ModuleEntry("Remove Tab Ping", "Hide ping icons in tab list",
                 HidersConfig::isRemoveTabPingEnabled, () -> HidersConfig.setRemoveTabPingEnabled(!HidersConfig.isRemoveTabPingEnabled())));
+        hiders.add(new ModuleEntry("No Armor", "Hide armor on players",
+                HidersConfig::isNoArmorEnabled,
+                () -> {
+                    String cur = HidersConfig.getNoArmorMode();
+                    HidersConfig.setNoArmorMode("OFF".equals(cur) ? "SELF" : "OFF");
+                },
+                List.of(
+                        new ModuleEntry.CycleSetting("Target",
+                                () -> List.of("OFF", "SELF", "OTHERS", "ALL"),
+                                HidersConfig::getNoArmorMode,
+                                m -> { HidersConfig.setNoArmorMode(m); HidersConfig.save(); })
+                )));
         modules.put(ModuleCategory.HIDERS, hiders);
 
         // ═══════════════════════ PLAYER ═══════════════════════

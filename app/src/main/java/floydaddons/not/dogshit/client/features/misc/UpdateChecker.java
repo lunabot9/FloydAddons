@@ -34,9 +34,11 @@ public final class UpdateChecker {
 
     public static void init() {
         try (InputStream is = UpdateChecker.class.getResourceAsStream("/fabric.mod.json")) {
-            if (is == null) return;
+            if (is == null) { System.out.println("[FloydAddons] UpdateChecker: fabric.mod.json not found"); return; }
             JsonObject mod = JsonParser.parseReader(new InputStreamReader(is, StandardCharsets.UTF_8)).getAsJsonObject();
+            if (!"floydaddons".equals(mod.get("id").getAsString())) { System.out.println("[FloydAddons] UpdateChecker: wrong mod id, skipping"); return; }
             String version = mod.get("version").getAsString();
+            System.out.println("[FloydAddons] UpdateChecker: version=" + version);
             if (version.equals("${version}")) return; // dev build
 
             if (version.contains("-mc")) {

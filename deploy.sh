@@ -20,5 +20,7 @@ if [ ! -f "$JAR" ]; then
     exit 1
 fi
 
+DEST_DIR="$(dirname "$DEST")"
+rm -f "${DEST_DIR}"/floydaddons*.jar
 cp "$JAR" "$DEST"
 echo "Deployed $(basename "$JAR") -> $DEST"
