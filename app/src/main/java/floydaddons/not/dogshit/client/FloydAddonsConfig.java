@@ -100,6 +100,7 @@ public final class FloydAddonsConfig {
         data.playerScaleX = SkinConfig.getPlayerScaleX();
         data.playerScaleY = SkinConfig.getPlayerScaleY();
         data.playerScaleZ = SkinConfig.getPlayerScaleZ();
+        data.playerSizeTarget = SkinConfig.getPlayerSizeTarget();
         // Render
         data.inventoryHudEnabled = RenderConfig.isInventoryHudEnabled();
         data.inventoryHudX = RenderConfig.getInventoryHudX();
@@ -295,6 +296,7 @@ public final class FloydAddonsConfig {
         } else if (data.playerScale != 1.0f && data.playerScale > 0) {
             SkinConfig.setPlayerScale(data.playerScale);
         }
+        if (data.playerSizeTarget != null) SkinConfig.setPlayerSizeTarget(data.playerSizeTarget);
     }
 
     private static void loadHiders(Data data) {
@@ -384,6 +386,7 @@ public final class FloydAddonsConfig {
         float playerScaleX = 1.0f;
         float playerScaleY = 1.0f;
         float playerScaleZ = 1.0f;
+        String playerSizeTarget = "Self";
         // Render
         boolean inventoryHudEnabled;
         int inventoryHudX;

@@ -26,13 +26,14 @@ public class SkinScreen extends Screen {
     private ButtonWidget capeConfigButton;
     private ButtonWidget coneHatToggle;
     private ButtonWidget coneHatConfigButton;
+    private ButtonWidget playerSizeTargetButton;
     private SliderWidget playerSizeXSlider;
     private SliderWidget playerSizeYSlider;
     private SliderWidget playerSizeZSlider;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 240;
-    private static final int BOX_HEIGHT = 340;
+    private static final int BOX_HEIGHT = 366;
     private static final long FADE_DURATION_MS = 90;
     private long openStartMs;
     private boolean closing = false;
@@ -67,8 +68,8 @@ public class SkinScreen extends Screen {
         panelY = savedY;
 
         int cx = panelX + (BOX_WIDTH - CONTROL_WIDTH) / 2;
-        // vertically center the stack of eight rows inside the box
-        int rowsHeight = ROW_HEIGHT * 8 + ROW_SPACING * 7;
+        // vertically center the stack of nine rows inside the box
+        int rowsHeight = ROW_HEIGHT * 9 + ROW_SPACING * 8;
         int cy = panelY + (BOX_HEIGHT - rowsHeight) / 2;
 
         // Row 0: "Cosmetics" section header (drawn in render)
@@ -105,8 +106,20 @@ public class SkinScreen extends Screen {
 
         // Row 4: "Player Size" section header (drawn in render)
 
+        playerSizeTargetButton = ButtonWidget.builder(Text.literal(playerSizeTargetLabel()), b -> {
+            String current = SkinConfig.getPlayerSizeTarget();
+            String next = switch (current) {
+                case "Self" -> "Real Players";
+                case "Real Players" -> "All";
+                default -> "Self";
+            };
+            SkinConfig.setPlayerSizeTarget(next);
+            b.setMessage(Text.literal(playerSizeTargetLabel()));
+            SkinConfig.save();
+        }).dimensions(cx, cy + ROW_SPACING * 5, CONTROL_WIDTH, ROW_HEIGHT).build();
+
         playerSizeXSlider = new SliderWidget(
-                cx, cy + ROW_SPACING * 5, CONTROL_WIDTH, ROW_HEIGHT,
+                cx, cy + ROW_SPACING * 6, CONTROL_WIDTH, ROW_HEIGHT,
                 Text.literal(playerSizeXLabel()),
                 normalizePlayerScale(SkinConfig.getPlayerScaleX())
         ) {
@@ -119,7 +132,7 @@ public class SkinScreen extends Screen {
         };
 
         playerSizeYSlider = new SliderWidget(
-                cx, cy + ROW_SPACING * 6, CONTROL_WIDTH, ROW_HEIGHT,
+                cx, cy + ROW_SPACING * 7, CONTROL_WIDTH, ROW_HEIGHT,
                 Text.literal(playerSizeYLabel()),
                 normalizePlayerScale(SkinConfig.getPlayerScaleY())
         ) {
@@ -132,7 +145,7 @@ public class SkinScreen extends Screen {
         };
 
         playerSizeZSlider = new SliderWidget(
-                cx, cy + ROW_SPACING * 7, CONTROL_WIDTH, ROW_HEIGHT,
+                cx, cy + ROW_SPACING * 8, CONTROL_WIDTH, ROW_HEIGHT,
                 Text.literal(playerSizeZLabel()),
                 normalizePlayerScale(SkinConfig.getPlayerScaleZ())
         ) {
@@ -154,6 +167,7 @@ public class SkinScreen extends Screen {
         addDrawableChild(capeConfigButton);
         addDrawableChild(coneHatToggle);
         addDrawableChild(coneHatConfigButton);
+        addDrawableChild(playerSizeTargetButton);
         addDrawableChild(playerSizeXSlider);
         addDrawableChild(playerSizeYSlider);
         addDrawableChild(playerSizeZSlider);
@@ -163,6 +177,7 @@ public class SkinScreen extends Screen {
     private String customLabel() { return "Custom Skin: " + (SkinConfig.customEnabled() ? "ON" : "OFF"); }
     private String capeLabel() { return "Cape: " + (RenderConfig.isCapeEnabled() ? "ON" : "OFF"); }
     private String coneHatLabel() { return "Cone Hat: " + (RenderConfig.isFloydHatEnabled() ? "ON" : "OFF"); }
+    private String playerSizeTargetLabel() { return "Target: " + SkinConfig.getPlayerSizeTarget(); }
     private String playerSizeXLabel() { return "Size X: " + String.format("%.1f", SkinConfig.getPlayerScaleX()); }
     private String playerSizeYLabel() { return "Size Y: " + String.format("%.1f", SkinConfig.getPlayerScaleY()); }
     private String playerSizeZLabel() { return "Size Z: " + String.format("%.1f", SkinConfig.getPlayerScaleZ()); }
@@ -230,7 +245,7 @@ public class SkinScreen extends Screen {
 
     private void repositionWidgets() {
         int cx = panelX + (BOX_WIDTH - CONTROL_WIDTH) / 2;
-        int rowsHeight = ROW_HEIGHT * 8 + ROW_SPACING * 7;
+        int rowsHeight = ROW_HEIGHT * 9 + ROW_SPACING * 8;
         int cy = panelY + (BOX_HEIGHT - rowsHeight) / 2;
         customToggle.setX(cx);                 customToggle.setY(cy + ROW_SPACING * 1);
         customConfigButton.setX(cx + MAIN_W + PAIR_GAP); customConfigButton.setY(cy + ROW_SPACING * 1);
@@ -238,9 +253,10 @@ public class SkinScreen extends Screen {
         capeConfigButton.setX(cx + MAIN_W + PAIR_GAP); capeConfigButton.setY(cy + ROW_SPACING * 2);
         coneHatToggle.setX(cx);                coneHatToggle.setY(cy + ROW_SPACING * 3);
         coneHatConfigButton.setX(cx + MAIN_W + PAIR_GAP); coneHatConfigButton.setY(cy + ROW_SPACING * 3);
-        playerSizeXSlider.setX(cx);            playerSizeXSlider.setY(cy + ROW_SPACING * 5);
-        playerSizeYSlider.setX(cx);            playerSizeYSlider.setY(cy + ROW_SPACING * 6);
-        playerSizeZSlider.setX(cx);            playerSizeZSlider.setY(cy + ROW_SPACING * 7);
+        playerSizeTargetButton.setX(cx);       playerSizeTargetButton.setY(cy + ROW_SPACING * 5);
+        playerSizeXSlider.setX(cx);            playerSizeXSlider.setY(cy + ROW_SPACING * 6);
+        playerSizeYSlider.setX(cx);            playerSizeYSlider.setY(cy + ROW_SPACING * 7);
+        playerSizeZSlider.setX(cx);            playerSizeZSlider.setY(cy + ROW_SPACING * 8);
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2);
         doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
@@ -280,13 +296,14 @@ public class SkinScreen extends Screen {
         styleButton(context, capeConfigButton, guiAlpha, mouseX, mouseY);
         styleButton(context, coneHatToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, coneHatConfigButton, guiAlpha, mouseX, mouseY);
+        styleButton(context, playerSizeTargetButton, guiAlpha, mouseX, mouseY);
         styleSlider(context, playerSizeXSlider, guiAlpha, mouseX, mouseY, SkinConfig.getPlayerScaleX(), -1.0f, 5.0f);
         styleSlider(context, playerSizeYSlider, guiAlpha, mouseX, mouseY, SkinConfig.getPlayerScaleY(), -1.0f, 5.0f);
         styleSlider(context, playerSizeZSlider, guiAlpha, mouseX, mouseY, SkinConfig.getPlayerScaleZ(), -1.0f, 5.0f);
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
         // Section headers
-        int rowsHeight = ROW_HEIGHT * 8 + ROW_SPACING * 7;
+        int rowsHeight = ROW_HEIGHT * 9 + ROW_SPACING * 8;
         int cy = panelY + (BOX_HEIGHT - rowsHeight) / 2;
         drawSectionHeader(context, "Cosmetics", cy, guiAlpha);
         drawSectionHeader(context, "Player Size", cy + ROW_SPACING * 4, guiAlpha);

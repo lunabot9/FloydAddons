@@ -1,9 +1,12 @@
 package floydaddons.not.dogshit.mixin;
 
 import floydaddons.not.dogshit.client.config.SkinConfig;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -17,12 +20,28 @@ public class PlayerSizeMixin {
         float x = SkinConfig.getPlayerScaleX();
         float y = SkinConfig.getPlayerScaleY();
         float z = SkinConfig.getPlayerScaleZ();
-        if (x != 1.0f || y != 1.0f || z != 1.0f) {
-            if (y < 0) {
-                // Translate upward so the flipped model stays visible (Odin-style fix)
-                matrices.translate(0.0f, Math.abs(y) * 1.5f, 0.0f);
+        if (x == 1.0f && y == 1.0f && z == 1.0f) return;
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null || mc.player == null) return;
+
+        String target = SkinConfig.getPlayerSizeTarget();
+        switch (target) {
+            case "Self" -> {
+                if (state.id != mc.player.getId()) return;
             }
-            matrices.scale(x, y, z);
+            case "Real Players" -> {
+                if (mc.world == null || mc.getNetworkHandler() == null) return;
+                Entity entity = mc.world.getEntityById(state.id);
+                if (!(entity instanceof PlayerEntity pe)) return;
+                if (mc.getNetworkHandler().getPlayerListEntry(pe.getUuid()) == null) return;
+            }
+            // "All" -> apply to everyone, no filter
         }
+
+        if (y < 0) {
+            matrices.translate(0.0f, Math.abs(y) * 1.5f, 0.0f);
+        }
+        matrices.scale(x, y, z);
     }
 }
