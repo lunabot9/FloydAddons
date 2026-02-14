@@ -396,11 +396,12 @@ public final class MobEspManager {
 
         boolean starMobsEnabled = RenderConfig.isMobEspStarMobs();
 
-        // Cleanup stale entries (entities despawned or unloaded)
+        // Cleanup stale entries — only remove when the MOB is gone.
+        // The armor stand may unload at shorter range than the mob itself,
+        // so we keep the pairing alive as long as the mob entity exists.
         armorStandToMob.entrySet().removeIf(entry -> {
-            Entity as = mc.world.getEntityById(entry.getKey());
             Entity mob = mc.world.getEntityById(entry.getValue());
-            if (as == null || mob == null) {
+            if (mob == null) {
                 resolvedMobIds.remove(entry.getValue());
                 resolvedMobNames.remove(entry.getValue());
                 return true;
