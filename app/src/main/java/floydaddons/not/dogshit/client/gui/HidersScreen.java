@@ -106,6 +106,11 @@ public class HidersScreen extends Screen {
                 HidersConfig::isRemoveTabPingEnabled,
                 () -> HidersConfig.setRemoveTabPingEnabled(!HidersConfig.isRemoveTabPingEnabled())));
 
+        toggleButtons.add(addCycle(le, row++, "No Armor",
+                HidersConfig::getNoArmorMode,
+                HidersConfig::setNoArmorMode,
+                List.of("OFF", "SELF", "OTHERS", "ALL")));
+
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
                 .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + BOX_HEIGHT - 30, 100, ROW_HEIGHT)
                 .build();
@@ -117,6 +122,22 @@ public class HidersScreen extends Screen {
         ButtonWidget btn = ButtonWidget.builder(Text.literal(name + ": " + (getter.getAsBoolean() ? "ON" : "OFF")), b -> {
             toggle.run();
             b.setMessage(Text.literal(name + ": " + (getter.getAsBoolean() ? "ON" : "OFF")));
+            FloydAddonsConfig.save();
+        }).dimensions(x, rowY(row), FULL_W, ROW_HEIGHT).build();
+        addDrawableChild(btn);
+        return btn;
+    }
+
+    private ButtonWidget addCycle(int x, int row, String name,
+                                   java.util.function.Supplier<String> getter,
+                                   java.util.function.Consumer<String> setter,
+                                   List<String> values) {
+        ButtonWidget btn = ButtonWidget.builder(Text.literal(name + ": " + getter.get()), b -> {
+            String cur = getter.get();
+            int idx = values.indexOf(cur);
+            String next = values.get((idx + 1) % values.size());
+            setter.accept(next);
+            b.setMessage(Text.literal(name + ": " + next));
             FloydAddonsConfig.save();
         }).dimensions(x, rowY(row), FULL_W, ROW_HEIGHT).build();
         addDrawableChild(btn);
