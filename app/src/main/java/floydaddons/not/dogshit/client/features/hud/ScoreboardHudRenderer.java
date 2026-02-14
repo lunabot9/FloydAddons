@@ -22,6 +22,7 @@ import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.scoreboard.number.NumberFormat;
 import net.minecraft.scoreboard.number.StyledNumberFormat;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 
 import java.util.Comparator;
@@ -91,14 +92,21 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
         NumberFormat numberFormat = objective.getNumberFormatOr(StyledNumberFormat.RED);
         TextRenderer textRenderer = mc.textRenderer;
 
-        // Collect entries
+        // Collect entries — convert to OrderedText and apply nick/server-ID
+        // replacements directly.  We must work at the OrderedText level because
+        // Team.decorateName() embeds the entry owner string (which may contain
+        // literal § chars for uniqueness) between prefix and suffix.  Text-level
+        // getString() preserves those § chars and breaks pattern matching, but
+        // asOrderedText() runs through TextVisitFactory.visitFormatted() which
+        // consumes them, yielding clean text for replacement.
         List<EntryLine> lines = scoreboard.getScoreboardEntries(objective).stream()
                 .filter(e -> !e.hidden())
                 .sorted(ENTRY_COMPARATOR)
                 .limit(15)
                 .map(entry -> {
                     Team entryTeam = scoreboard.getScoreHolderTeam(entry.owner());
-                    Text name = Team.decorateName(entryTeam, entry.name());
+                    Text rawName = Team.decorateName(entryTeam, entry.name());
+                    OrderedText name = NickTextUtil.replaceAllNamesInOrderedText(rawName.asOrderedText());
                     Text score = entry.formatted(numberFormat);
                     return new EntryLine(name, score, textRenderer.getWidth(score));
                 })
@@ -188,5 +196,5 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
         return RenderConfig.getButtonTextLiveColor(offset);
     }
 
-    private record EntryLine(Text name, Text score, int scoreWidth) {}
+    private record EntryLine(OrderedText name, Text score, int scoreWidth) {}
 }

@@ -33,6 +33,7 @@ public final class NickTextUtil {
     private static final Pattern PROFILE_ID_PATTERN = Pattern.compile(
             "(?i)profile\\s*id:\\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     private static final String PROFILE_ID_REPLACEMENT = "Profile ID: [hidden]";
+    private static final Pattern DATE_PATTERN = Pattern.compile("\\d{2}/\\d{2}/\\d{2}");
 
     private static volatile boolean suppressNickReplacement = false;
 
@@ -144,6 +145,7 @@ public final class NickTextUtil {
         }
 
         if (serverIdEnabled) {
+            result = replaceServerIdAfterDate(result);
             for (String id : ServerIdTracker.getCachedIds()) {
                 result = replaceInOrderedText(result, id, SERVER_ID_REPLACEMENT);
             }
@@ -187,6 +189,7 @@ public final class NickTextUtil {
         }
 
         if (serverIdEnabled) {
+            result = replaceServerIdAfterDateInString(result);
             for (String id : ServerIdTracker.getCachedIds()) {
                 result = caseInsensitiveReplace(result, id, SERVER_ID_REPLACEMENT);
             }
@@ -229,6 +232,11 @@ public final class NickTextUtil {
             }
 
             if (serverIdEnabled) {
+                String flat = result.getString();
+                String dateFixed = replaceServerIdAfterDateInString(flat);
+                if (!dateFixed.equals(flat)) {
+                    result = Text.literal(dateFixed).setStyle(result.getStyle());
+                }
                 for (String id : ServerIdTracker.getCachedIds()) {
                     result = replaceLiteralTextIgnoreCase(result, id, SERVER_ID_REPLACEMENT);
                 }
@@ -248,6 +256,89 @@ public final class NickTextUtil {
         String replaced = replaceAllNamesInString(content);
         if (replaced.equals(content)) return text;
         return Text.literal(replaced);
+    }
+
+    /**
+     * Replaces the first word after a MM/DD/YY date pattern (scoreboard server ID line).
+     * Only replaces if the word contains at least one digit.
+     */
+    private static OrderedText replaceServerIdAfterDate(OrderedText original) {
+        if (original == null) return original;
+
+        List<Integer> codePoints = new ArrayList<>();
+        List<Style> styles = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+
+        original.accept((index, style, codePoint) -> {
+            codePoints.add(codePoint);
+            styles.add(style);
+            sb.appendCodePoint(codePoint);
+            return true;
+        });
+
+        if (codePoints.isEmpty()) return original;
+        String text = sb.toString();
+        if (text.length() != codePoints.size()) return original;
+
+        Matcher dateMatcher = DATE_PATTERN.matcher(text);
+        if (!dateMatcher.find()) return original;
+
+        int dateEnd = dateMatcher.end();
+        int idStart = dateEnd;
+        while (idStart < text.length() && Character.isWhitespace(text.charAt(idStart))) idStart++;
+        if (idStart >= text.length()) return original;
+        int idEnd = idStart;
+        while (idEnd < text.length() && !Character.isWhitespace(text.charAt(idEnd))) idEnd++;
+
+        boolean hasDigit = false;
+        for (int i = idStart; i < idEnd; i++) {
+            if (Character.isDigit(text.charAt(i))) { hasDigit = true; break; }
+        }
+        if (!hasDigit) return original;
+
+        List<Integer> resultCPs = new ArrayList<>();
+        List<Style> resultStyles = new ArrayList<>();
+
+        for (int i = 0; i < idStart; i++) {
+            resultCPs.add(codePoints.get(i));
+            resultStyles.add(styles.get(i));
+        }
+        Style replStyle = styles.get(idStart);
+        for (int i = 0; i < SERVER_ID_REPLACEMENT.length(); i++) {
+            resultCPs.add((int) SERVER_ID_REPLACEMENT.charAt(i));
+            resultStyles.add(replStyle);
+        }
+        for (int i = idEnd; i < codePoints.size(); i++) {
+            resultCPs.add(codePoints.get(i));
+            resultStyles.add(styles.get(i));
+        }
+
+        List<Integer> finalCPs = List.copyOf(resultCPs);
+        List<Style> finalStyles = List.copyOf(resultStyles);
+        return visitor -> {
+            for (int i = 0; i < finalCPs.size(); i++) {
+                if (!visitor.accept(i, finalStyles.get(i), finalCPs.get(i))) return false;
+            }
+            return true;
+        };
+    }
+
+    private static String replaceServerIdAfterDateInString(String text) {
+        if (text == null || text.isEmpty()) return text;
+        Matcher dateMatcher = DATE_PATTERN.matcher(text);
+        if (!dateMatcher.find()) return text;
+        int dateEnd = dateMatcher.end();
+        int idStart = dateEnd;
+        while (idStart < text.length() && Character.isWhitespace(text.charAt(idStart))) idStart++;
+        if (idStart >= text.length()) return text;
+        int idEnd = idStart;
+        while (idEnd < text.length() && !Character.isWhitespace(text.charAt(idEnd))) idEnd++;
+        boolean hasDigit = false;
+        for (int i = idStart; i < idEnd; i++) {
+            if (Character.isDigit(text.charAt(i))) { hasDigit = true; break; }
+        }
+        if (!hasDigit) return text;
+        return text.substring(0, idStart) + SERVER_ID_REPLACEMENT + text.substring(idEnd);
     }
 
     /**
