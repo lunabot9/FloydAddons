@@ -28,14 +28,10 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.OptionalDouble;
-import java.util.Set;
 
 /**
  * Renders chroma tracer lines, wireframe hitbox outlines, and debug labels for mob ESP entities.
@@ -74,16 +70,8 @@ public final class MobEspRenderer {
 
         boolean debugActive = MobEspManager.isDebugActive();
 
-        // Collect matching entities — armor stands are never targets (resolved by tickScan)
-        List<Entity> targets = new ArrayList<>();
-        Set<Integer> addedIds = new HashSet<>();
-        for (Entity entity : mc.world.getEntities()) {
-            if (entity == mc.player) continue;
-            if (!MobEspManager.matches(entity)) continue;
-            if (addedIds.add(entity.getId())) {
-                targets.add(entity);
-            }
-        }
+        // Use the stable render target list built by tickScan() — never re-evaluate matches per frame
+        List<Entity> targets = MobEspManager.getRenderTargets();
 
         if (targets.isEmpty() && !debugActive) return;
 
@@ -141,13 +129,15 @@ public final class MobEspRenderer {
                 float[] rgb = resolveEntityColor(entity);
                 float r = rgb[0], g = rgb[1], b = rgb[2];
 
-                Box aabb = entity.getBoundingBox();
-                float x1 = (float) (aabb.minX - cameraPos.x);
-                float y1 = (float) (aabb.minY - cameraPos.y);
-                float z1 = (float) (aabb.minZ - cameraPos.z);
-                float x2 = (float) (aabb.maxX - cameraPos.x);
-                float y2 = (float) (aabb.maxY - cameraPos.y);
-                float z2 = (float) (aabb.maxZ - cameraPos.z);
+                // Use interpolated position for smooth movement between ticks
+                Vec3d pos = entity.getLerpedPos(tickDelta);
+                float halfW = entity.getWidth() / 2.0f;
+                float x1 = (float) (pos.x - halfW - cameraPos.x);
+                float y1 = (float) (pos.y - cameraPos.y);
+                float z1 = (float) (pos.z - halfW - cameraPos.z);
+                float x2 = (float) (pos.x + halfW - cameraPos.x);
+                float y2 = (float) (pos.y + entity.getHeight() - cameraPos.y);
+                float z2 = (float) (pos.z + halfW - cameraPos.z);
 
                 drawBoxOutline(lineBuf, entry, x1, y1, z1, x2, y2, z2, r, g, b, 1.0f);
                 drewOutlines = true;
