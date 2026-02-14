@@ -91,6 +91,7 @@ public class FloydAddonsClient implements ClientModInitializer {
             SkinManager.extractDefaultSkin(client);
             ServerIdTracker.tick(client);
             NpcTracker.tick();
+            MobEspManager.tickScan();
             CapeManager.tickAnimations();
             DiscordPresenceManager.tick(client);
             if (client.player == null) {

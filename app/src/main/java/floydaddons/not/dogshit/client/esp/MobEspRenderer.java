@@ -74,27 +74,14 @@ public final class MobEspRenderer {
 
         boolean debugActive = MobEspManager.isDebugActive();
 
-        // Collect matching entities, resolving armor stands to their mob entities
+        // Collect matching entities — armor stands are never targets (resolved by tickScan)
         List<Entity> targets = new ArrayList<>();
         Set<Integer> addedIds = new HashSet<>();
         for (Entity entity : mc.world.getEntities()) {
             if (entity == mc.player) continue;
             if (!MobEspManager.matches(entity)) continue;
-
-            if (entity instanceof ArmorStandEntity) {
-                // Armor stand matched (star mob nametag, name filter, etc.)
-                // Try to find the actual mob entity at the same position
-                Entity mob = findMobAtPosition(mc, entity);
-                if (mob != null && addedIds.add(mob.getId())) {
-                    targets.add(mob);
-                } else if (mob == null && addedIds.add(entity.getId())) {
-                    // No mob found — fall back to the armor stand itself
-                    targets.add(entity);
-                }
-            } else {
-                if (addedIds.add(entity.getId())) {
-                    targets.add(entity);
-                }
+            if (addedIds.add(entity.getId())) {
+                targets.add(entity);
             }
         }
 
@@ -197,40 +184,6 @@ public final class MobEspRenderer {
         return new float[]{r, g, b};
     }
 
-    /**
-     * Find the closest non-armor-stand entity at the same X,Z as the given armor stand.
-     * Star mob armor stands float above the actual mob entity.
-     */
-    private static Entity findMobAtPosition(MinecraftClient mc, Entity armorStand) {
-        double asX = armorStand.getX();
-        double asY = armorStand.getY();
-        double asZ = armorStand.getZ();
-
-        Entity closest = null;
-        double closestDist = Double.MAX_VALUE;
-
-        for (Entity entity : mc.world.getEntities()) {
-            if (entity instanceof ArmorStandEntity) continue;
-            if (entity == mc.player) continue;
-
-            double dx = entity.getX() - asX;
-            double dz = entity.getZ() - asZ;
-            double horizDistSq = dx * dx + dz * dz;
-            if (horizDistSq > 0.01) continue; // within 0.1 blocks horizontal
-
-            double dy = entity.getY() - asY;
-            if (dy > 1.0 || dy < -4.0) continue; // mob is at or below the nametag
-
-            double totalDist = horizDistSq + (dy * dy);
-            if (totalDist < closestDist) {
-                closestDist = totalDist;
-                closest = entity;
-            }
-        }
-
-        return closest;
-    }
-
     private static void drawBoxOutline(VertexConsumer buf, MatrixStack.Entry entry,
                                         float x1, float y1, float z1,
                                         float x2, float y2, float z2,
@@ -286,6 +239,11 @@ public final class MobEspRenderer {
 
             String label = typeId + " | " + displayName;
             if (cached != null) label += " | npc=" + cached;
+            if (entity instanceof ArmorStandEntity && MobEspManager.isMatchedArmorStand(entity.getId())) {
+                label += " AS-PAIRED";
+            }
+            String resolvedName = MobEspManager.getResolvedMobName(entity.getId());
+            if (resolvedName != null) label += " | from=" + resolvedName;
             if (matched) label += " MATCH";
 
             float distance = (float) Math.sqrt(dist);

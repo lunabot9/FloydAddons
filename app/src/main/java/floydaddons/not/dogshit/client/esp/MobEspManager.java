@@ -14,6 +14,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +54,27 @@ public final class MobEspManager {
     private static volatile Set<String> tabListNames = Collections.emptySet();
     private static long lastTabListRefreshMs = 0;
     private static final long TAB_LIST_CACHE_MS = 1_000L;
+
+    // --- Armor stand → mob resolution cache ---
+    // armor stand entity ID → paired mob entity ID
+    private static final Map<Integer, Integer> armorStandToMob = new ConcurrentHashMap<>();
+    // mob entity IDs that are ESP targets (resolved from armor stands)
+    private static final Set<Integer> resolvedMobIds = ConcurrentHashMap.newKeySet();
+    // mob entity ID → stripped armor stand name (for color lookup and debug)
+    private static final Map<Integer, String> resolvedMobNames = new ConcurrentHashMap<>();
+    private static int scanTickCounter = 0;
+    private static final int SCAN_INTERVAL = 10; // every 0.5 seconds
+
+    // Known dungeon miniboss names — matched on armor stands when star mobs enabled
+    private static final Set<String> MINIBOSS_NAMES = Set.of(
+            "shadow assassin", "lost adventurer", "frozen adventurer",
+            "king midas", "angry archaeologist"
+    );
+
+    // Mob names that spawn as player entities (not regular mobs)
+    private static final Set<String> PLAYER_MOB_NAMES = Set.of(
+            "shadow assassin", "lost adventurer", "king midas"
+    );
 
     private MobEspManager() {}
 
@@ -176,6 +199,16 @@ public final class MobEspManager {
      * or the default ESP color if no per-entry color is set.
      */
     public static int[] getColorForEntity(Entity entity) {
+        // Check resolved mob name (from armor stand pairing) for color
+        String resolvedName = resolvedMobNames.get(entity.getId());
+        if (resolvedName != null && !nameFilters.isEmpty()) {
+            for (String filter : nameFilters) {
+                if (resolvedName.contains(filter.toLowerCase())) {
+                    int[] c = filterColors.get(filter.toLowerCase());
+                    if (c != null) return c;
+                }
+            }
+        }
         // Check name filters first
         if (!nameFilters.isEmpty()) {
             String displayName = stripColorCodes(entity.getName().getString()).toLowerCase();
@@ -290,21 +323,17 @@ public final class MobEspManager {
 
     public static boolean matches(Entity entity) {
         if (isRealPlayer(entity)) return false;
-        if (entity instanceof ArmorStandEntity as) {
-            if (!as.hasCustomName() || as.getCustomName() == null) return false;
-            String stripped = stripColorCodes(as.getCustomName().getString());
 
-            // Star mob detection: armor stand nametag contains ✯
-            if (RenderConfig.isMobEspStarMobs() && stripped.contains(STAR_CHAR)) return true;
+        // Mobs resolved from armor stand pairings always match
+        if (resolvedMobIds.contains(entity.getId())) return true;
 
-            // Name filter on armor stand custom name
-            if (!nameFilters.isEmpty()) {
-                String lower = stripped.toLowerCase();
-                for (String filter : nameFilters) {
-                    if (lower.contains(filter.toLowerCase())) return true;
-                }
-            }
-            return false;
+        // Armor stands are never direct ESP targets — tickScan() resolves them to mobs
+        if (entity instanceof ArmorStandEntity) return false;
+
+        // Player-entity mobs (Shadow Assassin, Lost Adventurer, etc.) when star mobs enabled
+        if (entity instanceof PlayerEntity && RenderConfig.isMobEspStarMobs()) {
+            String name = stripColorCodes(entity.getName().getString()).toLowerCase();
+            if (PLAYER_MOB_NAMES.contains(name)) return true;
         }
 
         // Non-armor-stand: entity type ID match
@@ -342,5 +371,137 @@ public final class MobEspManager {
     /** Strip Minecraft color codes (section sign + char) from a string. */
     private static String stripColorCodes(String s) {
         return s.replaceAll("\u00a7.", "");
+    }
+
+    // --- Armor stand → mob resolution ---
+
+    /**
+     * Called every client tick. Periodically scans armor stands, resolves them
+     * to nearby mob entities, and caches the pairings. This eliminates per-frame
+     * lookups and prevents flickering.
+     */
+    public static void tickScan() {
+        if (!isEnabled() || !hasFilters()) return;
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null || mc.world == null || mc.player == null) {
+            clearCaches();
+            return;
+        }
+
+        if (++scanTickCounter < SCAN_INTERVAL) return;
+        scanTickCounter = 0;
+
+        boolean starMobsEnabled = RenderConfig.isMobEspStarMobs();
+
+        // Cleanup stale entries (entities despawned or unloaded)
+        armorStandToMob.entrySet().removeIf(entry -> {
+            Entity as = mc.world.getEntityById(entry.getKey());
+            Entity mob = mc.world.getEntityById(entry.getValue());
+            if (as == null || mob == null) {
+                resolvedMobIds.remove(entry.getValue());
+                resolvedMobNames.remove(entry.getValue());
+                return true;
+            }
+            return false;
+        });
+
+        // Scan armor stands for new pairings
+        for (Entity entity : mc.world.getEntities()) {
+            if (!(entity instanceof ArmorStandEntity as)) continue;
+            if (!as.hasCustomName() || as.getCustomName() == null) continue;
+            if (armorStandToMob.containsKey(as.getId())) continue; // already cached
+
+            String stripped = stripColorCodes(as.getCustomName().getString());
+            String lowerStripped = stripped.toLowerCase();
+
+            boolean matched = false;
+
+            // Star character check
+            if (starMobsEnabled && stripped.contains(STAR_CHAR)) matched = true;
+
+            // Miniboss name check (when star mobs enabled)
+            if (!matched && starMobsEnabled) {
+                for (String name : MINIBOSS_NAMES) {
+                    if (lowerStripped.contains(name)) { matched = true; break; }
+                }
+            }
+
+            // Name filter check
+            if (!matched && !nameFilters.isEmpty()) {
+                for (String filter : nameFilters) {
+                    if (lowerStripped.contains(filter.toLowerCase())) { matched = true; break; }
+                }
+            }
+
+            if (!matched) continue;
+
+            // Find the nearest mob entity near this armor stand
+            Entity mob = findNearbyMob(mc, as);
+            if (mob != null) {
+                armorStandToMob.put(as.getId(), mob.getId());
+                resolvedMobIds.add(mob.getId());
+                resolvedMobNames.put(mob.getId(), lowerStripped);
+            }
+        }
+    }
+
+    /**
+     * Find the closest non-armor-stand entity near the given armor stand.
+     * Uses a wide search radius (1.5 blocks horizontal, 5 blocks vertical below)
+     * to handle mob drift and stacking.
+     */
+    private static Entity findNearbyMob(MinecraftClient mc, Entity armorStand) {
+        double asX = armorStand.getX();
+        double asY = armorStand.getY();
+        double asZ = armorStand.getZ();
+
+        Entity closest = null;
+        double closestDist = Double.MAX_VALUE;
+
+        for (Entity entity : mc.world.getEntities()) {
+            if (entity instanceof ArmorStandEntity) continue;
+            if (entity == mc.player) continue;
+            if (isRealPlayer(entity)) continue;
+
+            double dx = entity.getX() - asX;
+            double dz = entity.getZ() - asZ;
+            double horizDistSq = dx * dx + dz * dz;
+            if (horizDistSq > 2.25) continue; // within 1.5 blocks horizontal
+
+            double dy = entity.getY() - asY;
+            if (dy > 1.0 || dy < -5.0) continue; // mob is at or below the nametag
+
+            double totalDist = horizDistSq + (dy * dy);
+            if (totalDist < closestDist) {
+                closestDist = totalDist;
+                closest = entity;
+            }
+        }
+
+        return closest;
+    }
+
+    /** Clear all resolution caches (e.g. on world change). */
+    public static void clearCaches() {
+        armorStandToMob.clear();
+        resolvedMobIds.clear();
+        resolvedMobNames.clear();
+        scanTickCounter = 0;
+    }
+
+    /** Returns the resolved mob entity ID for an armor stand, or null. */
+    public static Integer getResolvedMob(int armorStandId) {
+        return armorStandToMob.get(armorStandId);
+    }
+
+    /** Returns true if this armor stand has been matched and paired with a mob. */
+    public static boolean isMatchedArmorStand(int entityId) {
+        return armorStandToMob.containsKey(entityId);
+    }
+
+    /** Returns the stripped armor stand name for a resolved mob, or null. */
+    public static String getResolvedMobName(int entityId) {
+        return resolvedMobNames.get(entityId);
     }
 }
