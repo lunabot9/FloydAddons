@@ -52,6 +52,7 @@ public final class RenderConfig {
     private static int customScoreboardX = -1;
     private static int customScoreboardY = -1;
     private static boolean serverIdHiderEnabled = false;
+    private static boolean profileIdHiderEnabled = true;
     private static volatile boolean xrayEnabled = false;
     private static float xrayOpacity = 0.3f;
     private static volatile Set<String> xrayOpaqueBlocks = defaultXrayOpaqueBlocks();
@@ -201,6 +202,8 @@ public final class RenderConfig {
 
     public static boolean isServerIdHiderEnabled() { return serverIdHiderEnabled; }
     public static void setServerIdHiderEnabled(boolean v) { serverIdHiderEnabled = v; }
+    public static boolean isProfileIdHiderEnabled() { return profileIdHiderEnabled; }
+    public static void setProfileIdHiderEnabled(boolean v) { profileIdHiderEnabled = v; }
 
 
     public static boolean isXrayEnabled() { return xrayEnabled; }

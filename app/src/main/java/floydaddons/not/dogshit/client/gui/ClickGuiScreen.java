@@ -190,6 +190,10 @@ public class ClickGuiScreen extends Screen {
                         new ModuleEntry.MobFilterSetting("Edit Filters")
                 )));
 
+        render.add(new ModuleEntry("Profile ID Hider", "Hide profile IDs in chat",
+                RenderConfig::isProfileIdHiderEnabled,
+                () -> RenderConfig.setProfileIdHiderEnabled(!RenderConfig.isProfileIdHiderEnabled())));
+
         render.add(new ModuleEntry("Server ID Hider", "Hide server address display",
                 RenderConfig::isServerIdHiderEnabled,
                 () -> RenderConfig.setServerIdHiderEnabled(!RenderConfig.isServerIdHiderEnabled())));

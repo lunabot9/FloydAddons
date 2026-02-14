@@ -26,6 +26,7 @@ public class RenderScreen extends Screen {
     private final Screen parent;
 
     private ButtonWidget serverIdToggle;
+    private ButtonWidget profileIdToggle;
     private ButtonWidget xrayToggle;
     private SliderWidget opacitySlider;
     private ButtonWidget editBlocksButton;
@@ -88,16 +89,23 @@ public class RenderScreen extends Screen {
             RenderConfig.save();
         }).dimensions(le, rowY(0), FULL_W, ROW_HEIGHT).build();
 
-        // Row 1: "X-Ray" header (drawn in render)
-        // Row 2: X-Ray toggle
+        // Row 1: Profile ID Hider
+        profileIdToggle = ButtonWidget.builder(Text.literal(profileIdLabel()), b -> {
+            RenderConfig.setProfileIdHiderEnabled(!RenderConfig.isProfileIdHiderEnabled());
+            b.setMessage(Text.literal(profileIdLabel()));
+            RenderConfig.save();
+        }).dimensions(le, rowY(1), FULL_W, ROW_HEIGHT).build();
+
+        // Row 2: "X-Ray" header (drawn in render)
+        // Row 3: X-Ray toggle
         xrayToggle = ButtonWidget.builder(Text.literal(xrayLabel()), b -> {
             RenderConfig.toggleXray();
             b.setMessage(Text.literal(xrayLabel()));
-        }).dimensions(le, rowY(2), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(3), FULL_W, ROW_HEIGHT).build();
 
-        // Row 3: Opacity slider
+        // Row 4: Opacity slider
         opacitySlider = new SliderWidget(
-                le, rowY(3), FULL_W, ROW_HEIGHT,
+                le, rowY(4), FULL_W, ROW_HEIGHT,
                 Text.literal(opacityLabel()),
                 opacityToSlider(RenderConfig.getXrayOpacity())
         ) {
@@ -118,49 +126,49 @@ public class RenderScreen extends Screen {
             }
         };
 
-        // Row 4: Edit Blocks + Reload Blocks
+        // Row 5: Edit Blocks + Reload Blocks
         editBlocksButton = ButtonWidget.builder(Text.literal("Edit Blocks"), b -> {
             if (client != null) client.setScreen(new XrayEditorScreen(this));
-        }).dimensions(le, rowY(4), HALF_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(5), HALF_W, ROW_HEIGHT).build();
 
         reloadBlocksButton = ButtonWidget.builder(Text.literal("Reload Blocks"), b -> {
             FloydAddonsConfig.loadXrayOpaque();
             if (RenderConfig.isXrayEnabled()) {
                 RenderConfig.rebuildChunks();
             }
-        }).dimensions(le + HALF_W + PAIR_GAP, rowY(4), HALF_W, ROW_HEIGHT).build();
+        }).dimensions(le + HALF_W + PAIR_GAP, rowY(5), HALF_W, ROW_HEIGHT).build();
 
-        // Row 5: "Mob ESP" header (drawn in render)
-        // Row 6: Mob ESP toggle + Config
+        // Row 6: "Mob ESP" header (drawn in render)
+        // Row 7: Mob ESP toggle + Config
         mobEspToggle = ButtonWidget.builder(Text.literal(mobEspLabel()), b -> {
             RenderConfig.toggleMobEsp();
             b.setMessage(Text.literal(mobEspLabel()));
             RenderConfig.save();
-        }).dimensions(le, rowY(6), MAIN_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(7), MAIN_W, ROW_HEIGHT).build();
 
         mobEspConfigButton = ButtonWidget.builder(Text.literal("Config"), b -> {
             if (client != null) client.setScreen(new MobEspScreen(this));
-        }).dimensions(le + MAIN_W + PAIR_GAP, rowY(6), SECONDARY_W, ROW_HEIGHT).build();
+        }).dimensions(le + MAIN_W + PAIR_GAP, rowY(7), SECONDARY_W, ROW_HEIGHT).build();
 
-        // Row 7: "Other" header (drawn in render)
-        // Row 8: Hiders + Attack Animation
+        // Row 8: "Other" header (drawn in render)
+        // Row 9: Hiders + Attack Animation
         hidersButton = ButtonWidget.builder(Text.literal("Hiders"), b -> {
             if (client != null) client.setScreen(new HidersScreen(this));
-        }).dimensions(le, rowY(8), HALF_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(9), HALF_W, ROW_HEIGHT).build();
 
         animationsButton = ButtonWidget.builder(Text.literal("Attack Animation"), b -> {
             if (client != null) client.setScreen(new AnimationsScreen(this));
-        }).dimensions(le + HALF_W + PAIR_GAP, rowY(8), HALF_W, ROW_HEIGHT).build();
+        }).dimensions(le + HALF_W + PAIR_GAP, rowY(9), HALF_W, ROW_HEIGHT).build();
 
-        // Row 9: Client Time slider + toggle
+        // Row 10: Client Time slider + toggle
         timeToggle = ButtonWidget.builder(Text.literal(timeToggleLabel()), b -> {
             RenderConfig.setCustomTimeEnabled(!RenderConfig.isCustomTimeEnabled());
             b.setMessage(Text.literal(timeToggleLabel()));
             RenderConfig.save();
-        }).dimensions(le, rowY(9), HALF_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(10), HALF_W, ROW_HEIGHT).build();
 
         timeSlider = new SliderWidget(
-                le + HALF_W + PAIR_GAP, rowY(9), HALF_W, ROW_HEIGHT,
+                le + HALF_W + PAIR_GAP, rowY(10), HALF_W, ROW_HEIGHT,
                 Text.literal(timeSliderLabel()),
                 RenderConfig.getCustomTimeValue() / 100f
         ) {
@@ -172,13 +180,13 @@ public class RenderScreen extends Screen {
             @Override public void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {}
         };
 
-        // Row 10: Stalk Player
+        // Row 11: Stalk Player
         stalkButton = ButtonWidget.builder(Text.literal(stalkLabel()), b -> {
             if (StalkManager.isEnabled()) {
                 StalkManager.disable();
             }
             b.setMessage(Text.literal(stalkLabel()));
-        }).dimensions(le, rowY(10), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(11), FULL_W, ROW_HEIGHT).build();
 
         // Done
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
@@ -186,6 +194,7 @@ public class RenderScreen extends Screen {
                 .build();
 
         addDrawableChild(serverIdToggle);
+        addDrawableChild(profileIdToggle);
         addDrawableChild(xrayToggle);
         addDrawableChild(opacitySlider);
         addDrawableChild(editBlocksButton);
@@ -201,6 +210,7 @@ public class RenderScreen extends Screen {
     }
 
     private String serverIdLabel() { return "Server ID Hider: " + (RenderConfig.isServerIdHiderEnabled() ? "ON" : "OFF"); }
+    private String profileIdLabel() { return "Profile ID Hider: " + (RenderConfig.isProfileIdHiderEnabled() ? "ON" : "OFF"); }
     private String xrayLabel() { return "X-Ray: " + (RenderConfig.isXrayEnabled() ? "ON" : "OFF"); }
     private String opacityLabel() { return "X-Ray Opacity: " + Math.round(RenderConfig.getXrayOpacity() * 100) + "%"; }
     private String mobEspLabel() { return "Mob ESP: " + (RenderConfig.isMobEspEnabled() ? "ON" : "OFF"); }
@@ -268,6 +278,7 @@ public class RenderScreen extends Screen {
         InventoryHudRenderer.drawChromaBorder(context, left - 1, top - 1, right + 1, bottom + 1, guiAlpha);
 
         styleButton(context, serverIdToggle, guiAlpha, mouseX, mouseY);
+        styleButton(context, profileIdToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, xrayToggle, guiAlpha, mouseX, mouseY);
         styleSlider(context, opacitySlider, guiAlpha, mouseX, mouseY, RenderConfig.getXrayOpacity());
         styleButton(context, editBlocksButton, guiAlpha, mouseX, mouseY);
@@ -283,9 +294,9 @@ public class RenderScreen extends Screen {
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
         // Section headers
-        drawSectionHeader(context, "X-Ray", rowY(1), guiAlpha);
-        drawSectionHeader(context, "Mob ESP", rowY(5), guiAlpha);
-        drawSectionHeader(context, "Other", rowY(7), guiAlpha);
+        drawSectionHeader(context, "X-Ray", rowY(2), guiAlpha);
+        drawSectionHeader(context, "Mob ESP", rowY(6), guiAlpha);
+        drawSectionHeader(context, "Other", rowY(8), guiAlpha);
 
         // Title
         String title = "Render";
@@ -341,17 +352,18 @@ public class RenderScreen extends Screen {
     private void repositionWidgets() {
         int le = leftEdge();
         serverIdToggle.setX(le);               serverIdToggle.setY(rowY(0));
-        xrayToggle.setX(le);                   xrayToggle.setY(rowY(2));
-        opacitySlider.setX(le);                opacitySlider.setY(rowY(3));
-        editBlocksButton.setX(le);             editBlocksButton.setY(rowY(4));
-        reloadBlocksButton.setX(le + HALF_W + PAIR_GAP); reloadBlocksButton.setY(rowY(4));
-        mobEspToggle.setX(le);                 mobEspToggle.setY(rowY(6));
-        mobEspConfigButton.setX(le + MAIN_W + PAIR_GAP); mobEspConfigButton.setY(rowY(6));
-        hidersButton.setX(le);                 hidersButton.setY(rowY(8));
-        animationsButton.setX(le + HALF_W + PAIR_GAP); animationsButton.setY(rowY(8));
-        timeToggle.setX(le);                   timeToggle.setY(rowY(9));
-        timeSlider.setX(le + HALF_W + PAIR_GAP); timeSlider.setY(rowY(9));
-        stalkButton.setX(le);                  stalkButton.setY(rowY(10));
+        profileIdToggle.setX(le);              profileIdToggle.setY(rowY(1));
+        xrayToggle.setX(le);                   xrayToggle.setY(rowY(3));
+        opacitySlider.setX(le);                opacitySlider.setY(rowY(4));
+        editBlocksButton.setX(le);             editBlocksButton.setY(rowY(5));
+        reloadBlocksButton.setX(le + HALF_W + PAIR_GAP); reloadBlocksButton.setY(rowY(5));
+        mobEspToggle.setX(le);                 mobEspToggle.setY(rowY(7));
+        mobEspConfigButton.setX(le + MAIN_W + PAIR_GAP); mobEspConfigButton.setY(rowY(7));
+        hidersButton.setX(le);                 hidersButton.setY(rowY(9));
+        animationsButton.setX(le + HALF_W + PAIR_GAP); animationsButton.setY(rowY(9));
+        timeToggle.setX(le);                   timeToggle.setY(rowY(10));
+        timeSlider.setX(le + HALF_W + PAIR_GAP); timeSlider.setY(rowY(10));
+        stalkButton.setX(le);                  stalkButton.setY(rowY(11));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 

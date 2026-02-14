@@ -30,6 +30,9 @@ import java.util.regex.Pattern;
  */
 public final class NickTextUtil {
     private static final String SERVER_ID_REPLACEMENT = "fL0YD";
+    private static final Pattern PROFILE_ID_PATTERN = Pattern.compile(
+            "(?i)profile\\s*id:\\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+    private static final String PROFILE_ID_REPLACEMENT = "Profile ID: [hidden]";
 
     private static volatile boolean suppressNickReplacement = false;
 
@@ -121,7 +124,8 @@ public final class NickTextUtil {
     public static OrderedText replaceAllNamesInOrderedText(OrderedText original) {
         boolean nickEnabled = NickHiderConfig.isEnabled();
         boolean serverIdEnabled = RenderConfig.isServerIdHiderEnabled();
-        if (!nickEnabled && !serverIdEnabled) return original;
+        boolean profileIdEnabled = RenderConfig.isProfileIdHiderEnabled();
+        if (!nickEnabled && !serverIdEnabled && !profileIdEnabled) return original;
 
         OrderedText result = original;
 
@@ -147,6 +151,10 @@ public final class NickTextUtil {
             result = regexReplaceInOrderedText(result, ServerIdTracker.getFullPattern(), SERVER_ID_REPLACEMENT);
         }
 
+        if (profileIdEnabled) {
+            result = regexReplaceInOrderedText(result, PROFILE_ID_PATTERN, PROFILE_ID_REPLACEMENT);
+        }
+
         return result;
     }
 
@@ -158,7 +166,8 @@ public final class NickTextUtil {
     public static String replaceAllNamesInString(String text) {
         boolean nickEnabled = NickHiderConfig.isEnabled();
         boolean serverIdEnabled = RenderConfig.isServerIdHiderEnabled();
-        if (!nickEnabled && !serverIdEnabled) return text;
+        boolean profileIdEnabled = RenderConfig.isProfileIdHiderEnabled();
+        if (!nickEnabled && !serverIdEnabled && !profileIdEnabled) return text;
         if (text == null || text.isEmpty()) return text;
 
         String result = text;
@@ -185,6 +194,10 @@ public final class NickTextUtil {
             result = ServerIdTracker.getFullPattern().matcher(result).replaceAll(SERVER_ID_REPLACEMENT);
         }
 
+        if (profileIdEnabled) {
+            result = PROFILE_ID_PATTERN.matcher(result).replaceAll(PROFILE_ID_REPLACEMENT);
+        }
+
         return result;
     }
 
@@ -195,7 +208,8 @@ public final class NickTextUtil {
     public static StringVisitable replaceAllNamesInStringVisitable(StringVisitable text) {
         boolean nickEnabled = NickHiderConfig.isEnabled();
         boolean serverIdEnabled = RenderConfig.isServerIdHiderEnabled();
-        if (!nickEnabled && !serverIdEnabled) return text;
+        boolean profileIdEnabled = RenderConfig.isProfileIdHiderEnabled();
+        if (!nickEnabled && !serverIdEnabled && !profileIdEnabled) return text;
 
         if (text instanceof Text t) {
             Text result = t;
@@ -220,6 +234,10 @@ public final class NickTextUtil {
                 }
                 // Regex catch-all: replace any server ID pattern not yet in the accumulated set
                 result = regexReplaceLiteralText(result, ServerIdTracker.getFullPattern(), SERVER_ID_REPLACEMENT);
+            }
+
+            if (profileIdEnabled) {
+                result = regexReplaceLiteralText(result, PROFILE_ID_PATTERN, PROFILE_ID_REPLACEMENT);
             }
 
             return result;

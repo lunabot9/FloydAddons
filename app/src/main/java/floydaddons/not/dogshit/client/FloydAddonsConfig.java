@@ -133,6 +133,7 @@ public final class FloydAddonsConfig {
         data.customScoreboardX = RenderConfig.getCustomScoreboardX();
         data.customScoreboardY = RenderConfig.getCustomScoreboardY();
         data.serverIdHiderEnabled = RenderConfig.isServerIdHiderEnabled();
+        data.profileIdHiderEnabled = RenderConfig.isProfileIdHiderEnabled();
         data.xrayOpacity = RenderConfig.getXrayOpacity();
         data.mobEspEnabled = RenderConfig.isMobEspEnabled();
         data.mobEspTracers = RenderConfig.isMobEspTracers();
@@ -354,6 +355,7 @@ public final class FloydAddonsConfig {
         RenderConfig.setCustomScoreboardX(data.customScoreboardX);
         RenderConfig.setCustomScoreboardY(data.customScoreboardY);
         RenderConfig.setServerIdHiderEnabled(data.serverIdHiderEnabled);
+        RenderConfig.setProfileIdHiderEnabled(data.profileIdHiderEnabled);
         if (data.xrayOpacity > 0) RenderConfig.setXrayOpacity(data.xrayOpacity);
         RenderConfig.setMobEspEnabled(data.mobEspEnabled);
         RenderConfig.setMobEspTracers(data.mobEspTracers);
@@ -437,6 +439,7 @@ public final class FloydAddonsConfig {
         int customScoreboardX;
         int customScoreboardY;
         boolean serverIdHiderEnabled;
+        boolean profileIdHiderEnabled = true;
         float xrayOpacity;
         boolean mobEspEnabled;
         boolean mobEspTracers = true;
