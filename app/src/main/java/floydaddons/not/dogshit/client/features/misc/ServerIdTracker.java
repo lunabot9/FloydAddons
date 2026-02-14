@@ -20,7 +20,10 @@ import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.text.Text;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -245,8 +248,16 @@ public final class ServerIdTracker {
         String fallbackSuffix = null;
         UUID fallbackUUID = null;
 
+        // Snapshot the list to avoid ConcurrentModificationException
+        List<PlayerListEntry> entries;
         try {
-            for (PlayerListEntry entry : handler.getPlayerList()) {
+            entries = new ArrayList<>(handler.getPlayerList());
+        } catch (Exception e) {
+            return false;
+        }
+
+        for (PlayerListEntry entry : entries) {
+            try {
                 Text displayName = entry.getDisplayName();
                 if (displayName == null) continue;
 
@@ -275,9 +286,7 @@ public final class ServerIdTracker {
                         fallbackUUID = entry.getProfile().id();
                     }
                 }
-            }
-        } catch (Exception ignored) {
-            // ConcurrentModificationException possible during tab list updates
+            } catch (Exception ignored) {}
         }
 
         if (fallbackFull != null) {
