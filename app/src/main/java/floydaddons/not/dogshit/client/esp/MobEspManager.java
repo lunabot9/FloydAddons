@@ -62,6 +62,8 @@ public final class MobEspManager {
     private static final Set<Integer> resolvedMobIds = ConcurrentHashMap.newKeySet();
     // mob entity ID → stripped armor stand name (for color lookup and debug)
     private static final Map<Integer, String> resolvedMobNames = new ConcurrentHashMap<>();
+    // Stable render target list — rebuilt by tickScan(), consumed by renderer
+    private static final List<Entity> renderTargets = new ArrayList<>();
     private static int scanTickCounter = 0;
     private static final int SCAN_INTERVAL = 10; // every 0.5 seconds
 
@@ -394,11 +396,12 @@ public final class MobEspManager {
 
         boolean starMobsEnabled = RenderConfig.isMobEspStarMobs();
 
-        // Cleanup stale entries (entities despawned or unloaded)
+        // Cleanup stale entries — only remove when the MOB is gone.
+        // The armor stand may unload at shorter range than the mob itself,
+        // so we keep the pairing alive as long as the mob entity exists.
         armorStandToMob.entrySet().removeIf(entry -> {
-            Entity as = mc.world.getEntityById(entry.getKey());
             Entity mob = mc.world.getEntityById(entry.getValue());
-            if (as == null || mob == null) {
+            if (mob == null) {
                 resolvedMobIds.remove(entry.getValue());
                 resolvedMobNames.remove(entry.getValue());
                 return true;
@@ -444,6 +447,18 @@ public final class MobEspManager {
                 resolvedMobNames.put(mob.getId(), lowerStripped);
             }
         }
+
+        // Rebuild the stable render target list
+        List<Entity> newTargets = new ArrayList<>();
+        Set<Integer> addedIds = new HashSet<>();
+        for (Entity entity : mc.world.getEntities()) {
+            if (entity == mc.player) continue;
+            if (matches(entity) && addedIds.add(entity.getId())) {
+                newTargets.add(entity);
+            }
+        }
+        renderTargets.clear();
+        renderTargets.addAll(newTargets);
     }
 
     /**
@@ -482,11 +497,21 @@ public final class MobEspManager {
         return closest;
     }
 
+    /**
+     * Returns the stable render target list. Removes dead/despawned entities lazily.
+     * The renderer should draw from this list instead of re-evaluating matches().
+     */
+    public static List<Entity> getRenderTargets() {
+        renderTargets.removeIf(Entity::isRemoved);
+        return renderTargets;
+    }
+
     /** Clear all resolution caches (e.g. on world change). */
     public static void clearCaches() {
         armorStandToMob.clear();
         resolvedMobIds.clear();
         resolvedMobNames.clear();
+        renderTargets.clear();
         scanTickCounter = 0;
     }
 
