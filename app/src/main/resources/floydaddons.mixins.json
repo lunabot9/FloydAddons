@@ -38,7 +38,8 @@
     "SwingDurationMixin",
     "ClassicClickMixin",
     "ClientWorldPropertiesAccessor",
-    "TimeUpdateMixin"
+    "TimeUpdateMixin",
+    "WatchdogMessageHiderMixin"
   ],
   "injectors": {
     "defaultRequire": 1

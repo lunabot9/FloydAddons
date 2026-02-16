@@ -23,6 +23,8 @@
     "HiderFallingBlockMixin",
     "HiderParticleMixin",
     "HiderPlayerListMixin",
+    "HiderArmorMixin",
+    "HiderHeadMixin",
     "HiderArrowMixin",
     "HiderFireEntityMixin",
     "CameraAccessor",
@@ -36,7 +38,8 @@
     "SwingDurationMixin",
     "ClassicClickMixin",
     "ClientWorldPropertiesAccessor",
-    "TimeUpdateMixin"
+    "TimeUpdateMixin",
+    "WatchdogMessageHiderMixin"
   ],
   "injectors": {
     "defaultRequire": 1
