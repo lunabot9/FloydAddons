@@ -45,6 +45,7 @@ public final class CameraConfig {
     private static float f5CameraDistance = 4.0f;
     private static boolean f5ScrollEnabled = false;
     private static boolean f5ResetOnToggle = false;
+    private static boolean f5NoClip = false;
     private static final float F5_DEFAULT_DISTANCE = 4.0f;
 
     private CameraConfig() {}
@@ -202,6 +203,9 @@ public final class CameraConfig {
 
     public static boolean isF5ResetOnToggle() { return f5ResetOnToggle; }
     public static void setF5ResetOnToggle(boolean v) { f5ResetOnToggle = v; }
+
+    public static boolean isF5NoClip() { return f5NoClip; }
+    public static void setF5NoClip(boolean v) { f5NoClip = v; }
 
     public static float getF5DefaultDistance() { return F5_DEFAULT_DISTANCE; }
 

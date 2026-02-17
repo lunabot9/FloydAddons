@@ -30,13 +30,14 @@ public class CameraScreen extends Screen {
     private SliderWidget freelookDistanceSlider;
     private ButtonWidget f5DisableFrontToggle;
     private ButtonWidget f5DisableBackToggle;
+    private ButtonWidget f5NoClipToggle;
     private ButtonWidget f5ScrollToggle;
     private ButtonWidget f5ResetToggle;
     private SliderWidget f5DistanceSlider;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 304;
+    private static final int BOX_HEIGHT = 340;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;
@@ -128,23 +129,30 @@ public class CameraScreen extends Screen {
             FloydAddonsConfig.save();
         }).dimensions(le + HALF_W + PAIR_GAP, rowY(5), HALF_W, ROW_HEIGHT).build();
 
-        // Row 6: F5 Scroll Distance toggle
+        // Row 6: Ignore collision clipping
+        f5NoClipToggle = ButtonWidget.builder(Text.literal(f5NoClipLabel()), b -> {
+            CameraConfig.setF5NoClip(!CameraConfig.isF5NoClip());
+            b.setMessage(Text.literal(f5NoClipLabel()));
+            FloydAddonsConfig.save();
+        }).dimensions(le, rowY(6), FULL_W, ROW_HEIGHT).build();
+
+        // Row 7: F5 Scroll Distance toggle
         f5ScrollToggle = ButtonWidget.builder(Text.literal(f5ScrollLabel()), b -> {
             CameraConfig.setF5ScrollEnabled(!CameraConfig.isF5ScrollEnabled());
             b.setMessage(Text.literal(f5ScrollLabel()));
             FloydAddonsConfig.save();
-        }).dimensions(le, rowY(6), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(7), FULL_W, ROW_HEIGHT).build();
 
-        // Row 7: F5 Reset On Toggle
+        // Row 8: F5 Reset On Toggle
         f5ResetToggle = ButtonWidget.builder(Text.literal(f5ResetLabel()), b -> {
             CameraConfig.setF5ResetOnToggle(!CameraConfig.isF5ResetOnToggle());
             b.setMessage(Text.literal(f5ResetLabel()));
             FloydAddonsConfig.save();
-        }).dimensions(le, rowY(7), FULL_W, ROW_HEIGHT).build();
+        }).dimensions(le, rowY(8), FULL_W, ROW_HEIGHT).build();
 
-        // Row 8: F5 Camera Distance slider
+        // Row 9: F5 Camera Distance slider
         f5DistanceSlider = new SliderWidget(
-                le, rowY(8), FULL_W, ROW_HEIGHT,
+                le, rowY(9), FULL_W, ROW_HEIGHT,
                 Text.literal(f5DistanceLabel()),
                 normalizeF5Distance(CameraConfig.getF5CameraDistance())
         ) {
@@ -167,6 +175,7 @@ public class CameraScreen extends Screen {
         addDrawableChild(freelookDistanceSlider);
         addDrawableChild(f5DisableFrontToggle);
         addDrawableChild(f5DisableBackToggle);
+        addDrawableChild(f5NoClipToggle);
         addDrawableChild(f5ScrollToggle);
         addDrawableChild(f5ResetToggle);
         addDrawableChild(f5DistanceSlider);
@@ -179,6 +188,7 @@ public class CameraScreen extends Screen {
     private String freelookDistanceLabel() { return "Dist: " + String.format("%.1f", CameraConfig.getFreelookDistance()); }
     private String f5FrontLabel() { return "Disable Front: " + (CameraConfig.isF5DisableFront() ? "ON" : "OFF"); }
     private String f5BackLabel() { return "Disable Back: " + (CameraConfig.isF5DisableBack() ? "ON" : "OFF"); }
+    private String f5NoClipLabel() { return "Ignore Block Collisions: " + (CameraConfig.isF5NoClip() ? "ON" : "OFF"); }
     private String f5ScrollLabel() { return "Scrolling Changes Distance: " + (CameraConfig.isF5ScrollEnabled() ? "ON" : "OFF"); }
     private String f5ResetLabel() { return "Reset F5 Scrolling: " + (CameraConfig.isF5ResetOnToggle() ? "ON" : "OFF"); }
     private String f5DistanceLabel() { return "F5 Distance: " + String.format("%.1f", CameraConfig.getF5CameraDistance()); }
@@ -233,6 +243,7 @@ public class CameraScreen extends Screen {
         styleSlider(context, freelookDistanceSlider, guiAlpha, mouseX, mouseY, CameraConfig.getFreelookDistance(), 1.0f, 20.0f);
         styleButton(context, f5DisableFrontToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, f5DisableBackToggle, guiAlpha, mouseX, mouseY);
+        styleButton(context, f5NoClipToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, f5ScrollToggle, guiAlpha, mouseX, mouseY);
         styleButton(context, f5ResetToggle, guiAlpha, mouseX, mouseY);
         styleSlider(context, f5DistanceSlider, guiAlpha, mouseX, mouseY, CameraConfig.getF5CameraDistance(), 1.0f, 20.0f);
@@ -294,9 +305,10 @@ public class CameraScreen extends Screen {
         freelookDistanceSlider.setX(le + HALF_W + PAIR_GAP); freelookDistanceSlider.setY(rowY(3));
         f5DisableFrontToggle.setX(le);       f5DisableFrontToggle.setY(rowY(5));
         f5DisableBackToggle.setX(le + HALF_W + PAIR_GAP); f5DisableBackToggle.setY(rowY(5));
-        f5ScrollToggle.setX(le);             f5ScrollToggle.setY(rowY(6));
-        f5ResetToggle.setX(le);              f5ResetToggle.setY(rowY(7));
-        f5DistanceSlider.setX(le);           f5DistanceSlider.setY(rowY(8));
+        f5NoClipToggle.setX(le);             f5NoClipToggle.setY(rowY(6));
+        f5ScrollToggle.setX(le);             f5ScrollToggle.setY(rowY(7));
+        f5ResetToggle.setX(le);              f5ResetToggle.setY(rowY(8));
+        f5DistanceSlider.setX(le);           f5DistanceSlider.setY(rowY(9));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 
