@@ -418,13 +418,16 @@ public class ClickGuiScreen extends Screen {
                         CameraConfig::setFreelookDistance, 1.0f, 20.0f, "%.1f"))));
         camera.add(new ModuleEntry("F5 Customizer", "Customize third-person camera",
                 () -> CameraConfig.isF5DisableFront() || CameraConfig.isF5DisableBack()
-                        || CameraConfig.getF5CameraDistance() != 4.0f || CameraConfig.isF5ScrollEnabled(),
+                        || CameraConfig.getF5CameraDistance() != 4.0f || CameraConfig.isF5ScrollEnabled()
+                        || CameraConfig.isF5NoClip(),
                 () -> {},
                 List.of(
                         new ModuleEntry.BooleanSetting("Disable Front Cam", CameraConfig::isF5DisableFront,
                                 () -> { CameraConfig.setF5DisableFront(!CameraConfig.isF5DisableFront()); FloydAddonsConfig.save(); }),
                         new ModuleEntry.BooleanSetting("Disable Back Cam", CameraConfig::isF5DisableBack,
                                 () -> { CameraConfig.setF5DisableBack(!CameraConfig.isF5DisableBack()); FloydAddonsConfig.save(); }),
+                        new ModuleEntry.BooleanSetting("No Third-Person Clipping", CameraConfig::isF5NoClip,
+                                () -> { CameraConfig.setF5NoClip(!CameraConfig.isF5NoClip()); FloydAddonsConfig.save(); }),
                         new ModuleEntry.BooleanSetting("Scrolling Changes Distance", CameraConfig::isF5ScrollEnabled,
                                 () -> { CameraConfig.setF5ScrollEnabled(!CameraConfig.isF5ScrollEnabled()); FloydAddonsConfig.save(); }),
                         new ModuleEntry.BooleanSetting("Reset F5 Scrolling", CameraConfig::isF5ResetOnToggle,

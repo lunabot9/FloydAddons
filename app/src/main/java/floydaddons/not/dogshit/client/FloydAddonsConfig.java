@@ -152,6 +152,7 @@ public final class FloydAddonsConfig {
         data.f5CameraDistance = CameraConfig.getF5CameraDistance();
         data.f5ScrollEnabled = CameraConfig.isF5ScrollEnabled();
         data.f5ResetOnToggle = CameraConfig.isF5ResetOnToggle();
+        data.f5NoClip = CameraConfig.isF5NoClip();
         // Hiders
         data.hiderNoHurtCamera = HidersConfig.isNoHurtCameraEnabled();
         data.hiderRemoveFireOverlay = HidersConfig.isRemoveFireOverlayEnabled();
@@ -391,6 +392,7 @@ public final class FloydAddonsConfig {
         if (data.f5CameraDistance > 0) CameraConfig.setF5CameraDistance(data.f5CameraDistance);
         CameraConfig.setF5ScrollEnabled(data.f5ScrollEnabled);
         CameraConfig.setF5ResetOnToggle(data.f5ResetOnToggle);
+        CameraConfig.setF5NoClip(data.f5NoClip);
     }
 
     private static class Data {
@@ -459,6 +461,7 @@ public final class FloydAddonsConfig {
         // F5 Customizer toggles default to off
         boolean f5ScrollEnabled;
         boolean f5ResetOnToggle;
+        boolean f5NoClip;
         // Hiders
         boolean hiderNoHurtCamera;
         boolean hiderRemoveFireOverlay;
