@@ -11,6 +11,7 @@ import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
 
 import net.minecraft.block.BlockState;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.registry.Registries;
 
 import java.util.Collections;
@@ -65,6 +66,10 @@ public final class RenderConfig {
     private static int stalkTracerColor = 0xFFFFFFFF;
     private static boolean stalkTracerChromaEnabled = false;
     private static int hudCornerRadius = 0;
+    private static String windowTitle = "";
+    private static String defaultWindowTitle = null;
+    private static String lastAppliedTitle = null;
+    public static volatile boolean windowTitleDirty = false;
 
     private RenderConfig() {}
 
@@ -239,6 +244,52 @@ public final class RenderConfig {
 
     public static boolean isStalkTracerChromaEnabled() { return stalkTracerChromaEnabled; }
     public static void setStalkTracerChromaEnabled(boolean v) { stalkTracerChromaEnabled = v; }
+
+    public static String getWindowTitle() { return windowTitle; }
+    public static void setWindowTitle(String title) {
+        windowTitle = title != null ? title.trim() : "";
+        windowTitleDirty = true;
+        // Defer application until the game world exists to avoid early GL state issues.
+        if (MinecraftClient.getInstance() != null && MinecraftClient.getInstance().world != null) {
+            applyWindowTitle();
+        }
+    }
+
+    public static void applyWindowTitle() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null) return;
+        var window = client.getWindow();
+        if (defaultWindowTitle == null) {
+            try {
+                var f = window.getClass().getDeclaredField("title");
+                f.setAccessible(true);
+                defaultWindowTitle = (String) f.get(window);
+            } catch (Exception ignored) {
+                defaultWindowTitle = "Minecraft";
+            }
+        }
+        final String targetTitle = (windowTitle != null && !windowTitle.isEmpty()) ? windowTitle : defaultWindowTitle;
+        // If another mod reset the title, re-apply even if we already set it once.
+        try {
+            String currentTitle = null;
+            try {
+                var f = window.getClass().getDeclaredField("title");
+                f.setAccessible(true);
+                currentTitle = (String) f.get(window);
+            } catch (Exception ignored) {}
+            if (!windowTitleDirty && targetTitle.equals(currentTitle)) {
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        client.execute(() -> {
+            try {
+                window.setTitle(targetTitle);
+                lastAppliedTitle = targetTitle;
+                windowTitleDirty = false;
+            } catch (Exception ignored) {}
+        });
+    }
 
     /** Forces a full chunk rebuild for both vanilla and Sodium renderers. */
     public static void rebuildChunks() {
