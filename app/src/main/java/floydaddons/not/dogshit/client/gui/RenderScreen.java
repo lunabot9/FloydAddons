@@ -15,6 +15,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.SliderWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Util;
 
@@ -38,10 +39,11 @@ public class RenderScreen extends Screen {
     private ButtonWidget timeToggle;
     private SliderWidget timeSlider;
     private ButtonWidget stalkButton;
+    private TextFieldWidget windowTitleField;
     private ButtonWidget doneButton;
 
     private static final int BOX_WIDTH = 320;
-    private static final int BOX_HEIGHT = 380;
+    private static final int BOX_HEIGHT = 420;
     private static final int DRAG_BAR_HEIGHT = 18;
     private static final long FADE_DURATION_MS = 90;
     private static final int ROW_HEIGHT = 20;
@@ -188,6 +190,17 @@ public class RenderScreen extends Screen {
             b.setMessage(Text.literal(stalkLabel()));
         }).dimensions(le, rowY(11), FULL_W, ROW_HEIGHT).build();
 
+        // Row 12: Window title
+        windowTitleField = new TextFieldWidget(textRenderer, le, rowY(12), FULL_W, ROW_HEIGHT, Text.literal("Window Title"));
+        windowTitleField.setMaxLength(64);
+        windowTitleField.setText(RenderConfig.getWindowTitle());
+        windowTitleField.setSuggestion(RenderConfig.getWindowTitle().isEmpty() ? "Instance name / taskbar title" : "");
+        windowTitleField.setChangedListener(text -> {
+            RenderConfig.setWindowTitle(text);
+            RenderConfig.save();
+            windowTitleField.setSuggestion(text.isEmpty() ? "Instance name / taskbar title" : "");
+        });
+
         // Done
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
                 .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + BOX_HEIGHT - 30, 100, ROW_HEIGHT)
@@ -206,6 +219,7 @@ public class RenderScreen extends Screen {
         addDrawableChild(timeToggle);
         addDrawableChild(timeSlider);
         addDrawableChild(stalkButton);
+        addDrawableChild(windowTitleField);
         addDrawableChild(doneButton);
     }
 
@@ -291,6 +305,7 @@ public class RenderScreen extends Screen {
         styleSlider(context, timeSlider, guiAlpha, mouseX, mouseY, RenderConfig.getCustomTimeValue() / 100f);
         stalkButton.setMessage(Text.literal(stalkLabel()));
         styleButton(context, stalkButton, guiAlpha, mouseX, mouseY);
+        windowTitleField.render(context, mouseX, mouseY, delta);
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
         // Section headers
@@ -364,6 +379,7 @@ public class RenderScreen extends Screen {
         timeToggle.setX(le);                   timeToggle.setY(rowY(10));
         timeSlider.setX(le + HALF_W + PAIR_GAP); timeSlider.setY(rowY(10));
         stalkButton.setX(le);                  stalkButton.setY(rowY(11));
+        windowTitleField.setX(le);             windowTitleField.setY(rowY(12));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 

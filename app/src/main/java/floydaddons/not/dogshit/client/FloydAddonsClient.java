@@ -33,6 +33,7 @@ public class FloydAddonsClient implements ClientModInitializer {
     private KeyBinding freelookToggleKey;
     private static final KeyBinding.Category KEY_CATEGORY =
             KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
+    private static boolean windowIconApplied = false;
 
     @Override
     public void onInitializeClient() {
@@ -88,6 +89,13 @@ public class FloydAddonsClient implements ClientModInitializer {
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client != null && client.getWindow() != null) { // window exists even on title screen
+                if (!windowIconApplied) {
+                    try { TaskbarIconManager.apply(); } catch (Exception ignored) {}
+                    windowIconApplied = true;
+                }
+                try { RenderConfig.applyWindowTitle(); } catch (Exception ignored) {}
+            }
             SkinManager.extractDefaultSkin(client);
             ServerIdTracker.tick(client);
             NpcTracker.tick();

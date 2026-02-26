@@ -144,6 +144,7 @@ public final class FloydAddonsConfig {
         data.stalkTracerColor = RenderConfig.getStalkTracerColor();
         data.stalkTracerChromaEnabled = RenderConfig.isStalkTracerChromaEnabled();
         data.hudCornerRadius = RenderConfig.getHudCornerRadius();
+        data.windowTitle = RenderConfig.getWindowTitle();
         // Camera
         data.freecamSpeed = CameraConfig.getFreecamSpeed();
         data.freelookDistance = CameraConfig.getFreelookDistance();
@@ -367,6 +368,7 @@ public final class FloydAddonsConfig {
         RenderConfig.setStalkTracerColor(data.stalkTracerColor);
         RenderConfig.setStalkTracerChromaEnabled(data.stalkTracerChromaEnabled);
         RenderConfig.setHudCornerRadius(data.hudCornerRadius);
+        RenderConfig.setWindowTitle(data.windowTitle);
     }
 
     private static void loadAnimation(Data data) {
@@ -452,6 +454,7 @@ public final class FloydAddonsConfig {
         int stalkTracerColor = 0xFFFFFFFF;
         boolean stalkTracerChromaEnabled = true;
         int hudCornerRadius;
+        String windowTitle;
         // Camera
         float freecamSpeed = 1.0f;
         float freelookDistance = 4.0f;

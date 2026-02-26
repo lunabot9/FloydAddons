@@ -227,6 +227,12 @@ public class ClickGuiScreen extends Screen {
                 List.of(new ModuleEntry.ButtonSetting("Edit Layout",
                         () -> MinecraftClient.getInstance().setScreen(new MoveHudScreen(self))))));
 
+        render.add(new ModuleEntry("Instance Name", "Sets the window/taskbar title for this instance",
+                () -> !RenderConfig.getWindowTitle().isEmpty(),
+                () -> { RenderConfig.setWindowTitle(""); RenderConfig.save(); },
+                List.of(new ModuleEntry.TextSetting("Instance Title", RenderConfig::getWindowTitle,
+                        t -> { RenderConfig.setWindowTitle(t); RenderConfig.save(); })) ));
+
         render.add(new ModuleEntry("GUI Style", "Customize UI colors and chroma",
                 () -> RenderConfig.isButtonTextChromaEnabled() || RenderConfig.isButtonBorderChromaEnabled() || RenderConfig.isGuiBorderChromaEnabled()
                         || RenderConfig.isButtonTextFadeEnabled() || RenderConfig.isButtonBorderFadeEnabled() || RenderConfig.isGuiBorderFadeEnabled(),
