@@ -24,6 +24,9 @@ repositories {
     maven("https://jcenter.bintray.com/") {
         name = "JCenterReadonly"
     }
+    maven("https://jitpack.io") {
+        name = "JitPack"
+    }
 }
 
 dependencies {
