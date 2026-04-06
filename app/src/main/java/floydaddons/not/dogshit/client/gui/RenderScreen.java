@@ -39,6 +39,7 @@ public class RenderScreen extends Screen {
     private ButtonWidget timeToggle;
     private SliderWidget timeSlider;
     private ButtonWidget stalkButton;
+    private ButtonWidget borderlessButton;
     private TextFieldWidget windowTitleField;
     private ButtonWidget doneButton;
 
@@ -190,8 +191,14 @@ public class RenderScreen extends Screen {
             b.setMessage(Text.literal(stalkLabel()));
         }).dimensions(le, rowY(11), FULL_W, ROW_HEIGHT).build();
 
-        // Row 12: Window title
-        windowTitleField = new TextFieldWidget(textRenderer, le, rowY(12), FULL_W, ROW_HEIGHT, Text.literal("Window Title"));
+        // Row 12: Borderless windowed toggle
+        borderlessButton = ButtonWidget.builder(Text.literal(borderlessLabel()), b -> {
+            RenderConfig.toggleBorderlessWindowed();
+            b.setMessage(Text.literal(borderlessLabel()));
+        }).dimensions(le, rowY(12), FULL_W, ROW_HEIGHT).build();
+
+        // Row 13: Window title
+        windowTitleField = new TextFieldWidget(textRenderer, le, rowY(13), FULL_W, ROW_HEIGHT, Text.literal("Window Title"));
         windowTitleField.setMaxLength(64);
         windowTitleField.setText(RenderConfig.getWindowTitle());
         windowTitleField.setSuggestion(RenderConfig.getWindowTitle().isEmpty() ? "Instance name / taskbar title" : "");
@@ -219,6 +226,7 @@ public class RenderScreen extends Screen {
         addDrawableChild(timeToggle);
         addDrawableChild(timeSlider);
         addDrawableChild(stalkButton);
+        addDrawableChild(borderlessButton);
         addDrawableChild(windowTitleField);
         addDrawableChild(doneButton);
     }
@@ -230,6 +238,7 @@ public class RenderScreen extends Screen {
     private String mobEspLabel() { return "Mob ESP: " + (RenderConfig.isMobEspEnabled() ? "ON" : "OFF"); }
     private String timeToggleLabel() { return "Time Changer: " + (RenderConfig.isCustomTimeEnabled() ? "ON" : "OFF"); }
     private String timeSliderLabel() { return "Time: " + Math.round(RenderConfig.getCustomTimeValue()) + "%"; }
+    private String borderlessLabel() { return "Borderless Window: " + (RenderConfig.isBorderlessWindowed() ? "ON" : "OFF"); }
     private String stalkLabel() {
         if (StalkManager.isEnabled()) return "Stalk: " + StalkManager.getTargetName() + " (click to disable)";
         return "Stalk: OFF (use /fa stalk <name>)";
@@ -305,6 +314,8 @@ public class RenderScreen extends Screen {
         styleSlider(context, timeSlider, guiAlpha, mouseX, mouseY, RenderConfig.getCustomTimeValue() / 100f);
         stalkButton.setMessage(Text.literal(stalkLabel()));
         styleButton(context, stalkButton, guiAlpha, mouseX, mouseY);
+        borderlessButton.setMessage(Text.literal(borderlessLabel()));
+        styleButton(context, borderlessButton, guiAlpha, mouseX, mouseY);
         windowTitleField.render(context, mouseX, mouseY, delta);
         styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
 
@@ -379,7 +390,8 @@ public class RenderScreen extends Screen {
         timeToggle.setX(le);                   timeToggle.setY(rowY(10));
         timeSlider.setX(le + HALF_W + PAIR_GAP); timeSlider.setY(rowY(10));
         stalkButton.setX(le);                  stalkButton.setY(rowY(11));
-        windowTitleField.setX(le);             windowTitleField.setY(rowY(12));
+        borderlessButton.setX(le);             borderlessButton.setY(rowY(12));
+        windowTitleField.setX(le);             windowTitleField.setY(rowY(13));
         doneButton.setX(panelX + (BOX_WIDTH - 100) / 2); doneButton.setY(panelY + BOX_HEIGHT - 30);
     }
 

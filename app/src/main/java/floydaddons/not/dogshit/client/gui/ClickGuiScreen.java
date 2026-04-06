@@ -227,6 +227,10 @@ public class ClickGuiScreen extends Screen {
                 List.of(new ModuleEntry.ButtonSetting("Edit Layout",
                         () -> MinecraftClient.getInstance().setScreen(new MoveHudScreen(self))))));
 
+        render.add(new ModuleEntry("Borderless Window", "Borderless windowed mode (no title bar)",
+                RenderConfig::isBorderlessWindowed,
+                RenderConfig::toggleBorderlessWindowed));
+
         render.add(new ModuleEntry("Instance Name", "Sets the window/taskbar title for this instance",
                 () -> !RenderConfig.getWindowTitle().isEmpty(),
                 () -> { RenderConfig.setWindowTitle(""); RenderConfig.save(); },

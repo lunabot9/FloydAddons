@@ -13,6 +13,8 @@ import floydaddons.not.dogshit.client.util.*;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.registry.Registries;
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWVidMode;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -70,6 +72,12 @@ public final class RenderConfig {
     private static String defaultWindowTitle = null;
     private static String lastAppliedTitle = null;
     public static volatile boolean windowTitleDirty = false;
+    private static boolean borderlessWindowed = false;
+    private static boolean lastAppliedBorderless = false;
+    private static int savedWindowedX = -1;
+    private static int savedWindowedY = -1;
+    private static int savedWindowedWidth = 1280;
+    private static int savedWindowedHeight = 720;
 
     private RenderConfig() {}
 
@@ -245,6 +253,15 @@ public final class RenderConfig {
     public static boolean isStalkTracerChromaEnabled() { return stalkTracerChromaEnabled; }
     public static void setStalkTracerChromaEnabled(boolean v) { stalkTracerChromaEnabled = v; }
 
+    public static boolean isBorderlessWindowed() { return borderlessWindowed; }
+    public static void setBorderlessWindowed(boolean enabled) {
+        if (borderlessWindowed == enabled) return;
+        borderlessWindowed = enabled;
+        applyBorderlessWindowed();
+        save();
+    }
+    public static void toggleBorderlessWindowed() { setBorderlessWindowed(!borderlessWindowed); }
+
     public static String getWindowTitle() { return windowTitle; }
     public static void setWindowTitle(String title) {
         windowTitle = title != null ? title.trim() : "";
@@ -288,6 +305,57 @@ public final class RenderConfig {
                 lastAppliedTitle = targetTitle;
                 windowTitleDirty = false;
             } catch (Exception ignored) {}
+        });
+    }
+
+    /** Applies or restores the borderless windowed state on the render thread. */
+    public static void applyBorderlessWindowed() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null) return;
+
+        if (borderlessWindowed == lastAppliedBorderless) return;
+
+        client.execute(() -> {
+            var window = client.getWindow();
+            long handle = window.getHandle();
+
+            if (borderlessWindowed) {
+                int[] wx = new int[1], wy = new int[1], ww = new int[1], wh = new int[1];
+                GLFW.glfwGetWindowPos(handle, wx, wy);
+                GLFW.glfwGetWindowSize(handle, ww, wh);
+                savedWindowedX = wx[0];
+                savedWindowedY = wy[0];
+                savedWindowedWidth = Math.max(640, ww[0]);
+                savedWindowedHeight = Math.max(480, wh[0]);
+
+                long monitor = GLFW.glfwGetPrimaryMonitor();
+                GLFWVidMode mode = monitor != 0 ? GLFW.glfwGetVideoMode(monitor) : null;
+                int targetW = mode != null ? mode.width() : savedWindowedWidth;
+                int targetH = mode != null ? mode.height() : savedWindowedHeight;
+                int targetX = 0;
+                int targetY = 0;
+                if (monitor != 0) {
+                    int[] mx = new int[1], my = new int[1];
+                    GLFW.glfwGetMonitorPos(monitor, mx, my);
+                    targetX = mx[0];
+                    targetY = my[0];
+                }
+
+                GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
+                GLFW.glfwSetWindowMonitor(handle, 0, targetX, targetY, targetW, targetH, GLFW.GLFW_DONT_CARE);
+                GLFW.glfwFocusWindow(handle);
+                lastAppliedBorderless = true;
+            } else {
+                int targetW = savedWindowedWidth > 0 ? savedWindowedWidth : 1280;
+                int targetH = savedWindowedHeight > 0 ? savedWindowedHeight : 720;
+                int targetX = savedWindowedX >= 0 ? savedWindowedX : 50;
+                int targetY = savedWindowedY >= 0 ? savedWindowedY : 50;
+
+                GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
+                GLFW.glfwSetWindowMonitor(handle, 0, targetX, targetY, targetW, targetH, GLFW.GLFW_DONT_CARE);
+                GLFW.glfwFocusWindow(handle);
+                lastAppliedBorderless = false;
+            }
         });
     }
 

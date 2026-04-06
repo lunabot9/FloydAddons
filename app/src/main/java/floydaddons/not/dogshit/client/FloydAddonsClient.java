@@ -95,6 +95,7 @@ public class FloydAddonsClient implements ClientModInitializer {
                     windowIconApplied = true;
                 }
                 try { RenderConfig.applyWindowTitle(); } catch (Exception ignored) {}
+                try { RenderConfig.applyBorderlessWindowed(); } catch (Exception ignored) {}
             }
             SkinManager.extractDefaultSkin(client);
             ServerIdTracker.tick(client);
