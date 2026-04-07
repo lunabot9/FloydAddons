@@ -257,7 +257,7 @@ public final class RenderConfig {
     public static void setBorderlessWindowed(boolean enabled) {
         if (borderlessWindowed == enabled) return;
         borderlessWindowed = enabled;
-        applyBorderlessWindowed();
+        applyBorderlessWindowed(true);
         save();
     }
     public static void toggleBorderlessWindowed() { setBorderlessWindowed(!borderlessWindowed); }
@@ -309,24 +309,21 @@ public final class RenderConfig {
     }
 
     /** Applies or restores the borderless windowed state on the render thread. */
-    public static void applyBorderlessWindowed() {
+    public static void applyBorderlessWindowed() { applyBorderlessWindowed(false); }
+
+    /** Applies or restores the borderless windowed state on the render thread. */
+    public static void applyBorderlessWindowed(boolean force) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null || client.getWindow() == null) return;
 
-        if (borderlessWindowed == lastAppliedBorderless) return;
+        if (!force && borderlessWindowed == lastAppliedBorderless) return;
 
         client.execute(() -> {
             var window = client.getWindow();
             long handle = window.getHandle();
 
             if (borderlessWindowed) {
-                int[] wx = new int[1], wy = new int[1], ww = new int[1], wh = new int[1];
-                GLFW.glfwGetWindowPos(handle, wx, wy);
-                GLFW.glfwGetWindowSize(handle, ww, wh);
-                savedWindowedX = wx[0];
-                savedWindowedY = wy[0];
-                savedWindowedWidth = Math.max(640, ww[0]);
-                savedWindowedHeight = Math.max(480, wh[0]);
+                snapshotWindowedBounds(window);
 
                 long monitor = GLFW.glfwGetPrimaryMonitor();
                 GLFWVidMode mode = monitor != 0 ? GLFW.glfwGetVideoMode(monitor) : null;
@@ -346,8 +343,16 @@ public final class RenderConfig {
                 GLFW.glfwFocusWindow(handle);
                 lastAppliedBorderless = true;
             } else {
-                int targetW = savedWindowedWidth > 0 ? savedWindowedWidth : 1280;
-                int targetH = savedWindowedHeight > 0 ? savedWindowedHeight : 720;
+                long monitor = GLFW.glfwGetPrimaryMonitor();
+                GLFWVidMode mode = monitor != 0 ? GLFW.glfwGetVideoMode(monitor) : null;
+                int maxW = mode != null ? mode.width() - 64 : 1920;
+                int maxH = mode != null ? mode.height() - 64 : 1080;
+                int fallbackW = 1280, fallbackH = 720;
+                boolean savedLooksFullscreen = savedWindowedWidth >= maxW && savedWindowedHeight >= maxH;
+                int baseW = (savedWindowedWidth > 0 && !savedLooksFullscreen) ? savedWindowedWidth : fallbackW;
+                int baseH = (savedWindowedHeight > 0 && !savedLooksFullscreen) ? savedWindowedHeight : fallbackH;
+                int targetW = clamp(baseW, 640, maxW);
+                int targetH = clamp(baseH, 480, maxH);
                 int targetX = savedWindowedX >= 0 ? savedWindowedX : 50;
                 int targetY = savedWindowedY >= 0 ? savedWindowedY : 50;
 
@@ -357,6 +362,41 @@ public final class RenderConfig {
                 lastAppliedBorderless = false;
             }
         });
+    }
+
+    /** If another mod or the OS reset decorations, re-apply the desired state. */
+    public static void ensureBorderlessState() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null) return;
+        if (client.getWindow().isFullscreen()) return;
+        long handle = client.getWindow().getHandle();
+        boolean decorated = GLFW.glfwGetWindowAttrib(handle, GLFW.GLFW_DECORATED) == GLFW.GLFW_TRUE;
+        boolean shouldBeDecorated = !borderlessWindowed;
+        if (decorated != shouldBeDecorated) {
+            lastAppliedBorderless = !borderlessWindowed; // force re-run
+            applyBorderlessWindowed(true);
+        }
+        snapshotWindowedBounds(client.getWindow());
+    }
+
+    /** Record the current windowed position/size when in normal (decorated) window mode. */
+    private static void snapshotWindowedBounds(net.minecraft.client.util.Window window) {
+        if (window == null) return;
+        if (window.isFullscreen()) return;
+        long handle = window.getHandle();
+        // Only update when decorated to avoid capturing borderless/fullscreen sizes.
+        if (GLFW.glfwGetWindowAttrib(handle, GLFW.GLFW_DECORATED) != GLFW.GLFW_TRUE) return;
+        int[] wx = new int[1], wy = new int[1], ww = new int[1], wh = new int[1];
+        GLFW.glfwGetWindowPos(handle, wx, wy);
+        GLFW.glfwGetWindowSize(handle, ww, wh);
+        savedWindowedX = wx[0];
+        savedWindowedY = wy[0];
+        savedWindowedWidth = Math.max(640, ww[0]);
+        savedWindowedHeight = Math.max(480, wh[0]);
+    }
+
+    private static int clamp(int v, int min, int max) {
+        return Math.max(min, Math.min(max, v));
     }
 
     /** Forces a full chunk rebuild for both vanilla and Sodium renderers. */

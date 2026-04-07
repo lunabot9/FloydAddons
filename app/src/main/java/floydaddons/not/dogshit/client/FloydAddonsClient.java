@@ -34,6 +34,7 @@ public class FloydAddonsClient implements ClientModInitializer {
     private static final KeyBinding.Category KEY_CATEGORY =
             KeyBinding.Category.create(Identifier.of(MOD_ID, "category"));
     private static boolean windowIconApplied = false;
+    private static boolean prevFullscreen = false;
 
     @Override
     public void onInitializeClient() {
@@ -95,7 +96,14 @@ public class FloydAddonsClient implements ClientModInitializer {
                     windowIconApplied = true;
                 }
                 try { RenderConfig.applyWindowTitle(); } catch (Exception ignored) {}
-                try { RenderConfig.applyBorderlessWindowed(); } catch (Exception ignored) {}
+                try { RenderConfig.ensureBorderlessState(); } catch (Exception ignored) {}
+
+                // Respect vanilla fullscreen toggle: leaving fullscreen should restore normal window decorations.
+                boolean fullscreen = client.getWindow().isFullscreen();
+                if (prevFullscreen && !fullscreen && RenderConfig.isBorderlessWindowed()) {
+                    try { RenderConfig.setBorderlessWindowed(false); } catch (Exception ignored) {}
+                }
+                prevFullscreen = fullscreen;
             }
             SkinManager.extractDefaultSkin(client);
             ServerIdTracker.tick(client);
