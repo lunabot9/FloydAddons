@@ -1,0 +1,449 @@
+﻿2026-04-07T01:51:52.4923885Z Current runner version: '2.333.1'
+2026-04-07T01:51:52.4948303Z ##[group]Runner Image Provisioner
+2026-04-07T01:51:52.4949156Z Hosted Compute Agent
+2026-04-07T01:51:52.4949810Z Version: 20260213.493
+2026-04-07T01:51:52.4950644Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-04-07T01:51:52.4951421Z Build Date: 2026-02-13T00:28:41Z
+2026-04-07T01:51:52.4952125Z Worker ID: {f0cfdb8c-b426-4702-a3d6-f6dcbe7f5348}
+2026-04-07T01:51:52.4952784Z Azure Region: westus
+2026-04-07T01:51:52.4953364Z ##[endgroup]
+2026-04-07T01:51:52.4954815Z ##[group]Operating System
+2026-04-07T01:51:52.4955423Z Ubuntu
+2026-04-07T01:51:52.4955845Z 24.04.4
+2026-04-07T01:51:52.4956395Z LTS
+2026-04-07T01:51:52.4956826Z ##[endgroup]
+2026-04-07T01:51:52.4957308Z ##[group]Runner Image
+2026-04-07T01:51:52.4957947Z Image: ubuntu-24.04
+2026-04-07T01:51:52.4958427Z Version: 20260329.72.1
+2026-04-07T01:51:52.4959668Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260329.72/images/ubuntu/Ubuntu2404-Readme.md
+2026-04-07T01:51:52.4961505Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260329.72
+2026-04-07T01:51:52.4962396Z ##[endgroup]
+2026-04-07T01:51:52.4963486Z ##[group]GITHUB_TOKEN Permissions
+2026-04-07T01:51:52.4965348Z Contents: write
+2026-04-07T01:51:52.4965991Z Metadata: read
+2026-04-07T01:51:52.4966466Z ##[endgroup]
+2026-04-07T01:51:52.4968891Z Secret source: Actions
+2026-04-07T01:51:52.4970023Z Prepare workflow directory
+2026-04-07T01:51:52.5304677Z Prepare all required actions
+2026-04-07T01:51:52.5344804Z Getting action download info
+2026-04-07T01:51:53.0299230Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-04-07T01:51:53.1446737Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+2026-04-07T01:51:53.8487122Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+2026-04-07T01:51:53.9422497Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-04-07T01:51:54.0532704Z Download action repository 'softprops/action-gh-release@v2' (SHA:153bb8e04406b158c6c84fc1615b65b24149a1fe)
+2026-04-07T01:51:54.6475010Z Complete job name: build-release
+2026-04-07T01:51:54.7318259Z ##[group]Run actions/checkout@v4
+2026-04-07T01:51:54.7319299Z with:
+2026-04-07T01:51:54.7319818Z   fetch-depth: 0
+2026-04-07T01:51:54.7320893Z   repository: lunabot9/FloydAddons
+2026-04-07T01:51:54.7322070Z   token: ***
+2026-04-07T01:51:54.7322619Z   ssh-strict: true
+2026-04-07T01:51:54.7323163Z   ssh-user: git
+2026-04-07T01:51:54.7323733Z   persist-credentials: true
+2026-04-07T01:51:54.7324358Z   clean: true
+2026-04-07T01:51:54.7324948Z   sparse-checkout-cone-mode: true
+2026-04-07T01:51:54.7325649Z   fetch-tags: false
+2026-04-07T01:51:54.7326218Z   show-progress: true
+2026-04-07T01:51:54.7326798Z   lfs: false
+2026-04-07T01:51:54.7327307Z   submodules: false
+2026-04-07T01:51:54.7327894Z   set-safe-directory: true
+2026-04-07T01:51:54.7328896Z ##[endgroup]
+2026-04-07T01:51:54.8398746Z Syncing repository: lunabot9/FloydAddons
+2026-04-07T01:51:54.8401257Z ##[group]Getting Git version info
+2026-04-07T01:51:54.8402340Z Working directory is '/home/runner/work/FloydAddons/FloydAddons'
+2026-04-07T01:51:54.8403909Z [command]/usr/bin/git version
+2026-04-07T01:51:54.8441233Z git version 2.53.0
+2026-04-07T01:51:54.8466966Z ##[endgroup]
+2026-04-07T01:51:54.8489054Z Temporarily overriding HOME='/home/runner/work/_temp/ceebe7d3-0d68-4cba-8787-7fcb917c5bce' before making global git config changes
+2026-04-07T01:51:54.8495503Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-07T01:51:54.8498622Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/FloydAddons/FloydAddons
+2026-04-07T01:51:54.8527831Z Deleting the contents of '/home/runner/work/FloydAddons/FloydAddons'
+2026-04-07T01:51:54.8532328Z ##[group]Initializing the repository
+2026-04-07T01:51:54.8537183Z [command]/usr/bin/git init /home/runner/work/FloydAddons/FloydAddons
+2026-04-07T01:51:54.8638087Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-04-07T01:51:54.8640956Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-04-07T01:51:54.8643532Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-04-07T01:51:54.8645534Z hint: call:
+2026-04-07T01:51:54.8646401Z hint:
+2026-04-07T01:51:54.8647543Z hint: 	git config --global init.defaultBranch <name>
+2026-04-07T01:51:54.8649134Z hint:
+2026-04-07T01:51:54.8650910Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-04-07T01:51:54.8653481Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-04-07T01:51:54.8655346Z hint:
+2026-04-07T01:51:54.8656230Z hint: 	git branch -m <name>
+2026-04-07T01:51:54.8657319Z hint:
+2026-04-07T01:51:54.8658728Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-04-07T01:51:54.8660601Z Initialized empty Git repository in /home/runner/work/FloydAddons/FloydAddons/.git/
+2026-04-07T01:51:54.8663552Z [command]/usr/bin/git remote add origin https://github.com/lunabot9/FloydAddons
+2026-04-07T01:51:54.8694631Z ##[endgroup]
+2026-04-07T01:51:54.8696475Z ##[group]Disabling automatic garbage collection
+2026-04-07T01:51:54.8698647Z [command]/usr/bin/git config --local gc.auto 0
+2026-04-07T01:51:54.8727304Z ##[endgroup]
+2026-04-07T01:51:54.8729035Z ##[group]Setting up auth
+2026-04-07T01:51:54.8735198Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-07T01:51:54.8766977Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-07T01:51:54.9064842Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-07T01:51:54.9095554Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-07T01:51:54.9307819Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-07T01:51:54.9339811Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-07T01:51:54.9555125Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-04-07T01:51:54.9588653Z ##[endgroup]
+2026-04-07T01:51:54.9589749Z ##[group]Fetching the repository
+2026-04-07T01:51:54.9597750Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-04-07T01:51:56.5610622Z From https://github.com/lunabot9/FloydAddons
+2026-04-07T01:51:56.5612039Z  * [new branch]      main             -> origin/main
+2026-04-07T01:51:56.5613250Z  * [new tag]         commit-bae7527d17ae81b368d19be80be7bf67db318acf -> commit-bae7527d17ae81b368d19be80be7bf67db318acf
+2026-04-07T01:51:56.5614373Z  * [new tag]         v1.0.0           -> v1.0.0
+2026-04-07T01:51:56.5615028Z  * [new tag]         v1.0.2           -> v1.0.2
+2026-04-07T01:51:56.5615689Z  * [new tag]         v1.0.3-mc1.21.10 -> v1.0.3-mc1.21.10
+2026-04-07T01:51:56.5618022Z  * [new tag]         v1.0.4-mc1.21.10 -> v1.0.4-mc1.21.10
+2026-04-07T01:51:56.5619079Z  * [new tag]         v1.0.5-mc1.21.10 -> v1.0.5-mc1.21.10
+2026-04-07T01:51:56.5620120Z  * [new tag]         v1.0.6-mc1.21.10 -> v1.0.6-mc1.21.10
+2026-04-07T01:51:56.5621474Z  * [new tag]         v1.0.7-mc1.21.10 -> v1.0.7-mc1.21.10
+2026-04-07T01:51:56.5622440Z  * [new tag]         v1.0.8-mc1.21.10 -> v1.0.8-mc1.21.10
+2026-04-07T01:51:56.5623364Z  * [new tag]         v1.0.9-mc1.21.10 -> v1.0.9-mc1.21.10
+2026-04-07T01:51:56.5624287Z  * [new tag]         v1.1.0-mc1.21.10 -> v1.1.0-mc1.21.10
+2026-04-07T01:51:56.5625233Z  * [new tag]         v1.1.1-mc1.21.10 -> v1.1.1-mc1.21.10
+2026-04-07T01:51:56.5626413Z  * [new tag]         v1.1.2-mc1.21.10 -> v1.1.2-mc1.21.10
+2026-04-07T01:51:56.5627106Z  * [new tag]         v1.1.3-mc1.21.10 -> v1.1.3-mc1.21.10
+2026-04-07T01:51:56.5627642Z  * [new tag]         v1.1.4-mc1.21.10 -> v1.1.4-mc1.21.10
+2026-04-07T01:51:56.5628360Z  * [new tag]         v1.1.5-mc1.21.10 -> v1.1.5-mc1.21.10
+2026-04-07T01:51:56.5628990Z  * [new tag]         v1.1.6-mc1.21.10 -> v1.1.6-mc1.21.10
+2026-04-07T01:51:56.5629629Z  * [new tag]         v1.1.7-mc1.21.10 -> v1.1.7-mc1.21.10
+2026-04-07T01:51:56.5630224Z  * [new tag]         v1.1.8-mc1.21.10 -> v1.1.8-mc1.21.10
+2026-04-07T01:51:56.5661794Z [command]/usr/bin/git branch --list --remote origin/main
+2026-04-07T01:51:56.5686394Z   origin/main
+2026-04-07T01:51:56.5694762Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-04-07T01:51:56.5713477Z dd7426720ac5012d04ae3bf3aabe8ed774f9fb84
+2026-04-07T01:51:56.5717839Z ##[endgroup]
+2026-04-07T01:51:56.5718518Z ##[group]Determining the checkout info
+2026-04-07T01:51:56.5719292Z ##[endgroup]
+2026-04-07T01:51:56.5723475Z [command]/usr/bin/git sparse-checkout disable
+2026-04-07T01:51:56.5756520Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-04-07T01:51:56.5780799Z ##[group]Checking out the ref
+2026-04-07T01:51:56.5785070Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-04-07T01:51:56.5960171Z Switched to a new branch 'main'
+2026-04-07T01:51:56.5962611Z branch 'main' set up to track 'origin/main'.
+2026-04-07T01:51:56.5970574Z ##[endgroup]
+2026-04-07T01:51:56.6005458Z [command]/usr/bin/git log -1 --format=%H
+2026-04-07T01:51:56.6026388Z dd7426720ac5012d04ae3bf3aabe8ed774f9fb84
+2026-04-07T01:51:56.6269813Z ##[group]Run actions/setup-java@v4
+2026-04-07T01:51:56.6270146Z with:
+2026-04-07T01:51:56.6270744Z   distribution: temurin
+2026-04-07T01:51:56.6271015Z   java-version: 21
+2026-04-07T01:51:56.6271255Z   java-package: jdk
+2026-04-07T01:51:56.6271492Z   check-latest: false
+2026-04-07T01:51:56.6271763Z   server-id: github
+2026-04-07T01:51:56.6272001Z   server-username: GITHUB_ACTOR
+2026-04-07T01:51:56.6272288Z   server-password: GITHUB_TOKEN
+2026-04-07T01:51:56.6272563Z   overwrite-settings: true
+2026-04-07T01:51:56.6272819Z   job-status: success
+2026-04-07T01:51:56.6273197Z   token: ***
+2026-04-07T01:51:56.6273425Z ##[endgroup]
+2026-04-07T01:51:56.8221702Z ##[group]Installed distributions
+2026-04-07T01:51:56.8285329Z Resolved Java 21.0.10+7 from tool-cache
+2026-04-07T01:51:56.8286824Z Setting Java 21.0.10+7 as the default
+2026-04-07T01:51:56.8299658Z Creating toolchains.xml for JDK version 21 from temurin
+2026-04-07T01:51:56.8376953Z Writing to /home/runner/.m2/toolchains.xml
+2026-04-07T01:51:56.8377756Z 
+2026-04-07T01:51:56.8377957Z Java configuration:
+2026-04-07T01:51:56.8378682Z   Distribution: temurin
+2026-04-07T01:51:56.8379294Z   Version: 21.0.10+7
+2026-04-07T01:51:56.8382112Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:56.8383935Z 
+2026-04-07T01:51:56.8384546Z ##[endgroup]
+2026-04-07T01:51:56.8402418Z Creating settings.xml with server-id: github
+2026-04-07T01:51:56.8408583Z Writing to /home/runner/.m2/settings.xml
+2026-04-07T01:51:56.9421121Z ##[group]Run actions/cache@v4
+2026-04-07T01:51:56.9421499Z with:
+2026-04-07T01:51:56.9421756Z   path: ~/.gradle/caches
+~/.gradle/wrapper
+
+2026-04-07T01:51:56.9422237Z   key: Linux-gradle-915820cdc394112e587cf033a2d349387a148215fcf5391c6f2c467f5938b25a
+2026-04-07T01:51:56.9422704Z   restore-keys: Linux-gradle-
+
+2026-04-07T01:51:56.9422987Z   enableCrossOsArchive: false
+2026-04-07T01:51:56.9423266Z   fail-on-cache-miss: false
+2026-04-07T01:51:56.9423519Z   lookup-only: false
+2026-04-07T01:51:56.9423756Z   save-always: false
+2026-04-07T01:51:56.9423974Z env:
+2026-04-07T01:51:56.9424293Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:56.9424806Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:56.9425395Z ##[endgroup]
+2026-04-07T01:51:57.3236148Z Cache not found for input keys: Linux-gradle-915820cdc394112e587cf033a2d349387a148215fcf5391c6f2c467f5938b25a, Linux-gradle-
+2026-04-07T01:51:57.3329555Z ##[group]Run chmod +x gradlew
+2026-04-07T01:51:57.3329933Z [36;1mchmod +x gradlew[0m
+2026-04-07T01:51:57.3362589Z shell: /usr/bin/bash -e {0}
+2026-04-07T01:51:57.3362888Z env:
+2026-04-07T01:51:57.3363208Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:57.3363749Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:57.3364148Z ##[endgroup]
+2026-04-07T01:51:57.3552171Z ##[group]Run # Gather all vX.Y.Z(-mcX.Y.ZZ) tags and pick the highest base version
+2026-04-07T01:51:57.3552844Z [36;1m# Gather all vX.Y.Z(-mcX.Y.ZZ) tags and pick the highest base version[0m
+2026-04-07T01:51:57.3553423Z [36;1mTAGS=$(gh release list --limit 100 --json tagName -q '.[].tagName' 2>/dev/null || true)[0m
+2026-04-07T01:51:57.3553943Z [36;1mLATEST=$(echo "$TAGS" | sed -n 's/^v//p' | sed 's/-mc.*//' \[0m
+2026-04-07T01:51:57.3554384Z [36;1m  | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)[0m
+2026-04-07T01:51:57.3554716Z [36;1m[0m
+2026-04-07T01:51:57.3554936Z [36;1mif [ -z "$LATEST" ]; then[0m
+2026-04-07T01:51:57.3555263Z [36;1m  echo "version=1.0.1" >> "$GITHUB_OUTPUT"[0m
+2026-04-07T01:51:57.3555588Z [36;1m  echo "First release: v1.0.1"[0m
+2026-04-07T01:51:57.3555865Z [36;1melse[0m
+2026-04-07T01:51:57.3556132Z [36;1m  IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST"[0m
+2026-04-07T01:51:57.3556466Z [36;1m  PATCH=$((PATCH + 1))[0m
+2026-04-07T01:51:57.3556767Z [36;1m  if [ "$PATCH" -ge 10 ]; then[0m
+2026-04-07T01:51:57.3557040Z [36;1m    PATCH=0[0m
+2026-04-07T01:51:57.3557277Z [36;1m    MINOR=$((MINOR + 1))[0m
+2026-04-07T01:51:57.3557530Z [36;1m  fi[0m
+2026-04-07T01:51:57.3557756Z [36;1m  if [ "$MINOR" -ge 10 ]; then[0m
+2026-04-07T01:51:57.3558028Z [36;1m    MINOR=0[0m
+2026-04-07T01:51:57.3558253Z [36;1m    MAJOR=$((MAJOR + 1))[0m
+2026-04-07T01:51:57.3558510Z [36;1m  fi[0m
+2026-04-07T01:51:57.3558742Z [36;1m  NEXT="${MAJOR}.${MINOR}.${PATCH}"[0m
+2026-04-07T01:51:57.3559069Z [36;1m  echo "version=$NEXT" >> "$GITHUB_OUTPUT"[0m
+2026-04-07T01:51:57.3559408Z [36;1m  echo "Next release: v$NEXT (was v$LATEST)"[0m
+2026-04-07T01:51:57.3559714Z [36;1mfi[0m
+2026-04-07T01:51:57.3584222Z shell: /usr/bin/bash -e {0}
+2026-04-07T01:51:57.3584488Z env:
+2026-04-07T01:51:57.3584814Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:57.3585324Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:57.3585936Z   GH_TOKEN: ***
+2026-04-07T01:51:57.3586168Z ##[endgroup]
+2026-04-07T01:51:58.3983880Z Next release: v1.1.8 (was v1.1.7)
+2026-04-07T01:51:58.4034702Z ##[group]Run ./gradlew clean build --no-daemon -Ptarget_mc=1.21.10 -Pmod_version=1.1.8-mc1.21.10
+2026-04-07T01:51:58.4035355Z [36;1m./gradlew clean build --no-daemon -Ptarget_mc=1.21.10 -Pmod_version=1.1.8-mc1.21.10[0m
+2026-04-07T01:51:58.4061623Z shell: /usr/bin/bash -e {0}
+2026-04-07T01:51:58.4061843Z env:
+2026-04-07T01:51:58.4062128Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:58.4062589Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:51:58.4062936Z ##[endgroup]
+2026-04-07T01:51:59.3579308Z Downloading https://services.gradle.org/distributions/gradle-9.2.0-bin.zip
+2026-04-07T01:52:00.7993869Z ............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+2026-04-07T01:52:01.9940663Z 
+2026-04-07T01:52:01.9941521Z Welcome to Gradle 9.2.0!
+2026-04-07T01:52:01.9941862Z 
+2026-04-07T01:52:01.9944141Z Here are the highlights of this release:
+2026-04-07T01:52:01.9944847Z  - Windows ARM support
+2026-04-07T01:52:01.9952765Z  - Improved publishing APIs
+2026-04-07T01:52:01.9953271Z  - Better guidance for dependency verification failures
+2026-04-07T01:52:01.9954074Z 
+2026-04-07T01:52:01.9954438Z For more details see https://docs.gradle.org/9.2.0/release-notes.html
+2026-04-07T01:52:01.9954934Z 
+2026-04-07T01:52:02.0937425Z To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+2026-04-07T01:52:03.1936489Z Daemon will be stopped at the end of the build 
+2026-04-07T01:52:36.6945356Z 
+2026-04-07T01:52:36.6956565Z > Configure project :app
+2026-04-07T01:52:36.6959887Z Fabric Loom: 1.14.10
+2026-04-07T01:53:17.3938754Z 
+2026-04-07T01:53:17.3939286Z > Task :app:clean
+2026-04-07T01:53:42.4932179Z 
+2026-04-07T01:53:42.4945933Z > Task :app:compileJava
+2026-04-07T01:53:42.4947104Z Note: Some input files use or override a deprecated API.
+2026-04-07T01:53:42.4947782Z Note: Recompile with -Xlint:deprecation for details.
+2026-04-07T01:53:49.5930802Z 
+2026-04-07T01:53:49.5947033Z > Task :app:processResources
+2026-04-07T01:53:49.5949923Z > Task :app:classes
+2026-04-07T01:53:49.6931892Z > Task :app:jar
+2026-04-07T01:53:50.6961188Z 
+2026-04-07T01:53:50.6963757Z > Task :app:processIncludeJars
+2026-04-07T01:53:50.6965820Z (v3.3.0) is not valid semver for dependency club.minnced:discord-rpc-release:v3.3.0
+2026-04-07T01:53:50.6968995Z (v2.0.1) is not valid semver for dependency club.minnced:java-discord-rpc:v2.0.1
+2026-04-07T01:53:51.6932272Z 
+2026-04-07T01:53:51.6934010Z > Task :app:sourcesJar
+2026-04-07T01:53:51.7943201Z > Task :app:compileTestJava NO-SOURCE
+2026-04-07T01:53:51.7943778Z > Task :app:processTestResources NO-SOURCE
+2026-04-07T01:53:51.7944261Z > Task :app:testClasses UP-TO-DATE
+2026-04-07T01:53:51.7944694Z > Task :app:test SKIPPED
+2026-04-07T01:53:51.7945148Z > Task :app:validateAccessWidener NO-SOURCE
+2026-04-07T01:53:51.7945636Z > Task :app:check UP-TO-DATE
+2026-04-07T01:53:54.4938379Z > Task :app:remapJar
+2026-04-07T01:53:57.0942719Z > Task :app:remapSourcesJar
+2026-04-07T01:53:57.0971149Z > Task :app:assemble
+2026-04-07T01:53:57.0972894Z > Task :app:build
+2026-04-07T01:53:57.0973590Z 
+2026-04-07T01:53:57.0975662Z [Incubating] Problems report is available at: file:///home/runner/work/FloydAddons/FloydAddons/build/reports/problems/problems-report.html
+2026-04-07T01:53:57.0977897Z 
+2026-04-07T01:53:57.0979735Z Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+2026-04-07T01:53:57.0994884Z 
+2026-04-07T01:53:57.0995653Z You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+2026-04-07T01:53:57.0996502Z 
+2026-04-07T01:53:57.0997645Z For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+2026-04-07T01:53:57.0998610Z 
+2026-04-07T01:53:57.0998762Z BUILD SUCCESSFUL in 1m 57s
+2026-04-07T01:53:57.0999135Z 8 actionable tasks: 8 executed
+2026-04-07T01:53:57.4856058Z ##[group]Run ./gradlew build --no-daemon -Ptarget_mc=1.21.11 -Pmod_version=1.1.8-mc1.21.11
+2026-04-07T01:53:57.4856656Z [36;1m./gradlew build --no-daemon -Ptarget_mc=1.21.11 -Pmod_version=1.1.8-mc1.21.11[0m
+2026-04-07T01:53:57.4884356Z shell: /usr/bin/bash -e {0}
+2026-04-07T01:53:57.4884600Z env:
+2026-04-07T01:53:57.4884923Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:53:57.4905550Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:53:57.4906157Z ##[endgroup]
+2026-04-07T01:53:58.1677497Z To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+2026-04-07T01:53:59.2665483Z Daemon will be stopped at the end of the build 
+2026-04-07T01:54:04.1703602Z 
+2026-04-07T01:54:04.1774927Z > Configure project :app
+2026-04-07T01:54:04.1777868Z Fabric Loom: 1.14.10
+2026-04-07T01:54:35.2663618Z 
+2026-04-07T01:54:35.2665776Z Cannot remap modifiers because it does not exists in any of the targets [] or their parents.
+2026-04-07T01:55:02.3664382Z 
+2026-04-07T01:55:02.3667603Z > Task :app:compileJava
+2026-04-07T01:55:02.3689176Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:22: error: cannot find symbol
+2026-04-07T01:55:02.3712903Z import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:02.3714806Z                                   ^
+2026-04-07T01:55:02.3725621Z   symbol:   class RenderPhase
+2026-04-07T01:55:02.3726101Z   location: package net.minecraft.client.render
+2026-04-07T01:55:02.4675285Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:23: error: cannot find symbol
+2026-04-07T01:55:02.4689148Z import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:02.4691386Z                                   ^
+2026-04-07T01:55:02.4724746Z   symbol:   class RenderPhase
+2026-04-07T01:55:02.4725430Z   location: package net.minecraft.client.render
+2026-04-07T01:55:02.6672555Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeFeatureRenderer.java:45: error: cannot find symbol
+2026-04-07T01:55:02.6675528Z         RenderLayer layer = RenderLayer.getEntityCutoutNoCull(tex);
+2026-04-07T01:55:02.6696090Z                                        ^
+2026-04-07T01:55:02.6721158Z   symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:02.6723277Z   location: class RenderLayer
+2026-04-07T01:55:02.6725786Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:155: error: cannot find symbol
+2026-04-07T01:55:02.6728353Z             tex.setFilter(true, true);
+2026-04-07T01:55:02.6730074Z                ^
+2026-04-07T01:55:02.6731611Z   symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:02.6732236Z   location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:02.6733462Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:277: error: cannot find symbol
+2026-04-07T01:55:02.6734642Z                     tex.setFilter(true, true);
+2026-04-07T01:55:02.6735069Z                        ^
+2026-04-07T01:55:02.6735450Z   symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:02.6736008Z   location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:02.7665900Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/ConeFeatureRenderer.java:59: error: cannot find symbol
+2026-04-07T01:55:02.7685089Z         RenderLayer renderLayer = RenderLayer.getEntityCutoutNoCull(texture);
+2026-04-07T01:55:02.7723143Z                                              ^
+2026-04-07T01:55:02.7725083Z   symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:02.7727683Z   location: class RenderLayer
+2026-04-07T01:55:03.4668178Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/gui/ClickGuiScreen.java:1488: error: incompatible types: possible lossy conversion from float to int
+2026-04-07T01:55:03.4678867Z                         scaledSize, offset, bodyRot, null, client.player);
+2026-04-07T01:55:03.4682235Z                         ^
+2026-04-07T01:55:03.8673484Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:52: error: cannot find symbol
+2026-04-07T01:55:03.8677824Z                     .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.8680705Z                               ^
+2026-04-07T01:55:03.8692358Z   symbol:   variable RenderPhase
+2026-04-07T01:55:03.8698726Z   location: class StalkRenderer
+2026-04-07T01:55:03.8703686Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:51: error: package RenderPhase does not exist
+2026-04-07T01:55:03.8709798Z                     .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(3.0)))
+2026-04-07T01:55:03.8712974Z                                               ^
+2026-04-07T01:55:03.8716425Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:50: error: cannot find symbol
+2026-04-07T01:55:03.8722707Z             RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.8725385Z                        ^
+2026-04-07T01:55:03.8727956Z   symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.8731806Z   location: class RenderLayer
+2026-04-07T01:55:03.8737501Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:55: error: cannot find symbol
+2026-04-07T01:55:03.8741244Z                     .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.8744472Z                               ^
+2026-04-07T01:55:03.8753228Z   symbol:   variable RenderPhase
+2026-04-07T01:55:03.8759309Z   location: class MobEspRenderer
+2026-04-07T01:55:03.8763620Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:54: error: package RenderPhase does not exist
+2026-04-07T01:55:03.8775482Z                     .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(2.0)))
+2026-04-07T01:55:03.8782065Z                                               ^
+2026-04-07T01:55:03.8786907Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:53: error: cannot find symbol
+2026-04-07T01:55:03.8789892Z             RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.8804467Z                        ^
+2026-04-07T01:55:03.8805217Z   symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.8805702Z   location: class RenderLayer
+2026-04-07T01:55:03.8806192Z Note: Some input files use or override a deprecated API.
+2026-04-07T01:55:03.8806802Z Note: Recompile with -Xlint:deprecation for details.
+2026-04-07T01:55:03.8807574Z Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+2026-04-07T01:55:03.8808264Z 13 errors
+2026-04-07T01:55:03.9715231Z 
+2026-04-07T01:55:03.9715252Z 
+2026-04-07T01:55:03.9741882Z FAILURE: Build failed with an exception.
+2026-04-07T01:55:03.9742423Z > Task :app:compileJava FAILED
+2026-04-07T01:55:03.9744374Z 
+2026-04-07T01:55:03.9744385Z 
+2026-04-07T01:55:03.9745334Z * What went wrong:
+2026-04-07T01:55:03.9746270Z [Incubating] Problems report is available at: file:///home/runner/work/FloydAddons/FloydAddons/build/reports/problems/problems-report.html
+2026-04-07T01:55:03.9753779Z Execution failed for task ':app:compileJava'.
+2026-04-07T01:55:03.9756448Z > Compilation failed; see the compiler output below.
+2026-04-07T01:55:03.9756946Z 1 actionable task: 1 executed
+2026-04-07T01:55:03.9758710Z   Note: Recompile with -Xlint:deprecation for details.
+2026-04-07T01:55:03.9762682Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/gui/ClickGuiScreen.java:1488: error: incompatible types: possible lossy conversion from float to int
+2026-04-07T01:55:03.9764162Z                           scaledSize, offset, bodyRot, null, client.player);
+2026-04-07T01:55:03.9764667Z                           ^
+2026-04-07T01:55:03.9765633Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:22: error: cannot find symbol
+2026-04-07T01:55:03.9766752Z   import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:03.9767210Z                                     ^
+2026-04-07T01:55:03.9767593Z     symbol:   class RenderPhase
+2026-04-07T01:55:03.9768002Z     location: package net.minecraft.client.render
+2026-04-07T01:55:03.9769116Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:23: error: cannot find symbol
+2026-04-07T01:55:03.9770241Z   import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:03.9771209Z                                     ^
+2026-04-07T01:55:03.9771593Z     symbol:   class RenderPhase
+2026-04-07T01:55:03.9772011Z     location: package net.minecraft.client.render
+2026-04-07T01:55:03.9773104Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:52: error: cannot find symbol
+2026-04-07T01:55:03.9774190Z                       .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.9774627Z                                 ^
+2026-04-07T01:55:03.9774990Z     symbol:   variable RenderPhase
+2026-04-07T01:55:03.9775376Z     location: class StalkRenderer
+2026-04-07T01:55:03.9776372Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:50: error: cannot find symbol
+2026-04-07T01:55:03.9777481Z               RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.9777941Z                          ^
+2026-04-07T01:55:03.9778299Z     symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.9778732Z     location: class RenderLayer
+2026-04-07T01:55:03.9779723Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:55: error: cannot find symbol
+2026-04-07T01:55:03.9802585Z                       .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.9803060Z                                 ^
+2026-04-07T01:55:03.9803432Z     symbol:   variable RenderPhase
+2026-04-07T01:55:03.9803915Z     location: class MobEspRenderer
+2026-04-07T01:55:03.9804978Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:53: error: cannot find symbol
+2026-04-07T01:55:03.9806116Z               RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.9806578Z                          ^
+2026-04-07T01:55:03.9806937Z     symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.9807362Z     location: class RenderLayer
+2026-04-07T01:55:03.9807841Z   Note: Some input files use or override a deprecated API.
+2026-04-07T01:55:03.9808614Z   Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+2026-04-07T01:55:03.9810041Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:51: error: package RenderPhase does not exist
+2026-04-07T01:55:03.9824175Z                       .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(3.0)))
+2026-04-07T01:55:03.9824785Z                                                 ^
+2026-04-07T01:55:03.9825959Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:54: error: package RenderPhase does not exist
+2026-04-07T01:55:03.9827265Z                       .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(2.0)))
+2026-04-07T01:55:03.9827846Z                                                 ^
+2026-04-07T01:55:03.9829276Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeFeatureRenderer.java:45: error: cannot find symbol
+2026-04-07T01:55:03.9845355Z           RenderLayer layer = RenderLayer.getEntityCutoutNoCull(tex);
+2026-04-07T01:55:03.9846169Z                                          ^
+2026-04-07T01:55:03.9846667Z     symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:03.9847199Z     location: class RenderLayer
+2026-04-07T01:55:03.9848338Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:155: error: cannot find symbol
+2026-04-07T01:55:03.9849516Z               tex.setFilter(true, true);
+2026-04-07T01:55:03.9849922Z                  ^
+2026-04-07T01:55:03.9850293Z     symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:03.9851129Z     location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:03.9852385Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:277: error: cannot find symbol
+2026-04-07T01:55:03.9853851Z                       tex.setFilter(true, true);
+2026-04-07T01:55:03.9854280Z                          ^
+2026-04-07T01:55:03.9854670Z     symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:03.9855185Z     location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:03.9856428Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/ConeFeatureRenderer.java:59: error: cannot find symbol
+2026-04-07T01:55:03.9857804Z           RenderLayer renderLayer = RenderLayer.getEntityCutoutNoCull(texture);
+2026-04-07T01:55:03.9858424Z                                                ^
+2026-04-07T01:55:03.9858855Z     symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:03.9859337Z     location: class RenderLayer
+2026-04-07T01:55:03.9859664Z   13 errors
+2026-04-07T01:55:03.9859813Z 
+2026-04-07T01:55:03.9859927Z * Try:
+2026-04-07T01:55:03.9881619Z > Check your code and dependencies to fix the compilation error(s)
+2026-04-07T01:55:03.9882443Z > Run with --scan to generate a Build Scan (powered by Develocity).
+2026-04-07T01:55:03.9882874Z 
+2026-04-07T01:55:03.9883000Z BUILD FAILED in 1m 6s
+2026-04-07T01:55:04.4416357Z ##[error]Process completed with exit code 1.
+2026-04-07T01:55:04.4534550Z Post job cleanup.
+2026-04-07T01:55:04.6299007Z Post job cleanup.
+2026-04-07T01:55:04.7245487Z [command]/usr/bin/git version
+2026-04-07T01:55:04.7282221Z git version 2.53.0
+2026-04-07T01:55:04.7328092Z Temporarily overriding HOME='/home/runner/work/_temp/37063572-76ea-48ec-b1f3-76aa4b531f50' before making global git config changes
+2026-04-07T01:55:04.7329348Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-07T01:55:04.7335151Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/FloydAddons/FloydAddons
+2026-04-07T01:55:04.7370675Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-07T01:55:04.7402565Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-07T01:55:04.7622779Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-07T01:55:04.7643738Z http.https://github.com/.extraheader
+2026-04-07T01:55:04.7656872Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-04-07T01:55:04.7687763Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-07T01:55:04.7900600Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-07T01:55:04.7929863Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-07T01:55:04.8255803Z Cleaning up orphan processes
+2026-04-07T01:55:04.8541358Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v4, actions/setup-java@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

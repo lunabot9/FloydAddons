@@ -1,0 +1,160 @@
+﻿2026-04-07T01:53:57.4856045Z ##[group]Run ./gradlew build --no-daemon -Ptarget_mc=1.21.11 -Pmod_version=1.1.8-mc1.21.11
+2026-04-07T01:53:57.4856654Z [36;1m./gradlew build --no-daemon -Ptarget_mc=1.21.11 -Pmod_version=1.1.8-mc1.21.11[0m
+2026-04-07T01:53:57.4884344Z shell: /usr/bin/bash -e {0}
+2026-04-07T01:53:57.4884598Z env:
+2026-04-07T01:53:57.4884920Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:53:57.4905533Z   JAVA_HOME_21_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.10-7/x64
+2026-04-07T01:53:57.4906152Z ##[endgroup]
+2026-04-07T01:53:58.1677449Z To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+2026-04-07T01:53:59.2665434Z Daemon will be stopped at the end of the build 
+2026-04-07T01:54:04.1703550Z 
+2026-04-07T01:54:04.1774900Z > Configure project :app
+2026-04-07T01:54:04.1777778Z Fabric Loom: 1.14.10
+2026-04-07T01:54:35.2663564Z 
+2026-04-07T01:54:35.2665763Z Cannot remap modifiers because it does not exists in any of the targets [] or their parents.
+2026-04-07T01:55:02.3664327Z 
+2026-04-07T01:55:02.3667587Z > Task :app:compileJava
+2026-04-07T01:55:02.3689155Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:22: error: cannot find symbol
+2026-04-07T01:55:02.3712884Z import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:02.3714799Z                                   ^
+2026-04-07T01:55:02.3725610Z   symbol:   class RenderPhase
+2026-04-07T01:55:02.3726096Z   location: package net.minecraft.client.render
+2026-04-07T01:55:02.4675235Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:23: error: cannot find symbol
+2026-04-07T01:55:02.4689123Z import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:02.4691341Z                                   ^
+2026-04-07T01:55:02.4724729Z   symbol:   class RenderPhase
+2026-04-07T01:55:02.4725416Z   location: package net.minecraft.client.render
+2026-04-07T01:55:02.6672506Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeFeatureRenderer.java:45: error: cannot find symbol
+2026-04-07T01:55:02.6675518Z         RenderLayer layer = RenderLayer.getEntityCutoutNoCull(tex);
+2026-04-07T01:55:02.6696070Z                                        ^
+2026-04-07T01:55:02.6721137Z   symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:02.6723269Z   location: class RenderLayer
+2026-04-07T01:55:02.6725768Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:155: error: cannot find symbol
+2026-04-07T01:55:02.6728345Z             tex.setFilter(true, true);
+2026-04-07T01:55:02.6730067Z                ^
+2026-04-07T01:55:02.6731601Z   symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:02.6732218Z   location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:02.6733457Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:277: error: cannot find symbol
+2026-04-07T01:55:02.6734637Z                     tex.setFilter(true, true);
+2026-04-07T01:55:02.6735064Z                        ^
+2026-04-07T01:55:02.6735446Z   symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:02.6736003Z   location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:02.7665852Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/ConeFeatureRenderer.java:59: error: cannot find symbol
+2026-04-07T01:55:02.7685054Z         RenderLayer renderLayer = RenderLayer.getEntityCutoutNoCull(texture);
+2026-04-07T01:55:02.7723120Z                                              ^
+2026-04-07T01:55:02.7725072Z   symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:02.7727113Z   location: class RenderLayer
+2026-04-07T01:55:03.4668119Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/gui/ClickGuiScreen.java:1488: error: incompatible types: possible lossy conversion from float to int
+2026-04-07T01:55:03.4678846Z                         scaledSize, offset, bodyRot, null, client.player);
+2026-04-07T01:55:03.4682223Z                         ^
+2026-04-07T01:55:03.8673433Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:52: error: cannot find symbol
+2026-04-07T01:55:03.8677807Z                     .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.8680694Z                               ^
+2026-04-07T01:55:03.8692341Z   symbol:   variable RenderPhase
+2026-04-07T01:55:03.8698713Z   location: class StalkRenderer
+2026-04-07T01:55:03.8703642Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:51: error: package RenderPhase does not exist
+2026-04-07T01:55:03.8709783Z                     .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(3.0)))
+2026-04-07T01:55:03.8712963Z                                               ^
+2026-04-07T01:55:03.8716417Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:50: error: cannot find symbol
+2026-04-07T01:55:03.8722694Z             RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.8725377Z                        ^
+2026-04-07T01:55:03.8727948Z   symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.8731794Z   location: class RenderLayer
+2026-04-07T01:55:03.8737476Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:55: error: cannot find symbol
+2026-04-07T01:55:03.8741232Z                     .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.8744459Z                               ^
+2026-04-07T01:55:03.8753196Z   symbol:   variable RenderPhase
+2026-04-07T01:55:03.8759296Z   location: class MobEspRenderer
+2026-04-07T01:55:03.8763605Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:54: error: package RenderPhase does not exist
+2026-04-07T01:55:03.8775468Z                     .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(2.0)))
+2026-04-07T01:55:03.8782051Z                                               ^
+2026-04-07T01:55:03.8786893Z /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:53: error: cannot find symbol
+2026-04-07T01:55:03.8789881Z             RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.8804454Z                        ^
+2026-04-07T01:55:03.8805202Z   symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.8805696Z   location: class RenderLayer
+2026-04-07T01:55:03.8806186Z Note: Some input files use or override a deprecated API.
+2026-04-07T01:55:03.8806775Z Note: Recompile with -Xlint:deprecation for details.
+2026-04-07T01:55:03.8807569Z Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+2026-04-07T01:55:03.8808260Z 13 errors
+2026-04-07T01:55:03.9715172Z 
+2026-04-07T01:55:03.9715250Z 
+2026-04-07T01:55:03.9741853Z FAILURE: Build failed with an exception.
+2026-04-07T01:55:03.9742419Z > Task :app:compileJava FAILED
+2026-04-07T01:55:03.9744367Z 
+2026-04-07T01:55:03.9744382Z 
+2026-04-07T01:55:03.9745328Z * What went wrong:
+2026-04-07T01:55:03.9746264Z [Incubating] Problems report is available at: file:///home/runner/work/FloydAddons/FloydAddons/build/reports/problems/problems-report.html
+2026-04-07T01:55:03.9753766Z Execution failed for task ':app:compileJava'.
+2026-04-07T01:55:03.9756441Z > Compilation failed; see the compiler output below.
+2026-04-07T01:55:03.9756943Z 1 actionable task: 1 executed
+2026-04-07T01:55:03.9758705Z   Note: Recompile with -Xlint:deprecation for details.
+2026-04-07T01:55:03.9762361Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/gui/ClickGuiScreen.java:1488: error: incompatible types: possible lossy conversion from float to int
+2026-04-07T01:55:03.9764157Z                           scaledSize, offset, bodyRot, null, client.player);
+2026-04-07T01:55:03.9764664Z                           ^
+2026-04-07T01:55:03.9765629Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:22: error: cannot find symbol
+2026-04-07T01:55:03.9766749Z   import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:03.9767207Z                                     ^
+2026-04-07T01:55:03.9767590Z     symbol:   class RenderPhase
+2026-04-07T01:55:03.9767999Z     location: package net.minecraft.client.render
+2026-04-07T01:55:03.9769111Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:23: error: cannot find symbol
+2026-04-07T01:55:03.9770227Z   import net.minecraft.client.render.RenderPhase;
+2026-04-07T01:55:03.9771204Z                                     ^
+2026-04-07T01:55:03.9771589Z     symbol:   class RenderPhase
+2026-04-07T01:55:03.9772007Z     location: package net.minecraft.client.render
+2026-04-07T01:55:03.9773100Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:52: error: cannot find symbol
+2026-04-07T01:55:03.9774186Z                       .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.9774624Z                                 ^
+2026-04-07T01:55:03.9774987Z     symbol:   variable RenderPhase
+2026-04-07T01:55:03.9775373Z     location: class StalkRenderer
+2026-04-07T01:55:03.9776368Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:50: error: cannot find symbol
+2026-04-07T01:55:03.9777478Z               RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.9777938Z                          ^
+2026-04-07T01:55:03.9778288Z     symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.9778728Z     location: class RenderLayer
+2026-04-07T01:55:03.9779720Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:55: error: cannot find symbol
+2026-04-07T01:55:03.9802563Z                       .layering(RenderPhase.NO_LAYERING)
+2026-04-07T01:55:03.9803057Z                                 ^
+2026-04-07T01:55:03.9803429Z     symbol:   variable RenderPhase
+2026-04-07T01:55:03.9803912Z     location: class MobEspRenderer
+2026-04-07T01:55:03.9804967Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:53: error: cannot find symbol
+2026-04-07T01:55:03.9806113Z               RenderLayer.MultiPhaseParameters.builder()
+2026-04-07T01:55:03.9806575Z                          ^
+2026-04-07T01:55:03.9806934Z     symbol:   variable MultiPhaseParameters
+2026-04-07T01:55:03.9807359Z     location: class RenderLayer
+2026-04-07T01:55:03.9807832Z   Note: Some input files use or override a deprecated API.
+2026-04-07T01:55:03.9808610Z   Note: Some messages have been simplified; recompile with -Xdiags:verbose to get full output
+2026-04-07T01:55:03.9810036Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/StalkRenderer.java:51: error: package RenderPhase does not exist
+2026-04-07T01:55:03.9824158Z                       .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(3.0)))
+2026-04-07T01:55:03.9824781Z                                                 ^
+2026-04-07T01:55:03.9825955Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/esp/MobEspRenderer.java:54: error: package RenderPhase does not exist
+2026-04-07T01:55:03.9827261Z                       .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(2.0)))
+2026-04-07T01:55:03.9827843Z                                                 ^
+2026-04-07T01:55:03.9829016Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeFeatureRenderer.java:45: error: cannot find symbol
+2026-04-07T01:55:03.9845337Z           RenderLayer layer = RenderLayer.getEntityCutoutNoCull(tex);
+2026-04-07T01:55:03.9846162Z                                          ^
+2026-04-07T01:55:03.9846662Z     symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:03.9847193Z     location: class RenderLayer
+2026-04-07T01:55:03.9848319Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:155: error: cannot find symbol
+2026-04-07T01:55:03.9849507Z               tex.setFilter(true, true);
+2026-04-07T01:55:03.9849917Z                  ^
+2026-04-07T01:55:03.9850287Z     symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:03.9851122Z     location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:03.9852365Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/CapeManager.java:277: error: cannot find symbol
+2026-04-07T01:55:03.9853846Z                       tex.setFilter(true, true);
+2026-04-07T01:55:03.9854275Z                          ^
+2026-04-07T01:55:03.9854665Z     symbol:   method setFilter(boolean,boolean)
+2026-04-07T01:55:03.9855182Z     location: variable tex of type NativeImageBackedTexture
+2026-04-07T01:55:03.9856422Z   /home/runner/work/FloydAddons/FloydAddons/app/src/main/java/floydaddons/not/dogshit/client/features/cosmetic/ConeFeatureRenderer.java:59: error: cannot find symbol
+2026-04-07T01:55:03.9857798Z           RenderLayer renderLayer = RenderLayer.getEntityCutoutNoCull(texture);
+2026-04-07T01:55:03.9858411Z                                                ^
+2026-04-07T01:55:03.9858850Z     symbol:   method getEntityCutoutNoCull(Identifier)
+2026-04-07T01:55:03.9859333Z     location: class RenderLayer
+2026-04-07T01:55:03.9859661Z   13 errors
+2026-04-07T01:55:03.9859810Z 
+2026-04-07T01:55:03.9859915Z * Try:
+2026-04-07T01:55:03.9881598Z > Check your code and dependencies to fix the compilation error(s)
+2026-04-07T01:55:03.9882438Z > Run with --scan to generate a Build Scan (powered by Develocity).
+2026-04-07T01:55:03.9882870Z 
+2026-04-07T01:55:03.9882996Z BUILD FAILED in 1m 6s
+2026-04-07T01:55:04.4416330Z ##[error]Process completed with exit code 1.
