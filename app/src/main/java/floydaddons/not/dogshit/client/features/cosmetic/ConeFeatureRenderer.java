@@ -56,7 +56,7 @@ public class ConeFeatureRenderer extends FeatureRenderer<PlayerEntityRenderState
         matrices.multiply(new Quaternionf().rotateY((float) Math.toRadians(rotation)));
 
         Identifier texture = ConeHatManager.getTexture(mc);
-        RenderLayer renderLayer = RenderLayer.getEntityCutoutNoCull(texture);
+        RenderLayer renderLayer = RenderCompat.getEntityCutoutNoCull(texture);
 
         queue.submitCustom(matrices, renderLayer, (entry, consumer) -> {
             drawCone(entry, consumer, light, height, radius);

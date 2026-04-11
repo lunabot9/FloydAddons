@@ -42,7 +42,7 @@ public class CapeFeatureRenderer extends FeatureRenderer<PlayerEntityRenderState
         if (mc.player == null || state.id != mc.player.getId()) return;
 
         Identifier tex = CapeManager.getTexture(mc);
-        RenderLayer layer = RenderLayer.getEntityCutoutNoCull(tex);
+        RenderLayer layer = RenderCompat.getEntityCutoutNoCull(tex);
 
         matrices.push();
         // anchor to body

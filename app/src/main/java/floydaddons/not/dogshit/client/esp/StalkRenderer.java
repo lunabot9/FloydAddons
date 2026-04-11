@@ -10,48 +10,24 @@ import floydaddons.not.dogshit.client.esp.*;
 import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import floydaddons.not.dogshit.mixin.WorldRendererAccessor;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.render.BufferBuilderStorage;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderPhase;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
-
-import java.util.OptionalDouble;
 
 /**
  * Renders a chroma tracer line from the crosshair to the stalked player.
- * Shows through walls (no depth test). Approach based on SkyHanni's line renderer.
  */
 public final class StalkRenderer {
 
-    // Custom pipeline: LINES shaders with NO depth test (renders through walls)
-    private static final RenderPipeline XRAY_LINES_PIPELINE = RenderPipeline.builder(RenderPipelines.RENDERTYPE_LINES_SNIPPET)
-            .withLocation(Identifier.of("floydaddons", "pipeline/tracer_lines"))
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false)
-            .build();
-
-    // Custom render layer: xray lines with configurable width
-    private static final RenderLayer TRACER_LAYER = RenderLayer.of(
-            "floydaddons_tracer",
-            1536,
-            XRAY_LINES_PIPELINE,
-            RenderLayer.MultiPhaseParameters.builder()
-                    .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(3.0)))
-                    .layering(RenderPhase.NO_LAYERING)
-                    .build(false)
-    );
+    private static final RenderLayer TRACER_LAYER = RenderCompat.getLineLayer();
 
     private StalkRenderer() {}
 

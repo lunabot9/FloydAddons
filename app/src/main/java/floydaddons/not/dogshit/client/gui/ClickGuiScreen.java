@@ -1484,7 +1484,7 @@ public class ClickGuiScreen extends Screen {
                 client.player.setPitch(0f);
                 client.player.headYaw = 0f;
                 client.player.lastHeadYaw = 0f;
-                InventoryScreen.drawEntity(context, pvX, pvY, pvX + pvW, pvY + pvH,
+                RenderCompat.drawEntity(context, pvX, pvY, pvX + pvW, pvY + pvH,
                         scaledSize, offset, bodyRot, null, client.player);
                 client.player.bodyYaw = savedBodyYaw;
                 client.player.setYaw(savedYaw);

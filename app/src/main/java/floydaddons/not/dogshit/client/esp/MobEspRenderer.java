@@ -10,51 +10,30 @@ import floydaddons.not.dogshit.client.esp.*;
 import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
 import floydaddons.not.dogshit.mixin.WorldRendererAccessor;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.render.BufferBuilderStorage;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderPhase;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.List;
-import java.util.OptionalDouble;
 
 /**
  * Renders chroma tracer lines, wireframe hitbox outlines, and debug labels for mob ESP entities.
  * Uses MobEspManager.matches() for entity filtering and NpcTracker to skip duplicate armor stands.
- * Shows through walls (no depth test).
  */
 public final class MobEspRenderer {
 
-    private static final RenderPipeline XRAY_LINES_PIPELINE = RenderPipeline.builder(RenderPipelines.RENDERTYPE_LINES_SNIPPET)
-            .withLocation(Identifier.of("floydaddons", "pipeline/mob_esp_lines"))
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false)
-            .build();
-
-    private static final RenderLayer MOB_ESP_LAYER = RenderLayer.of(
-            "floydaddons_mob_esp",
-            1536,
-            XRAY_LINES_PIPELINE,
-            RenderLayer.MultiPhaseParameters.builder()
-                    .lineWidth(new RenderPhase.LineWidth(OptionalDouble.of(2.0)))
-                    .layering(RenderPhase.NO_LAYERING)
-                    .build(false)
-    );
+    private static final RenderLayer MOB_ESP_LAYER = RenderCompat.getLineLayer();
 
     private MobEspRenderer() {}
 
