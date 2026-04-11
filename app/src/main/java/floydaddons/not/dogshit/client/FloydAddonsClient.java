@@ -96,12 +96,12 @@ public class FloydAddonsClient implements ClientModInitializer {
                     windowIconApplied = true;
                 }
                 try { RenderConfig.applyWindowTitle(); } catch (Exception ignored) {}
-                try { RenderConfig.ensureBorderlessState(); } catch (Exception ignored) {}
+                try { RenderConfig.tickWindowState(); RenderConfig.ensureBorderlessState(); } catch (Exception ignored) {}
 
-                // Respect vanilla fullscreen toggle: leaving fullscreen should restore normal window decorations.
+                // Preserve user-selected borderless state even after exiting vanilla fullscreen.
                 boolean fullscreen = client.getWindow().isFullscreen();
                 if (prevFullscreen && !fullscreen && RenderConfig.isBorderlessWindowed()) {
-                    try { RenderConfig.setBorderlessWindowed(false); } catch (Exception ignored) {}
+                    try { RenderConfig.applyBorderlessWindowed(true); } catch (Exception ignored) {}
                 }
                 prevFullscreen = fullscreen;
             }

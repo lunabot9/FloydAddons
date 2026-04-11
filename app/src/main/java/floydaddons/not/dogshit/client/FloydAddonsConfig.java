@@ -370,7 +370,7 @@ public final class FloydAddonsConfig {
         RenderConfig.setStalkTracerChromaEnabled(data.stalkTracerChromaEnabled);
         RenderConfig.setHudCornerRadius(data.hudCornerRadius);
         RenderConfig.setWindowTitle(data.windowTitle);
-        RenderConfig.setBorderlessWindowed(data.borderlessWindowed);
+        RenderConfig.restoreBorderlessWindowed(data.borderlessWindowed);
     }
 
     private static void loadAnimation(Data data) {
