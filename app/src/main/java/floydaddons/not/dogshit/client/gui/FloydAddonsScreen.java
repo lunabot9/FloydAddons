@@ -62,6 +62,10 @@ public class FloydAddonsScreen extends Screen {
     private int clickGuiBtnY;
     private static final int CLICKGUI_BTN_W = 74;
     private static final int CLICKGUI_BTN_H = 18;
+    private int v2BtnX;
+    private int v2BtnY;
+    private static final int V2_BTN_W = 74;
+    private static final int V2_BTN_H = 18;
 
     private int scaleX(int value) { return Math.round(value * SCALE_X); }
     private int scaleY(int value) { return Math.round(value * SCALE_Y); }
@@ -141,6 +145,11 @@ public class FloydAddonsScreen extends Screen {
         clickGuiBtnX = left + 6;
         clickGuiBtnY = top + 4 + STYLE_BTN_H + 4;
         drawClickGuiButton(context, guiAlpha, mouseX, mouseY);
+
+        // V2 UI button below ClickGUI button
+        v2BtnX = left + 6;
+        v2BtnY = clickGuiBtnY + CLICKGUI_BTN_H + 4;
+        drawV2Button(context, guiAlpha, mouseX, mouseY);
 
         // Title scaled up 75% with chroma gradient right-to-left
         float titleScale = 1.75f;
@@ -292,6 +301,14 @@ public class FloydAddonsScreen extends Screen {
         if (mx >= clickGuiBtnX && mx <= clickGuiBtnX + CLICKGUI_BTN_W && my >= clickGuiBtnY && my <= clickGuiBtnY + CLICKGUI_BTN_H) {
             if (client != null) {
                 client.setScreen(new ClickGuiScreen());
+                return true;
+            }
+        }
+
+        // V2 UI button
+        if (mx >= v2BtnX && mx <= v2BtnX + V2_BTN_W && my >= v2BtnY && my <= v2BtnY + V2_BTN_H) {
+            if (client != null) {
+                client.setScreen(new floydaddons.not.dogshit.client.gui.v2.FloydAddonsV2Screen());
                 return true;
             }
         }
@@ -456,6 +473,22 @@ public class FloydAddonsScreen extends Screen {
         int tw = textRenderer.getWidth(label);
         int tx = bx + (CLICKGUI_BTN_W - tw) / 2;
         int ty = by + (CLICKGUI_BTN_H - textRenderer.fontHeight) / 2;
+        int color = applyAlpha(chromaColorSynced(0f), alpha);
+        context.drawTextWithShadow(textRenderer, label, tx, ty, color);
+    }
+
+    private void drawV2Button(DrawContext context, float alpha, int mouseX, int mouseY) {
+        int bx = v2BtnX;
+        int by = v2BtnY;
+        boolean hover = mouseX >= bx && mouseX <= bx + V2_BTN_W && mouseY >= by && mouseY <= by + V2_BTN_H;
+        int fill = applyAlpha(hover ? 0xFF666666 : 0xFF4A4A4A, alpha);
+        context.fill(bx, by, bx + V2_BTN_W, by + V2_BTN_H, fill);
+        drawChromaBorderSyncedForced(context, bx - 1, by - 1, bx + V2_BTN_W + 1, by + V2_BTN_H + 1, alpha);
+
+        String label = "Open V2 UI";
+        int tw = textRenderer.getWidth(label);
+        int tx = bx + (V2_BTN_W - tw) / 2;
+        int ty = by + (V2_BTN_H - textRenderer.fontHeight) / 2;
         int color = applyAlpha(chromaColorSynced(0f), alpha);
         context.drawTextWithShadow(textRenderer, label, tx, ty, color);
     }
