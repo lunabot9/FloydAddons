@@ -40,3 +40,7 @@ deploy.sh
 
 # Claude Code
 CLAUDE.md
+
+# flt agent runtime
+.flt/
+.harness-backup-CLAUDE.md
