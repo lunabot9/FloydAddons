@@ -1,4 +1,4 @@
-name: "Release: MC 1.21.10 + 1.21.11"
+name: "Release: MC 1.21.11"
 
 on:
   push:
@@ -40,11 +40,10 @@ jobs:
       - name: Calculate next version
         id: version
         run: |
-          # Gather all vX.Y.Z(-mcX.Y.ZZ) tags and pick the highest base version
-          TAGS=$(gh release list --limit 100 --json tagName -q '.[].tagName' 2>/dev/null || true)
-          LATEST=$(echo "$TAGS" | sed -n 's/^v//p' | sed 's/-mc.*//' \
-            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-
+          LATEST=$(gh release list --limit 50 --json tagName -q '.[].tagName' 2>/dev/null \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+(-mc1\.21\.11)?$' \
+            | sed 's/-mc.*//' | sed 's/^v//' \
+            | sort -V | tail -1 || echo "")
           if [ -z "$LATEST" ]; then
             echo "version=1.0.1" >> "$GITHUB_OUTPUT"
             echo "First release: v1.0.1"
@@ -66,37 +65,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Build for 1.21.10
-        run: ./gradlew clean build --no-daemon -Ptarget_mc=1.21.10 -Pmod_version=${{ steps.version.outputs.version }}-mc1.21.10
-
       - name: Build for 1.21.11
-        run: ./gradlew build --no-daemon -Ptarget_mc=1.21.11 -Pmod_version=${{ steps.version.outputs.version }}-mc1.21.11
+        run: ./gradlew clean build --no-daemon -Pmod_version=${{ steps.version.outputs.version }}
 
       - name: Upload build artifact
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: floydaddons-${{ steps.version.outputs.version }}-multi
-          path: |
-            app/build/libs/floydaddons-${{ steps.version.outputs.version }}-mc1.21.10.jar
-            app/build/libs/floydaddons-${{ steps.version.outputs.version }}-mc1.21.11.jar
+          name: floydaddons-${{ steps.version.outputs.version }}-mc1.21.11
+          path: app/build/libs/floydaddons-${{ steps.version.outputs.version }}.jar
 
-      - name: Create GitHub Release (MC 1.21.10)
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}-mc1.21.10
-          name: FloydAddons v${{ steps.version.outputs.version }} (MC 1.21.10)
-          body: |
-            ${{ github.event.head_commit.message }}
-
-            ---
-            **Minecraft 1.21.10**
-          files: app/build/libs/floydaddons-${{ steps.version.outputs.version }}-mc1.21.10.jar
-          draft: false
-          prerelease: false
-
-      - name: Create GitHub Release (MC 1.21.11)
+      - name: Create GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
@@ -107,6 +86,6 @@ jobs:
 
             ---
             **Minecraft 1.21.11**
-          files: app/build/libs/floydaddons-${{ steps.version.outputs.version }}-mc1.21.11.jar
+          files: app/build/libs/floydaddons-${{ steps.version.outputs.version }}.jar
           draft: false
           prerelease: false

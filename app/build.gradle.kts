@@ -3,22 +3,12 @@ plugins {
     id("net.fabricmc.fabric-loom-remap") version "1.14.10"
 }
 
-fun Project.strProp(name: String): String? = findProperty(name) as String?
-fun String.toKeySuffix() = replace(".", "_")
-
-val targetMc = strProp("target_mc") ?: "1.21.10"
-val minecraftVersion = strProp("minecraft_version_${targetMc.toKeySuffix()}") ?: strProp("minecraft_version")
-    ?: error("Missing minecraft_version for $targetMc")
-val yarnMappings = strProp("yarn_mappings_${targetMc.toKeySuffix()}") ?: strProp("yarn_mappings")
-    ?: error("Missing yarn_mappings for $targetMc")
-val loaderVersion = strProp("loader_version_${targetMc.toKeySuffix()}") ?: strProp("loader_version")
-    ?: error("Missing loader_version for $targetMc")
-val fabricApiVersion = strProp("fabric_api_version_${targetMc.toKeySuffix()}") ?: strProp("fabric_api_version")
-    ?: error("Missing fabric_api_version for $targetMc")
-val minecraftDependency = strProp("minecraft_dependency_${targetMc.toKeySuffix()}") ?: strProp("minecraft_dependency")
-    ?: ">=$minecraftVersion"
-val loaderDependency = strProp("fabricloader_dependency_${targetMc.toKeySuffix()}") ?: strProp("fabricloader_dependency")
-    ?: ">=$loaderVersion"
+val minecraftVersion = property("minecraft_version") as String
+val yarnMappings = property("yarn_mappings") as String
+val loaderVersion = property("loader_version") as String
+val fabricApiVersion = property("fabric_api_version") as String
+val minecraftDependency = property("minecraft_dependency") as String
+val loaderDependency = property("fabricloader_dependency") as String
 
 group = property("maven_group")!!
 version = property("mod_version")!!
