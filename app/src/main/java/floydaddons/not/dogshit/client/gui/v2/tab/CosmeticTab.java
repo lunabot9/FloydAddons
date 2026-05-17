@@ -25,7 +25,7 @@ import java.util.List;
  * Cosmetic tab — Custom Skin / Custom Cape / Cone Hat accordions.
  */
 public class CosmeticTab implements V2Tab {
-    private static final int HEADER_H = 28;
+    private static final int HEADER_H = 38;
 
     private final ContentPane pane;
     private final AccordionRow skinRow;
@@ -369,10 +369,10 @@ public class CosmeticTab implements V2Tab {
 
     private static final class ConeHatBody implements AccordionRow.Body {
         private static final int PAD = 12;
-        private static final int ROW_H = 14;
-        private static final int ROW_GAP = 4;
-        private static final int LABEL_W = 80;
-        private static final int SLIDER_PAD_LEFT = 6;
+        private static final int ROW_H = 22;
+        private static final int ROW_GAP = 7;
+        private static final int LABEL_W = 61;
+        private static final int SLIDER_W = 39;
 
         private final List<SliderRow> sliderRows;
         private final int height;
@@ -414,13 +414,13 @@ public class CosmeticTab implements V2Tab {
         public void render(DrawContext ctx, int x, int y, int w, int mouseX, int mouseY, float delta) {
             TextRenderer tr = MinecraftClient.getInstance().textRenderer;
             int yCursor = y + PAD;
-            int sliderX = x + PAD + LABEL_W + SLIDER_PAD_LEFT;
-            int sliderW = (x + w - PAD) - sliderX;
+            int sliderX = x + PAD + LABEL_W;
             for (SliderRow row : sliderRows) {
                 int textY = yCursor + (ROW_H - tr.fontHeight) / 2 + 1;
-                ctx.drawText(tr, row.label, x + PAD, textY, V2Theme.TEXT_PRIMARY, false);
+                ctx.drawText(tr, net.minecraft.text.Text.literal(row.label).styled(s -> s.withBold(true)),
+                        x + PAD + 4, textY, V2Theme.TEXT_PRIMARY, false);
                 row.slider.setPos(sliderX, yCursor);
-                row.slider.setSize(sliderW, ROW_H);
+                row.slider.setSize(SLIDER_W, ROW_H);
                 row.slider.render(ctx, mouseX, mouseY, delta);
                 yCursor += ROW_H + ROW_GAP;
             }

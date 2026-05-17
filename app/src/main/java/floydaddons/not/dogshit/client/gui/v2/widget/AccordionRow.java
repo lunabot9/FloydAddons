@@ -81,29 +81,35 @@ public class AccordionRow {
         if (expandAnim < target) expandAnim = Math.min(target, expandAnim + step);
         else if (expandAnim > target) expandAnim = Math.max(target, expandAnim - step);
 
+        int bodyH = body != null ? Math.round(body.getHeight() * expandAnim) : 0;
+        int totalH = headerH + bodyH;
+
+        if (bodyH > 0) {
+            V2Theme.fillRoundedRect(ctx, x, y, w, totalH, V2Theme.BUTTON_RADIUS, V2Theme.BG_BODY);
+        }
+
         // Header bg
         V2Theme.drawMetallicGradient(ctx, x, y, w, headerH, V2Theme.BUTTON_RADIUS);
-        if (expanded) {
-            V2Theme.drawRoundedBorder(ctx, x, y, w, headerH, V2Theme.BUTTON_RADIUS, V2Theme.OUTLINE_ACTIVE);
-        }
 
         // Title
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
         Text styled = Text.literal(title).styled(s -> s.withBold(true));
-        int textY = y + (headerH - tr.fontHeight) / 2 + 1;
-        ctx.drawText(tr, styled, x + 14, textY, V2Theme.TEXT_PRIMARY, false);
+        float textScale = 1.55f;
+        float textY = y + (headerH - tr.fontHeight * textScale) / 2f;
+        V2Theme.drawScaledText(ctx, tr, styled, x + 20, textY, textScale, V2Theme.TEXT_PRIMARY);
 
         // Chevron (uses the bold style — '>' when collapsed, 'v' when expanded)
         String chev = expandAnim >= 0.5f ? "v" : ">";
         Text chevText = Text.literal(chev).styled(s -> s.withBold(true));
-        int chevW = tr.getWidth(chevText);
-        ctx.drawText(tr, chevText, x + w - 14 - chevW, textY, V2Theme.TEXT_CHEVRON, false);
+        float chevScale = 2.0f;
+        float chevW = tr.getWidth(chevText) * chevScale;
+        float chevY = y + (headerH - tr.fontHeight * chevScale) / 2f - 1f;
+        V2Theme.drawScaledText(ctx, tr, chevText, x + w - 20 - chevW, chevY,
+                chevScale, V2Theme.TEXT_CHEVRON);
 
         // Body (clipped via animation height)
-        if (body != null && expandAnim > 0f) {
-            int bodyH = Math.round(body.getHeight() * expandAnim);
+        if (body != null && bodyH > 0) {
             int bodyY = y + headerH;
-            ctx.fill(x, bodyY, x + w, bodyY + bodyH, V2Theme.BG_BODY);
             // Render body content; consumer uses (x, bodyY, w) as anchor
             ctx.enableScissor(x, bodyY, x + w, bodyY + bodyH);
             try {
@@ -111,6 +117,10 @@ public class AccordionRow {
             } finally {
                 ctx.disableScissor();
             }
+        }
+
+        if (bodyH > 0) {
+            V2Theme.drawRoundedBorder(ctx, x, y, w, totalH, V2Theme.BUTTON_RADIUS, V2Theme.OUTLINE_ACTIVE);
         }
     }
 

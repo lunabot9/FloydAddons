@@ -38,7 +38,7 @@ public class NickHiderTextRendererMixin {
     }
 
     @ModifyVariable(
-        method = "prepare(Lnet/minecraft/text/OrderedText;FFIZI)Lnet/minecraft/client/font/TextRenderer$GlyphDrawable;",
+        method = "prepare(Lnet/minecraft/text/OrderedText;FFIZZI)Lnet/minecraft/client/font/TextRenderer$GlyphDrawable;",
         at = @At("HEAD"),
         argsOnly = true,
         ordinal = 0

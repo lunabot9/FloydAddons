@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class RenderTab implements V2Tab {
 
-    private static final int HEADER_H = 28;
+    private static final int HEADER_H = 38;
 
     private final ContentPane pane;
     private final List<AccordionRow> rows = new ArrayList<>();
@@ -34,6 +34,8 @@ public class RenderTab implements V2Tab {
         AccordionRow esp = new AccordionRow(0, 0, 0, HEADER_H, "ESP", new EspRow());
         AccordionRow animations = new AccordionRow(0, 0, 0, HEADER_H, "Animations", new AnimationsRow());
         AccordionRow visual = new AccordionRow(0, 0, 0, HEADER_H, "Visual", new VisualRow());
+
+        hiders.setExpanded(true);
 
         rows.add(hiders);
         rows.add(xray);

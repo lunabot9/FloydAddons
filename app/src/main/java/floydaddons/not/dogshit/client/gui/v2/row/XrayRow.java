@@ -5,7 +5,6 @@ import floydaddons.not.dogshit.client.config.RenderConfig;
 import floydaddons.not.dogshit.client.gui.XrayEditorScreen;
 import floydaddons.not.dogshit.client.gui.v2.widget.AccordionRow;
 import floydaddons.not.dogshit.client.gui.v2.widget.MetallicButton;
-import floydaddons.not.dogshit.client.gui.v2.widget.Slider;
 import floydaddons.not.dogshit.client.gui.v2.widget.ToggleSwitch;
 import floydaddons.not.dogshit.client.gui.v2.widget.V2Theme;
 import net.minecraft.client.MinecraftClient;
@@ -14,22 +13,22 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
 
 /**
- * Body for the X-ray accordion. Toggle + opacity slider + Edit/Reload Blocks buttons.
+ * Body for the X-ray accordion. Toggle + Edit/Reload Blocks buttons.
  * Source: /tmp/fig-2x/X-ray render.png.
  */
 public class XrayRow implements AccordionRow.Body {
 
-    private static final int PAD_X = 12;
-    private static final int PAD_Y = 8;
-    private static final int ROW_GAP = 6;
-    private static final int TOGGLE_ROW_H = 16;
-    private static final int SLIDER_H = 14;
-    private static final int BUTTON_H = 18;
-    private static final int TOTAL_HEIGHT =
-            PAD_Y * 2 + TOGGLE_ROW_H + ROW_GAP + SLIDER_H + ROW_GAP + BUTTON_H;
+    private static final int PAD_X = 10;
+    private static final int PAD_Y = 12;
+    private static final int TOGGLE_ROW_H = 17;
+    private static final int BUTTON_H = 21;
+    private static final int BUTTON_GAP_Y = 12;
+    private static final int EDIT_BUTTON_W = 85;
+    private static final int RELOAD_BUTTON_W = 100;
+    private static final int BUTTON_GAP_X = 11;
+    private static final int TOTAL_HEIGHT = 72;
 
     private final ToggleSwitch xrayToggle;
-    private final Slider opacitySlider;
     private final MetallicButton editButton;
     private final MetallicButton reloadButton;
 
@@ -42,20 +41,13 @@ public class XrayRow implements AccordionRow.Body {
                         RenderConfig.save();
                     }
                 });
-        this.opacitySlider = new Slider(0, 0, 1, SLIDER_H,
-                0.05, 1.0,
-                RenderConfig::getXrayOpacity,
-                v -> {
-                    RenderConfig.setXrayOpacity((float) v);
-                    RenderConfig.save();
-                }).withDecimals(2);
         this.editButton = new MetallicButton(0, 0, 1, BUTTON_H, "Edit Blocks", () -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             mc.setScreen(new XrayEditorScreen(mc.currentScreen));
-        }).setRadius(V2Theme.SMALL_PILL_RADIUS);
+        }).setRadius(V2Theme.SMALL_PILL_RADIUS).setTextScale(0.95f);
         this.reloadButton = new MetallicButton(0, 0, 1, BUTTON_H, "Reload Blocks",
                 FloydAddonsConfig::loadXrayOpaque)
-                .setRadius(V2Theme.SMALL_PILL_RADIUS);
+                .setRadius(V2Theme.SMALL_PILL_RADIUS).setTextScale(0.95f);
     }
 
     @Override
@@ -68,7 +60,6 @@ public class XrayRow implements AccordionRow.Body {
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
         int innerX = x + PAD_X;
         int innerY = y + PAD_Y;
-        int innerW = w - PAD_X * 2;
 
         // Row 1: "X-ray" label + toggle (left aligned, like Figma)
         int row1Y = innerY;
@@ -81,18 +72,11 @@ public class XrayRow implements AccordionRow.Body {
         xrayToggle.setPos(toggleX, toggleY);
         xrayToggle.render(ctx, mouseX, mouseY, delta);
 
-        // Row 2: Opacity slider full width with label baked into the value
-        int row2Y = row1Y + TOGGLE_ROW_H + ROW_GAP;
-        opacitySlider.setPos(innerX, row2Y);
-        opacitySlider.setSize(innerW, SLIDER_H);
-        opacitySlider.render(ctx, mouseX, mouseY, delta);
-
-        // Row 3: two buttons (Edit Blocks, Reload Blocks)
-        int row3Y = row2Y + SLIDER_H + ROW_GAP;
-        int btnGap = 8;
-        int btnW = (innerW - btnGap) / 2;
-        editButton.setBounds(innerX, row3Y, btnW, BUTTON_H);
-        reloadButton.setBounds(innerX + btnW + btnGap, row3Y, btnW, BUTTON_H);
+        // Row 2: two compact buttons.
+        int row2Y = row1Y + TOGGLE_ROW_H + BUTTON_GAP_Y;
+        editButton.setBounds(x + PAD_X, row2Y, EDIT_BUTTON_W, BUTTON_H);
+        reloadButton.setBounds(x + PAD_X + EDIT_BUTTON_W + BUTTON_GAP_X, row2Y,
+                RELOAD_BUTTON_W, BUTTON_H);
         editButton.render(ctx, mouseX, mouseY, delta);
         reloadButton.render(ctx, mouseX, mouseY, delta);
     }
@@ -100,7 +84,6 @@ public class XrayRow implements AccordionRow.Body {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (xrayToggle.mouseClicked(mx, my, button)) return true;
-        if (opacitySlider.mouseClicked(mx, my, button)) return true;
         if (editButton.mouseClicked(mx, my, button)) return true;
         if (reloadButton.mouseClicked(mx, my, button)) return true;
         return false;
@@ -109,14 +92,8 @@ public class XrayRow implements AccordionRow.Body {
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
         boolean any = false;
-        any |= opacitySlider.mouseReleased(mx, my, button);
         any |= editButton.mouseReleased(mx, my, button);
         any |= reloadButton.mouseReleased(mx, my, button);
         return any;
-    }
-
-    @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        return opacitySlider.mouseDragged(mx, my, button, dx, dy);
     }
 }

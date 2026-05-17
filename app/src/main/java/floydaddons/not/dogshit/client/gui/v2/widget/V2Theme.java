@@ -1,6 +1,8 @@
 package floydaddons.not.dogshit.client.gui.v2.widget;
 
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.text.Text;
 
 /**
  * Centralized design tokens for the V2 GUI rebuild. All values are sampled from the
@@ -15,14 +17,14 @@ public final class V2Theme {
     public static final int CANVAS_W = 480;
     /** Source: Main - QoL.png. */
     public static final int CANVAS_H = 270;
-    /** Source: Main - QoL.png — left sidebar rail width. */
-    public static final int SIDEBAR_W = 160;
-    /** Source: Main - QoL.png — sidebar tab pill width. */
-    public static final int SIDEBAR_TAB_WIDTH = 130;
-    /** Source: Main - QoL.png — sidebar tab pill height. */
-    public static final int SIDEBAR_TAB_HEIGHT = 22;
-    /** Source: Main - QoL.png — vertical gap between sidebar tabs. */
-    public static final int SIDEBAR_TAB_GAP = 6;
+    /** Source: Figma — left sidebar rail width. */
+    public static final int SIDEBAR_W = 107;
+    /** Source: Figma — sidebar tab pill width. */
+    public static final int SIDEBAR_TAB_WIDTH = 80;
+    /** Source: Figma — sidebar tab pill height. */
+    public static final int SIDEBAR_TAB_HEIGHT = 17;
+    /** Source: Figma — vertical gap between sidebar tabs. */
+    public static final int SIDEBAR_TAB_GAP = 8;
 
     /** Source: Main - QoL.png — outer panel corner radius. */
     public static final int PANE_RADIUS = 12;
@@ -34,9 +36,9 @@ public final class V2Theme {
     public static final int SLIDER_RADIUS = 7;
 
     /** Source: Hiders.png — toggle track default size. */
-    public static final int TOGGLE_TRACK_W = 24;
+    public static final int TOGGLE_TRACK_W = 29;
     /** Source: Hiders.png — toggle track default size. */
-    public static final int TOGGLE_TRACK_H = 12;
+    public static final int TOGGLE_TRACK_H = 17;
 
     // === Backgrounds ===
     /** Source: Main - QoL.png left rail — very dark near-black. */
@@ -186,5 +188,28 @@ public final class V2Theme {
     public static int applyAlpha(int color, float alpha) {
         int a = Math.round(((color >>> 24) & 0xFF) * Math.max(0f, Math.min(1f, alpha)));
         return (a << 24) | (color & 0x00FFFFFF);
+    }
+
+    public static void drawScaledText(DrawContext ctx, TextRenderer tr, Text text,
+                                      float x, float y, float scale, int color) {
+        ctx.getMatrices().pushMatrix();
+        ctx.getMatrices().translate(x, y);
+        ctx.getMatrices().scale(scale, scale);
+        ctx.drawText(tr, text, 0, 0, color, false);
+        ctx.getMatrices().popMatrix();
+    }
+
+    public static void drawScaledText(DrawContext ctx, TextRenderer tr, String text,
+                                      float x, float y, float scale, int color) {
+        drawScaledText(ctx, tr, Text.literal(text), x, y, scale, color);
+    }
+
+    public static void drawCenteredScaledText(DrawContext ctx, TextRenderer tr, Text text,
+                                              int x, int y, int w, int h, float scale, int color) {
+        float textW = tr.getWidth(text) * scale;
+        float textH = tr.fontHeight * scale;
+        float tx = x + (w - textW) / 2f;
+        float ty = y + (h - textH) / 2f;
+        drawScaledText(ctx, tr, text, tx, ty, scale, color);
     }
 }

@@ -252,7 +252,7 @@ public final class FloydAddonsCommand {
 
     private static int openGui(CommandContext<FabricClientCommandSource> context) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        mc.send(() -> mc.setScreen(new FloydAddonsScreen(Text.literal("FloydAddons"))));
+        mc.send(() -> mc.setScreen(new floydaddons.not.dogshit.client.gui.v2.FloydAddonsV2Screen()));
         return Command.SINGLE_SUCCESS;
     }
 

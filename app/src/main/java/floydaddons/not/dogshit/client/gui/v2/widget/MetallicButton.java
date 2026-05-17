@@ -17,6 +17,7 @@ public class MetallicButton {
     protected boolean active;
     protected boolean enabled = true;
     protected int radius = V2Theme.BUTTON_RADIUS;
+    protected float textScale = 0.75f;
 
     private boolean pressed = false;
 
@@ -46,6 +47,11 @@ public class MetallicButton {
 
     public MetallicButton setRadius(int radius) {
         this.radius = radius;
+        return this;
+    }
+
+    public MetallicButton setTextScale(float textScale) {
+        this.textScale = textScale;
         return this;
     }
 
@@ -99,10 +105,7 @@ public class MetallicButton {
         if (label == null || label.isEmpty()) return;
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
         Text styled = Text.literal(label).styled(s -> s.withBold(true));
-        int textW = tr.getWidth(styled);
-        int tx = x + (w - textW) / 2;
-        int ty = y + (h - tr.fontHeight) / 2 + 1;
-        ctx.drawText(tr, styled, tx, ty, V2Theme.TEXT_PRIMARY, false);
+        V2Theme.drawCenteredScaledText(ctx, tr, styled, x, y, w, h, textScale, V2Theme.TEXT_PRIMARY);
     }
 
     public boolean mouseClicked(double mx, double my, int button) {

@@ -2,6 +2,7 @@ package floydaddons.not.dogshit.client.gui.v2.tab;
 
 import floydaddons.not.dogshit.client.config.NickHiderConfig;
 import floydaddons.not.dogshit.client.gui.NameMappingsEditorScreen;
+import floydaddons.not.dogshit.client.gui.v2.widget.AccordionRow;
 import floydaddons.not.dogshit.client.gui.v2.widget.ContentPane;
 import floydaddons.not.dogshit.client.gui.v2.widget.MetallicButton;
 import floydaddons.not.dogshit.client.gui.v2.widget.ToggleSwitch;
@@ -16,29 +17,29 @@ import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * V2 GUI tab for the Neck Hider feature. Lays out a {@link ContentPane} titled
- * "Neck Hider" containing the enabled toggle, the nickname text field, and the
- * Edit / Reload Names buttons.
+ * Figma-backed Neck Hider tab. The visible frame has two accordions:
+ * Neck Hider, and Other Neck Hider. The bodies retain the previous controls.
  */
 public class NeckHiderTab implements V2Tab {
 
-    private static final int ROW_HEIGHT = 22;
-    private static final int LABEL_GAP = 8;
+    private static final int HEADER_H = 38;
     private static final int FIELD_HEIGHT = 18;
     private static final int BUTTON_HEIGHT = 22;
     private static final int BUTTON_GAP = 8;
 
     private final ContentPane pane;
+    private final List<AccordionRow> rows = new ArrayList<>();
+    private final AccordionRow neckRow;
+    private final AccordionRow otherNeckRow;
+
     private final ToggleSwitch enabledToggle;
     private TextFieldWidget nickField;
     private final MetallicButton editNamesButton;
     private final MetallicButton reloadNamesButton;
-
-    private int paneX;
-    private int paneY;
-    private int paneW;
-    private int paneH;
 
     public NeckHiderTab() {
         this.pane = new ContentPane(0, 0, 0, 0, "Neck Hider");
@@ -62,9 +63,14 @@ public class NeckHiderTab implements V2Tab {
         this.reloadNamesButton = new MetallicButton(0, 0, 0, BUTTON_HEIGHT, "Reload Names",
                 NickHiderConfig::loadNameMappings);
 
-        this.pane.add(new EnabledRow(this));
-        this.pane.add(new NicknameRow(this));
-        this.pane.add(new ButtonsRow(this));
+        this.neckRow = new AccordionRow(0, 0, 0, HEADER_H, "Neck Hider", new NeckHiderBody(this));
+        this.otherNeckRow = new AccordionRow(0, 0, 0, HEADER_H, "Other Neck Hider", new OtherNeckHiderBody(this));
+        rows.add(neckRow);
+        rows.add(otherNeckRow);
+
+        for (AccordionRow row : rows) {
+            pane.add(new AccordionChild(row));
+        }
     }
 
     @Override
@@ -74,11 +80,7 @@ public class NeckHiderTab implements V2Tab {
 
     @Override
     public void layout(int x, int y, int w, int h) {
-        this.paneX = x;
-        this.paneY = y;
-        this.paneW = w;
-        this.paneH = h;
-        this.pane.setBounds(x, y, w, h);
+        pane.setBounds(x, y, w, h);
     }
 
     @Override
@@ -89,7 +91,24 @@ public class NeckHiderTab implements V2Tab {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        return pane.mouseClicked(mx, my, button);
+        boolean[] before = new boolean[rows.size()];
+        for (int i = 0; i < rows.size(); i++) before[i] = rows.get(i).isExpanded();
+
+        boolean handled = pane.mouseClicked(mx, my, button);
+
+        int newlyOpenedIdx = -1;
+        for (int i = 0; i < rows.size(); i++) {
+            if (!before[i] && rows.get(i).isExpanded()) {
+                newlyOpenedIdx = i;
+                break;
+            }
+        }
+        if (newlyOpenedIdx >= 0) {
+            for (int i = 0; i < rows.size(); i++) {
+                if (i != newlyOpenedIdx) rows.get(i).setExpanded(false);
+            }
+        }
+        return handled;
     }
 
     @Override
@@ -110,10 +129,8 @@ public class NeckHiderTab implements V2Tab {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int mods) {
         if (nickField != null && nickField.isFocused()) {
-            // Enter persists the value
-            if (keyCode == 257 || keyCode == 335) { // GLFW_KEY_ENTER / KP_ENTER
-                NickHiderConfig.setNickname(nickField.getText());
-                NickHiderConfig.save();
+            if (keyCode == 257 || keyCode == 335) {
+                persistNickname();
                 nickField.setFocused(false);
                 return true;
             }
@@ -145,6 +162,12 @@ public class NeckHiderTab implements V2Tab {
         persistNickname();
     }
 
+    public int frameState() {
+        if (neckRow.isExpanded()) return 1;
+        if (otherNeckRow.isExpanded()) return 2;
+        return 0;
+    }
+
     private void ensureField() {
         if (nickField == null) {
             TextRenderer tr = MinecraftClient.getInstance().textRenderer;
@@ -157,153 +180,131 @@ public class NeckHiderTab implements V2Tab {
     }
 
     private void persistNickname() {
-        if (nickField != null) {
-            String current = nickField.getText();
-            if (current != null && !current.isEmpty()
-                    && !current.equals(NickHiderConfig.getNickname())) {
-                NickHiderConfig.setNickname(current);
-                NickHiderConfig.save();
-            }
+        if (nickField == null) return;
+        String current = nickField.getText();
+        if (current != null && !current.isEmpty() && !current.equals(NickHiderConfig.getNickname())) {
+            NickHiderConfig.setNickname(current);
+            NickHiderConfig.save();
         }
     }
 
-    // ===== Rows =====
+    private static final class AccordionChild implements ContentPane.Child {
+        private final AccordionRow row;
 
-    private static final class EnabledRow implements ContentPane.Child {
-        private final NeckHiderTab parent;
-        private int x, y, w;
-
-        EnabledRow(NeckHiderTab parent) {
-            this.parent = parent;
+        AccordionChild(AccordionRow row) {
+            this.row = row;
         }
 
-        @Override
-        public int getHeight() {
-            return ROW_HEIGHT;
-        }
+        @Override public int getHeight() { return row.getTotalHeight(); }
 
         @Override
         public void layout(int x, int y, int w) {
-            this.x = x;
-            this.y = y;
-            this.w = w;
-            int toggleX = x + w - parent.enabledToggle.getWidth();
-            int toggleY = y + (ROW_HEIGHT - parent.enabledToggle.getHeight()) / 2;
-            parent.enabledToggle.setPos(toggleX, toggleY);
+            row.setPos(x, y);
+            row.setWidth(w);
         }
 
-        @Override
-        public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-            TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-            int textY = y + (ROW_HEIGHT - tr.fontHeight) / 2 + 1;
-            ctx.drawText(tr, Text.literal("Neck Hider"), x, textY, V2Theme.TEXT_PRIMARY, false);
-            parent.enabledToggle.render(ctx, mouseX, mouseY, delta);
-        }
-
-        @Override
-        public boolean mouseClicked(double mx, double my, int button) {
-            return parent.enabledToggle.mouseClicked(mx, my, button);
-        }
+        @Override public void render(DrawContext ctx, int mouseX, int mouseY, float delta) { row.render(ctx, mouseX, mouseY, delta); }
+        @Override public boolean mouseClicked(double mx, double my, int button) { return row.mouseClicked(mx, my, button); }
+        @Override public boolean mouseReleased(double mx, double my, int button) { return row.mouseReleased(mx, my, button); }
+        @Override public boolean mouseDragged(double mx, double my, int button, double dx, double dy) { return row.mouseDragged(mx, my, button, dx, dy); }
+        @Override public boolean mouseScrolled(double mx, double my, double horiz, double vert) { return row.mouseScrolled(mx, my, horiz, vert); }
+        @Override public boolean keyPressed(int k, int s, int m) { return row.keyPressed(k, s, m); }
+        @Override public boolean charTyped(char c, int m) { return row.charTyped(c, m); }
     }
 
-    private static final class NicknameRow implements ContentPane.Child {
-        private final NeckHiderTab parent;
-        private int x, y, w;
+    private static final class NeckHiderBody implements AccordionRow.Body {
+        private static final int PAD = 12;
+        private static final int ROW_GAP = 8;
+        private static final int LABEL_TOGGLE_GAP = 8;
+        private static final int LABEL_FIELD_GAP = 10;
+        private static final int HEIGHT = 72;
 
-        NicknameRow(NeckHiderTab parent) {
+        private final NeckHiderTab parent;
+
+        NeckHiderBody(NeckHiderTab parent) {
             this.parent = parent;
         }
 
-        @Override
-        public int getHeight() {
-            return ROW_HEIGHT;
-        }
+        @Override public int getHeight() { return HEIGHT; }
 
         @Override
-        public void layout(int x, int y, int w) {
-            this.x = x;
-            this.y = y;
-            this.w = w;
+        public void render(DrawContext ctx, int x, int y, int w, int mouseX, int mouseY, float delta) {
             parent.ensureField();
             TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-            int labelW = tr.getWidth("Nickname");
-            int fieldX = x + labelW + LABEL_GAP;
-            int fieldW = Math.max(40, w - labelW - LABEL_GAP);
-            int fieldY = y + (ROW_HEIGHT - FIELD_HEIGHT) / 2;
+
+            int row1Y = y + PAD;
+            String enabledLabel = "Enabled";
+            int enabledLabelW = tr.getWidth(enabledLabel);
+            int enabledTextY = row1Y + (V2Theme.TOGGLE_TRACK_H - tr.fontHeight) / 2 + 1;
+            ctx.drawText(tr, enabledLabel, x + PAD, enabledTextY, V2Theme.TEXT_PRIMARY, false);
+            parent.enabledToggle.setPos(x + PAD + enabledLabelW + LABEL_TOGGLE_GAP, row1Y);
+            parent.enabledToggle.render(ctx, mouseX, mouseY, delta);
+
+            int row2Y = row1Y + V2Theme.TOGGLE_TRACK_H + ROW_GAP;
+            String nickLabel = "Default Nick";
+            int labelW = tr.getWidth(nickLabel);
+            int labelY = row2Y + (FIELD_HEIGHT - tr.fontHeight) / 2 + 1;
+            ctx.drawText(tr, nickLabel, x + PAD, labelY, V2Theme.TEXT_PRIMARY, false);
+
+            int fieldX = x + PAD + labelW + LABEL_FIELD_GAP;
+            int fieldW = Math.max(80, w - (fieldX - x) - PAD);
             parent.nickField.setX(fieldX);
-            parent.nickField.setY(fieldY);
+            parent.nickField.setY(row2Y);
             parent.nickField.setWidth(fieldW);
             parent.nickField.setHeight(FIELD_HEIGHT);
-        }
 
-        @Override
-        public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-            parent.ensureField();
-            TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-            int textY = y + (ROW_HEIGHT - tr.fontHeight) / 2 + 1;
-            ctx.drawText(tr, Text.literal("Nickname"), x, textY, V2Theme.TEXT_PRIMARY, false);
-
-            int fx = parent.nickField.getX();
-            int fy = parent.nickField.getY();
-            int fw = parent.nickField.getWidth();
-            int fh = FIELD_HEIGHT;
-            V2Theme.fillRoundedRect(ctx, fx, fy, fw, fh, 4, V2Theme.BG_SIDEBAR);
-            V2Theme.drawRoundedBorder(ctx, fx, fy, fw, fh, 4,
+            V2Theme.fillRoundedRect(ctx, fieldX, row2Y, fieldW, FIELD_HEIGHT, 4, V2Theme.BG_SIDEBAR);
+            V2Theme.drawRoundedBorder(ctx, fieldX, row2Y, fieldW, FIELD_HEIGHT, 4,
                     parent.nickField.isFocused() ? V2Theme.OUTLINE_ACTIVE : V2Theme.METAL_MID);
 
             ctx.getMatrices().pushMatrix();
-            ctx.getMatrices().translate(0f, (fh - tr.fontHeight) / 2f - 1f);
+            ctx.getMatrices().translate(0f, (FIELD_HEIGHT - tr.fontHeight) / 2f - 1f);
             parent.nickField.render(ctx, mouseX, mouseY, delta);
             ctx.getMatrices().popMatrix();
         }
 
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
+            if (parent.enabledToggle.mouseClicked(mx, my, button)) return true;
             parent.ensureField();
             int fx = parent.nickField.getX();
             int fy = parent.nickField.getY();
             int fw = parent.nickField.getWidth();
-            int fh = FIELD_HEIGHT;
-            boolean inside = mx >= fx && mx < fx + fw && my >= fy && my < fy + fh;
+            boolean inside = mx >= fx && mx < fx + fw && my >= fy && my < fy + FIELD_HEIGHT;
             boolean wasFocused = parent.nickField.isFocused();
             parent.nickField.setFocused(inside);
-            if (inside) {
-                return true;
-            }
-            if (wasFocused) {
-                parent.persistNickname();
-            }
+            if (inside) return true;
+            if (wasFocused) parent.persistNickname();
             return false;
         }
     }
 
-    private static final class ButtonsRow implements ContentPane.Child {
-        private final NeckHiderTab parent;
-        private int x, y, w;
+    private static final class OtherNeckHiderBody implements AccordionRow.Body {
+        private static final int PAD = 12;
+        private static final int HEIGHT = 58;
 
-        ButtonsRow(NeckHiderTab parent) {
+        private final NeckHiderTab parent;
+
+        OtherNeckHiderBody(NeckHiderTab parent) {
             this.parent = parent;
         }
 
-        @Override
-        public int getHeight() {
-            return BUTTON_HEIGHT;
-        }
+        @Override public int getHeight() { return HEIGHT; }
 
         @Override
-        public void layout(int x, int y, int w) {
-            this.x = x;
-            this.y = y;
-            this.w = w;
-            int btnW = (w - BUTTON_GAP) / 2;
-            parent.editNamesButton.setBounds(x, y, btnW, BUTTON_HEIGHT);
-            parent.reloadNamesButton.setBounds(x + btnW + BUTTON_GAP, y, w - btnW - BUTTON_GAP, BUTTON_HEIGHT);
-        }
-
-        @Override
-        public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        public void render(DrawContext ctx, int x, int y, int w, int mouseX, int mouseY, float delta) {
+            int btnW = (w - PAD * 2 - BUTTON_GAP) / 2;
+            int btnY = y + PAD;
+            parent.editNamesButton.setBounds(x + PAD, btnY, btnW, BUTTON_HEIGHT);
+            parent.reloadNamesButton.setBounds(x + PAD + btnW + BUTTON_GAP, btnY,
+                    w - PAD * 2 - btnW - BUTTON_GAP, BUTTON_HEIGHT);
             parent.editNamesButton.render(ctx, mouseX, mouseY, delta);
             parent.reloadNamesButton.render(ctx, mouseX, mouseY, delta);
+
+            TextRenderer tr = MinecraftClient.getInstance().textRenderer;
+            String hint = NickHiderConfig.getNameMappings().size() + " mapped names";
+            int hintY = btnY + BUTTON_HEIGHT + 7;
+            ctx.drawText(tr, hint, x + PAD, hintY, V2Theme.TEXT_SECONDARY, false);
         }
 
         @Override
@@ -314,9 +315,9 @@ public class NeckHiderTab implements V2Tab {
 
         @Override
         public boolean mouseReleased(double mx, double my, int button) {
-            boolean a = parent.editNamesButton.mouseReleased(mx, my, button);
-            boolean b = parent.reloadNamesButton.mouseReleased(mx, my, button);
-            return a || b;
+            boolean edit = parent.editNamesButton.mouseReleased(mx, my, button);
+            boolean reload = parent.reloadNamesButton.mouseReleased(mx, my, button);
+            return edit || reload;
         }
     }
 }

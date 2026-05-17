@@ -34,11 +34,15 @@ public class ContentPane {
         default boolean charTyped(char chr, int modifiers) { return false; }
     }
 
-    private static final int TITLE_PAD_TOP = 6;
-    private static final int TITLE_PAD_BOTTOM = 6;
-    private static final int CONTENT_PAD = 12;
-    private static final int CHILD_GAP = 8;
+    private static final int TITLE_Y = 11;
+    private static final int TITLE_H = 20;
+    private static final int UNDERLINE_Y = 37;
+    private static final int CONTENT_TOP = 51;
+    private static final int CONTENT_PAD_X = 15;
+    private static final int CONTENT_PAD_BOTTOM = 10;
+    private static final int CHILD_GAP = 5;
     private static final int SCROLL_STEP = 14;
+    private static final float TITLE_SCALE = 2.0f;
 
     private int x, y, w, h;
     private final String title;
@@ -79,13 +83,12 @@ public class ContentPane {
     public int getHeight() { return h; }
 
     private int contentTop() {
-        TextRenderer tr = MinecraftClient.getInstance().textRenderer;
-        return y + TITLE_PAD_TOP + tr.fontHeight + TITLE_PAD_BOTTOM + 4;
+        return y + CONTENT_TOP;
     }
 
-    private int contentLeft() { return x + CONTENT_PAD; }
-    private int contentWidth() { return w - CONTENT_PAD * 2; }
-    private int contentBottom() { return y + h - CONTENT_PAD; }
+    private int contentLeft() { return x + CONTENT_PAD_X; }
+    private int contentWidth() { return w - CONTENT_PAD_X * 2; }
+    private int contentBottom() { return y + h - CONTENT_PAD_BOTTOM; }
 
     private int totalContentHeight() {
         int total = 0;
@@ -103,20 +106,17 @@ public class ContentPane {
     }
 
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Pane background
-        V2Theme.fillRoundedRect(ctx, x, y, w, h, V2Theme.PANE_RADIUS, V2Theme.BG_PANE);
-
         // Title centered
         TextRenderer tr = MinecraftClient.getInstance().textRenderer;
         Text styled = Text.literal(title).styled(s -> s.withBold(true));
-        int titleW = tr.getWidth(styled);
-        int titleX = x + (w - titleW) / 2;
-        int titleY = y + TITLE_PAD_TOP;
-        ctx.drawText(tr, styled, titleX, titleY, V2Theme.TEXT_PRIMARY, false);
+        V2Theme.drawCenteredScaledText(ctx, tr, styled, x, y + TITLE_Y, w, TITLE_H,
+                TITLE_SCALE, V2Theme.TEXT_PRIMARY);
 
         // Underline
-        int underlineY = titleY + tr.fontHeight + 3;
-        ctx.fill(x + CONTENT_PAD, underlineY, x + w - CONTENT_PAD, underlineY + 1, V2Theme.DIVIDER);
+        ctx.fill(contentLeft(), y + UNDERLINE_Y, x + w - CONTENT_PAD_X, y + UNDERLINE_Y + 2,
+                V2Theme.DIVIDER);
+        ctx.fill(contentLeft(), y + h - CONTENT_PAD_BOTTOM, x + w - CONTENT_PAD_X,
+                y + h - CONTENT_PAD_BOTTOM + 2, V2Theme.DIVIDER);
 
         // Layout children
         scroll = Math.max(0, Math.min(scroll, maxScroll()));

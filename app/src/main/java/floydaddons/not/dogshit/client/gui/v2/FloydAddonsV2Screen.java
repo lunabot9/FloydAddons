@@ -1,7 +1,6 @@
 package floydaddons.not.dogshit.client.gui.v2;
 
 import floydaddons.not.dogshit.client.FloydAddonsClient;
-import floydaddons.not.dogshit.client.features.hud.HudScreen;
 import floydaddons.not.dogshit.client.gui.ClickGuiScreen;
 import floydaddons.not.dogshit.client.gui.GuiStyleScreen;
 import floydaddons.not.dogshit.client.gui.v2.tab.CosmeticTab;
@@ -13,7 +12,6 @@ import floydaddons.not.dogshit.client.gui.v2.widget.MetallicButton;
 import floydaddons.not.dogshit.client.gui.v2.widget.SidebarTab;
 import floydaddons.not.dogshit.client.gui.v2.widget.V2Theme;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -35,16 +33,22 @@ import java.util.List;
 public class FloydAddonsV2Screen extends Screen {
     private static final int PANEL_W = V2Theme.CANVAS_W;
     private static final int PANEL_H = V2Theme.CANVAS_H;
-    private static final int SIDEBAR_W = V2Theme.SIDEBAR_W;
-
-    private static final int SIDEBAR_PAD_X = 14;
-    private static final int SIDEBAR_PAD_TOP = 10;
-    private static final int AVATAR_SIZE = 28;
-    private static final int DIVIDER_PAD_X = 12;
-    private static final int ACTION_BTN_H = 18;
+    private static final int FRAME_TEX_W = 960;
+    private static final int FRAME_TEX_H = 540;
+    private static final float FRAME_SCALE_X = FRAME_TEX_W / (float) PANEL_W;
+    private static final float FRAME_SCALE_Y = FRAME_TEX_H / (float) PANEL_H;
+    private static final int ACTION_BTN_H = 17;
+    private static final int CONTENT_X = V2Theme.SIDEBAR_W;
+    private static final int CONTENT_W = V2Theme.CANVAS_W - V2Theme.SIDEBAR_W;
     private static final String GITHUB_URL = "https://github.com/lunabot9/FloydAddons";
 
-    private static final Identifier AVATAR_TEX = Identifier.of(FloydAddonsClient.MOD_ID, "textures/gui/floyd_user.png");
+    private static final Identifier FRAME_COSMETIC = figmaFrame("cosmetic");
+    private static final Identifier FRAME_COSMETIC_CAPE = figmaFrame("cosmetic_cape");
+    private static final Identifier FRAME_COSMETIC_CONE = figmaFrame("cosmetic_cone");
+    private static final Identifier FRAME_RENDER_HIDERS = figmaFrame("render_hiders");
+    private static final Identifier FRAME_RENDER_XRAY = figmaFrame("render_xray");
+    private static final Identifier FRAME_NECK_HIDER = figmaFrame("neck_hider");
+    private static final Identifier FRAME_QOL = figmaFrame("qol");
 
     private final List<V2Tab> tabs = new ArrayList<>();
     private final List<SidebarTab> sidebarButtons = new ArrayList<>();
@@ -53,6 +57,10 @@ public class FloydAddonsV2Screen extends Screen {
     private int panelX, panelY;
     private int activeTabIndex = 0;
     private V2Tab lastActiveTab = null;
+    private int cosmeticFrameState = 0;
+    private int renderFrameState = 0;
+    private Identifier currentFrame = FRAME_COSMETIC;
+    private ButtonPress pressedButton = null;
 
     public FloydAddonsV2Screen() {
         super(Text.literal("FloydAddons"));
@@ -95,40 +103,26 @@ public class FloydAddonsV2Screen extends Screen {
         actionButtons.clear();
 
         int sidebarX = panelX;
-        int avatarY = panelY + SIDEBAR_PAD_TOP;
-
-        // First divider sits below the avatar block
-        int firstDividerY = avatarY + AVATAR_SIZE + 8;
-
-        // Sidebar tabs
-        int tabsTopY = firstDividerY + 8;
-        int tabX = sidebarX + (SIDEBAR_W - V2Theme.SIDEBAR_TAB_WIDTH) / 2;
-        int yCursor = tabsTopY;
+        int tabX = sidebarX + 13;
+        int[] tabYs = {
+                panelY + 53,
+                panelY + 78,
+                panelY + 103,
+                panelY + 128
+        };
         for (int i = 0; i < tabs.size(); i++) {
             final int idx = i;
-            SidebarTab btn = new SidebarTab(tabX, yCursor, tabs.get(i).displayName(), () -> setActiveTab(idx, true));
+            SidebarTab btn = new SidebarTab(tabX, tabYs[i], tabs.get(i).displayName(), () -> setActiveTab(idx, true));
             btn.setActive(i == activeTabIndex);
             sidebarButtons.add(btn);
-            yCursor += V2Theme.SIDEBAR_TAB_HEIGHT + V2Theme.SIDEBAR_TAB_GAP;
         }
 
-        // Second divider below tabs
-        int secondDividerY = yCursor + 4;
-
-        // Action buttons (Edit UI / Edit HUD / Click GUI / Github)
-        int actionsTopY = secondDividerY + 8;
-        int actionX = sidebarX + (SIDEBAR_W - V2Theme.SIDEBAR_TAB_WIDTH) / 2;
-        int aY = actionsTopY;
-        actionButtons.add(new MetallicButton(actionX, aY, V2Theme.SIDEBAR_TAB_WIDTH, ACTION_BTN_H, "Edit UI",
+        int actionX = sidebarX + 13;
+        actionButtons.add(new MetallicButton(actionX, panelY + 165, V2Theme.SIDEBAR_TAB_WIDTH, ACTION_BTN_H, "Edit UI",
                 () -> { if (client != null) client.setScreen(new GuiStyleScreen(this)); }));
-        aY += ACTION_BTN_H + V2Theme.SIDEBAR_TAB_GAP;
-        actionButtons.add(new MetallicButton(actionX, aY, V2Theme.SIDEBAR_TAB_WIDTH, ACTION_BTN_H, "Edit HUD",
-                () -> { if (client != null) client.setScreen(new HudScreen(this)); }));
-        aY += ACTION_BTN_H + V2Theme.SIDEBAR_TAB_GAP;
-        actionButtons.add(new MetallicButton(actionX, aY, V2Theme.SIDEBAR_TAB_WIDTH, ACTION_BTN_H, "Click GUI",
+        actionButtons.add(new MetallicButton(actionX, panelY + 192, V2Theme.SIDEBAR_TAB_WIDTH, ACTION_BTN_H, "Click GUI",
                 () -> { if (client != null) client.setScreen(new ClickGuiScreen()); }));
-        aY += ACTION_BTN_H + V2Theme.SIDEBAR_TAB_GAP;
-        actionButtons.add(new MetallicButton(actionX, aY, V2Theme.SIDEBAR_TAB_WIDTH, ACTION_BTN_H, "Github",
+        actionButtons.add(new MetallicButton(actionX, panelY + 217, V2Theme.SIDEBAR_TAB_WIDTH, ACTION_BTN_H, "Github",
                 () -> {
                     try {
                         Util.getOperatingSystem().open(URI.create(GITHUB_URL));
@@ -155,9 +149,9 @@ public class FloydAddonsV2Screen extends Screen {
 
     private void layoutContent() {
         if (tabs.isEmpty()) return;
-        int contentX = panelX + SIDEBAR_W;
+        int contentX = panelX + CONTENT_X;
         int contentY = panelY;
-        int contentW = PANEL_W - SIDEBAR_W;
+        int contentW = CONTENT_W;
         int contentH = PANEL_H;
         tabs.get(activeTabIndex).layout(contentX, contentY, contentW, contentH);
     }
@@ -170,81 +164,97 @@ public class FloydAddonsV2Screen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Sidebar background — rounded LEFT corners only.
-        drawLeftRoundedRect(ctx, panelX, panelY, SIDEBAR_W, PANEL_H, V2Theme.PANE_RADIUS, V2Theme.BG_SIDEBAR);
-
-        // Content pane background — rounded RIGHT corners only.
-        drawRightRoundedRect(ctx, panelX + SIDEBAR_W, panelY, PANEL_W - SIDEBAR_W, PANEL_H,
-                V2Theme.PANE_RADIUS, V2Theme.BG_PANE);
-
-        renderSidebarHeader(ctx);
-        renderSidebarDividers(ctx);
-
-        for (SidebarTab tab : sidebarButtons) {
-            tab.render(ctx, mouseX, mouseY, delta);
-        }
-        for (MetallicButton btn : actionButtons) {
-            btn.render(ctx, mouseX, mouseY, delta);
-        }
-
-        // V2.0 label bottom-left
-        TextRenderer tr = textRenderer;
-        ctx.drawText(tr, "V2.0", panelX + SIDEBAR_PAD_X, panelY + PANEL_H - tr.fontHeight - 6,
-                V2Theme.TEXT_PRIMARY, false);
-
-        // Active tab content
+        // Keep the existing tab implementation alive underneath so hitboxes, drag
+        // targets and accordion timing still update. The Figma PNG frame is the
+        // visible layer. Clip this logic pass to the rounded panel so transparent
+        // PNG corners reveal the world, not the underlay.
         if (!tabs.isEmpty()) {
+            renderLogicLayer(ctx, mouseX, mouseY, delta);
+        }
+
+        Identifier nextFrame = resolveFrame();
+        if (!currentFrame.equals(nextFrame)) {
+            currentFrame = nextFrame;
+        }
+        drawFrame(ctx, currentFrame);
+        renderPressedButton(ctx, delta);
+    }
+
+    private Identifier resolveFrame() {
+        return switch (activeTabIndex) {
+            case 0 -> switch (cosmeticFrameState) {
+                case 2 -> FRAME_COSMETIC_CAPE;
+                case 3 -> FRAME_COSMETIC_CONE;
+                default -> FRAME_COSMETIC;
+            };
+            case 1 -> renderFrameState == 1 ? FRAME_RENDER_XRAY : FRAME_RENDER_HIDERS;
+            case 2 -> FRAME_NECK_HIDER;
+            case 3 -> FRAME_QOL;
+            default -> FRAME_COSMETIC;
+        };
+    }
+
+    private void drawFrame(DrawContext ctx, Identifier frame) {
+        ctx.drawTexture(RenderPipelines.GUI_TEXTURED, frame, panelX, panelY, 0f, 0f,
+                PANEL_W, PANEL_H, FRAME_TEX_W, FRAME_TEX_H, FRAME_TEX_W, FRAME_TEX_H);
+    }
+
+    private static Identifier figmaFrame(String name) {
+        return Identifier.of(FloydAddonsClient.MOD_ID, "textures/gui/figma/" + name + "_hi.png");
+    }
+
+    private void renderLogicLayer(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        int r = V2Theme.PANE_RADIUS;
+        renderLogicScissored(ctx, mouseX, mouseY, delta, panelX + r, panelY, PANEL_W - r * 2, r);
+        renderLogicScissored(ctx, mouseX, mouseY, delta, panelX, panelY + r, PANEL_W, PANEL_H - r * 2);
+        renderLogicScissored(ctx, mouseX, mouseY, delta, panelX + r, panelY + PANEL_H - r, PANEL_W - r * 2, r);
+    }
+
+    private void renderLogicScissored(DrawContext ctx, int mouseX, int mouseY, float delta,
+                                      int x, int y, int w, int h) {
+        ctx.enableScissor(x, y, x + w, y + h);
+        try {
             tabs.get(activeTabIndex).render(ctx, mouseX, mouseY, delta);
+        } finally {
+            ctx.disableScissor();
         }
     }
 
-    private void renderSidebarHeader(DrawContext ctx) {
-        int avatarX = panelX + SIDEBAR_PAD_X;
-        int avatarY = panelY + SIDEBAR_PAD_TOP;
-        // Use GUI_TEXTURED pipeline for the avatar
-        ctx.drawTexture(RenderPipelines.GUI_TEXTURED, AVATAR_TEX,
-                avatarX, avatarY, 0, 0, AVATAR_SIZE, AVATAR_SIZE, AVATAR_SIZE, AVATAR_SIZE);
+    private void renderPressedButton(DrawContext ctx, float delta) {
+        if (pressedButton == null) return;
 
-        TextRenderer tr = textRenderer;
-        Text title = Text.literal("FloydAddons").styled(s -> s.withBold(true));
-        int textX = avatarX + AVATAR_SIZE + 6;
-        int textY = avatarY + (AVATAR_SIZE - tr.fontHeight) / 2 + 1;
-        ctx.drawText(tr, title, textX, textY, V2Theme.TEXT_PRIMARY, false);
-    }
-
-    private void renderSidebarDividers(DrawContext ctx) {
-        int dx1 = panelX + DIVIDER_PAD_X;
-        int dx2 = panelX + SIDEBAR_W - DIVIDER_PAD_X;
-        // First divider: between header and tabs
-        if (!sidebarButtons.isEmpty()) {
-            int y = sidebarButtons.get(0).getY() - 5;
-            ctx.fill(dx1, y, dx2, y + 1, V2Theme.DIVIDER);
+        float target = pressedButton.down ? 1f : 0f;
+        float speed = pressedButton.down ? 0.45f : 0.35f;
+        if (pressedButton.amount < target) {
+            pressedButton.amount = Math.min(target, pressedButton.amount + delta * speed);
+        } else if (pressedButton.amount > target) {
+            pressedButton.amount = Math.max(target, pressedButton.amount - delta * speed);
         }
-        // Second divider: between tabs and actions
-        if (!actionButtons.isEmpty()) {
-            int y = actionButtons.get(0).getY() - 5;
-            ctx.fill(dx1, y, dx2, y + 1, V2Theme.DIVIDER);
+        if (!pressedButton.down && pressedButton.amount <= 0.01f) {
+            pressedButton = null;
+            return;
         }
-    }
 
-    /** Rounded only on the left edge — fills with a single solid color. */
-    private static void drawLeftRoundedRect(DrawContext ctx, int x, int y, int w, int h, int radius, int color) {
-        if (w <= 0 || h <= 0) return;
-        int r = Math.max(0, Math.min(radius, Math.min(w, h / 2)));
-        for (int row = 0; row < h; row++) {
-            int leftInset = V2Theme.roundedInset(r, h, row);
-            ctx.fill(x + leftInset, y + row, x + w, y + row + 1, color);
+        int offset = Math.round(2f * pressedButton.amount);
+        int x = panelX + pressedButton.x;
+        int y = panelY + pressedButton.y;
+        ctx.enableScissor(x, y, x + pressedButton.w, y + pressedButton.h);
+        try {
+            drawFrameRegion(ctx, currentFrame, pressedButton.x, pressedButton.y,
+                    pressedButton.w, pressedButton.h, x, y + offset);
+            ctx.fill(x, y, x + pressedButton.w, y + pressedButton.h,
+                    (Math.round(42 * pressedButton.amount) << 24));
+        } finally {
+            ctx.disableScissor();
         }
     }
 
-    /** Rounded only on the right edge — fills with a single solid color. */
-    private static void drawRightRoundedRect(DrawContext ctx, int x, int y, int w, int h, int radius, int color) {
-        if (w <= 0 || h <= 0) return;
-        int r = Math.max(0, Math.min(radius, Math.min(w, h / 2)));
-        for (int row = 0; row < h; row++) {
-            int rightInset = V2Theme.roundedInset(r, h, row);
-            ctx.fill(x, y + row, x + w - rightInset, y + row + 1, color);
-        }
+    private void drawFrameRegion(DrawContext ctx, Identifier frame, int srcX, int srcY, int w, int h,
+                                 int dstX, int dstY) {
+        ctx.drawTexture(RenderPipelines.GUI_TEXTURED, frame, dstX, dstY,
+                srcX * FRAME_SCALE_X, srcY * FRAME_SCALE_Y,
+                w, h, Math.round(w * FRAME_SCALE_X), Math.round(h * FRAME_SCALE_Y),
+                FRAME_TEX_W, FRAME_TEX_H);
     }
 
     // ---------- Input plumbing ----------
@@ -254,6 +264,9 @@ public class FloydAddonsV2Screen extends Screen {
         double mx = click.x();
         double my = click.y();
         int button = click.button();
+        if (button == 0) {
+            pressedButton = findPressedButton(mx, my);
+        }
 
         // Sidebar — buttons handle press state, action via mouseReleased.
         boolean handled = false;
@@ -265,10 +278,79 @@ public class FloydAddonsV2Screen extends Screen {
         }
         if (handled) return true;
 
+        updateFigmaFrameState(mx, my);
+
         if (!tabs.isEmpty()) {
             if (tabs.get(activeTabIndex).mouseClicked(mx, my, button)) return true;
         }
         return super.mouseClicked(click, ignoresInput);
+    }
+
+    private ButtonPress findPressedButton(double mx, double my) {
+        int rx = (int) Math.round(mx - panelX);
+        int ry = (int) Math.round(my - panelY);
+        if (rx < 0 || ry < 0 || rx >= PANEL_W || ry >= PANEL_H) return null;
+
+        int[] sidebarYs = {53, 78, 103, 128};
+        for (int y : sidebarYs) {
+            if (inside(rx, ry, 13, y, 80, 17)) return new ButtonPress(13, y, 80, 17);
+        }
+        int[] actionYs = {165, 192, 217};
+        for (int y : actionYs) {
+            if (inside(rx, ry, 13, y, 80, 17)) return new ButtonPress(13, y, 80, 17);
+        }
+
+        if (activeTabIndex == 0) {
+            if (inside(rx, ry, 121, 51, 337, 38)) return new ButtonPress(121, 51, 337, 38);
+            if (inside(rx, ry, 121, 93, 337, 38)) return new ButtonPress(121, 93, 337, 38);
+            int coneY = cosmeticFrameState == 2 ? 204 : 136;
+            if (inside(rx, ry, 121, coneY, 337, 38)) return new ButtonPress(121, coneY, 337, 38);
+            if (cosmeticFrameState == 2 && inside(rx, ry, 342, 134, 114, 17)) {
+                return new ButtonPress(342, 134, 114, 17);
+            }
+        } else if (activeTabIndex == 1) {
+            if (inside(rx, ry, 123, 46, 337, 38)) return new ButtonPress(123, 46, 337, 38);
+            if (inside(rx, ry, 123, 89, 337, 38)) return new ButtonPress(123, 89, 337, 38);
+            if (renderFrameState == 1) {
+                if (inside(rx, ry, 132, 174, 85, 21)) return new ButtonPress(132, 174, 85, 21);
+                if (inside(rx, ry, 228, 174, 100, 21)) return new ButtonPress(228, 174, 100, 21);
+                if (inside(rx, ry, 123, 203, 337, 38)) return new ButtonPress(123, 203, 337, 38);
+            } else {
+                if (inside(rx, ry, 123, 203, 337, 38)) return new ButtonPress(123, 203, 337, 38);
+                if (inside(rx, ry, 123, 249, 337, 21)) return new ButtonPress(123, 249, 337, 21);
+            }
+        } else if (activeTabIndex == 2) {
+            if (inside(rx, ry, 121, 51, 337, 38)) return new ButtonPress(121, 51, 337, 38);
+            if (inside(rx, ry, 121, 93, 337, 38)) return new ButtonPress(121, 93, 337, 38);
+        }
+
+        return null;
+    }
+
+    private void updateFigmaFrameState(double mx, double my) {
+        int rx = (int) Math.round(mx - panelX);
+        int ry = (int) Math.round(my - panelY);
+        if (rx < 0 || ry < 0 || rx >= PANEL_W || ry >= PANEL_H) return;
+
+        if (activeTabIndex == 0) {
+            if (inside(rx, ry, 121, 51, 337, 38)) {
+                cosmeticFrameState = 0;
+            } else if (inside(rx, ry, 121, 93, 337, 38)) {
+                cosmeticFrameState = cosmeticFrameState == 2 ? 0 : 2;
+            } else if (inside(rx, ry, 121, cosmeticFrameState == 2 ? 204 : 136, 337, 38)) {
+                cosmeticFrameState = cosmeticFrameState == 3 ? 0 : 3;
+            }
+        } else if (activeTabIndex == 1) {
+            if (inside(rx, ry, 123, 46, 337, 38)) {
+                renderFrameState = 0;
+            } else if (inside(rx, ry, 123, 89, 337, 38) || inside(rx, ry, 123, 247, 337, 23)) {
+                renderFrameState = 1;
+            }
+        }
+    }
+
+    private static boolean inside(int x, int y, int bx, int by, int bw, int bh) {
+        return x >= bx && x < bx + bw && y >= by && y < by + bh;
     }
 
     @Override
@@ -276,6 +358,9 @@ public class FloydAddonsV2Screen extends Screen {
         double mx = click.x();
         double my = click.y();
         int button = click.button();
+        if (button == 0 && pressedButton != null) {
+            pressedButton.down = false;
+        }
 
         boolean handled = false;
         for (SidebarTab tab : sidebarButtons) {
@@ -288,6 +373,22 @@ public class FloydAddonsV2Screen extends Screen {
             if (tabs.get(activeTabIndex).mouseReleased(mx, my, button)) handled = true;
         }
         return handled || super.mouseReleased(click);
+    }
+
+    private static final class ButtonPress {
+        final int x;
+        final int y;
+        final int w;
+        final int h;
+        boolean down = true;
+        float amount = 0f;
+
+        ButtonPress(int x, int y, int w, int h) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+        }
     }
 
     @Override

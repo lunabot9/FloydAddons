@@ -20,9 +20,9 @@ import java.util.function.Consumer;
  */
 public class HidersRow implements AccordionRow.Body {
 
-    private static final int ROW_H = 16;
-    private static final int PAD_X = 12;
-    private static final int PAD_Y = 8;
+    private static final int ROW_H = 18;
+    private static final int PAD_X = 6;
+    private static final int PAD_Y = 7;
     private static final int COL_GAP = 12;
 
     private static final int TOTAL_HEIGHT = PAD_Y * 2 + ROW_H * 8;
