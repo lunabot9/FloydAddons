@@ -9,8 +9,11 @@ import floydaddons.not.dogshit.client.features.misc.*;
 import floydaddons.not.dogshit.client.esp.*;
 import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
+import floydaddons.not.dogshit.client.gui.v2.widget.NvgRoundedTextureRenderer;
+import floydaddons.not.dogshit.client.gui.v2.widget.V2Theme;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -42,15 +45,22 @@ import java.util.Set;
 public class MobEspEditorScreen extends Screen {
     private final Screen parent;
 
-    private static final int BOX_WIDTH = 360;
-    private static final int BOX_HEIGHT = 320;
-    private static final int DRAG_BAR_HEIGHT = 18;
+    private static final Identifier FIGMA_FRAME = Identifier.of(FloydAddonsClient.MOD_ID,
+            "textures/gui/figma/mob_esp_editor_hi.png");
+    private static final int BOX_WIDTH = 428;
+    private static final int BOX_HEIGHT = 502;
+    private static final int PANEL_RADIUS = 20;
+    private static final int DRAG_BAR_HEIGHT = 58;
     private static final long FADE_DURATION_MS = 90;
     private static final int ENTRY_HEIGHT = 20;
     private static final int CONTENT_PADDING = 4;
     private static final int BUTTON_SIZE_W = 18;
     private static final int BUTTON_SIZE_H = 16;
     private static final int COLOR_SQUARE_SIZE = 10;
+    private static final int DONE_W = 134;
+    private static final int DONE_H = 54;
+    private static final int DONE_Y = 428;
+    private static final boolean RENDER_DYNAMIC_FILTER_ROWS = false;
 
     private int panelX, panelY;
     private int scrollOffset = 0;
@@ -94,7 +104,7 @@ public class MobEspEditorScreen extends Screen {
         panelY = (height - BOX_HEIGHT) / 2;
 
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
-                .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + BOX_HEIGHT - 30, 100, 20)
+                .dimensions(panelX + (BOX_WIDTH - DONE_W) / 2, panelY + DONE_Y, DONE_W, DONE_H)
                 .build();
         addDrawableChild(doneButton);
 
@@ -115,6 +125,11 @@ public class MobEspEditorScreen extends Screen {
     }
 
     private void recalcMaxScroll() {
+        if (!RENDER_DYNAMIC_FILTER_ROWS) {
+            maxScroll = 0;
+            return;
+        }
+
         int totalEntries = 0;
         // Active Names header + entries (only if non-empty)
         if (!activeNames.isEmpty()) {
@@ -227,6 +242,14 @@ public class MobEspEditorScreen extends Screen {
         int right = left + BOX_WIDTH;
         int bottom = top + BOX_HEIGHT;
 
+        drawFigmaFrame(context, left, top, scale);
+
+        hitEntries.clear();
+        if (!RENDER_DYNAMIC_FILTER_ROWS) {
+            matrices.popMatrix();
+            return;
+        }
+
         context.fill(left, top, right, bottom, applyAlpha(0xAA000000, guiAlpha));
         InventoryHudRenderer.drawChromaBorder(context, left - 1, top - 1, right + 1, bottom + 1, guiAlpha);
 
@@ -246,8 +269,6 @@ public class MobEspEditorScreen extends Screen {
         int contentRight = right - CONTENT_PADDING;
         int contentBottom = bottom - 38;
         int contentWidth = contentRight - contentLeft;
-
-        hitEntries.clear();
 
         context.enableScissor(contentLeft, contentTop, contentRight, contentBottom);
 
@@ -675,14 +696,45 @@ public class MobEspEditorScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (!RENDER_DYNAMIC_FILTER_ROWS) {
+            return true;
+        }
+
         scrollOffset -= (int) (verticalAmount * ENTRY_HEIGHT * 3);
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         return true;
     }
 
     private void repositionWidgets() {
-        doneButton.setX(panelX + (BOX_WIDTH - 100) / 2);
-        doneButton.setY(panelY + BOX_HEIGHT - 30);
+        doneButton.setX(panelX + (BOX_WIDTH - DONE_W) / 2);
+        doneButton.setY(panelY + DONE_Y);
+    }
+
+    private void drawFigmaFrame(DrawContext context, int left, int top, float scale) {
+        float scaledW = BOX_WIDTH * scale;
+        float scaledH = BOX_HEIGHT * scale;
+        float scaledLeft = left + BOX_WIDTH / 2f - scaledW / 2f;
+        float scaledTop = top + BOX_HEIGHT / 2f - scaledH / 2f;
+        if (NvgRoundedTextureRenderer.beginRoundedClip(scaledLeft, scaledTop, scaledW, scaledH, PANEL_RADIUS * scale)) {
+            try {
+                context.drawTexture(RenderPipelines.GUI_TEXTURED, FIGMA_FRAME, left, top, 0f, 0f,
+                        BOX_WIDTH, BOX_HEIGHT, 856, 1004, 856, 1004);
+            } finally {
+                NvgRoundedTextureRenderer.endRoundedClip();
+            }
+            return;
+        }
+
+        for (int row = 0; row < BOX_HEIGHT; row++) {
+            int inset = V2Theme.roundedInset(PANEL_RADIUS, BOX_HEIGHT, row);
+            context.enableScissor(left + inset, top + row, left + BOX_WIDTH - inset, top + row + 1);
+            try {
+                context.drawTexture(RenderPipelines.GUI_TEXTURED, FIGMA_FRAME, left, top, 0f, 0f,
+                        BOX_WIDTH, BOX_HEIGHT, 856, 1004, 856, 1004);
+            } finally {
+                context.disableScissor();
+            }
+        }
     }
 
     private void styleButton(DrawContext context, ButtonWidget button, float alpha, int mouseX, int mouseY) {

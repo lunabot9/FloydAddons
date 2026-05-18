@@ -43,6 +43,16 @@ dependencies {
     modImplementation("net.fabricmc:fabric-loader:$loaderVersion")
     modImplementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
 
+    val lwjglVersion = "3.3.3"
+    val nanovg = "org.lwjgl:lwjgl-nanovg:$lwjglVersion"
+    implementation(nanovg)
+    include(nanovg)
+    listOf("natives-windows", "natives-linux", "natives-macos", "natives-macos-arm64").forEach { classifier ->
+        val native = "org.lwjgl:lwjgl-nanovg:$lwjglVersion:$classifier"
+        runtimeOnly(native)
+        include(native)
+    }
+
     val discordRpc = "club.minnced:java-discord-rpc:v2.0.1"
     val discordNatives = "club.minnced:discord-rpc-release:v3.3.0"
     modImplementation(discordRpc)

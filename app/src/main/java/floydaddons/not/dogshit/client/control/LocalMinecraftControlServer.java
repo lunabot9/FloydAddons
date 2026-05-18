@@ -8,8 +8,18 @@ import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import floydaddons.not.dogshit.client.FloydAddonsConfig;
+import floydaddons.not.dogshit.client.config.RenderConfig;
+import floydaddons.not.dogshit.client.features.cosmetic.CapeManager;
+import floydaddons.not.dogshit.client.features.cosmetic.ConeHatManager;
+import floydaddons.not.dogshit.client.gui.XrayEditorScreen;
+import floydaddons.not.dogshit.client.gui.MobEspEditorScreen;
+import floydaddons.not.dogshit.client.gui.v2.FloydAddonsV2Screen;
+import floydaddons.not.dogshit.client.skin.SkinManager;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.MouseInput;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.ScreenshotRecorder;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
@@ -40,9 +50,10 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Temporary local bridge for development agents. It is intentionally loopback-only
@@ -161,7 +172,8 @@ public final class LocalMinecraftControlServer {
                         "port", getPort(),
                         "auth", "Authorization: Bearer <token>",
                         "settings", SETTINGS_PATH.toString(),
-                        "endpoints", List.of("/state", "/chat", "/look", "/hotbar", "/key", "/action")
+                        "endpoints", List.of("/state", "/chat", "/look", "/hotbar", "/key", "/action",
+                                "/screen", "/mouse", "/screenshot")
                 ));
                 return;
             }
@@ -178,6 +190,9 @@ public final class LocalMinecraftControlServer {
                 case "/hotbar" -> requireMethod(exchange, "POST", () -> handleHotbar(exchange));
                 case "/key" -> requireMethod(exchange, "POST", () -> handleKey(exchange));
                 case "/action" -> requireMethod(exchange, "POST", () -> handleAction(exchange));
+                case "/screen" -> requireMethod(exchange, "POST", () -> handleScreen(exchange));
+                case "/mouse" -> requireMethod(exchange, "POST", () -> handleMouse(exchange));
+                case "/screenshot" -> requireMethod(exchange, "POST", () -> handleScreenshot(exchange));
                 default -> send(exchange, 404, Map.of("ok", false, "error", "not_found"));
             }
         } catch (IllegalArgumentException e) {
@@ -206,6 +221,14 @@ public final class LocalMinecraftControlServer {
             root.put("connected", client.player != null && client.world != null);
             root.put("screen", client.currentScreen == null ? null : client.currentScreen.getClass().getName());
             root.put("screenTitle", client.currentScreen == null ? null : client.currentScreen.getTitle().getString());
+            root.put("window", Map.of(
+                    "fullscreen", client.getWindow().isFullscreen(),
+                    "borderlessWindowed", RenderConfig.isBorderlessWindowed(),
+                    "width", client.getWindow().getWidth(),
+                    "height", client.getWindow().getHeight(),
+                    "scaledWidth", client.getWindow().getScaledWidth(),
+                    "scaledHeight", client.getWindow().getScaledHeight()
+            ));
 
             if (client.player == null || client.world == null) {
                 return root;
@@ -323,11 +346,116 @@ public final class LocalMinecraftControlServer {
                 case "jump" -> tapKey(client.options.jumpKey, body);
                 case "sneak" -> tapKey(client.options.sneakKey, body);
                 case "sprint" -> tapKey(client.options.sprintKey, body);
+                case "fullscreen" -> {
+                    boolean enabled = !body.has("enabled") || body.get("enabled").getAsBoolean();
+                    if (client.getWindow().isFullscreen() != enabled) {
+                        client.getWindow().toggleFullscreen();
+                    }
+                }
+                case "windowedFullscreen", "borderlessWindowed" -> {
+                    boolean enabled = !body.has("enabled") || body.get("enabled").getAsBoolean();
+                    if (enabled && client.getWindow().isFullscreen()) {
+                        client.getWindow().toggleFullscreen();
+                    }
+                    RenderConfig.setBorderlessWindowed(enabled);
+                    RenderConfig.applyBorderlessWindowed(true);
+                }
+                case "reloadMod", "reloadResources" -> {
+                    FloydAddonsConfig.load();
+                    SkinManager.clearCache();
+                    CapeManager.listAvailableImages(true);
+                    ConeHatManager.clearCache();
+                    RenderConfig.rebuildChunks();
+                    client.reloadResources();
+                }
                 default -> throw new IllegalArgumentException("unknown_action");
             }
             return null;
         });
         send(exchange, 200, Map.of("ok", true, "action", action));
+    }
+
+    private static void handleScreen(HttpExchange exchange) throws Exception {
+        JsonObject body = readJson(exchange);
+        String screen = requiredString(body, "screen");
+        callClient(() -> {
+            MinecraftClient client = MinecraftClient.getInstance();
+            switch (screen) {
+                case "floyd", "floydaddons", "v2" -> client.setScreen(new FloydAddonsV2Screen());
+                case "xrayEditor", "xrayBlocks" -> client.setScreen(new XrayEditorScreen(client.currentScreen));
+                case "mobEspEditor", "mobEspFilters" -> client.setScreen(new MobEspEditorScreen(client.currentScreen));
+                case "close", "none" -> client.setScreen(null);
+                default -> throw new IllegalArgumentException("unknown_screen");
+            }
+            return null;
+        });
+        send(exchange, 200, Map.of("ok", true, "screen", screen));
+    }
+
+    private static void handleMouse(HttpExchange exchange) throws Exception {
+        JsonObject body = readJson(exchange);
+        String event = body.has("event") && !body.get("event").isJsonNull()
+                ? body.get("event").getAsString() : "click";
+        double x = requiredNumber(body, "x");
+        double y = requiredNumber(body, "y");
+        int button = hasNumber(body, "button") ? body.get("button").getAsInt() : 0;
+        double horizontalAmount = hasNumber(body, "horizontalAmount") ? body.get("horizontalAmount").getAsDouble() : 0.0;
+        double verticalAmount = hasNumber(body, "verticalAmount") ? body.get("verticalAmount").getAsDouble()
+                : hasNumber(body, "amount") ? body.get("amount").getAsDouble() : 0.0;
+        callClient(() -> {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.currentScreen == null) {
+                throw new IllegalArgumentException("no_screen");
+            }
+            Click click = new Click(x, y, new MouseInput(button, 0));
+            switch (event) {
+                case "click" -> {
+                    client.currentScreen.mouseClicked(click, false);
+                    client.currentScreen.mouseReleased(click);
+                }
+                case "down", "press" -> client.currentScreen.mouseClicked(click, false);
+                case "up", "release" -> client.currentScreen.mouseReleased(click);
+                case "scroll", "wheel" -> client.currentScreen.mouseScrolled(x, y, horizontalAmount, verticalAmount);
+                default -> throw new IllegalArgumentException("unknown_mouse_event");
+            }
+            return null;
+        });
+        send(exchange, 200, Map.of("ok", true, "event", event, "x", x, "y", y, "button", button,
+                "horizontalAmount", horizontalAmount, "verticalAmount", verticalAmount));
+    }
+
+    private static void handleScreenshot(HttpExchange exchange) throws Exception {
+        JsonObject body = readJson(exchange);
+        String fileName = body.has("fileName") && !body.get("fileName").isJsonNull()
+                ? body.get("fileName").getAsString() : "floyd-control.png";
+        if (!fileName.endsWith(".png") || fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
+            throw new IllegalArgumentException("invalid_fileName");
+        }
+
+        CompletableFuture<Map<String, Object>> result = new CompletableFuture<>();
+        MinecraftClient.getInstance().execute(() -> {
+            try {
+                MinecraftClient client = MinecraftClient.getInstance();
+                Path screenshotsDir = client.runDirectory.toPath().resolve("screenshots");
+                Path output = screenshotsDir.resolve(fileName);
+                ScreenshotRecorder.saveScreenshot(client.runDirectory, fileName, client.getFramebuffer(), 1, message -> {
+                    Map<String, Object> payload = new LinkedHashMap<>();
+                    payload.put("ok", true);
+                    payload.put("path", output.toString());
+                    payload.put("message", message.getString());
+                    payload.put("screen", client.currentScreen == null ? null : client.currentScreen.getClass().getName());
+                    result.complete(payload);
+                });
+            } catch (Throwable t) {
+                result.completeExceptionally(t);
+            }
+        });
+
+        try {
+            send(exchange, 200, result.get(5, TimeUnit.SECONDS));
+        } catch (TimeoutException e) {
+            throw new IllegalArgumentException("screenshot_timeout");
+        }
     }
 
     private static void tapKey(KeyBinding key, JsonObject body) {
@@ -476,6 +604,13 @@ public final class LocalMinecraftControlServer {
             throw new IllegalArgumentException("missing_" + key);
         }
         return body.get(key).getAsInt();
+    }
+
+    private static double requiredNumber(JsonObject body, String key) {
+        if (!hasNumber(body, key)) {
+            throw new IllegalArgumentException("missing_" + key);
+        }
+        return body.get(key).getAsDouble();
     }
 
     private static boolean hasNumber(JsonObject body, String key) {

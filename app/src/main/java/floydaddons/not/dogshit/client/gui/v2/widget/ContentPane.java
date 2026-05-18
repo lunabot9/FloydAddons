@@ -81,6 +81,8 @@ public class ContentPane {
     public int getY() { return y; }
     public int getWidth() { return w; }
     public int getHeight() { return h; }
+    public int getScroll() { return scroll; }
+    public boolean isScrolled() { return scroll > 0; }
 
     private int contentTop() {
         return y + CONTENT_TOP;

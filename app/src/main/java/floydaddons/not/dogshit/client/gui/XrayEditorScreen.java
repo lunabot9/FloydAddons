@@ -9,10 +9,13 @@ import floydaddons.not.dogshit.client.features.misc.*;
 import floydaddons.not.dogshit.client.esp.*;
 import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
+import floydaddons.not.dogshit.client.gui.v2.widget.NvgRoundedTextureRenderer;
+import floydaddons.not.dogshit.client.gui.v2.widget.V2Theme;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -37,15 +40,29 @@ import java.util.Set;
 public class XrayEditorScreen extends Screen {
     private final Screen parent;
 
-    private static final int BOX_WIDTH = 340;
-    private static final int BOX_HEIGHT = 300;
-    private static final int DRAG_BAR_HEIGHT = 18;
+    private static final Identifier FIGMA_FRAME = Identifier.of(FloydAddonsClient.MOD_ID,
+            "textures/gui/figma/xray_editor_hi.png");
+    private static final int BOX_WIDTH = 428;
+    private static final int BOX_HEIGHT = 502;
+    private static final int PANEL_RADIUS = 20;
+    private static final int DRAG_BAR_HEIGHT = 56;
     private static final long FADE_DURATION_MS = 90;
     private static final int ENTRY_HEIGHT = 20;
-    private static final int CONTENT_PADDING = 4;
+    private static final int CONTENT_PADDING = 10;
     private static final int BUTTON_SIZE_W = 18;
     private static final int BUTTON_SIZE_H = 16;
-    private static final int HEADER_HEIGHT = 14;
+    private static final int TITLE_Y = 20;
+    private static final int TITLE_UNDERLINE_Y = 56;
+    private static final int ACTIVE_HEADER_Y = 74;
+    private static final int ACTIVE_UNDERLINE_Y = 100;
+    private static final int ACTIVE_CONTENT_Y = 112;
+    private static final int NEARBY_HEADER_Y = 174;
+    private static final int NEARBY_UNDERLINE_Y = 200;
+    private static final int NEARBY_CONTENT_Y = 212;
+    private static final int DONE_W = 134;
+    private static final int DONE_H = 54;
+    private static final int DONE_Y = 426;
+    private static final boolean RENDER_DYNAMIC_BLOCK_ROWS = false;
 
     private int panelX, panelY;
     private int scrollOffset = 0;
@@ -81,7 +98,7 @@ public class XrayEditorScreen extends Screen {
         panelY = (height - BOX_HEIGHT) / 2;
 
         doneButton = ButtonWidget.builder(Text.literal("Done"), b -> close())
-                .dimensions(panelX + (BOX_WIDTH - 100) / 2, panelY + BOX_HEIGHT - 30, 100, 20)
+                .dimensions(panelX + (BOX_WIDTH - DONE_W) / 2, panelY + DONE_Y, DONE_W, DONE_H)
                 .build();
         addDrawableChild(doneButton);
 
@@ -96,6 +113,11 @@ public class XrayEditorScreen extends Screen {
     }
 
     private void recalcMaxScroll() {
+        if (!RENDER_DYNAMIC_BLOCK_ROWS) {
+            maxScroll = 0;
+            return;
+        }
+
         int totalEntries = 0;
         // "Active Blocks" header + entries (only if non-empty)
         if (!activeBlocks.isEmpty()) {
@@ -105,7 +127,7 @@ public class XrayEditorScreen extends Screen {
         totalEntries++;
         totalEntries += nearbyBlocks.size();
 
-        int contentAreaHeight = BOX_HEIGHT - 26 - 40; // title area top, done button area bottom
+        int contentAreaHeight = DONE_Y - NEARBY_CONTENT_Y - CONTENT_PADDING;
         int totalContentHeight = totalEntries * ENTRY_HEIGHT + CONTENT_PADDING * 2;
         maxScroll = Math.max(0, totalContentHeight - contentAreaHeight);
     }
@@ -166,41 +188,28 @@ public class XrayEditorScreen extends Screen {
         int left = panelX;
         int top = panelY;
         int right = left + BOX_WIDTH;
-        int bottom = top + BOX_HEIGHT;
 
-        // Panel background
-        context.fill(left, top, right, bottom, applyAlpha(0xAA000000, guiAlpha));
-        InventoryHudRenderer.drawChromaBorder(context, left - 1, top - 1, right + 1, bottom + 1, guiAlpha);
-
-        // Title
-        String title = "X-Ray Blocks";
-        int titleWidth = textRenderer.getWidth(title);
-        int tx = panelX + (BOX_WIDTH - titleWidth) / 2;
-        int ty = panelY + 6;
-        context.drawTextWithShadow(textRenderer, title, tx, ty, applyAlpha(chromaColor(0f), guiAlpha));
-
-        // Done button
-        styleButton(context, doneButton, guiAlpha, mouseX, mouseY);
-
-        // Scrollable content area
-        int contentLeft = left + CONTENT_PADDING;
-        int contentTop = top + 22;
-        int contentRight = right - CONTENT_PADDING;
-        int contentBottom = bottom - 38;
-        int contentWidth = contentRight - contentLeft;
-
-        context.enableScissor(contentLeft, contentTop, contentRight, contentBottom);
+        drawFigmaFrame(context, left, top, scale);
 
         buttonEntries.clear();
-        int y = contentTop + CONTENT_PADDING - scrollOffset;
+        if (!RENDER_DYNAMIC_BLOCK_ROWS) {
+            matrices.popMatrix();
+            return;
+        }
+
+        int contentLeft = left + CONTENT_PADDING;
+        int activeTop = top + ACTIVE_CONTENT_Y;
+        int activeBottom = top + NEARBY_HEADER_Y - 6;
+        int nearbyTop = top + NEARBY_CONTENT_Y;
+        int nearbyBottom = top + DONE_Y - CONTENT_PADDING;
+        int contentRight = right - CONTENT_PADDING;
+        int contentWidth = contentRight - contentLeft;
+
+        int y = activeTop - scrollOffset;
         float chromaOffset = (System.currentTimeMillis() % 4000) / 4000f;
 
-        // --- Active Blocks header + entries (only if non-empty) ---
+        context.enableScissor(contentLeft, activeTop, contentRight, activeBottom);
         if (!activeBlocks.isEmpty()) {
-            context.drawTextWithShadow(textRenderer, "Active Blocks", contentLeft + 2, y + 2,
-                    applyAlpha(chromaColor(chromaOffset), guiAlpha));
-            y += ENTRY_HEIGHT;
-
             for (String id : activeBlocks) {
                 int entryY = y;
                 // Block item icon
@@ -222,7 +231,7 @@ public class XrayEditorScreen extends Screen {
                 int btnY = entryY;
                 boolean hover = mouseX >= btnX && mouseX <= btnX + BUTTON_SIZE_W
                         && mouseY >= btnY && mouseY <= btnY + BUTTON_SIZE_H
-                        && mouseY >= contentTop && mouseY <= contentBottom;
+                        && mouseY >= activeTop && mouseY <= activeBottom;
                 int fill = applyAlpha(hover ? 0xFF993333 : 0xFF773333, guiAlpha);
                 context.fill(btnX, btnY, btnX + BUTTON_SIZE_W, btnY + BUTTON_SIZE_H, fill);
                 InventoryHudRenderer.drawButtonBorder(context, btnX - 1, btnY - 1, btnX + BUTTON_SIZE_W + 1, btnY + BUTTON_SIZE_H + 1, guiAlpha);
@@ -233,21 +242,18 @@ public class XrayEditorScreen extends Screen {
                         applyAlpha(chromaColor(chromaOffset), guiAlpha));
 
                 // Record button region for click handling
-                if (entryY + BUTTON_SIZE_H > contentTop && entryY < contentBottom) {
+                if (entryY + BUTTON_SIZE_H > activeTop && entryY < activeBottom) {
                     buttonEntries.add(new ButtonEntry(btnX, btnY, BUTTON_SIZE_W, BUTTON_SIZE_H, id, false));
                 }
 
                 y += ENTRY_HEIGHT;
             }
         }
+        context.disableScissor();
 
-        // --- Nearby Blocks header ---
-        y += 4; // small gap
-        context.drawTextWithShadow(textRenderer, "Nearby Blocks", contentLeft + 2, y + 2,
-                applyAlpha(chromaColor(chromaOffset + 0.25f), guiAlpha));
-        y += ENTRY_HEIGHT;
+        y = nearbyTop - scrollOffset;
 
-        // --- Nearby block entries ---
+        context.enableScissor(contentLeft, nearbyTop, contentRight, nearbyBottom);
         for (String id : nearbyBlocks) {
             int entryY = y;
             // Block item icon
@@ -269,7 +275,7 @@ public class XrayEditorScreen extends Screen {
             int btnY = entryY;
             boolean hover = mouseX >= btnX && mouseX <= btnX + BUTTON_SIZE_W
                     && mouseY >= btnY && mouseY <= btnY + BUTTON_SIZE_H
-                    && mouseY >= contentTop && mouseY <= contentBottom;
+                    && mouseY >= nearbyTop && mouseY <= nearbyBottom;
             int fill = applyAlpha(hover ? 0xFF339933 : 0xFF337733, guiAlpha);
             context.fill(btnX, btnY, btnX + BUTTON_SIZE_W, btnY + BUTTON_SIZE_H, fill);
             InventoryHudRenderer.drawButtonBorder(context, btnX - 1, btnY - 1, btnX + BUTTON_SIZE_W + 1, btnY + BUTTON_SIZE_H + 1, guiAlpha);
@@ -280,7 +286,7 @@ public class XrayEditorScreen extends Screen {
                     applyAlpha(chromaColor(chromaOffset), guiAlpha));
 
             // Record button region for click handling
-            if (entryY + BUTTON_SIZE_H > contentTop && entryY < contentBottom) {
+            if (entryY + BUTTON_SIZE_H > nearbyTop && entryY < nearbyBottom) {
                 buttonEntries.add(new ButtonEntry(btnX, btnY, BUTTON_SIZE_W, BUTTON_SIZE_H, id, true));
             }
 
@@ -310,8 +316,8 @@ public class XrayEditorScreen extends Screen {
             }
 
             // Content area buttons
-            int contentTop = panelY + 22;
-            int contentBottom = panelY + BOX_HEIGHT - 38;
+            int contentTop = panelY + ACTIVE_CONTENT_Y;
+            int contentBottom = panelY + DONE_Y - CONTENT_PADDING;
             for (ButtonEntry entry : buttonEntries) {
                 if (mx >= entry.x && mx <= entry.x + entry.w
                         && my >= entry.y && my <= entry.y + entry.h
@@ -358,25 +364,62 @@ public class XrayEditorScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (!RENDER_DYNAMIC_BLOCK_ROWS) {
+            return true;
+        }
+
         scrollOffset -= (int) (verticalAmount * ENTRY_HEIGHT * 3);
         scrollOffset = Math.max(0, Math.min(scrollOffset, maxScroll));
         return true;
     }
 
     private void repositionWidgets() {
-        doneButton.setX(panelX + (BOX_WIDTH - 100) / 2);
-        doneButton.setY(panelY + BOX_HEIGHT - 30);
+        doneButton.setX(panelX + (BOX_WIDTH - DONE_W) / 2);
+        doneButton.setY(panelY + DONE_Y);
+    }
+
+    private void drawFigmaFrame(DrawContext context, int left, int top, float scale) {
+        float scaledW = BOX_WIDTH * scale;
+        float scaledH = BOX_HEIGHT * scale;
+        float scaledLeft = left + BOX_WIDTH / 2f - scaledW / 2f;
+        float scaledTop = top + BOX_HEIGHT / 2f - scaledH / 2f;
+        if (NvgRoundedTextureRenderer.beginRoundedClip(scaledLeft, scaledTop, scaledW, scaledH, PANEL_RADIUS * scale)) {
+            try {
+                context.drawTexture(RenderPipelines.GUI_TEXTURED, FIGMA_FRAME, left, top, 0f, 0f,
+                        BOX_WIDTH, BOX_HEIGHT, 856, 1004, 856, 1004);
+            } finally {
+                NvgRoundedTextureRenderer.endRoundedClip();
+            }
+            return;
+        }
+
+        for (int row = 0; row < BOX_HEIGHT; row++) {
+            int inset = V2Theme.roundedInset(PANEL_RADIUS, BOX_HEIGHT, row);
+            context.enableScissor(left + inset, top + row, left + BOX_WIDTH - inset, top + row + 1);
+            try {
+                context.drawTexture(RenderPipelines.GUI_TEXTURED, FIGMA_FRAME, left, top, 0f, 0f,
+                        BOX_WIDTH, BOX_HEIGHT, 856, 1004, 856, 1004);
+            } finally {
+                context.disableScissor();
+            }
+        }
     }
 
     private void styleButton(DrawContext context, ButtonWidget button, float alpha, int mouseX, int mouseY) {
-        int bx = button.getX(), by = button.getY(), bw = button.getWidth(), bh = button.getHeight();
-        boolean hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + bh;
-        context.fill(bx, by, bx + bw, by + bh, applyAlpha(hover ? 0xFF666666 : 0xFF555555, alpha));
-        InventoryHudRenderer.drawButtonBorder(context, bx - 1, by - 1, bx + bw + 1, by + bh + 1, alpha);
-        String label = button.getMessage().getString();
-        int tw = textRenderer.getWidth(label);
-        context.drawTextWithShadow(textRenderer, label, bx + (bw - tw) / 2, by + (bh - textRenderer.fontHeight) / 2,
-                applyAlpha(chromaColor((System.currentTimeMillis() % 4000) / 4000f), alpha));
+    }
+
+    private void drawCenteredScaledText(DrawContext context, String text, int centerX, int y, float scale, int color) {
+        int width = textRenderer.getWidth(text);
+        drawScaledText(context, text, Math.round(centerX - width * scale / 2f), y, scale, color);
+    }
+
+    private void drawScaledText(DrawContext context, String text, int x, int y, float scale, int color) {
+        var matrices = context.getMatrices();
+        matrices.pushMatrix();
+        matrices.translate(x, y);
+        matrices.scale(scale, scale);
+        context.drawText(textRenderer, Text.literal(text).styled(s -> s.withBold(true)), 0, 0, color, false);
+        matrices.popMatrix();
     }
 
     private int applyAlpha(int color, float alpha) {

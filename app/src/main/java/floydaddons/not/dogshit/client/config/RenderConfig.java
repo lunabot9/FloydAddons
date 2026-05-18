@@ -363,7 +363,6 @@ public final class RenderConfig {
 
                 GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
                 GLFW.glfwSetWindowMonitor(handle, 0, targetX, targetY, targetW, targetH, GLFW.GLFW_DONT_CARE);
-                GLFW.glfwFocusWindow(handle);
                 lastAppliedBorderless = true;
             } else {
                 long monitor = GLFW.glfwGetPrimaryMonitor();
@@ -381,7 +380,6 @@ public final class RenderConfig {
 
                 GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
                 GLFW.glfwSetWindowMonitor(handle, 0, targetX, targetY, targetW, targetH, GLFW.GLFW_DONT_CARE);
-                GLFW.glfwFocusWindow(handle);
                 lastAppliedBorderless = false;
             }
             pendingBorderlessApply = false;
@@ -483,7 +481,6 @@ public final class RenderConfig {
             GLFW.glfwSetWindowMonitor(handle, 0, windowedX, windowedY, windowedW, windowedH, GLFW.GLFW_DONT_CARE);
             GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
             GLFW.glfwSetWindowMonitor(handle, 0, borderlessX, borderlessY, borderlessW, borderlessH, GLFW.GLFW_DONT_CARE);
-            GLFW.glfwFocusWindow(handle);
 
             lastAppliedBorderless = true;
             pendingBorderlessApply = false;

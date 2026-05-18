@@ -91,39 +91,26 @@ public class NeckHiderTab implements V2Tab {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        boolean[] before = new boolean[rows.size()];
-        for (int i = 0; i < rows.size(); i++) before[i] = rows.get(i).isExpanded();
-
-        boolean handled = pane.mouseClicked(mx, my, button);
-
-        int newlyOpenedIdx = -1;
-        for (int i = 0; i < rows.size(); i++) {
-            if (!before[i] && rows.get(i).isExpanded()) {
-                newlyOpenedIdx = i;
-                break;
-            }
+        if (button == 0 && (insideHeader(neckRow, mx, my) || insideHeader(otherNeckRow, mx, my))) {
+            collapseRows();
+            return true;
         }
-        if (newlyOpenedIdx >= 0) {
-            for (int i = 0; i < rows.size(); i++) {
-                if (i != newlyOpenedIdx) rows.get(i).setExpanded(false);
-            }
-        }
-        return handled;
+        return false;
     }
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        return pane.mouseReleased(mx, my, button);
+        return false;
     }
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        return pane.mouseDragged(mx, my, button, dx, dy);
+        return false;
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double horiz, double vert) {
-        return pane.mouseScrolled(mx, my, horiz, vert);
+        return false;
     }
 
     @Override
@@ -151,9 +138,21 @@ public class NeckHiderTab implements V2Tab {
 
     @Override
     public void onShown() {
+        collapseRows();
         ensureField();
         if (nickField != null) {
             nickField.setText(NickHiderConfig.getNickname());
+        }
+    }
+
+    private static boolean insideHeader(AccordionRow row, double mx, double my) {
+        return mx >= row.getX() && mx < row.getX() + row.getWidth()
+                && my >= row.getY() && my < row.getY() + row.getHeaderHeight();
+    }
+
+    private void collapseRows() {
+        for (AccordionRow row : rows) {
+            row.setExpanded(false);
         }
     }
 

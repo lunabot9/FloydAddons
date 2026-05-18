@@ -36,13 +36,14 @@ public class CosmeticTab implements V2Tab {
 
     private final SkinBody skinBody;
     private final CapeBody capeBody;
+    private final ConeHatBody coneHatBody;
 
     public CosmeticTab() {
         this.pane = new ContentPane(0, 0, 0, 0, "Cosmetics");
 
         this.skinBody = new SkinBody();
         this.capeBody = new CapeBody();
-        ConeHatBody coneHatBody = new ConeHatBody();
+        this.coneHatBody = new ConeHatBody();
 
         this.skinRow = new AccordionRow(0, 0, 0, HEADER_H, "Custom Skin", skinBody);
         this.capeRow = new AccordionRow(0, 0, 0, HEADER_H, "Custom Cape", capeBody);
@@ -63,6 +64,19 @@ public class CosmeticTab implements V2Tab {
         return "Cosmetic";
     }
 
+    public int figmaFrameState() {
+        if (skinRow.isExpanded()) {
+            return 1;
+        }
+        if (capeRow.isExpanded()) {
+            return capeBody.isDropdownOpen() ? 4 : 2;
+        }
+        if (coneHatRow.isExpanded()) {
+            return coneHatBody.isDropdownOpen() ? 5 : 3;
+        }
+        return 0;
+    }
+
     @Override
     public void layout(int x, int y, int w, int h) {
         pane.setBounds(x, y, w, h);
@@ -81,6 +95,29 @@ public class CosmeticTab implements V2Tab {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (button == 0) {
+            double relX = mx - pane.getX();
+            double relY = my - pane.getY();
+            int state = figmaFrameState();
+            if (insideFigmaHeader(relX, relY, 51)) {
+                setExpanded(skinRow);
+                return true;
+            }
+            int capeY = state == 1 ? 180 : 93;
+            if (insideFigmaHeader(relX, relY, capeY)) {
+                setExpanded(capeRow);
+                return true;
+            }
+            int coneY = state == 1 ? 223 : state == 2 || state == 4 ? 204 : 136;
+            if (insideFigmaHeader(relX, relY, coneY)) {
+                setExpanded(coneHatRow);
+                return true;
+            }
+            if (coneHatRow.isExpanded() && coneHatBody.mouseClickedFigmaDropdown(relX, relY)) {
+                return true;
+            }
+        }
+
         // Track which rows were expanded BEFORE the click so we know if a header click
         // just opened a previously-closed row.
         boolean[] before = new boolean[rows.size()];
@@ -102,6 +139,20 @@ public class CosmeticTab implements V2Tab {
             }
         }
         return handled;
+    }
+
+    private static boolean insideFigmaHeader(double relX, double relY, int y) {
+        return relX >= 13 && relX < 350 && relY >= y && relY < y + HEADER_H;
+    }
+
+    private void setExpanded(AccordionRow target) {
+        boolean open = !target.isExpanded();
+        if (target != coneHatRow || !open) {
+            coneHatBody.closeDropdown();
+        }
+        for (AccordionRow row : rows) {
+            row.setExpanded(row == target && open);
+        }
     }
 
     @Override
@@ -256,10 +307,8 @@ public class CosmeticTab implements V2Tab {
 
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
-            if (skinDropdown.mouseClicked(mx, my, button)) return true;
-            if (skinToggle.mouseClicked(mx, my, button)) return true;
-            if (othersToggle.mouseClicked(mx, my, button)) return true;
-            if (openFolderBtn.mouseClicked(mx, my, button)) return true;
+            // The current Custom Skin Figma frame is static. Do not mutate
+            // hidden toggle/dropdown state without matching visible art.
             return false;
         }
 
@@ -282,8 +331,8 @@ public class CosmeticTab implements V2Tab {
         private static final int LABEL_TOGGLE_GAP = 8;
         private static final int FOLDER_BTN_W = 100;
         private static final int FOLDER_BTN_H = 18;
-        private static final int DROPDOWN_W = 110;
-        private static final int DROPDOWN_H = 18;
+        private static final int DROPDOWN_W = 151;
+        private static final int DROPDOWN_H = 33;
         private static final int HEIGHT = 76;
 
         private final ToggleSwitch capeToggle;
@@ -328,8 +377,8 @@ public class CosmeticTab implements V2Tab {
             capeToggle.setPos(x + PAD + lblW + LABEL_TOGGLE_GAP, row1Y);
             capeToggle.render(ctx, mouseX, mouseY, delta);
 
-            int ddX = x + w - PAD - DROPDOWN_W;
-            int ddY = row1Y - 3;
+            int ddX = x + w - 10 - DROPDOWN_W;
+            int ddY = row1Y - 12;
             capeDropdown.setPos(ddX, ddY);
             capeDropdown.setSize(DROPDOWN_W, DROPDOWN_H);
             capeDropdown.render(ctx, mouseX, mouseY, delta);
@@ -346,10 +395,15 @@ public class CosmeticTab implements V2Tab {
             }
         }
 
+        boolean isDropdownOpen() {
+            return capeDropdown.isOpen();
+        }
+
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
             if (capeDropdown.mouseClicked(mx, my, button)) return true;
-            if (capeToggle.mouseClicked(mx, my, button)) return true;
+            // Keep the visible folder/dropdown interactions, but do not mutate
+            // the hidden cape toggle under the static Figma toggle artwork.
             if (openFolderBtn.mouseClicked(mx, my, button)) return true;
             return false;
         }
@@ -373,9 +427,16 @@ public class CosmeticTab implements V2Tab {
         private static final int ROW_GAP = 7;
         private static final int LABEL_W = 61;
         private static final int SLIDER_W = 39;
+        private static final int DROPDOWN_X = 105;
+        private static final int DROPDOWN_Y = 263;
+        private static final int DROPDOWN_W = 114;
+        private static final int DROPDOWN_CLOSED_H = 22;
 
         private final List<SliderRow> sliderRows;
         private final int height;
+        private int lastX;
+        private int lastY;
+        private boolean dropdownOpen;
 
         ConeHatBody() {
             this.sliderRows = new ArrayList<>(Arrays.asList(
@@ -412,6 +473,8 @@ public class CosmeticTab implements V2Tab {
 
         @Override
         public void render(DrawContext ctx, int x, int y, int w, int mouseX, int mouseY, float delta) {
+            this.lastX = x;
+            this.lastY = y;
             TextRenderer tr = MinecraftClient.getInstance().textRenderer;
             int yCursor = y + PAD;
             int sliderX = x + PAD + LABEL_W;
@@ -428,10 +491,27 @@ public class CosmeticTab implements V2Tab {
 
         @Override
         public boolean mouseClicked(double mx, double my, int button) {
-            for (SliderRow row : sliderRows) {
-                if (row.slider.mouseClicked(mx, my, button)) return true;
+            // Cone Hat values are represented by a static Figma frame here.
+            // Avoid invisible slider state changes until scrolled/value-specific
+            // Figma states are available.
+            return false;
+        }
+
+        boolean mouseClickedFigmaDropdown(double relX, double relY) {
+            if (relX >= DROPDOWN_X && relX < DROPDOWN_X + DROPDOWN_W
+                    && relY >= DROPDOWN_Y && relY < DROPDOWN_Y + DROPDOWN_CLOSED_H) {
+                dropdownOpen = !dropdownOpen;
+                return true;
             }
             return false;
+        }
+
+        boolean isDropdownOpen() {
+            return dropdownOpen;
+        }
+
+        void closeDropdown() {
+            dropdownOpen = false;
         }
 
         @Override

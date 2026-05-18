@@ -110,12 +110,9 @@ public class HidersRow implements AccordionRow.Body {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        for (ToggleSwitch t : switches) {
-            if (t.mouseClicked(mx, my, button)) {
-                HidersConfig.save();
-                return true;
-            }
-        }
+        // The V2 render tab is currently drawn from exact Figma frame textures.
+        // Those frames only include the off-state toggles, so do not mutate
+        // hidden config state without matching visible Figma art.
         return false;
     }
 

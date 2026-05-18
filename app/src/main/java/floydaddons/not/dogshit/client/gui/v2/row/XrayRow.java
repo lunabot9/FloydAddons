@@ -83,7 +83,8 @@ public class XrayRow implements AccordionRow.Body {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (xrayToggle.mouseClicked(mx, my, button)) return true;
+        // The visible Figma frame only has the off-state toggle. Keep the editor
+        // buttons active, but avoid invisible x-ray toggle state changes.
         if (editButton.mouseClicked(mx, my, button)) return true;
         if (reloadButton.mouseClicked(mx, my, button)) return true;
         return false;

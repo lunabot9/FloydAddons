@@ -25,20 +25,22 @@ public class RenderTab implements V2Tab {
 
     private final ContentPane pane;
     private final List<AccordionRow> rows = new ArrayList<>();
+    private final AccordionRow hidersRow;
+    private final AccordionRow xrayRow;
 
     public RenderTab() {
         this.pane = new ContentPane(0, 0, 0, 0, "Render");
 
-        AccordionRow hiders = new AccordionRow(0, 0, 0, HEADER_H, "Hiders", new HidersRow());
-        AccordionRow xray = new AccordionRow(0, 0, 0, HEADER_H, "X-ray", new XrayRow());
+        this.hidersRow = new AccordionRow(0, 0, 0, HEADER_H, "Hiders", new HidersRow());
+        this.xrayRow = new AccordionRow(0, 0, 0, HEADER_H, "X-ray", new XrayRow());
         AccordionRow esp = new AccordionRow(0, 0, 0, HEADER_H, "ESP", new EspRow());
         AccordionRow animations = new AccordionRow(0, 0, 0, HEADER_H, "Animations", new AnimationsRow());
         AccordionRow visual = new AccordionRow(0, 0, 0, HEADER_H, "Visual", new VisualRow());
 
-        hiders.setExpanded(true);
+        hidersRow.setExpanded(true);
 
-        rows.add(hiders);
-        rows.add(xray);
+        rows.add(hidersRow);
+        rows.add(xrayRow);
         rows.add(esp);
         rows.add(animations);
         rows.add(visual);
@@ -53,6 +55,13 @@ public class RenderTab implements V2Tab {
         return "Render";
     }
 
+    public int figmaFrameState() {
+        if (xrayRow.isExpanded()) {
+            return 1;
+        }
+        return 0;
+    }
+
     @Override
     public void layout(int x, int y, int w, int h) {
         pane.setBounds(x, y, w, h);
@@ -65,6 +74,27 @@ public class RenderTab implements V2Tab {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (button == 0) {
+            double relX = mx - pane.getX();
+            double relY = my - pane.getY();
+            int state = figmaFrameState();
+            if (insideFigmaHeader(relX, relY, 46)) {
+                hidersRow.setExpanded(true);
+                xrayRow.setExpanded(false);
+                return true;
+            }
+            int xrayHeaderY = state == 1 ? 89 : 203;
+            if (insideFigmaHeader(relX, relY, xrayHeaderY)) {
+                hidersRow.setExpanded(false);
+                xrayRow.setExpanded(true);
+                return true;
+            }
+            if (insideFigmaHeader(relX, relY, state == 1 ? 203 : 249)
+                    || insideFigmaHeader(relX, relY, state == 1 ? 249 : 295)) {
+                return true;
+            }
+        }
+
         // Snapshot expansion state so we can detect newly-opened rows and collapse siblings.
         boolean[] before = new boolean[rows.size()];
         for (int i = 0; i < rows.size(); i++) before[i] = rows.get(i).isExpanded();
@@ -88,6 +118,10 @@ public class RenderTab implements V2Tab {
         return handled;
     }
 
+    private static boolean insideFigmaHeader(double relX, double relY, int y) {
+        return relX >= 24 && relX < 361 && relY >= y && relY < y + HEADER_H;
+    }
+
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
         return pane.mouseReleased(mx, my, button);
@@ -100,7 +134,14 @@ public class RenderTab implements V2Tab {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double horiz, double vert) {
-        return pane.mouseScrolled(mx, my, horiz, vert);
+        if (vert < 0) {
+            hidersRow.setExpanded(false);
+            xrayRow.setExpanded(true);
+        } else if (vert > 0) {
+            hidersRow.setExpanded(true);
+            xrayRow.setExpanded(false);
+        }
+        return true;
     }
 
     @Override

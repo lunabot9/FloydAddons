@@ -26,8 +26,8 @@ public final class V2Theme {
     /** Source: Figma — vertical gap between sidebar tabs. */
     public static final int SIDEBAR_TAB_GAP = 8;
 
-    /** Source: Main - QoL.png — outer panel corner radius. */
-    public static final int PANE_RADIUS = 12;
+    /** Source: Figma outer frames — 40px radius on the 2x texture, 20px in GUI space. */
+    public static final int PANE_RADIUS = 20;
     /** Source: Hiders.png — accordion / button pill corner radius. */
     public static final int BUTTON_RADIUS = 10;
     /** Source: X-ray render.png — small outline pill (Edit Blocks etc.) radius. */
