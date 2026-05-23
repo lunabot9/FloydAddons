@@ -1,14 +1,18 @@
+rootProject.name = "FloydAddons"
 pluginManagement {
+
     repositories {
-        maven("https://maven.fabricmc.net/") { name = "FabricMC" }
+        mavenCentral()
         gradlePluginPortal()
+        maven("https://maven.fabricmc.net/")
+        maven("https://jitpack.io")
+    }
+
+    val loom_version: String by settings
+    val kotlin_version: String by settings
+
+    plugins {
+        id("fabric-loom") version loom_version
+        kotlin("jvm") version kotlin_version
     }
 }
-
-plugins {
-    // Allow automatic toolchain download if JDK 21 is missing
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
-
-rootProject.name = "FloydAddons NOT DOGSHIT"
-include("app")

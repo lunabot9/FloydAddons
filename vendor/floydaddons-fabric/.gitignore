@@ -1,0 +1,46 @@
+# Gradle
+.gradle/
+.gradle_local/
+app/.gradle/
+app/.gradle_local/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+*.swp
+
+# Fabric Loom dev runtime
+app/run/
+
+# Compiled classes
+*.class
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Extracted / decompiled Minecraft sources
+com/
+net/
+
+# Temp investigation files
+tmp_fapi/
+
+# Built JARs in root
+/*.jar
+
+# Deploy script (local paths)
+deploy.sh
+
+# Claude Code
+CLAUDE.md
+
+# flt agent runtime
+.flt/
+.harness-backup-CLAUDE.md
