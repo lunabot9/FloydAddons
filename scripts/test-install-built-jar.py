@@ -149,6 +149,7 @@ class InstallBuiltJarTest(unittest.TestCase):
         env["FLOYDADDONS_SKIP_BUILD"] = "true"
         env["FLOYDADDONS_SKIP_FABRIC_PROFILE"] = "true"
         env["FLOYDADDONS_SKIP_RUNTIME_DEPS"] = "true"
+        env["PATH"] = os.pathsep.join(("/usr/bin", "/bin", "/usr/sbin", "/sbin"))
         if extra_env:
             env.update(extra_env)
         command = [str(SCRIPT)]

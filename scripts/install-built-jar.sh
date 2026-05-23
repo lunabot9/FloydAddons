@@ -25,12 +25,17 @@ mkdir -p "$mods_dir"
 property() {
     local key="$1"
     local line
-    line="$(rg -n "^${key}=" gradle.properties | head -n 1 || true)"
-    if [[ -z "$line" ]]; then
-        echo "missing gradle property: $key" >&2
-        exit 1
-    fi
-    printf '%s\n' "${line#*=}"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        case "$line" in
+            "$key="*)
+                printf '%s\n' "${line#*=}"
+                return 0
+                ;;
+        esac
+    done < gradle.properties
+
+    echo "missing gradle property: $key" >&2
+    exit 1
 }
 
 minecraft_root="$(cd "$(dirname "$mods_dir")" && pwd)"
