@@ -1,0 +1,52 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.odtheking.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "accessors.BeaconBeamAccessor",
+    "accessors.CameraAccessor",
+    "mixins.AnimationItemInHandRendererMixin",
+    "mixins.AnimationLivingEntityMixin",
+    "mixins.AnimationToggleKeyMappingMixin",
+    "mixins.AvatarRendererMixin",
+    "mixins.CameraClientControlMixin",
+    "mixins.CameraLocalPlayerInputMixin",
+    "mixins.CameraMixin",
+    "mixins.CameraMouseMixin",
+    "mixins.CameraTypeMixin",
+    "mixins.ClientPacketListenerMixin",
+    "mixins.FontMixin",
+    "mixins.FloydBrandSpoofMixin",
+    "mixins.FloydFabricLoaderMixin",
+    "mixins.FloydTitleScreenBackgroundMixin",
+    "mixins.FloydTimeUpdateMixin",
+    "mixins.FloydWatchdogMessageMixin",
+    "mixins.GameRendererMixin",
+    "mixins.GuiMixin",
+    "mixins.HiderArrowLayerMixin",
+    "mixins.HiderArmorLayerMixin",
+    "mixins.HiderFallingBlockRendererMixin",
+    "mixins.HiderHeadLayerMixin",
+    "mixins.KeyBindingMixin",
+    "mixins.LivingEntityRendererMixin",
+    "mixins.ParticleEngineMixin",
+    "mixins.PlayerTabOverlayMixin",
+    "mixins.ScreenEffectRendererMixin",
+    "mixins.ScreenMixin",
+    "mixins.XrayIndigoAlphaMixin",
+    "mixins.XrayLightTextureMixin",
+    "mixins.XrayOcclusionMixin",
+    "mixins.XrayRenderLayersMixin",
+    "mixins.XraySodiumAlphaMixin",
+    "mixins.XraySodiumFaceCullMixin",
+    "mixins.XraySodiumFluidAlphaMixin"
+  ],
+  "mixins": [
+    "mixins.ConnectionMixin",
+    "mixins.EntityMixin"
+  ]
+}
