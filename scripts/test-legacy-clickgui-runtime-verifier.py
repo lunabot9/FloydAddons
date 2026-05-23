@@ -22,6 +22,7 @@ def load_verifier() -> Any:
 class LegacyClickGuiRuntimeVerifierTest(unittest.TestCase):
     def setUp(self) -> None:
         self.verifier = load_verifier()
+        self.verifier.time.sleep = lambda _seconds: None
 
     def test_accepts_old_module_row_click_semantics(self) -> None:
         proof = self.verifier.verify_legacy_clickgui(FakeClient())
