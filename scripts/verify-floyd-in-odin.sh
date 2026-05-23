@@ -131,13 +131,13 @@ print("active mixin config exactly matches source files")
 PY
 
 old_odin_source_regex='odinclient|OdinClient|1\.8\.9|features.impl.(boss|dungeon|nether|skyblock)|utils.skyblock|hypixelapi|HypixelData|RequestUtils|WebSocketConnection|CataCommand|DevCommand|DungeonWaypoint|PetCommand|PosMsg|Soopy|Termsim|WaypointCommand|AutoSessionID|PersonalBest|ServerUtils|JsonResourceLoader|CustomGUIImpl|DrawContextRenderer|PlayerUtils|createSoundSettings|setClipboardContent|DevModule|isDevModule|containsOneOf|equalsOneOf|matchesOneOf|capitalizeFirst|toFixed|formatTime|romanToInt|getBlockBounds|clickSlot|formatNumber|sendChatMessage|getCenteredText|getChatBreak|Vec2|floorVec|isXZInterceptable|Category\.(DUNGEON|BOSS|NETHER|SKYBLOCK)|val (DUNGEON|BOSS|SKYBLOCK|NETHER)|8Fqsg5xBP3|modmenu\.discord|update_checker|OdinMod|com\.odtheking\.odin\.OdinMod'
-if rg -n "$old_odin_source_regex" src/main/kotlin src/main/java src/main/resources build.gradle.kts README.md MIGRATION.md THIRD_PARTY_NOTICES.md; then
+if grep -REn "$old_odin_source_regex" src/main/kotlin src/main/java src/main/resources build.gradle.kts README.md MIGRATION.md THIRD_PARTY_NOTICES.md; then
     echo "old Odin residue audit failed" >&2
     exit 1
 fi
 
 floyd_grouping_source_regex='features\.impl\.qol|features/impl/qol|features\.impl\.player\.FloydSkin|features/impl/player/FloydSkin'
-if rg -n "$floyd_grouping_source_regex" src/main/kotlin src/main/java src/main/resources build.gradle.kts; then
+if grep -REn "$floyd_grouping_source_regex" src/main/kotlin src/main/java src/main/resources build.gradle.kts; then
     echo "Floyd GUI grouping audit failed" >&2
     exit 1
 fi
@@ -159,7 +159,7 @@ if ! dry_run_add_output="$(git add -n . 2>&1)"; then
     echo "git add dry-run failed" >&2
     exit 1
 fi
-dry_run_add_matches="$(printf '%s\n' "$dry_run_add_output" | rg 'build-release|__pycache__|\.pyc|logs/|\.kotlin/|CLAUDE\.md|deploy\.sh|\.flt' || true)"
+dry_run_add_matches="$(printf '%s\n' "$dry_run_add_output" | grep -E 'build-release|__pycache__|\.pyc|logs/|\.kotlin/|CLAUDE\.md|deploy\.sh|\.flt' || true)"
 if [[ -n "$dry_run_add_matches" ]]; then
     echo "$dry_run_add_matches"
     echo "git add dry-run would include generated or local-only files" >&2
@@ -367,14 +367,14 @@ if missing or extra:
 print("sources jar exactly matches active source and resource trees")
 PY
 
-jar_matches="$(jar tf "${runtime_only_jars[0]}" | sort | rg "$jar_regex" || true)"
+jar_matches="$(jar tf "${runtime_only_jars[0]}" | sort | grep -E "$jar_regex" || true)"
 if [[ "$jar_matches" != "floydaddons.mixins.json" ]]; then
     echo "$jar_matches"
     echo "runtime jar audit failed" >&2
     exit 1
 fi
 
-sources_matches="$(jar tf "${source_jars[0]}" | sort | rg "$jar_regex" || true)"
+sources_matches="$(jar tf "${source_jars[0]}" | sort | grep -E "$jar_regex" || true)"
 if [[ "$sources_matches" != "floydaddons.mixins.json" ]]; then
     echo "$sources_matches"
     echo "sources jar audit failed" >&2
