@@ -1,0 +1,5 @@
+{
+    "chatgpt.openOnStartup": true,
+    "chatgpt.runCodexInWindowsSubsystemForLinux": false,
+    "java.configuration.updateBuildConfiguration": "automatic"
+}

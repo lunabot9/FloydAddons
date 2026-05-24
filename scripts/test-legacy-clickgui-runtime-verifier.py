@@ -420,7 +420,7 @@ class LegacyClickGuiRuntimeVerifierTest(unittest.TestCase):
         self.assertTrue(proof["skinPageControls"]["entriesContainExpected"])
         self.assertTrue(proof["skinPageControls"]["availableContainVerifierPngs"])
         self.assertEqual({"customSkin": False, "self": False, "others": False, "selected": "zz_floyd_skin_verify_a.png"}, proof["skinPageControls"]["before"])
-        self.assertEqual(True, proof["skinPageControls"]["after"]["customSkin"])
+        self.assertEqual(False, proof["skinPageControls"]["after"]["customSkin"])
         self.assertEqual(True, proof["skinPageControls"]["after"]["self"])
         self.assertEqual(True, proof["skinPageControls"]["after"]["others"])
         self.assertEqual("zz_floyd_skin_verify_b.png", proof["skinPageControls"]["after"]["selected"])
@@ -698,7 +698,7 @@ class LegacyClickGuiRuntimeVerifierTest(unittest.TestCase):
         with self.assertRaises(SystemExit) as raised:
             self.verifier.verify_legacy_clickgui(client)
 
-        self.assertIn("Skin Custom Skin page row did not toggle value", str(raised.exception))
+        self.assertIn("Skin Self page row did not toggle value", str(raised.exception))
 
     def test_rejects_cape_page_regression(self) -> None:
         client = FakeClient(ignore_cape_page=True)

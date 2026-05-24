@@ -187,7 +187,11 @@ if [[ ${#runtime_only_jars[@]} -ne 1 ]]; then
     exit 1
 fi
 
-python3 - "${runtime_only_jars[0]}" <<'PY'
+mod_id="$(property mod_id)"
+mod_name="$(property mod_name)"
+mod_version="$(property mod_version)"
+
+python3 - "${runtime_only_jars[0]}" <<PY
 import json
 import sys
 import zipfile
@@ -197,9 +201,9 @@ with zipfile.ZipFile(jar_path) as jar:
     fabric = json.loads(jar.read("fabric.mod.json"))
 
 expected = {
-    "id": "floydaddons",
-    "version": "0.1.0",
-    "name": "Floyd Addons",
+    "id": "${mod_id}",
+    "version": "${mod_version}",
+    "name": "${mod_name}",
     "license": "BSD-3-Clause AND MIT",
     "icon": "assets/floydaddons/icons/taskbar_icon_128x128.png",
     "environment": "client",
@@ -227,7 +231,7 @@ if failures:
 print("packaged Fabric metadata matches Floyd-in-Odin scaffold")
 PY
 
-python3 - "${source_jars[0]}" <<'PY'
+python3 - "${source_jars[0]}" <<PY
 import json
 import sys
 import zipfile

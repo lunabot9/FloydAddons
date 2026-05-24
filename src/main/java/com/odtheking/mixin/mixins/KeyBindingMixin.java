@@ -2,6 +2,7 @@ package com.odtheking.mixin.mixins;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.odtheking.odin.events.InputEvent;
+import com.odtheking.odin.keybind.KeybindSync;
 import net.minecraft.client.KeyMapping;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,5 +15,11 @@ public class KeyBindingMixin {
     @Inject(method = "click", at = @At("HEAD"), cancellable = true)
     private static void onKeyPressed(InputConstants.Key key, CallbackInfo ci) {
         if (new InputEvent(key).postAndCatch()) ci.cancel();
+    }
+
+    @Inject(method = "setKey", at = @At("TAIL"))
+    private void onSetKey(InputConstants.Key boundKey, CallbackInfo ci) {
+        if (KeybindSync.isSyncing()) return;
+        KeybindSync.syncFromBinding((KeyMapping) (Object) this, boundKey);
     }
 }

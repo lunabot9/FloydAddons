@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -26,12 +27,25 @@ LIVE_SCAN_SOURCES = {
 MAX_LIVE_HIT_AGE_TICKS = 1200
 
 
+def current_version() -> str:
+    env_version = os.environ.get("FLOYDADDONS_VERSION", "").strip()
+    if env_version:
+        return env_version.lstrip("v")
+
+    properties = Path("gradle.properties")
+    if properties.exists():
+        for line in properties.read_text().splitlines():
+            if line.startswith("mod_version="):
+                return line.split("=", 1)[1].strip().lstrip("v")
+    return "2.0.1"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Summarize Floyd-in-Odin completion proof status.")
     parser.add_argument("--runtime-proof", default=str(DEFAULT_RUNTIME_PROOF))
     parser.add_argument("--live-proof", default=str(DEFAULT_LIVE_PROOF))
     parser.add_argument("--minecraft-root", default=str(DEFAULT_MINECRAFT_ROOT))
-    parser.add_argument("--build-jar", default="build/libs/FloydAddons-0.1.0.jar")
+    parser.add_argument("--build-jar", default=str(Path("build/libs") / f"FloydAddons-{current_version()}.jar"))
     parser.add_argument("--json", action="store_true", help="Print JSON. Text output is the default.")
     parser.add_argument(
         "--require-complete",
@@ -138,7 +152,7 @@ def live_status(path: Path) -> dict[str, Any]:
     }
 
 
-def live_install_status(minecraft_root: Path, build_jar: Path = Path("build/libs/FloydAddons-0.1.0.jar")) -> dict[str, Any]:
+def live_install_status(minecraft_root: Path, build_jar: Path = Path("build/libs") / f"FloydAddons-{current_version()}.jar") -> dict[str, Any]:
     script = Path(__file__).with_name("live-install-status.py")
     spec = importlib.util.spec_from_file_location("live_install_status", script)
     if spec is None or spec.loader is None:
@@ -161,7 +175,7 @@ def completion_report(
     runtime_path: Path,
     live_path: Path,
     minecraft_root: Path = DEFAULT_MINECRAFT_ROOT,
-    build_jar: Path = Path("build/libs/FloydAddons-0.1.0.jar"),
+    build_jar: Path = Path("build/libs") / f"FloydAddons-{current_version()}.jar",
 ) -> dict[str, Any]:
     runtime = runtime_status(runtime_path)
     install = live_install_status(minecraft_root, build_jar)

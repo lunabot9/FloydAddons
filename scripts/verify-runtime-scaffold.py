@@ -25,7 +25,7 @@ EXPECTED_CATEGORY_MODULES = {
 EXPECTED_SCAFFOLD = {
     "modId": "floydaddons",
     "modName": "Floyd Addons",
-    "version": "0.1.0",
+    "version": "2.0.1",
     "minecraftVersion": "1.21.11",
     "entrypoint": "com.odtheking.odin.FloydAddonsMod",
     "mixinConfig": "floydaddons.mixins.json",

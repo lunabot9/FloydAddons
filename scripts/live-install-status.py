@@ -6,9 +6,23 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import zipfile
 from pathlib import Path
 from typing import Any
+
+
+def current_version() -> str:
+    env_version = os.environ.get("FLOYDADDONS_VERSION", "").strip()
+    if env_version:
+        return env_version.lstrip("v")
+
+    properties = Path("gradle.properties")
+    if properties.exists():
+        for line in properties.read_text().splitlines():
+            if line.startswith("mod_version="):
+                return line.split("=", 1)[1].strip().lstrip("v")
+    return "2.0.1"
 
 
 EXPECTED = {
@@ -16,7 +30,7 @@ EXPECTED = {
     "loaderVersion": "0.18.5",
     "fabricApi": "fabric-api-0.141.3+1.21.11.jar",
     "fabricKotlin": "fabric-language-kotlin-1.13.10+kotlin.2.3.20.jar",
-    "floydJar": "FloydAddons-0.1.0.jar",
+    "floydJar": f"FloydAddons-{current_version()}.jar",
     "profileName": "fabric-loader-1.21.11",
     "versionId": "fabric-loader-0.18.5-1.21.11",
 }

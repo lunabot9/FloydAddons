@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -24,6 +26,37 @@ jobs:
 
       - name: setup gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: compute release version
+        if: github.event_name == 'push' && github.ref == 'refs/heads/V2'
+        run: |
+          set -euo pipefail
+          latest_tag="$(git tag -l 'v2.0.*' --sort=-v:refname | head -n 1)"
+          if [[ -z "$latest_tag" ]]; then
+            latest_tag="v2.0.0"
+          fi
+          version="${latest_tag#v}"
+          IFS='.' read -r major minor patch <<<"$version"
+          next_patch=$((patch + 1))
+          release_version="${major}.${minor}.${next_patch}"
+          python3 - "$release_version" <<'PY'
+from pathlib import Path
+import sys
+
+version = sys.argv[1]
+props = Path("gradle.properties")
+props_text = props.read_text()
+props_text = props_text.replace("mod_version=2.0.1", f"mod_version={version}")
+props.write_text(props_text)
+
+initializer = Path("src/main/kotlin/com/odtheking/odin/FloydAddonsMod.kt")
+init_text = initializer.read_text()
+init_text = init_text.replace('const val MOD_VERSION = "2.0.1"', f'const val MOD_VERSION = "{version}"')
+initializer.write_text(init_text)
+PY
+          echo "FLOYDADDONS_VERSION=$release_version" >> "$GITHUB_ENV"
+          echo "ORG_GRADLE_PROJECT_mod_version=$release_version" >> "$GITHUB_ENV"
+          echo "Computed FloydAddons release version: $release_version"
 
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew ./scripts/verify-floyd-in-odin.sh ./scripts/verify-live-hypixel-acquisition.py ./scripts/verify-runtime-scaffold.py ./scripts/verify-legacy-clickgui-runtime.py ./scripts/run-runtime-scaffold-smoke.sh ./scripts/install-built-jar.sh ./scripts/live-hypixel-status.sh
@@ -39,14 +72,14 @@ jobs:
             build/libs/FloydAddons-*.jar
             !build/libs/FloydAddons-*-sources.jar
 
-      - name: publish v2.0.0 release
+      - name: publish v2 release
         if: github.event_name == 'push' && github.ref == 'refs/heads/V2'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          tag="v2.0.0"
+          tag="v${FLOYDADDONS_VERSION}"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release $tag already exists."
             exit 0
@@ -71,5 +104,5 @@ jobs:
 
           gh release create "$tag" "${runtime_jars[0]}" \
             --target "$GITHUB_SHA" \
-            --title "FloydAddons v2.0.0 (MC 1.21.11)" \
+            --title "FloydAddons v${FLOYDADDONS_VERSION} (MC 1.21.11)" \
             --notes "Odin-based FloydAddons v2 for Minecraft 1.21.11."

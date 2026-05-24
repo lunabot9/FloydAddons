@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": ["Tim Waldin", "FloydAddons contributors", "Odin contributors"],
+  "icon": "assets/floydaddons/icons/taskbar_icon_128x128.png",
+  "license": "BSD-3-Clause AND MIT",
+  "environment": "client",
+  "entrypoints": {
+    "modmenu": [
+      "com.odtheking.odin.clickgui.ModMenuIntegration"
+    ],
+    "client": [
+      {
+        "adapter": "kotlin",
+        "value": "com.odtheking.odin.FloydAddonsMod"
+      }
+    ]
+  },
+  "mixins": [
+    "floydaddons.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": ">=${fabric_api_version}",
+    "minecraft": "~${minecraft_version}",
+    "fabric-language-kotlin": ">=${fabric_kotlin_version}"
+  }
+}

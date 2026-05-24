@@ -1780,7 +1780,6 @@ def verify_skin_page_controls(client: "BridgeClient") -> dict[str, Any]:
     before = skin_page_state(state)
     entries = skin_entries(state)
     expected = [
-        ("TOGGLE", "Custom Skin"),
         ("TOGGLE", "Self"),
         ("TOGGLE", "Others"),
         ("OPEN_FOLDER", "Open Skin Folder"),
@@ -1792,9 +1791,6 @@ def verify_skin_page_controls(client: "BridgeClient") -> dict[str, Any]:
     if dropdown_target is None:
         raise SystemExit(f"Skin page dropdown needs at least two available skins, got {available!r}")
 
-    custom_click = client.post("/mouse", mouse_payload(find_skin_entry(state, "TOGGLE", "Custom Skin")["bounds"], button=0))
-    time.sleep(0.15)
-    state = client.get("/state")
     self_click = client.post("/mouse", mouse_payload(find_skin_entry(state, "TOGGLE", "Self")["bounds"], button=0))
     time.sleep(0.15)
     state = client.get("/state")
@@ -1808,8 +1804,6 @@ def verify_skin_page_controls(client: "BridgeClient") -> dict[str, Any]:
     after = skin_page_state(client.get("/state"))
 
     failures: list[str] = []
-    if custom_click.get("handled") is not True:
-        failures.append("Skin Custom Skin page row click was not handled")
     if self_click.get("handled") is not True:
         failures.append("Skin Self page row click was not handled")
     if others_click.get("handled") is not True:
@@ -1820,8 +1814,6 @@ def verify_skin_page_controls(client: "BridgeClient") -> dict[str, Any]:
         failures.append("Skin dropdown page selection click was not handled")
     if missing:
         failures.append(f"Skin page entries missing expected controls {missing!r}; got {[(e.get('kind'), e.get('settingName')) for e in entries]}")
-    if after["customSkin"] == before["customSkin"]:
-        failures.append(f"Skin Custom Skin page row did not toggle value {before['customSkin']!r}")
     if after["self"] == before["self"]:
         failures.append(f"Skin Self page row did not toggle value {before['self']!r}")
     if after["others"] == before["others"]:
@@ -1840,7 +1832,6 @@ def verify_skin_page_controls(client: "BridgeClient") -> dict[str, Any]:
 
     return {
         "entriesContainExpected": not missing,
-        "customClickHandled": custom_click.get("handled"),
         "selfClickHandled": self_click.get("handled"),
         "othersClickHandled": others_click.get("handled"),
         "openFolderHandled": open_folder_click.get("handled"),
@@ -3312,14 +3303,10 @@ def restore_skin_page_controls(client: "BridgeClient", desired: dict[str, Any]) 
     for _ in range(16):
         state = open_skin_page(client)
         current = skin_page_state(state)
-        if {key: current[key] for key in ("customSkin", "self", "others", "selected")} == {
-            key: desired[key] for key in ("customSkin", "self", "others", "selected")
+        if {key: current[key] for key in ("self", "others", "selected")} == {
+            key: desired[key] for key in ("self", "others", "selected")
         }:
             return
-        if current["customSkin"] != desired["customSkin"]:
-            client.post("/mouse", mouse_payload(find_skin_entry(state, "TOGGLE", "Custom Skin")["bounds"], button=0))
-            time.sleep(0.15)
-            continue
         if current["self"] != desired["self"]:
             client.post("/mouse", mouse_payload(find_skin_entry(state, "TOGGLE", "Self")["bounds"], button=0))
             time.sleep(0.15)

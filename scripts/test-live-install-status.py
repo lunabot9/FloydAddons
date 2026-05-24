@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import tempfile
 import unittest
 import zipfile
@@ -12,6 +13,16 @@ from pathlib import Path
 
 
 SCRIPT = Path(__file__).with_name("live-install-status.py")
+
+
+def current_version() -> str:
+    env_version = os.environ.get("FLOYDADDONS_VERSION", "").strip()
+    if env_version:
+        return env_version.lstrip("v")
+    for line in Path("gradle.properties").read_text().splitlines():
+        if line.startswith("mod_version="):
+            return line.split("=", 1)[1].strip().lstrip("v")
+    return "2.0.1"
 
 
 def load_status():
@@ -30,7 +41,7 @@ class LiveInstallStatusTest(unittest.TestCase):
     def test_reports_ready_when_profile_and_runtime_jars_exist(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            build_jar = Path(directory) / "build" / "FloydAddons-0.1.0.jar"
+            build_jar = Path(directory) / "build" / f"FloydAddons-{current_version()}.jar"
             self.write_ready_install(root, build_jar)
 
             report = self.status_module.status(root, build_jar)
@@ -43,11 +54,11 @@ class LiveInstallStatusTest(unittest.TestCase):
     def test_reports_missing_profile_and_dependency_jars(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            build_jar = Path(directory) / "build" / "FloydAddons-0.1.0.jar"
+            build_jar = Path(directory) / "build" / f"FloydAddons-{current_version()}.jar"
             build_jar.parent.mkdir()
             self.write_jar(build_jar, "fabric.mod.json", '{"id":"floydaddons"}')
             (root / "mods").mkdir()
-            (root / "mods" / "FloydAddons-0.1.0.jar").write_bytes(build_jar.read_bytes())
+            (root / "mods" / f"FloydAddons-{current_version()}.jar").write_bytes(build_jar.read_bytes())
 
             report = self.status_module.status(root, build_jar)
 
@@ -60,9 +71,9 @@ class LiveInstallStatusTest(unittest.TestCase):
     def test_rejects_installed_floyd_jar_that_does_not_match_build(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            build_jar = Path(directory) / "build" / "FloydAddons-0.1.0.jar"
+            build_jar = Path(directory) / "build" / f"FloydAddons-{current_version()}.jar"
             self.write_ready_install(root, build_jar)
-            (root / "mods" / "FloydAddons-0.1.0.jar").write_text("stale floyd")
+            (root / "mods" / f"FloydAddons-{current_version()}.jar").write_text("stale floyd")
 
             report = self.status_module.status(root, build_jar)
 
@@ -72,7 +83,7 @@ class LiveInstallStatusTest(unittest.TestCase):
     def test_rejects_invalid_dependency_jar(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            build_jar = Path(directory) / "build" / "FloydAddons-0.1.0.jar"
+            build_jar = Path(directory) / "build" / f"FloydAddons-{current_version()}.jar"
             self.write_ready_install(root, build_jar)
             (root / "mods" / "fabric-api-0.141.3+1.21.11.jar").write_text("not a jar")
 
@@ -84,7 +95,7 @@ class LiveInstallStatusTest(unittest.TestCase):
     def test_rejects_invalid_current_build_jar(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            build_jar = Path(directory) / "build" / "FloydAddons-0.1.0.jar"
+            build_jar = Path(directory) / "build" / f"FloydAddons-{current_version()}.jar"
             self.write_ready_install(root, build_jar)
             build_jar.write_text("not a jar")
 
@@ -96,7 +107,7 @@ class LiveInstallStatusTest(unittest.TestCase):
     def test_rejects_missing_current_build_jar(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            build_jar = Path(directory) / "build" / "FloydAddons-0.1.0.jar"
+            build_jar = Path(directory) / "build" / f"FloydAddons-{current_version()}.jar"
             self.write_ready_install(root, build_jar)
             build_jar.unlink()
 
@@ -123,7 +134,7 @@ class LiveInstallStatusTest(unittest.TestCase):
                 }
             }
         }))
-        (mods_dir / "FloydAddons-0.1.0.jar").write_bytes(build_jar.read_bytes())
+        (mods_dir / f"FloydAddons-{current_version()}.jar").write_bytes(build_jar.read_bytes())
         for name in ("fabric-api-0.141.3+1.21.11.jar", "fabric-language-kotlin-1.13.10+kotlin.2.3.20.jar"):
             LiveInstallStatusTest.write_jar(mods_dir / name, "fabric.mod.json", name)
 
