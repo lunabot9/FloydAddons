@@ -1,0 +1,75 @@
+name: build
+on: [ pull_request, push ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        java: [ 21 ]
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: validate gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: setup jdk ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+          java-version: ${{ matrix.java }}
+
+      - name: setup gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: make gradle wrapper executable
+        run: chmod +x ./gradlew ./scripts/verify-floyd-in-odin.sh ./scripts/verify-live-hypixel-acquisition.py ./scripts/verify-runtime-scaffold.py ./scripts/verify-legacy-clickgui-runtime.py ./scripts/run-runtime-scaffold-smoke.sh ./scripts/install-built-jar.sh ./scripts/live-hypixel-status.sh
+
+      - name: verify floyd-in-odin
+        run: ./scripts/verify-floyd-in-odin.sh
+
+      - name: upload release jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: FloydAddons-${{ github.sha }}
+          path: |
+            build/libs/FloydAddons-*.jar
+            !build/libs/FloydAddons-*-sources.jar
+
+      - name: publish v2.0.0 release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/V2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          tag="v2.0.0"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists."
+            exit 0
+          fi
+
+          runtime_jars=()
+          for jar in build/libs/FloydAddons-*.jar; do
+            [[ "$jar" == *-sources.jar ]] && continue
+            runtime_jars+=("$jar")
+          done
+
+          if [[ "${#runtime_jars[@]}" -ne 1 ]]; then
+            printf '%s\n' "${runtime_jars[@]}"
+            echo "expected exactly one FloydAddons runtime jar" >&2
+            exit 1
+          fi
+
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            git tag "$tag" "$GITHUB_SHA"
+            git push origin "$tag"
+          fi
+
+          gh release create "$tag" "${runtime_jars[0]}" \
+            --target "$GITHUB_SHA" \
+            --title "FloydAddons v2.0.0 (MC 1.21.11)" \
+            --notes "Odin-based FloydAddons v2 for Minecraft 1.21.11."
