@@ -1,146 +1,138 @@
 #!/usr/bin/env python3
 """
-render_title_bg.py — Blender compositor script for FloydAddons animated title background.
+render_title_bg.py — Ken Burns zoom + lightning pulse for FloydAddons title background.
 
-Applies a Ken Burns zoom + lightning pulse effect to a source image, rendering
-PNG frames for use with FloydTitleScreenBackgroundMixin.
+Produces PNG frames for use with FloydTitleScreenBackgroundMixin.
+Requires: Pillow, numpy  (pip install Pillow numpy)
 
 Usage:
-    blender --background --python scripts/render_title_bg.py -- <image_path> [output_dir] [frames] [fps]
+    python3 scripts/render_title_bg.py [image_path] [output_dir] [frames] [fps] [width] [height]
 
 Defaults:
     image_path  ~/Downloads/mcbginspo.png
     output_dir  ~/floydaddons_title_frames
     frames      72  (3 s at 24 fps)
-    fps         24
+    fps         24  (stored in metadata only — used by encode_title_bg.sh)
+    width       1920
+    height      1080
 
 Install rendered frames:
     cp -r ~/floydaddons_title_frames ~/.minecraft/config/floydaddons/mainmenu_frames
 """
 
-import bpy
-import math
-import os
 import sys
+import os
+import math
+import numpy as np
+from PIL import Image, ImageFilter
 
 # ── Args ──────────────────────────────────────────────────────────────────────
 
-argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+argv = sys.argv[1:]
 IMAGE_PATH   = os.path.expanduser(argv[0]) if len(argv) > 0 else os.path.expanduser("~/Downloads/mcbginspo.png")
 OUTPUT_DIR   = os.path.expanduser(argv[1]) if len(argv) > 1 else os.path.expanduser("~/floydaddons_title_frames")
 TOTAL_FRAMES = int(argv[2])                if len(argv) > 2 else 72
 FPS          = int(argv[3])                if len(argv) > 3 else 24
+OUT_W        = int(argv[4])                if len(argv) > 4 else 1920
+OUT_H        = int(argv[5])                if len(argv) > 5 else 1080
 
-# Resolution: 1920×1080 fills any screen; render smaller for lighter install.
-# Default is 1920×1080. Override with --  <img> <outdir> <frames> <fps> <w> <h>
-OUT_W = int(argv[4]) if len(argv) > 4 else 1920
-OUT_H = int(argv[5]) if len(argv) > 5 else 1080
-
-print(f"[floyd-bg] image={IMAGE_PATH}  out={OUTPUT_DIR}  {TOTAL_FRAMES}f@{FPS}fps  {OUT_W}x{OUT_H}")
+print(f"[floyd-bg] {IMAGE_PATH}  →  {OUTPUT_DIR}")
+print(f"[floyd-bg] {TOTAL_FRAMES} frames @ {FPS} fps  |  {OUT_W}×{OUT_H}")
 
 if not os.path.exists(IMAGE_PATH):
     sys.exit(f"[floyd-bg] ERROR: image not found: {IMAGE_PATH}")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# ── Scene setup ───────────────────────────────────────────────────────────────
+# ── Load and prep source ──────────────────────────────────────────────────────
 
-scene = bpy.context.scene
-render = scene.render
-render.resolution_x    = OUT_W
-render.resolution_y    = OUT_H
-render.fps             = FPS
-render.use_compositing = True
-render.use_sequencer   = False
-scene.frame_start      = 1
-scene.frame_end        = TOTAL_FRAMES
-render.image_settings.file_format  = 'PNG'
-render.image_settings.color_mode   = 'RGB'
-render.image_settings.compression  = 15      # light PNG compression for speed
-render.filepath = os.path.join(OUTPUT_DIR, "frame_####")
+src = Image.open(IMAGE_PATH).convert("RGB")
+# Upscale source large enough that Ken Burns zoom never hits the edge
+# We zoom to 1.14× so we need source at least 1.14 × output size
+needed = (int(OUT_W * 1.20), int(OUT_H * 1.20))
+src_big = src.resize(needed, Image.LANCZOS)
+src_arr = np.array(src_big, dtype=np.float32) / 255.0
 
-# ── Load source image ─────────────────────────────────────────────────────────
+# Pre-compute a "lightning glow" layer: extract bright pixels, blur heavily
+def make_glow(arr_f32, blur_radius=40, threshold=0.75):
+    bright = np.clip(arr_f32 - threshold, 0, None) / (1.0 - threshold)
+    bright_img = Image.fromarray((bright * 255).astype(np.uint8))
+    blurred = bright_img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+    return np.array(blurred, dtype=np.float32) / 255.0
 
-img = bpy.data.images.load(IMAGE_PATH)
-img.colorspace_settings.name = 'sRGB'
+glow_layer = make_glow(src_arr)
 
-# ── Compositor node tree ──────────────────────────────────────────────────────
+def easeInOut(t):
+    return t * t * (3 - 2 * t)
 
-scene.use_nodes = True
-tree   = scene.node_tree
-nodes  = tree.nodes
-links  = tree.links
-nodes.clear()
+print(f"[floyd-bg] rendering {TOTAL_FRAMES} frames...")
 
-# Image source
-n_img = nodes.new('CompositorNodeImage')
-n_img.image    = img
-n_img.location = (-900, 0)
+for f in range(TOTAL_FRAMES):
+    t = f / max(TOTAL_FRAMES - 1, 1)
+    te = easeInOut(t)
 
-# Scale to render size (fills frame, crops to aspect ratio if needed)
-n_scale = nodes.new('CompositorNodeScale')
-n_scale.space        = 'RENDER_SIZE'
-n_scale.frame_method = 'CROP'
-n_scale.location     = (-700, 0)
+    # ── Ken Burns: zoom 1.0 → 1.12, drift toward face (center-right) ─────────
+    zoom   = 1.0 + 0.12 * te
+    # crop a region of size (OUT_W/zoom × OUT_H/zoom) from src_big
+    crop_w = int(OUT_W / zoom)
+    crop_h = int(OUT_H / zoom)
 
-# Ken Burns: slow zoom-in + slight lateral drift
-# Zoom from 1.0→1.14 over the clip; drift 30px right→center, 15px up
-n_transform = nodes.new('CompositorNodeTransform')
-n_transform.filter_type = 'BICUBIC'
-n_transform.location    = (-500, 0)
+    # Drift: start top-left offset, drift toward center of src_big
+    max_x = needed[0] - crop_w
+    max_y = needed[1] - crop_h
+    x0 = int(max_x * (0.3 * (1 - te)))          # drift from 30% offset toward 0
+    y0 = int(max_y * (0.15 * (1 - te) + 0.05))  # slight upward drift
 
-def _set_key(node_input, value, frame):
-    node_input.default_value = value
-    node_input.keyframe_insert(data_path='default_value', frame=frame)
+    crop = src_arr[y0:y0 + crop_h, x0:x0 + crop_w]
+    # Resize crop back to output size (this IS the zoom)
+    frame_img = Image.fromarray((crop * 255).astype(np.uint8))
+    frame_img = frame_img.resize((OUT_W, OUT_H), Image.LANCZOS)
+    frame = np.array(frame_img, dtype=np.float32) / 255.0
 
-for f in range(1, TOTAL_FRAMES + 1):
-    t = (f - 1) / max(TOTAL_FRAMES - 1, 1)
-    _set_key(n_transform.inputs['Scale'], 1.0 + 0.14 * t, f)
-    _set_key(n_transform.inputs['X'],    30.0 * (1.0 - t), f)
-    _set_key(n_transform.inputs['Y'],    15.0 * t,          f)
-    _set_key(n_transform.inputs['Angle'], 0.0,              f)
+    # Crop the glow layer the same way
+    glow_crop = glow_layer[y0:y0 + crop_h, x0:x0 + crop_w]
+    glow_img  = Image.fromarray((glow_crop * 255).astype(np.uint8))
+    glow_img  = glow_img.resize((OUT_W, OUT_H), Image.LANCZOS)
+    glow      = np.array(glow_img, dtype=np.float32) / 255.0
 
-# Ease the keyframe curves so the motion feels cinematic (ease-in-out)
-for fcurve in scene.animation_data.action.fcurves if scene.animation_data and scene.animation_data.action else []:
-    for kp in fcurve.keyframe_points:
-        kp.interpolation = 'BEZIER'
-        kp.easing = 'EASE_IN_OUT'
+    # ── Lightning pulse (3 asymmetric bursts per loop) ────────────────────────
+    tc = f / TOTAL_FRAMES
+    pulse = max(0.0, math.sin(tc * math.pi * 6)) ** 1.5   # sharp rise, fast decay
+    pulse_strength = 0.10 + 0.35 * pulse
 
-# Glare / bloom — pulses 3× per loop to sell the lightning effect
-n_glare = nodes.new('CompositorNodeGlare')
-n_glare.glare_type = 'BLOOM'
-n_glare.threshold  = 0.82
-n_glare.size       = 7
-n_glare.quality    = 'MEDIUM'
-n_glare.location   = (-300, 0)
+    # Add glow (screen blend: 1 - (1-a)(1-b))
+    frame = 1.0 - (1.0 - frame) * (1.0 - glow * pulse_strength)
 
-for f in range(1, TOTAL_FRAMES + 1):
-    t = (f - 1) / TOTAL_FRAMES
-    # 3 asymmetric pulses: sharp rise, slower decay
-    pulse = 0.08 + 0.18 * max(0.0, math.sin(t * math.pi * 6)) ** 2
-    _set_key(n_glare.inputs['Mix'] if 'Mix' in n_glare.inputs else n_glare.inputs[0], pulse, f)
+    # ── Color grade: push purple/electric ────────────────────────────────────
+    r, g, b = frame[:,:,0], frame[:,:,1], frame[:,:,2]
+    r = r * 0.92
+    g = g * 0.88
+    b = np.clip(b * 1.14, 0, 1)
+    # Lift shadows toward indigo
+    shadow_mask = 1.0 - frame.mean(axis=2, keepdims=True)
+    r = r + shadow_mask[:,:,0] * 0.03
+    g = g + shadow_mask[:,:,0] * 0.01
+    b = b + shadow_mask[:,:,0] * 0.06
+    frame = np.stack([r, g, b], axis=2)
 
-# Color balance: push the purple/electric palette
-n_color = nodes.new('CompositorNodeColorBalance')
-n_color.correction_method = 'LIFT_GAMMA_GAIN'
-n_color.lift  = (0.96, 0.94, 1.04, 1.0)   # blue shadows
-n_color.gamma = (1.00, 0.96, 1.04, 1.0)   # cool mids
-n_color.gain  = (0.94, 0.90, 1.12, 1.0)   # push electric highlights
-n_color.location = (-100, 0)
+    # ── Vignette ─────────────────────────────────────────────────────────────
+    ys = np.linspace(-1, 1, OUT_H)[:, None]
+    xs = np.linspace(-1, 1, OUT_W)[None, :]
+    vignette = 1.0 - 0.45 * np.clip(xs**2 + ys**2, 0, 1)
+    frame = frame * vignette[:, :, None]
 
-# Output
-n_comp = nodes.new('CompositorNodeComposite')
-n_comp.location = (150, 0)
+    frame = np.clip(frame, 0, 1)
 
-# Wire
-links.new(n_img.outputs['Image'],        n_scale.inputs['Image'])
-links.new(n_scale.outputs['Image'],      n_transform.inputs['Image'])
-links.new(n_transform.outputs['Image'],  n_glare.inputs['Image'])
-links.new(n_glare.outputs['Image'],      n_color.inputs['Image'])
-links.new(n_color.outputs['Image'],      n_comp.inputs['Image'])
+    # ── Save ─────────────────────────────────────────────────────────────────
+    out_path = os.path.join(OUTPUT_DIR, f"frame_{f + 1:04d}.png")
+    Image.fromarray((frame * 255).astype(np.uint8)).save(out_path, optimize=False)
 
-# ── Render ────────────────────────────────────────────────────────────────────
+    if f % 12 == 0 or f == TOTAL_FRAMES - 1:
+        print(f"  {f + 1}/{TOTAL_FRAMES}")
 
-print(f"[floyd-bg] rendering {TOTAL_FRAMES} frames → {OUTPUT_DIR}")
-bpy.ops.render.render(animation=True)
-print(f"[floyd-bg] done. copy output to: ~/.minecraft/config/floydaddons/mainmenu_frames/")
+# Write FPS hint file for encode script
+with open(os.path.join(OUTPUT_DIR, "fps.txt"), "w") as fh:
+    fh.write(str(FPS) + "\n")
+
+print(f"[floyd-bg] done — {TOTAL_FRAMES} frames in {OUTPUT_DIR}")
+print(f"[floyd-bg] next: run scripts/encode_title_bg.sh to encode preview + install")
