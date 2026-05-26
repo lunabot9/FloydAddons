@@ -1034,6 +1034,8 @@ class ScaffoldAuditTest {
             "toggleSettingRow(FloydSkin, \"Custom Skin\", \"Custom Skin\", RowLayout.LEFT)",
             "ModuleManager.saveConfigurations()",
             "drawStretchBackground(context",
+            "private const val hubBackgroundTextureSize = 1024",
+            "hubBackgroundTextureSize, hubBackgroundTextureSize",
             "drawChromaBorder(context",
             "drawCentralLabels(context",
             "mc.setScreen(HudManager)",

@@ -88,7 +88,7 @@ object FloydHud : Module(
             if (consumeVanillaSignal) vanillaScoreboardWouldRender.set(false)
             return false
         }
-        return if (consumeVanillaSignal) vanillaScoreboardWouldRender.getAndSet(false) else vanillaScoreboardWouldRender.get()
+        return vanillaScoreboardWouldRender.get()
     }
 
     private fun GuiGraphics.drawInventoryHud(): Pair<Int, Int> {

@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 
 class FloydHudTest {
     @Test
-    fun `custom scoreboard requires vanilla sidebar signal`() {
+    fun `custom scoreboard keeps drawing after vanilla sidebar signal`() {
         FloydHud.resetVanillaScoreboardWouldRender()
 
         assertFalse(
@@ -31,7 +31,7 @@ class FloydHudTest {
                 hudEnabled = true
             )
         )
-        assertFalse(
+        assertTrue(
             FloydHud.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
@@ -108,7 +108,7 @@ class FloydHudTest {
         assertTrue(floyd.contains("String footerText = \"FloydAddons\""))
 
         assertTrue(active.contains("sortedWith(compareByDescending<PlayerScoreEntry> { it.value() }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.owner() })"))
-        assertTrue(active.contains("return if (consumeVanillaSignal) vanillaScoreboardWouldRender.getAndSet(false) else vanillaScoreboardWouldRender.get()"))
+        assertTrue(active.contains("return vanillaScoreboardWouldRender.get()"))
         assertTrue(active.contains("DisplaySlot::teamColorToSlot"))
         assertTrue(active.contains("if (lines.size > 1) lines.removeAt(lines.lastIndex)"))
         assertTrue(active.contains("Component.literal(\"FloydAddons\").visualOrderText"))

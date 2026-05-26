@@ -71,6 +71,7 @@ import org.lwjgl.glfw.GLFW
 object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private const val hubPanelWidth = 480
     private const val hubPanelHeight = 270
+    private const val hubBackgroundTextureSize = 1024
     private const val borderThickness = 1
     private const val fadeDurationMs = 120L
     private const val dragBarHeight = 22
@@ -6357,7 +6358,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun drawStretchBackground(context: GuiGraphics, x: Int, y: Int, w: Int, h: Int, alpha: Float) {
         val a = (alpha.coerceIn(0f, 1f) * 255).roundToInt()
         context.fill(x, y, x + w, y + h, a shl 24)
-        context.blit(RenderPipelines.GUI_TEXTURED, background, x, y, 0f, 0f, w, h, w, h)
+        context.blit(RenderPipelines.GUI_TEXTURED, background, x, y, 0f, 0f, w, h, hubBackgroundTextureSize, hubBackgroundTextureSize)
     }
 
     private fun drawTitle(context: GuiGraphics, centerX: Int, y: Int, alpha: Float) {
