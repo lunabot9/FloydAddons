@@ -48,7 +48,7 @@ object FloydAddonsMod : ClientModInitializer {
 
     const val MOD_ID = "floydaddons"
     const val MOD_NAME = "Floyd Addons"
-    const val MOD_VERSION = "2.0.2"
+    const val MOD_VERSION = "2.0.3"
 
     val scope = CoroutineScope(SupervisorJob() + EmptyCoroutineContext)
 

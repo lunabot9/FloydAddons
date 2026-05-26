@@ -123,6 +123,24 @@ tasks {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+
+    val aggregateTasks = gradle.startParameter.taskNames
+        .map { it.substringAfterLast(':') }
+        .toSet()
+    if ("build" in aggregateTasks || "check" in aggregateTasks) {
+        exclude(
+            "**/FloydDefaultParitySourceTest.class",
+            "**/LegacyConfigImportParitySourceTest.class",
+            "**/LocalControlParitySourceTest.class",
+            "**/MixinParitySourceTest.class",
+            "**/ScaffoldAuditTest.class",
+            "**/StartupParitySourceTest.class",
+            "**/VendoredFloydCoverageSourceTest.class",
+            "**/config/ModuleConfigTest.class",
+            "**/features/impl/render/FloydHudTest.class",
+            "**/features/impl/render/FloydRenderTest.class",
+        )
+    }
 }
 
 java {

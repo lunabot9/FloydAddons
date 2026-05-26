@@ -43,6 +43,7 @@ object FloydHubMap : Module(
     private const val MAP_TILE_SIZE = 128
     private const val TOTAL_TILES = MAP_COLUMNS * MAP_ROWS
     private const val SCAN_INTERVAL_TICKS = 20L
+    private const val MAX_GIF_FRAMES = 32
 
     var selectedImage by StringSetting("Image", "", 96, desc = "PNG or GIF file in config/floydaddons/hub-map.")
     private val openFolder by ActionSetting("Open Folder", desc = "Opens config/floydaddons/hub-map.") {
@@ -61,15 +62,14 @@ object FloydHubMap : Module(
     }
 
     private val imageDir: Path = FloydAddonsMod.configFile.toPath().resolve("hub-map")
-    private val tileIdentifiers = Array(TOTAL_TILES) { index ->
-        Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "hub_map/custom_$index")
-    }
 
     private var cachedSelection: String? = null
     private var tileTextures = emptyList<LinearHubMapTexture>()
     private var gifTiles: GifTileSet? = null
     private var mappedTilesById = emptyMap<Int, Int>()
     private var lastScanTick = -100L
+    private var textureGeneration = 0L
+    private var tileIdentifiers = buildTileIdentifiers()
 
     init {
         on<TickEvent.ClientEnd> {
@@ -102,6 +102,8 @@ object FloydHubMap : Module(
     )
 
     fun reload() {
+        textureGeneration += 1
+        tileIdentifiers = buildTileIdentifiers()
         cachedSelection = null
         gifTiles = null
         tileTextures = emptyList()
@@ -134,6 +136,9 @@ object FloydHubMap : Module(
 
         ensureExternalDir()
         gifTiles = null
+
+        textureGeneration += 1
+        tileIdentifiers = buildTileIdentifiers()
 
         val originalSelection = selection
         val selectedPath = selection.takeIf { it.isNotBlank() }?.let(imageDir::resolve)?.takeIf { it.isRegularFile() }
@@ -284,18 +289,18 @@ object FloydHubMap : Module(
         return buildList(TOTAL_TILES) {
             for (row in 0 until MAP_ROWS) {
                 for (column in 0 until MAP_COLUMNS) {
-                    add(nativeImageFromBuffered(scaled.getSubimage(column * MAP_TILE_SIZE, row * MAP_TILE_SIZE, MAP_TILE_SIZE, MAP_TILE_SIZE)))
+                    add(nativeImageFromBuffered(scaled, column * MAP_TILE_SIZE, row * MAP_TILE_SIZE))
                 }
             }
         }
     }
 
-    private fun nativeImageFromBuffered(image: BufferedImage): NativeImage {
-        val native = NativeImage(image.width, image.height, false)
-        for (y in 0 until image.height) {
-            for (x in 0 until image.width) {
-                native.setPixel(x, y, image.getRGB(x, y))
-            }
+    private fun nativeImageFromBuffered(image: BufferedImage, startX: Int, startY: Int): NativeImage {
+        val native = NativeImage(MAP_TILE_SIZE, MAP_TILE_SIZE, false)
+        val pixels = IntArray(MAP_TILE_SIZE * MAP_TILE_SIZE)
+        image.getRGB(startX, startY, MAP_TILE_SIZE, MAP_TILE_SIZE, pixels, 0, MAP_TILE_SIZE)
+        for (index in pixels.indices) {
+            native.setPixel(index % MAP_TILE_SIZE, index / MAP_TILE_SIZE, pixels[index])
         }
         return native
     }
@@ -312,6 +317,24 @@ object FloydHubMap : Module(
 
                     val canvasWidth = reader.getWidth(0)
                     val canvasHeight = reader.getHeight(0)
+                    if (frameCount > MAX_GIF_FRAMES) {
+                        FloydAddonsMod.logger.warn(
+                            "Hub map GIF {} has {} frames; using static first-frame fallback to avoid client lag.",
+                            path.fileName,
+                            frameCount
+                        )
+                        val first = reader.read(0) ?: return null
+                        val firstComposite = BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB)
+                        val firstGraphics = firstComposite.createGraphics()
+                        try {
+                            firstGraphics.drawImage(first, 0, 0, null)
+                        } finally {
+                            firstGraphics.dispose()
+                        }
+                        val tiles = sliceScaledImage(firstComposite)
+                        return GifTileSet(registerTiles(tiles), listOf(tiles), intArrayOf(100))
+                    }
+
                     val composite = BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB)
                     val compositeGraphics = composite.createGraphics()
                     val tileFrames = mutableListOf<List<NativeImage>>()
@@ -369,6 +392,13 @@ object FloydHubMap : Module(
 
     private fun saveIfSelectionChanged(originalSelection: String?) {
         if (selectedImage != originalSelection) ModuleManager.saveConfigurations()
+    }
+
+    private fun buildTileIdentifiers(): Array<Identifier> {
+        val generation = textureGeneration
+        return Array(TOTAL_TILES) { index ->
+            Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "hub_map/${generation}_$index")
+        }
     }
 
     private fun Int.floorMod(modulus: Int): Int = ((this % modulus) + modulus) % modulus

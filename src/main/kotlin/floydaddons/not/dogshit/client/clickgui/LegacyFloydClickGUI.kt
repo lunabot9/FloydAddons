@@ -4449,7 +4449,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun moduleBrowserCategories(): List<Category> =
-        listOf(Category.RENDER, Category.HIDERS, Category.PLAYER, Category.CAMERA)
+        listOf(Category.RENDER, Category.HIDERS, Category.PLAYER, Category.CAMERA, Category.HUD)
 
     private fun drawModuleBrowserSearch(context: GuiGraphics, alpha: Float) {
         val x = (width - moduleBrowserSearchWidth) / 2
@@ -4546,7 +4546,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydTimeChanger, "Time Changer", LegacyModuleBrowserKind.MODULE, "Time Changer"),
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
-                LegacyModuleBrowserEntry(FloydCustomScoreboard, "Custom Scoreboard", LegacyModuleBrowserKind.MODULE, "Custom Scoreboard"),
                 LegacyModuleBrowserEntry(FloydHubMap, "Custom Hub Map", LegacyModuleBrowserKind.MODULE),
                 LegacyModuleBrowserEntry(FloydRender, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
                 LegacyModuleBrowserEntry(ClickGUIModule, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
@@ -4581,6 +4580,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydFreecamModule, "Freecam", LegacyModuleBrowserKind.CAMERA_FREECAM),
                 LegacyModuleBrowserEntry(FloydFreelookModule, "Freelook", LegacyModuleBrowserKind.CAMERA_FREELOOK),
                 LegacyModuleBrowserEntry(FloydF5CustomizerModule, "F5 Customizer", LegacyModuleBrowserKind.CAMERA_F5)
+            )
+            Category.HUD -> listOf(
+                LegacyModuleBrowserEntry(FloydCustomScoreboard, "Custom Scoreboard", LegacyModuleBrowserKind.MODULE, "Custom Scoreboard")
             )
             else -> emptyList()
         }.filter { entry -> ModuleManager.modules.containsValue(entry.module) }

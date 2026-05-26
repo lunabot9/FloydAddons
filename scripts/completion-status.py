@@ -37,7 +37,7 @@ def current_version() -> str:
         for line in properties.read_text().splitlines():
             if line.startswith("mod_version="):
                 return line.split("=", 1)[1].strip().lstrip("v")
-    return "2.0.2"
+    return "2.0.3"
 
 
 def parse_args() -> argparse.Namespace:

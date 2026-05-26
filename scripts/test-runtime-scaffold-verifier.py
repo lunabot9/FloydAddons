@@ -91,7 +91,7 @@ def state():
         "scaffold": {
             "modId": "floydaddons",
             "modName": "Floyd Addons",
-            "version": "2.0.2",
+            "version": "2.0.3",
             "minecraftVersion": "1.21.11",
             "entrypoint": "floydaddons.not.dogshit.client.FloydAddonsMod",
             "mixinConfig": "floydaddons.mixins.json",

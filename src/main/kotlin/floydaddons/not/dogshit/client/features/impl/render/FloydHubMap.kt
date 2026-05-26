@@ -62,15 +62,14 @@ object FloydHubMap : Module(
     }
 
     private val imageDir: Path = FloydAddonsMod.configFile.toPath().resolve("hub-map")
-    private val tileIdentifiers = Array(TOTAL_TILES) { index ->
-        Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "hub_map/custom_$index")
-    }
 
     private var cachedSelection: String? = null
     private var tileTextures = emptyList<LinearHubMapTexture>()
     private var gifTiles: GifTileSet? = null
     private var mappedTilesById = emptyMap<Int, Int>()
     private var lastScanTick = -100L
+    private var textureGeneration = 0L
+    private var tileIdentifiers = buildTileIdentifiers()
 
     init {
         on<TickEvent.ClientEnd> {
@@ -103,6 +102,8 @@ object FloydHubMap : Module(
     )
 
     fun reload() {
+        textureGeneration += 1
+        tileIdentifiers = buildTileIdentifiers()
         cachedSelection = null
         gifTiles = null
         tileTextures = emptyList()
@@ -135,6 +136,9 @@ object FloydHubMap : Module(
 
         ensureExternalDir()
         gifTiles = null
+
+        textureGeneration += 1
+        tileIdentifiers = buildTileIdentifiers()
 
         val originalSelection = selection
         val selectedPath = selection.takeIf { it.isNotBlank() }?.let(imageDir::resolve)?.takeIf { it.isRegularFile() }
@@ -388,6 +392,13 @@ object FloydHubMap : Module(
 
     private fun saveIfSelectionChanged(originalSelection: String?) {
         if (selectedImage != originalSelection) ModuleManager.saveConfigurations()
+    }
+
+    private fun buildTileIdentifiers(): Array<Identifier> {
+        val generation = textureGeneration
+        return Array(TOTAL_TILES) { index ->
+            Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "hub_map/${generation}_$index")
+        }
     }
 
     private fun Int.floorMod(modulus: Int): Int = ((this % modulus) + modulus) % modulus
