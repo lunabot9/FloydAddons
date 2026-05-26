@@ -22,7 +22,7 @@ def current_version() -> str:
     for line in Path("gradle.properties").read_text().splitlines():
         if line.startswith("mod_version="):
             return line.split("=", 1)[1].strip().lstrip("v")
-    return "2.0.1"
+    return "2.0.2"
 
 
 def load_status():

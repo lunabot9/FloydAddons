@@ -9,10 +9,10 @@ import floydaddons.not.dogshit.client.features.misc.*;
 import floydaddons.not.dogshit.client.esp.*;
 import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
+import floydaddons.not.dogshit.client.utils.ui.rendering.NVGRenderer;
 
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.scoreboard.Scoreboard;
@@ -26,6 +26,7 @@ import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,6 +42,7 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
     private static final int LINE_HEIGHT = 9;
     private static final int PADDING = 3;
     private static final int TITLE_PADDING = 2;
+    private static final float HUD_TEXT_SIZE = 9f;
 
     private static int lastWidth = 100;
     private static int lastHeight = 50;
@@ -90,7 +92,6 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
         if (objective == null) return;
 
         NumberFormat numberFormat = objective.getNumberFormatOr(StyledNumberFormat.RED);
-        TextRenderer textRenderer = mc.textRenderer;
 
         // Collect entries — convert to OrderedText and apply nick/server-ID
         // replacements directly.  We must work at the OrderedText level because
@@ -108,7 +109,7 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
                     Text rawName = Team.decorateName(entryTeam, entry.name());
                     OrderedText name = NickTextUtil.replaceAllNamesInOrderedText(rawName.asOrderedText());
                     Text score = entry.formatted(numberFormat);
-                    return new EntryLine(name, score, textRenderer.getWidth(score));
+                    return new EntryLine(orderedTextToString(name), score.getString(), textWidth(score.getString()));
                 })
                 .toList();
 
@@ -119,16 +120,16 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
             lines = lines.subList(0, lines.size() - 1);
         }
 
-        Text title = objective.getDisplayName();
-        int titleWidth = textRenderer.getWidth(title);
+        String title = objective.getDisplayName().getString();
+        int titleWidth = textWidth(title);
         String footerText = "FloydAddons";
-        int footerWidth = textRenderer.getWidth(footerText);
+        int footerWidth = textWidth(footerText);
 
         // Calculate dimensions
-        int colonWidth = textRenderer.getWidth(": ");
+        int colonWidth = textWidth(": ");
         int maxLineWidth = Math.max(titleWidth, footerWidth);
         for (EntryLine line : lines) {
-            int lineWidth = textRenderer.getWidth(line.name) + (line.scoreWidth > 0 ? colonWidth + line.scoreWidth : 0);
+            int lineWidth = textWidth(line.name) + (line.scoreWidth > 0 ? colonWidth + line.scoreWidth : 0);
             if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
         }
 
@@ -165,26 +166,36 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
             InventoryHudRenderer.drawChromaBorder(context, x - 1, y - 1, x + boxWidth + 1, y + boxHeight + 1, 1f);
         }
 
-        // Title (chroma colored, centered)
-        int titleX = x + (boxWidth - titleWidth) / 2;
-        int titleY = y + TITLE_PADDING;
-        context.drawTextWithShadow(textRenderer, title, titleX, titleY, uiTextColor(0f));
-
-        // Entry lines (directly after title, no divider)
         int lineY = y + titleBarHeight;
-        int scoreRight = x + boxWidth - PADDING;
-        for (EntryLine line : lines) {
-            context.drawText(textRenderer, line.name, x + PADDING, lineY, 0xFFFFFFFF, false);
-            if (line.scoreWidth > 0) {
-                context.drawText(textRenderer, line.score, scoreRight - line.scoreWidth, lineY, 0xFFFFFFFF, false);
-            }
-            lineY += LINE_HEIGHT;
-        }
+        renderHudText(title, footerText, titleWidth, footerWidth, x, y, boxWidth, lineY, lines);
+    }
 
-        // Footer: "FloydAddons" in chroma, centered
-        int footerX = x + (boxWidth - footerWidth) / 2;
-        int footerY = lineY + TITLE_PADDING;
-        context.drawTextWithShadow(textRenderer, footerText, footerX, footerY, uiTextColor(0.5f));
+    private static void renderHudText(String title, String footerText, int titleWidth, int footerWidth,
+                                      int boxX, int boxY, int boxWidth, int lineY, List<EntryLine> lines) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null) return;
+
+        NVGRenderer.INSTANCE.beginFrame(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        try {
+            int titleDrawX = boxX + (boxWidth - titleWidth) / 2;
+            int titleDrawY = boxY + TITLE_PADDING;
+            drawHudText(title, titleDrawX, titleDrawY, uiTextColor(0f));
+
+            int currentY = lineY;
+            int scoreRight = boxX + boxWidth - PADDING;
+            for (EntryLine line : lines) {
+                drawHudText(line.name(), boxX + PADDING, currentY, 0xFFFFFFFF);
+                if (line.scoreWidth() > 0) {
+                    drawHudText(line.score(), scoreRight - line.scoreWidth(), currentY, 0xFFFFFFFF);
+                }
+                currentY += LINE_HEIGHT;
+            }
+
+            int footerDrawX = boxX + (boxWidth - footerWidth) / 2;
+            drawHudText(footerText, footerDrawX, currentY + TITLE_PADDING, uiTextColor(0.5f));
+        } finally {
+            NVGRenderer.INSTANCE.endFrame();
+        }
     }
 
     public static int getLastWidth() { return lastWidth; }
@@ -196,5 +207,22 @@ public final class ScoreboardHudRenderer implements HudRenderCallback {
         return RenderConfig.getButtonTextLiveColor(offset);
     }
 
-    private record EntryLine(OrderedText name, Text score, int scoreWidth) {}
+    private static int textWidth(String text) {
+        return Math.round(NVGRenderer.INSTANCE.textWidth(text, HUD_TEXT_SIZE, NVGRenderer.INSTANCE.getDefaultFont()));
+    }
+
+    private static void drawHudText(String text, float x, float y, int color) {
+        NVGRenderer.INSTANCE.text(text, x, y, HUD_TEXT_SIZE, color, NVGRenderer.INSTANCE.getDefaultFont());
+    }
+
+    private static String orderedTextToString(OrderedText text) {
+        StringBuilder sb = new StringBuilder();
+        text.accept((index, style, codePoint) -> {
+            sb.appendCodePoint(codePoint);
+            return true;
+        });
+        return sb.toString();
+    }
+
+    private record EntryLine(String name, String score, int scoreWidth) {}
 }

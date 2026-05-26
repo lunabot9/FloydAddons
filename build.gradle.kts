@@ -62,6 +62,11 @@ dependencies {
 }
 
 loom {
+    mixin {
+        useLegacyMixinAp = true
+        defaultRefmapName = "floydaddons.refmap.json"
+    }
+
     runConfigs.named("client") {
         isIdeConfigGenerated = true
         vmArgs.addAll(
@@ -94,6 +99,7 @@ tasks {
     }
 
     named<Jar>("jar") {
+        exclude("com/odtheking/**", "starred/skies/**", "odin.mixins.json", "odinClient.mixins.json")
         from(listOf("LICENSE", "THIRD_PARTY_NOTICES.md", "PROVENANCE.md")) {
             into("META-INF")
         }
@@ -127,6 +133,7 @@ java {
 }
 
 tasks.named<Jar>("sourcesJar") {
+    exclude("com/odtheking/**", "starred/skies/**", "odin.mixins.json", "odinClient.mixins.json")
     from(listOf("LICENSE", "THIRD_PARTY_NOTICES.md", "PROVENANCE.md")) {
         into("META-INF")
     }

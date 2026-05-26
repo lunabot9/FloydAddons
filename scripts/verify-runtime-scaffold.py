@@ -25,9 +25,9 @@ EXPECTED_CATEGORY_MODULES = {
 EXPECTED_SCAFFOLD = {
     "modId": "floydaddons",
     "modName": "Floyd Addons",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "minecraftVersion": "1.21.11",
-    "entrypoint": "com.odtheking.odin.FloydAddonsMod",
+    "entrypoint": "floydaddons.not.dogshit.client.FloydAddonsMod",
     "mixinConfig": "floydaddons.mixins.json",
     "resourceNamespace": "floydaddons",
     "activeScaffold": "Odin Fabric module/config/event/ClickGUI",

@@ -477,11 +477,11 @@ class LegacyClickGuiRuntimeVerifierTest(unittest.TestCase):
         self.assertNotIn("FloydPageReal", FakeClient.latest.nick_name_mappings)
         self.assertEqual("Inventory HUD", proof["hudEditLayoutExtra"]["inventoryHud"]["popup"])
         self.assertEqual(["Edit Layout"], proof["hudEditLayoutExtra"]["inventoryHud"]["extras"])
-        self.assertEqual("com.odtheking.odin.clickgui.HudManager", proof["hudEditLayoutExtra"]["inventoryHud"]["screen"])
+        self.assertEqual("floydaddons.not.dogshit.client.clickgui.HudManager", proof["hudEditLayoutExtra"]["inventoryHud"]["screen"])
         self.assertEqual("HUD Manager", proof["hudEditLayoutExtra"]["inventoryHud"]["screenTitle"])
         self.assertEqual("Custom Scoreboard", proof["hudEditLayoutExtra"]["customScoreboard"]["popup"])
         self.assertEqual(["Edit Layout"], proof["hudEditLayoutExtra"]["customScoreboard"]["extras"])
-        self.assertEqual("com.odtheking.odin.clickgui.HudManager", proof["hudEditLayoutExtra"]["customScoreboard"]["screen"])
+        self.assertEqual("floydaddons.not.dogshit.client.clickgui.HudManager", proof["hudEditLayoutExtra"]["customScoreboard"]["screen"])
         self.assertEqual("HUD Manager", proof["hudEditLayoutExtra"]["customScoreboard"]["screenTitle"])
 
     def test_rejects_mob_right_click_toggle_regression(self) -> None:
@@ -762,7 +762,7 @@ class FakeClient:
         ignore_player_size_page: bool = False,
     ) -> None:
         FakeClient.latest = self
-        self.screen = "com.odtheking.odin.clickgui.LegacyFloydClickGUI"
+        self.screen = "floydaddons.not.dogshit.client.clickgui.LegacyFloydClickGUI"
         self.screen_title: str | None = None
         self.page = "HUB"
         self.xray_enabled = False
@@ -964,7 +964,7 @@ class FakeClient:
                 self.screen_title = None
                 self.popup = None
             else:
-                self.screen = "com.odtheking.odin.clickgui.LegacyFloydClickGUI"
+                self.screen = "floydaddons.not.dogshit.client.clickgui.LegacyFloydClickGUI"
                 self.screen_title = None
                 self.page = "HUB"
                 self.popup = None
@@ -1661,7 +1661,7 @@ class FakeClient:
             and inside(x, y, self.inventory_hud_layout_bounds())
         ):
             if not self.ignore_hud_layout:
-                self.screen = "com.odtheking.odin.clickgui.HudManager"
+                self.screen = "floydaddons.not.dogshit.client.clickgui.HudManager"
                 self.screen_title = "HUD Manager"
                 self.popup = None
             handled = True

@@ -10,12 +10,12 @@
   "environment": "client",
   "entrypoints": {
     "modmenu": [
-      "com.odtheking.odin.clickgui.ModMenuIntegration"
+      "floydaddons.not.dogshit.client.clickgui.ModMenuIntegration"
     ],
     "client": [
       {
         "adapter": "kotlin",
-        "value": "com.odtheking.odin.FloydAddonsMod"
+        "value": "floydaddons.not.dogshit.client.FloydAddonsMod"
       }
     ]
   },

@@ -9,8 +9,8 @@ combined implementation; the upstream inputs used for the port are:
 | FloydAddons upstream | `https://github.com/lunabot9/FloydAddons.git` `main` | `17c5ba3d4fa0185eb689a62f1f6c3de0d6a60b75` |
 | FloydAddons fork source | `/Users/twaldin/SkyblockQOLmod` / `https://github.com/twaldin/SkyblockQOLmod.git` `main` | `17c5ba3d4fa0185eb689a62f1f6c3de0d6a60b75` |
 
-The active Odin scaffold lives under `src/main/kotlin/com/odtheking/odin` and
-`src/main/java/com/odtheking/mixin`, adapted for the `floydaddons` mod id and
+The active Odin scaffold lives under `src/main/kotlin/floydaddons/not/dogshit/client` and
+`src/main/java/floydaddons/not/dogshit/mixin`, adapted for the `floydaddons` mod id and
 Floyd feature surfaces.
 
 The Floyd behavior source is vendored under `vendor/floydaddons-fabric` for

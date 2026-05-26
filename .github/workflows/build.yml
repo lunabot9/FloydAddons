@@ -46,12 +46,12 @@ import sys
 version = sys.argv[1]
 props = Path("gradle.properties")
 props_text = props.read_text()
-props_text = props_text.replace("mod_version=2.0.1", f"mod_version={version}")
+props_text = props_text.replace("mod_version=2.0.2", f"mod_version={version}")
 props.write_text(props_text)
 
-initializer = Path("src/main/kotlin/com/odtheking/odin/FloydAddonsMod.kt")
+initializer = Path("src/main/kotlin/floydaddons/not/dogshit/client/FloydAddonsMod.kt")
 init_text = initializer.read_text()
-init_text = init_text.replace('const val MOD_VERSION = "2.0.1"', f'const val MOD_VERSION = "{version}"')
+init_text = init_text.replace('const val MOD_VERSION = "2.0.2"', f'const val MOD_VERSION = "{version}"')
 initializer.write_text(init_text)
 PY
           echo "FLOYDADDONS_VERSION=$release_version" >> "$GITHUB_ENV"
@@ -59,10 +59,10 @@ PY
           echo "Computed FloydAddons release version: $release_version"
 
       - name: make gradle wrapper executable
-        run: chmod +x ./gradlew ./scripts/verify-floyd-in-odin.sh ./scripts/verify-live-hypixel-acquisition.py ./scripts/verify-runtime-scaffold.py ./scripts/verify-legacy-clickgui-runtime.py ./scripts/run-runtime-scaffold-smoke.sh ./scripts/install-built-jar.sh ./scripts/live-hypixel-status.sh
+        run: chmod +x ./gradlew ./scripts/verify-floyd-in-floydaddons.sh ./scripts/verify-live-hypixel-acquisition.py ./scripts/verify-runtime-scaffold.py ./scripts/verify-legacy-clickgui-runtime.py ./scripts/run-runtime-scaffold-smoke.sh ./scripts/install-built-jar.sh ./scripts/live-hypixel-status.sh
 
-      - name: verify floyd-in-odin
-        run: ./scripts/verify-floyd-in-odin.sh
+      - name: verify floydaddons
+        run: ./scripts/verify-floyd-in-floydaddons.sh
 
       - name: upload release jar
         uses: actions/upload-artifact@v4

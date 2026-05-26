@@ -9,8 +9,8 @@ is ported into that scaffold as Odin modules.
 
 ## Source Layout
 
-- `src/main/kotlin/com/odtheking/odin`: active Odin-based scaffold and Floyd module surfaces.
-- `src/main/java/com/odtheking/mixin`: active Mojang-mapped behavior mixins.
+- `src/main/kotlin/floydaddons/not/dogshit/client`: active Odin-based scaffold and Floyd module surfaces.
+- `src/main/java/floydaddons/not/dogshit/mixin`: active Mojang-mapped behavior mixins.
 - `src/main/resources`: Fabric metadata and retained runtime assets under `assets/floydaddons`.
 - `vendor/floydaddons-fabric`: vendored FloydAddons Fabric/Yarn implementation source from `/Users/twaldin/SkyblockQOLmod`.
 
@@ -62,7 +62,7 @@ Live authenticated Hypixel text acquisition from Hypixel itself is not yet verif
 ## Verification
 
 ```bash
-./scripts/verify-floyd-in-odin.sh
+./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 To summarize current completion evidence from proof artifacts:
@@ -71,7 +71,7 @@ To summarize current completion evidence from proof artifacts:
 python3 scripts/completion-status.py --json
 ```
 
-Set `FLOYDADDONS_REQUIRE_COMPLETE=true` on `./scripts/verify-floyd-in-odin.sh`
+Set `FLOYDADDONS_REQUIRE_COMPLETE=true` on `./scripts/verify-floyd-in-floydaddons.sh`
 to make the gate fail unless runtime scaffold proof, non-auth live install
 readiness, and live Hypixel proof are all valid. The completion summary reports
 the prepared launcher state under `liveInstall`, so install readiness stays
@@ -203,13 +203,13 @@ See `LIVE_PROOF.md` for the final live-Hypixel proof runbook.
 Focused parity/audit suites:
 
 ```bash
-./gradlew test --tests com.odtheking.odin.ScaffoldAuditTest
-./gradlew test --tests com.odtheking.odin.StartupParitySourceTest
-./gradlew test --tests com.odtheking.odin.LocalControlParitySourceTest
-./gradlew test --tests com.odtheking.odin.MixinParitySourceTest
-./gradlew test --tests com.odtheking.odin.CommandParitySourceTest
-./gradlew test --tests com.odtheking.odin.LegacyConfigImportParitySourceTest
-./gradlew test --tests com.odtheking.odin.LiveHypixelVerificationScriptTest
+./gradlew test --tests floydaddons.not.dogshit.client.ScaffoldAuditTest
+./gradlew test --tests floydaddons.not.dogshit.client.StartupParitySourceTest
+./gradlew test --tests floydaddons.not.dogshit.client.LocalControlParitySourceTest
+./gradlew test --tests floydaddons.not.dogshit.client.MixinParitySourceTest
+./gradlew test --tests floydaddons.not.dogshit.client.CommandParitySourceTest
+./gradlew test --tests floydaddons.not.dogshit.client.LegacyConfigImportParitySourceTest
+./gradlew test --tests floydaddons.not.dogshit.client.LiveHypixelVerificationScriptTest
 ```
 
 The migration ledger in `MIGRATION.md` records runtime smokes, parity decisions, and the remaining live-Hypixel verification blocker.

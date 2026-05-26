@@ -36,7 +36,7 @@ python3 scripts/live-install-status.py --json
 This checks readiness without sending the final `/replace-text` probe:
 
 ```bash
-FLOYDADDONS_RUN_LIVE_PREFLIGHT=true ./scripts/verify-floyd-in-odin.sh
+FLOYDADDONS_RUN_LIVE_PREFLIGHT=true ./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 On success, the gate writes:
@@ -58,7 +58,7 @@ python3 scripts/verify-live-hypixel-acquisition.py --diagnose --json
 To run the normal static/build gate first and then save the same diagnostic:
 
 ```bash
-FLOYDADDONS_RUN_LIVE_DIAGNOSE=true ./scripts/verify-floyd-in-odin.sh
+FLOYDADDONS_RUN_LIVE_DIAGNOSE=true ./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 That writes `logs/live-hypixel-diagnose.json`. A diagnostic with `ready=false`
@@ -87,7 +87,7 @@ To keep the full static/build gate in the same run while waiting, pass the wait
 through the repo verifier:
 
 ```bash
-FLOYDADDONS_RUN_LIVE_PREFLIGHT=true FLOYDADDONS_LIVE_WAIT_SECONDS=120 ./scripts/verify-floyd-in-odin.sh
+FLOYDADDONS_RUN_LIVE_PREFLIGHT=true FLOYDADDONS_LIVE_WAIT_SECONDS=120 ./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 ## Final Proof
@@ -96,13 +96,13 @@ This runs the full static/build gate and then verifies cached server-ID
 replacement without synthetic `scanText`:
 
 ```bash
-FLOYDADDONS_RUN_LIVE_HYPIXEL=true ./scripts/verify-floyd-in-odin.sh
+FLOYDADDONS_RUN_LIVE_HYPIXEL=true ./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 The final proof accepts the same bounded wait pass-through:
 
 ```bash
-FLOYDADDONS_RUN_LIVE_HYPIXEL=true FLOYDADDONS_LIVE_WAIT_SECONDS=120 ./scripts/verify-floyd-in-odin.sh
+FLOYDADDONS_RUN_LIVE_HYPIXEL=true FLOYDADDONS_LIVE_WAIT_SECONDS=120 ./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 On success, the gate writes:

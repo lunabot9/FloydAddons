@@ -16,18 +16,18 @@ only as vendored reference material.
 
 | Requirement | Authoritative evidence | Status |
 | --- | --- | --- |
-| Use Odin 1.21 scaffold, not old OdinClient/1.8.9 | `gradle.properties` targets Minecraft `1.21.11`; `PROVENANCE.md` pins `odtheking/Odin` at `77b66713f74849bbcc05067484e6e85c01c96698`; `ScaffoldAuditTest.active build metadata targets FloydAddons on Odin 1_21_11 scaffold` pins metadata. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
-| Final mod is FloydAddons/floydaddons | `gradle.properties`, `fabric.mod.json`, `FloydAddonsMod`, runtime and sources jar metadata audits in `scripts/verify-floyd-in-odin.sh`. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
+| Use Odin 1.21 scaffold, not legacy 1.8.9 client | `gradle.properties` targets Minecraft `1.21.11`; `PROVENANCE.md` pins `odtheking/Odin` at `77b66713f74849bbcc05067484e6e85c01c96698`; `ScaffoldAuditTest.active build metadata targets FloydAddons on Odin 1_21_11 scaffold` pins metadata. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
+| Final mod is FloydAddons/floydaddons | `gradle.properties`, `fabric.mod.json`, `FloydAddonsMod`, runtime and sources jar metadata audits in `scripts/verify-floyd-in-floydaddons.sh`. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
 | Active modules are Floyd behavior mounted through Odin's module system | `ModuleManager.kt` registers ClickGUI plus Floyd modules; `ScaffoldAuditTest.active module registry is Floyd feature modules plus Odin ClickGUI` pins exact order and membership; runtime `/state.modules` reports `moduleCount=16`. | Verified by tests and runtime smoke. |
 | Module groupings match Floyd GUI groups | `Category.kt` defines `Render`, `Hiders`, `Player`, `Camera`, `Cosmetic`, `QOL`, `Misc`; `ScaffoldAuditTest.active categories are Floyd gui groups only` and `active module categories follow Floyd GUI grouping` compare active modules to vendored Floyd GUI source. | Verified by tests and runtime smoke. |
-| Floyd old GUI/editor screens are not active runtime surfaces | `VendoredFloydCoverageSourceTest` classifies old GUI/editor files as retired; `ScaffoldAuditTest.old Floyd GUI controls are represented by Odin settings or explicit retired styling` pins control coverage; jar/source audits reject old GUI packages and PNG resources. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
-| Vendored Floyd behavior and resources are covered | `vendor/floydaddons-fabric` is present; `VendoredFloydCoverageSourceTest` requires every vendored source/resource to be classified, requires packaged Floyd resources to match vendored bytes, and requires active behavior files to be referenced outside its own ledger. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
-| Old Odin gameplay modules, old categories, stale helpers, and stale `assets/odin` are absent | `scripts/verify-floyd-in-odin.sh` rejects old Odin source tokens, stale directories, and jar entries; `ScaffoldAuditTest` pins the verifier tokens. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
-| Active mixin config matches active mixin source | `scripts/verify-floyd-in-odin.sh` compares `floydaddons.mixins.json` against `src/main/java/com/odtheking/mixin` in both directions. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
+| Floyd old GUI/editor screens are not active runtime surfaces | `VendoredFloydCoverageSourceTest` classifies old GUI/editor files as retired; `ScaffoldAuditTest.old Floyd GUI controls are represented by Odin settings or explicit retired styling` pins control coverage; jar/source audits reject old GUI packages and PNG resources. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
+| Vendored Floyd behavior and resources are covered | `vendor/floydaddons-fabric` is present; `VendoredFloydCoverageSourceTest` requires every vendored source/resource to be classified, requires packaged Floyd resources to match vendored bytes, and requires active behavior files to be referenced outside its own ledger. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
+| Old Odin gameplay modules, old categories, stale helpers, and stale `assets/odin` are absent | `scripts/verify-floyd-in-floydaddons.sh` rejects old Odin source tokens, stale directories, and jar entries; `ScaffoldAuditTest` pins the verifier tokens. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
+| Active mixin config matches active mixin source | `scripts/verify-floyd-in-floydaddons.sh` compares `floydaddons.mixins.json` against `src/main/java/floydaddons/not/dogshit/mixin` in both directions. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
 | Runtime scaffold proof is available without screenshots | `FloydLocalControl` exposes `/health`, `/state`, and `/replace-text`; README documents proof surfaces; `LocalControlParitySourceTest` pins the bridge shape. | Verified by tests and runtime smoke. |
 | Runtime title-screen smoke proves the scaffold loads | `MIGRATION.md` records the 2026-05-19 smoke: `FLOYDADDONS_DEVAUTH=false ./gradlew runClient --quiet`, `/health ok=true`, `/state ok=true`, Floyd categories, `moduleCount=16`, empty `QOL`, Local Control runtime flags, and scaffold provenance. `scripts/run-runtime-scaffold-smoke.sh` now reproduces the same non-auth title-screen proof end to end through local-control and exits only after port `38765` is closed. | Verified by `scripts/run-runtime-scaffold-smoke.sh`. |
-| Legal/provenance notices are packaged | `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `PROVENANCE.md` exist; `build.gradle.kts` packages them under `META-INF`; `scripts/verify-floyd-in-odin.sh` byte-compares packaged copies in runtime and sources jars. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
-| Sources jar mirrors active source/resources | `scripts/verify-floyd-in-odin.sh` compares the sources jar against `src/main/kotlin`, `src/main/java`, and `src/main/resources`. | Verified by `./scripts/verify-floyd-in-odin.sh`. |
+| Legal/provenance notices are packaged | `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `PROVENANCE.md` exist; `build.gradle.kts` packages them under `META-INF`; `scripts/verify-floyd-in-floydaddons.sh` byte-compares packaged copies in runtime and sources jars. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
+| Sources jar mirrors active source/resources | `scripts/verify-floyd-in-floydaddons.sh` compares the sources jar against `src/main/kotlin`, `src/main/java`, and `src/main/resources`. | Verified by `./scripts/verify-floyd-in-floydaddons.sh`. |
 | Live Hypixel server-ID acquisition from Hypixel itself | `scripts/verify-live-hypixel-acquisition.py --json` is the required proof command once Minecraft is already connected to Hypixel with Local Control and Server ID Hider enabled. The helper auto-detects normal-launcher `config/floydaddons/control-bridge.json` and dev-run `run/config/floydaddons/control-bridge.json` sidecars unless `--config` is supplied. | Not yet verified; this remains the completion blocker. |
 
 ## Current Gate
@@ -35,7 +35,7 @@ only as vendored reference material.
 The current repo gate is:
 
 ```bash
-./scripts/verify-floyd-in-odin.sh
+./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 The current proof-artifact status can be summarized with:
@@ -131,7 +131,7 @@ Run it only after Minecraft is already connected to Hypixel and the live proof
 preconditions in `README.md` are satisfied:
 
 ```bash
-FLOYDADDONS_RUN_LIVE_HYPIXEL=true ./scripts/verify-floyd-in-odin.sh
+FLOYDADDONS_RUN_LIVE_HYPIXEL=true ./scripts/verify-floyd-in-floydaddons.sh
 ```
 
 That helper is intentionally limited to the FloydAddons local-control sidecar and

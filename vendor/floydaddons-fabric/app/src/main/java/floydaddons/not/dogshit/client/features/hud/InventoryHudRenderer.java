@@ -9,6 +9,7 @@ import floydaddons.not.dogshit.client.features.misc.*;
 import floydaddons.not.dogshit.client.esp.*;
 import floydaddons.not.dogshit.client.skin.*;
 import floydaddons.not.dogshit.client.util.*;
+import floydaddons.not.dogshit.client.utils.ui.rendering.NVGRenderer;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -19,6 +20,9 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Renders the movable inventory HUD overlay.
  */
@@ -26,6 +30,7 @@ public final class InventoryHudRenderer implements HudRenderCallback {
     public static final int COLS = 9;
     public static final int ROWS = 3; // main inventory only
     private static final int BASE_SLOT = 18;
+    private static final float HUD_TEXT_SIZE = 9f;
 
     private static final int BACKGROUND_COLOR = 0x88000000;
     private static boolean moveMode = false;
@@ -87,22 +92,18 @@ public final class InventoryHudRenderer implements HudRenderCallback {
         }
 
         if (inv != null) {
-            drawSlots(context, inv, x, y, alpha);
-        }
-
-        if (showMoveHint) {
-            String hint = "Drag to move | Scroll to resize";
-            var tr = MinecraftClient.getInstance().textRenderer;
-            int hintWidth = tr.getWidth(hint);
-            int hx = x + (getHudWidth() - hintWidth) / 2;
-            int hy = y - tr.fontHeight - 4;
-            context.drawTextWithShadow(tr, hint, hx, hy, applyAlpha(0xFFFFFFFF, alpha));
+            List<StackLabel> stackLabels = drawSlots(context, inv, x, y);
+            String hint = showMoveHint ? "Drag to move | Scroll to resize" : null;
+            renderHudText(stackLabels, hint, x, y, alpha);
+        } else if (showMoveHint) {
+            renderHudText(List.of(), "Drag to move | Scroll to resize", x, y, alpha);
         }
     }
 
-    private static void drawSlots(DrawContext context, PlayerInventory inv, int x, int y, float alpha) {
+    private static List<StackLabel> drawSlots(DrawContext context, PlayerInventory inv, int x, int y) {
         int[] slotOrder = buildSlotOrder();
         int slotSize = getSlotSize();
+        List<StackLabel> stackLabels = new ArrayList<>();
         for (int slot = 0; slot < slotOrder.length; slot++) {
             int col = slot % COLS;
             int row = slot / COLS;
@@ -119,14 +120,13 @@ public final class InventoryHudRenderer implements HudRenderCallback {
             matrices.popMatrix();
 
             if (stack.getCount() > 1) {
-                var tr = MinecraftClient.getInstance().textRenderer;
                 String count = String.valueOf(stack.getCount());
-                // Center horizontally at the bottom of the slot (vanilla-style)
-                int tx = (int) (sx + (slotSize - tr.getWidth(count)) / 2f + 1);
-                int ty = (int) (sy + slotSize - tr.fontHeight - 3);
-                context.drawTextWithShadow(tr, count, tx, ty, 0xFFFFFFFF);
+                int tx = Math.round(sx + (slotSize - NVGRenderer.INSTANCE.textWidth(count, HUD_TEXT_SIZE, NVGRenderer.INSTANCE.getDefaultFont())) / 2f + 1f);
+                int ty = Math.round(sy + slotSize - HUD_TEXT_SIZE - 3f);
+                stackLabels.add(new StackLabel(count, tx, ty));
             }
         }
+        return stackLabels;
     }
 
     private static int[] buildSlotOrder() {
@@ -501,4 +501,38 @@ public final class InventoryHudRenderer implements HudRenderCallback {
     public static int baseSlot() {
         return BASE_SLOT;
     }
+
+    private static void renderHudText(List<StackLabel> labels, String hint, int x, int y, float alpha) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null) return;
+
+        int hintWidth = 0;
+        int hintX = 0;
+        int hintY = 0;
+        if (hint != null) {
+            hintWidth = Math.round(NVGRenderer.INSTANCE.textWidth(hint, HUD_TEXT_SIZE, NVGRenderer.INSTANCE.getDefaultFont()));
+            hintX = x + (getHudWidth() - hintWidth) / 2;
+            hintY = y - Math.round(HUD_TEXT_SIZE) - 4;
+        }
+
+        if (labels.isEmpty() && hint == null) return;
+
+        NVGRenderer.INSTANCE.beginFrame(mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        try {
+            for (StackLabel label : labels) {
+                drawHudText(label.text(), label.x(), label.y(), alpha);
+            }
+            if (hint != null) {
+                drawHudText(hint, hintX, hintY, alpha);
+            }
+        } finally {
+            NVGRenderer.INSTANCE.endFrame();
+        }
+    }
+
+    private static void drawHudText(String text, float x, float y, float alpha) {
+        NVGRenderer.INSTANCE.text(text, x, y, HUD_TEXT_SIZE, applyAlpha(0xFFFFFFFF, alpha), NVGRenderer.INSTANCE.getDefaultFont());
+    }
+
+    private record StackLabel(String text, int x, int y) {}
 }

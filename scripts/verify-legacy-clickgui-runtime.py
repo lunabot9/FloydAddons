@@ -1366,7 +1366,7 @@ def verify_hud_layout_entry(client: "BridgeClient", label: str) -> dict[str, Any
         failures.append(f"{label} Edit Layout click was not handled")
     if extras != ["Edit Layout"]:
         failures.append(f"{label} popup extras expected ['Edit Layout'], got {extras!r}")
-    if screen != "com.odtheking.odin.clickgui.HudManager":
+    if screen != "floydaddons.not.dogshit.client.clickgui.HudManager":
         failures.append(f"{label} Edit Layout expected HudManager screen, got {screen!r}")
     if screen_title != "HUD Manager":
         failures.append(f"{label} Edit Layout expected HUD Manager title, got {screen_title!r}")
