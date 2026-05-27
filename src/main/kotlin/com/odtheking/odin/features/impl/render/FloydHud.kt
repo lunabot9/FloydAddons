@@ -36,6 +36,10 @@ object FloydHud : Module(
         drawScoreboardHud(example)
     }
 
+    private val dayHud by HUD("Day HUD", "Displays the Minecraft lobby day number.", true, 10, 132, 1f) { example ->
+        drawDayHud(example)
+    }
+
     fun state(): Map<String, Any?> {
         val objective = sidebarObjective()
         return mapOf(
@@ -61,6 +65,13 @@ object FloydHud : Module(
                 "x" to scoreboardHud.x,
                 "y" to scoreboardHud.y,
                 "hudScale" to scoreboardHud.scale
+            ),
+            "dayHud" to mapOf(
+                "enabled" to (enabled && dayHud.enabled),
+                "day" to mc.level?.dayTime?.let(::lobbyDay),
+                "x" to dayHud.x,
+                "y" to dayHud.y,
+                "hudScale" to dayHud.scale
             ),
             "cornerRadius" to hudCornerRadius
         )
@@ -90,6 +101,10 @@ object FloydHud : Module(
         }
         return vanillaScoreboardWouldRender.get()
     }
+
+    internal fun lobbyDay(dayTime: Long): Long = Math.floorDiv(dayTime, TICKS_PER_DAY)
+
+    internal fun lobbyDayLabel(dayTime: Long): String = "day: ${lobbyDay(dayTime)}"
 
     private fun GuiGraphics.drawInventoryHud(): Pair<Int, Int> {
         val inventory = mc.player?.inventory
@@ -158,6 +173,15 @@ object FloydHud : Module(
         return drawScoreboardBox(Component.literal("SKYBLOCK"), lines, Component.literal("FloydAddons").visualOrderText)
     }
 
+    private fun GuiGraphics.drawDayHud(example: Boolean): Pair<Int, Int> {
+        val label = if (example) "day: 7" else lobbyDayLabel(mc.level?.dayTime ?: return 0 to 0)
+        val width = mc.font.width(label) + 6
+        val height = mc.font.lineHeight + 6
+        fillPanel(width, height)
+        drawString(mc.font, label, 3, 3, 0xFFFFFFFF.toInt(), true)
+        return width to height
+    }
+
     private fun GuiGraphics.drawScoreboardBox(title: Component, lines: List<ScoreLine>, footer: FormattedCharSequence): Pair<Int, Int> {
         val titleWidth = mc.font.width(title)
         val footerWidth = mc.font.width(footer)
@@ -214,4 +238,6 @@ object FloydHud : Module(
     }
 
     private data class ScoreLine(val name: FormattedCharSequence, val score: Component, val scoreWidth: Int)
+
+    private const val TICKS_PER_DAY = 24_000L
 }

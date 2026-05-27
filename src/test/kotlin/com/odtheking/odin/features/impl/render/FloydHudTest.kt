@@ -8,6 +8,14 @@ import kotlin.test.assertTrue
 
 class FloydHudTest {
     @Test
+    fun `lobby day HUD uses minecraft day number`() {
+        assertTrue(FloydHud.lobbyDayLabel(0L) == "day: 0")
+        assertTrue(FloydHud.lobbyDayLabel(23_999L) == "day: 0")
+        assertTrue(FloydHud.lobbyDayLabel(24_000L) == "day: 1")
+        assertTrue(FloydHud.lobbyDayLabel(72_001L) == "day: 3")
+    }
+
+    @Test
     fun `custom scoreboard keeps drawing after vanilla sidebar signal`() {
         FloydHud.resetVanillaScoreboardWouldRender()
 
@@ -112,5 +120,15 @@ class FloydHudTest {
         assertTrue(active.contains("DisplaySlot::teamColorToSlot"))
         assertTrue(active.contains("if (lines.size > 1) lines.removeAt(lines.lastIndex)"))
         assertTrue(active.contains("Component.literal(\"FloydAddons\").visualOrderText"))
+    }
+
+    @Test
+    fun `day HUD is a toggleable movable HUD setting`() {
+        val root = Path.of("").toAbsolutePath()
+        val active = Files.readString(root.resolve("src/main/kotlin/com/odtheking/odin/features/impl/render/FloydHud.kt"))
+
+        assertTrue(active.contains("HUD(\"Day HUD\""))
+        assertTrue(active.contains("\"dayHud\" to mapOf("))
+        assertTrue(active.contains("drawString(mc.font, label, 3, 3"))
     }
 }
