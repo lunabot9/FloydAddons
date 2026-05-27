@@ -4071,7 +4071,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 listOf(ModulePopupExtra("Target: ${FloydMobEsp.stalkTarget().ifBlank { "<none>" }}", ModulePopupExtraKind.STALK_TARGET))
             LegacyModuleBrowserKind.RENDER_HUD,
             LegacyModuleBrowserKind.RENDER_BOOLEAN ->
-                if (entry.label in setOf("Inventory HUD", "Custom Scoreboard")) listOf(ModulePopupExtra("Edit Layout", ModulePopupExtraKind.HUD_LAYOUT)) else emptyList()
+                if (entry.label in setOf("Inventory HUD", "Custom Scoreboard", "Day HUD")) listOf(ModulePopupExtra("Edit Layout", ModulePopupExtraKind.HUD_LAYOUT)) else emptyList()
             else -> modulePopupExtras(entry.module)
         }
 
@@ -4505,6 +4505,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
                 LegacyModuleBrowserEntry(FloydRender, "Custom Scoreboard", LegacyModuleBrowserKind.RENDER_BOOLEAN, "Custom Scoreboard"),
+                LegacyModuleBrowserEntry(FloydHud, "Day HUD", LegacyModuleBrowserKind.RENDER_HUD, "Day HUD"),
                 LegacyModuleBrowserEntry(FloydRender, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
                 LegacyModuleBrowserEntry(FloydRender, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
                 LegacyModuleBrowserEntry(ClickGUIModule, "GUI Style", LegacyModuleBrowserKind.RENDER_GUI_STYLE),
