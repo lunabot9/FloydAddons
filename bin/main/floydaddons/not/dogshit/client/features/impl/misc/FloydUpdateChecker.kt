@@ -52,7 +52,7 @@ object FloydUpdateChecker {
     }
 
     fun tick() {
-        if (!FloydCompatibility.shouldCheckUpdates()) return
+        if (!FloydUpdateCheckerModule.enabled) return
         if (FloydAddonsMod.mc.player == null) return
 
         pendingMessage?.let {

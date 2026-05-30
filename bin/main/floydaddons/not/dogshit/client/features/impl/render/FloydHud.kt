@@ -8,6 +8,7 @@ import floydaddons.not.dogshit.client.features.Category
 import floydaddons.not.dogshit.client.features.Module
 import floydaddons.not.dogshit.client.features.impl.player.FloydNickHider
 import floydaddons.not.dogshit.client.utils.Color
+import floydaddons.not.dogshit.client.utils.Colors
 import floydaddons.not.dogshit.client.utils.render.ItemStateRenderer.Companion.drawItemStack
 import floydaddons.not.dogshit.client.utils.render.RoundRectPIPRenderer
 import floydaddons.not.dogshit.client.utils.ui.rendering.NVGPIPRenderer
@@ -37,6 +38,10 @@ object FloydHud : Module(
     private const val INVENTORY_HUD_DEFAULT_X = 1540
     private const val INVENTORY_HUD_DEFAULT_Y = 24
     private const val INVENTORY_HUD_DEFAULT_SCALE = 2f
+
+    private const val DAY_TRACKER_DEFAULT_X = 1680
+    private const val DAY_TRACKER_DEFAULT_Y = 180
+    private const val DAY_TRACKER_DEFAULT_SCALE = 1f
 
     private const val SCOREBOARD_HUD_DEFAULT_X = 1680
     private const val SCOREBOARD_HUD_DEFAULT_Y = 250
@@ -83,6 +88,10 @@ object FloydHud : Module(
         drawInventoryHud(it)
     }
 
+    private val dayTrackerHud by HUD("Day Tracker", "Displays the current server day in a movable Floyd HUD.", true, DAY_TRACKER_DEFAULT_X, DAY_TRACKER_DEFAULT_Y, DAY_TRACKER_DEFAULT_SCALE, anchorRight = true) {
+        drawDayTrackerHud(it)
+    }
+
     private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", true, SCOREBOARD_HUD_DEFAULT_X, SCOREBOARD_HUD_DEFAULT_Y, SCOREBOARD_HUD_DEFAULT_SCALE, anchorRight = true) { example ->
         drawScoreboardHud(example)
     }
@@ -102,15 +111,23 @@ object FloydHud : Module(
                 "fade" to inventoryHudFade,
                 "fadeColor" to "#${inventoryHudFadeColor.hex()}"
             ),
+            "dayTracker" to mapOf(
+                "enabled" to (enabled && dayTrackerHud.enabled),
+                "day" to currentServerDay(),
+                "label" to currentServerDayLabel(),
+                "x" to dayTrackerHud.x,
+                "y" to dayTrackerHud.y,
+                "hudScale" to dayTrackerHud.scale
+            ),
             "scoreboardHud" to mapOf(
                 "enabled" to (enabled && scoreboardHud.enabled),
-                "customScoreboard" to FloydRender.shouldUseCustomScoreboard(),
+                "customScoreboard" to FloydCustomScoreboard.shouldUseCustomScoreboard(),
                 "scale" to scoreboardHudScale,
                 "sidebarObjective" to objective?.name,
                 "vanillaWouldRender" to vanillaScoreboardWouldRender.get(),
                 "wouldRender" to shouldDrawScoreboardHud(
                     example = false,
-                    customScoreboard = FloydRender.shouldUseCustomScoreboard(),
+                    customScoreboard = FloydCustomScoreboard.shouldUseCustomScoreboard(),
                     objectivePresent = objective != null,
                     consumeVanillaSignal = false
                 ),
@@ -131,7 +148,8 @@ object FloydHud : Module(
         vanillaScoreboardWouldRender.set(true)
     }
 
-    internal fun resetVanillaScoreboardWouldRender() {
+    @JvmStatic
+    fun resetVanillaScoreboardWouldRender() {
         vanillaScoreboardWouldRender.set(false)
     }
 
@@ -148,7 +166,7 @@ object FloydHud : Module(
             if (consumeVanillaSignal) vanillaScoreboardWouldRender.set(false)
             return false
         }
-        return if (consumeVanillaSignal) vanillaScoreboardWouldRender.getAndSet(false) else vanillaScoreboardWouldRender.get()
+        return vanillaScoreboardWouldRender.get()
     }
 
     @JvmStatic
@@ -204,6 +222,20 @@ object FloydHud : Module(
                 }
             }
         }
+        return width to height
+    }
+
+    private fun GuiGraphics.drawDayTrackerHud(example: Boolean): Pair<Int, Int> {
+        val label = if (example) "Day 13" else currentServerDayLabel() ?: return 0 to 0
+        val fontSize = 12f
+        val paddingX = 10f
+        val paddingY = 7f
+        val textWidth = NVGRenderer.textWidth(label, fontSize, NVGRenderer.defaultFont)
+        val width = ceil(textWidth + paddingX * 2f).toInt()
+        val height = ceil(fontSize + paddingY * 2f).toInt()
+
+        fillPanel(width, height, monochromeBorderColors(0xFFFFFFFF.toInt()))
+        NVGRenderer.text(label, paddingX, paddingY, fontSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         return width to height
     }
 
@@ -268,7 +300,7 @@ object FloydHud : Module(
 
     private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
         val objective = sidebarObjective() ?: return if (example) drawScoreboardExample() else 0 to 0
-        if (!shouldDrawScoreboardHud(example, FloydRender.shouldUseCustomScoreboard(), objectivePresent = true)) return 0 to 0
+        if (!shouldDrawScoreboardHud(example, FloydCustomScoreboard.shouldUseCustomScoreboard(), objectivePresent = true)) return 0 to 0
         val scoreboard = mc.level?.scoreboard ?: return if (example) drawScoreboardExample() else 0 to 0
         val sortedEntries = scoreboard.listPlayerScores(objective)
             .filterNot(PlayerScoreEntry::isHidden)
@@ -475,7 +507,7 @@ object FloydHud : Module(
     }
 
     private fun styledFooterText(text: FormattedCharSequence): StyledScoreboardText {
-        val chars = ArrayList<String>(text.length())
+        val chars = ArrayList<String>()
         text.accept { _, _, codePoint ->
             chars += String(Character.toChars(codePoint))
             true
@@ -595,6 +627,13 @@ object FloydHud : Module(
 
     private fun scoreboardMinimumContentWidth(): Float =
         SCOREBOARD_MIN_WIDTH_SAMPLES.maxOf { sample -> textWidth(sample) }
+
+    private fun currentServerDay(): Long? {
+        val level = mc.level ?: return null
+        return (level.dayTime / 24000L) + 1L
+    }
+
+    private fun currentServerDayLabel(): String? = currentServerDay()?.let { "Day $it" }
 
     private fun chromaColor(offset: Float): Int {
         val hue = animationPhase(HUD_CHROMA_DURATION_MS, offset)

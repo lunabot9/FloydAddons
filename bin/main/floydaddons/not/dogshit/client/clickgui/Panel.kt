@@ -3,6 +3,7 @@ package floydaddons.not.dogshit.client.clickgui
 import floydaddons.not.dogshit.client.clickgui.ClickGUI.gray26
 import floydaddons.not.dogshit.client.clickgui.settings.ModuleButton
 import floydaddons.not.dogshit.client.features.Category
+import floydaddons.not.dogshit.client.features.Module
 import floydaddons.not.dogshit.client.features.ModuleManager
 import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
 import floydaddons.not.dogshit.client.utils.Colors
@@ -26,7 +27,9 @@ class Panel(private val category: Category) {
 
     val panelSetting = ClickGUIModule.panelSetting[category.name] ?: throw IllegalStateException("Panel setting for category $category is not initialized")
     val moduleButtons = ModuleManager.modulesByCategory[category]
-        ?.sortedByDescending { NVGRenderer.textWidth(it.name, 16f, NVGRenderer.defaultFont) }
+        ?.filter { it.visibleInGui }
+        ?.sortedWith(compareBy<Module> { panelSortPriority(it) }
+            .thenByDescending { NVGRenderer.textWidth(it.name, 16f, NVGRenderer.defaultFont) })
         ?.map { ModuleButton(it, this@Panel) } ?: listOf()
     private val lastModuleButton by lazy { moduleButtons.lastOrNull() }
 
@@ -165,5 +168,13 @@ class Panel(private val category: Category) {
     companion object {
         const val WIDTH = 240f
         const val HEIGHT = 32f
+    }
+
+    private fun panelSortPriority(module: Module): Int {
+        if (category != Category.HIDERS) return 0
+        return when (module.name) {
+            "Server ID Hider", "Profile ID Hider" -> 1
+            else -> 0
+        }
     }
 }

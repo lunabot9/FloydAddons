@@ -162,6 +162,7 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
             val slotSize = (18 * FloydHud.inventoryHudScale).roundToInt().coerceAtLeast(12)
             9 * slotSize to 3 * slotSize
         }
+        "Day Tracker" -> 120 to 32
         "Scoreboard HUD" -> {
             val scale = FloydHud.scoreboardHudScale
             (180 * scale).roundToInt() to (120 * scale).roundToInt()

@@ -17,17 +17,37 @@ import floydaddons.not.dogshit.client.events.core.on
 import floydaddons.not.dogshit.client.features.Category
 import floydaddons.not.dogshit.client.features.Module
 import floydaddons.not.dogshit.client.features.impl.camera.FloydCamera
-import floydaddons.not.dogshit.client.features.impl.hiders.FloydHiders
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydDisableArrows
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydDisableHungerBar
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHideEntityFire
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHideWatchdogMessages
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHidePotionEffects
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydModHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydNoArmor
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydNoHurtCamera
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydProfileIdHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveExplosionParticles
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveFallingBlocks
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveFireOverlay
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveTabPing
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydServerIdHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydThirdPersonCrosshair
+import floydaddons.not.dogshit.client.features.impl.misc.FloydCustomMainMenu
+import floydaddons.not.dogshit.client.features.impl.misc.FloydSpoofClientBrand
+import floydaddons.not.dogshit.client.features.impl.misc.FloydTaskbarIconModule
+import floydaddons.not.dogshit.client.features.impl.misc.FloydUpdateCheckerModule
+import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
+import floydaddons.not.dogshit.client.features.impl.render.FloydAnimations
+import floydaddons.not.dogshit.client.features.impl.render.FloydCustomScoreboard
 import floydaddons.not.dogshit.client.features.impl.render.FloydHud
 import floydaddons.not.dogshit.client.features.impl.render.FloydMobEsp
 import floydaddons.not.dogshit.client.features.impl.render.FloydRender
+import floydaddons.not.dogshit.client.features.impl.render.FloydTimeChanger
 import floydaddons.not.dogshit.client.features.impl.cosmetic.FloydCape
 import floydaddons.not.dogshit.client.features.impl.cosmetic.FloydConeHat
 import floydaddons.not.dogshit.client.features.impl.player.FloydNickHider
 import floydaddons.not.dogshit.client.features.impl.player.FloydPlayerSize
 import floydaddons.not.dogshit.client.features.impl.cosmetic.FloydSkin
-import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
-import floydaddons.not.dogshit.client.features.impl.render.FloydAnimations
 import floydaddons.not.dogshit.client.features.impl.render.FloydXray
 import floydaddons.not.dogshit.client.utils.render.RenderBatchManager
 import floydaddons.not.dogshit.client.utils.ui.clearMouseOverride
@@ -270,6 +290,8 @@ object FloydLocalControl : Module(
         root["window"] = mapOf(
             "fullscreen" to mc.window.isFullscreen,
             "borderlessWindowed" to (FloydRender.enabled && FloydRender.borderlessWindowed),
+            "instanceTitle" to ClickGUIModule.instanceTitle,
+            "effectiveInstanceTitle" to ClickGUIModule.instanceTitle.trim().ifEmpty { "Minecraft" },
             "width" to mc.window.width,
             "height" to mc.window.height,
             "scaledWidth" to mc.window.guiScaledWidth,
@@ -284,9 +306,27 @@ object FloydLocalControl : Module(
         root["render"] = mapOf(
             "batch" to RenderBatchManager.state(),
             "core" to FloydRender.state(),
+            "time" to FloydTimeChanger.state(),
+            "customScoreboard" to FloydCustomScoreboard.state(),
             "xray" to FloydXray.state(),
             "animations" to FloydAnimations.state(),
-            "hiders" to FloydHiders.state(),
+            "hiders" to mapOf(
+                "noHurtCamera" to FloydNoHurtCamera.state(),
+                "removeFireOverlay" to FloydRemoveFireOverlay.state(),
+                "disableHungerBar" to FloydDisableHungerBar.state(),
+                "hidePotionEffects" to FloydHidePotionEffects.state(),
+                "thirdPersonCrosshair" to FloydThirdPersonCrosshair.state(),
+                "hideEntityFire" to FloydHideEntityFire.state(),
+                "disableArrows" to FloydDisableArrows.state(),
+                "removeFallingBlocks" to FloydRemoveFallingBlocks.state(),
+                "removeExplosionParticles" to FloydRemoveExplosionParticles.state(),
+                "removeTabPing" to FloydRemoveTabPing.state(),
+                "hideWatchdogMessages" to FloydHideWatchdogMessages.state(),
+                "modHider" to FloydModHider.state(),
+                "serverIdHider" to FloydServerIdHider.state(),
+                "profileIdHider" to FloydProfileIdHider.state(),
+                "noArmor" to FloydNoArmor.state()
+            ),
             "mobEsp" to FloydMobEsp.state(),
             "hud" to FloydHud.state()
         )
@@ -303,7 +343,12 @@ object FloydLocalControl : Module(
         root["misc"] = mapOf(
             "localControl" to state(),
             "discordPresence" to FloydDiscordPresence.state(),
-            "compatibility" to FloydCompatibility.state(),
+            "compatibility" to mapOf(
+                "spoofClientBrand" to FloydSpoofClientBrand.state(),
+                "customMainMenu" to FloydCustomMainMenu.state(),
+                "taskbarIcon" to FloydTaskbarIconModule.state(),
+                "updateChecker" to FloydUpdateCheckerModule.state()
+            ),
             "clickGui" to ClickGUIModule.state()
         )
         root["legacyGui"] = LegacyFloydClickGUI.debugState()

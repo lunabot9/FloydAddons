@@ -13,7 +13,9 @@ import floydaddons.not.dogshit.client.features.Module
 import floydaddons.not.dogshit.client.features.ModuleManager
 import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
 import floydaddons.not.dogshit.client.features.impl.player.FloydNickHider
+import floydaddons.not.dogshit.client.features.impl.render.FloydCustomScoreboard
 import floydaddons.not.dogshit.client.features.impl.render.FloydMobEsp
+import floydaddons.not.dogshit.client.features.impl.render.FloydTimeChanger
 import floydaddons.not.dogshit.client.features.impl.render.FloydXray
 import floydaddons.not.dogshit.client.utils.Color
 import java.nio.charset.StandardCharsets
@@ -147,8 +149,10 @@ object FloydSidecarConfig {
 
         set("Neck Hider", "Enabled", data.primitive("nickHiderEnabled"))
         set("Neck Hider", "Default Nick", data.nonEmptyStringPrimitive("nickname"))
-        set("Hiders", "Server ID Hider", data.primitive("serverIdHiderEnabled"))
-        set("Hiders", "Profile ID Hider", data.boolOrDefault("profileIdHiderEnabled", true))
+        set("Neck Hider", "Hide Player Level", data.primitive("hidePlayerLevel"))
+        set("Neck Hider", "Hide Rank Display", data.primitive("hideRankDisplay"))
+        setModuleEnabled("Server ID Hider", data.bool("serverIdHiderEnabled"))
+        setModuleEnabled("Profile ID Hider", data.boolOrDefault("profileIdHiderEnabled", true).asBoolean)
 
         set("Custom Skin", "Custom Skin", data.boolOrDefault("skinCustomEnabled", true))
         set("Custom Skin", "Self", data.primitive("skinSelfEnabled"))
@@ -165,25 +169,42 @@ object FloydSidecarConfig {
         set("Player Size", "Z", if (useLegacyUniformScale) JsonPrimitive(legacyScale) else scaleZ)
         set("Player Size", "Target", data.string("playerSizeTarget")?.let(::playerSizeTarget)?.let(::JsonPrimitive))
 
-        set("Render", "Time Changer", data.primitive("customTimeEnabled"))
-        set("Render", "Time", data.primitive("customTimeValue"))
-        set("Render", "Custom Scoreboard", data.primitive("customScoreboardEnabled"))
+        setModuleEnabled("Time Changer", data.bool("customTimeEnabled"))
+        set("Time Changer", "Time", data.primitive("customTimeValue"))
+        setModuleEnabled("Custom Scoreboard", data.bool("customScoreboardEnabled"))
         set("Render", "Borderless Window", data.primitive("borderlessWindowed"))
-        set("Render", "Instance Title", data.trimmedStringPrimitive("windowTitle"))
+        set("Click GUI", "Instance Title", data.trimmedStringPrimitive("windowTitle"))
+
+        setModuleEnabled("Spoof Client Brand", data.boolOrDefault("spoofClientBrandEnabled", true).asBoolean)
+        setModuleEnabled("Custom Main Menu", data.boolOrDefault("customMainMenuEnabled", true).asBoolean)
+        setModuleEnabled("Taskbar Icon", data.boolOrDefault("taskbarIconEnabled", true).asBoolean)
+        setModuleEnabled("Update Checker", data.boolOrDefault("updateCheckerEnabled", true).asBoolean)
 
         set("X-Ray", "Opacity", data.positivePrimitive("xrayOpacity"))
 
-        set("Hiders", "No Hurt Camera", data.primitive("hiderNoHurtCamera"))
-        set("Hiders", "Remove Fire Overlay", data.primitive("hiderRemoveFireOverlay"))
-        set("Hiders", "Disable Hunger Bar", data.primitive("hiderDisableHungerBar"))
-        set("Hiders", "Hide Potion Effects", data.primitive("hiderHidePotionEffects"))
-        set("Hiders", "3rd Person Crosshair", data.primitive("hiderThirdPersonCrosshair"))
-        set("Hiders", "Hide Entity Fire", data.primitive("hiderHideEntityFire"))
-        set("Hiders", "Disable Arrows", data.primitive("hiderDisableAttachedArrows"))
-        set("Hiders", "Remove Falling Blocks", data.primitive("hiderRemoveFallingBlocks"))
-        set("Hiders", "No Explosion Particles", data.primitive("hiderRemoveExplosionParticles"))
-        set("Hiders", "Remove Tab Ping", data.primitive("hiderRemoveTabPing"))
-        set("Hiders", "Target", data.string("hiderNoArmorMode")?.let(::noArmorMode)?.let(::JsonPrimitive))
+        setModuleEnabled("No Hurt Camera", data.bool("hiderNoHurtCamera"))
+        setModuleEnabled("Remove Fire Overlay", data.bool("hiderRemoveFireOverlay"))
+        setModuleEnabled("Disable Hunger Bar", data.bool("hiderDisableHungerBar"))
+        setModuleEnabled("Hide Potion Effects", data.bool("hiderHidePotionEffects"))
+        setModuleEnabled("3rd Person Crosshair", data.bool("hiderThirdPersonCrosshair"))
+        setModuleEnabled("Hide Entity Fire", data.bool("hiderHideEntityFire"))
+        setModuleEnabled("Disable Arrows", data.bool("hiderDisableAttachedArrows"))
+        setModuleEnabled("Remove Falling Blocks", data.bool("hiderRemoveFallingBlocks"))
+        setModuleEnabled("No Explosion Particles", data.bool("hiderRemoveExplosionParticles"))
+        setModuleEnabled("Remove Tab Ping", data.bool("hiderRemoveTabPing"))
+        setModuleEnabled(
+            "Hide Watchdog Message",
+            data.boolOrDefault("hideWatchdogMessagesEnabled", data.boolOrDefault("hideWatchdogMessages", true).asBoolean).asBoolean
+        )
+        setModuleEnabled(
+            "Mod Hider",
+            data.boolOrDefault("hideLoaderEntryEnabled", data.boolOrDefault("hideLoaderEntry", true).asBoolean).asBoolean
+        )
+        val noArmorMode = data.string("hiderNoArmorMode")?.let(::noArmorMode)
+        set("No Armor", "Target", noArmorMode?.let(::JsonPrimitive))
+        if (noArmorMode != null && !noArmorMode.equals("Off", ignoreCase = true)) {
+            setModuleEnabled("No Armor", true)
+        }
 
         set("Camera", "Speed", data.positivePrimitive("freecamSpeed"))
         set("Camera", "Distance", data.positivePrimitive("freelookDistance"))

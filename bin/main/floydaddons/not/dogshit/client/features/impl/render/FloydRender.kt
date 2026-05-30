@@ -1,29 +1,22 @@
 package floydaddons.not.dogshit.client.features.impl.render
 
-import floydaddons.not.dogshit.client.clickgui.settings.impl.BooleanSetting
-import floydaddons.not.dogshit.client.clickgui.settings.impl.NumberSetting
-import floydaddons.not.dogshit.client.clickgui.settings.impl.StringSetting
 import floydaddons.not.dogshit.client.events.TickEvent
 import floydaddons.not.dogshit.client.events.core.on
-import floydaddons.not.dogshit.client.features.Category
 import floydaddons.not.dogshit.client.features.Module
+import floydaddons.not.dogshit.client.clickgui.settings.impl.BooleanSetting
+import floydaddons.not.dogshit.client.features.Category
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFWVidMode
 
 object FloydRender : Module(
     name = "Render",
     category = Category.RENDER,
-    description = "Floyd render settings: custom time, scoreboard, window styling, and player visuals.",
+    description = "Floyd render settings: full chat chroma, borderless fullscreen, and player visuals.",
     toggled = true,
 ) {
-    val customTime by BooleanSetting("Time Changer", false, desc = "Matches Floyd's custom time override.")
-    val customTimeValue by NumberSetting("Time", 50f, 0f, 100f, 1f, desc = "World time slider used by custom time.")
-    val customScoreboard by BooleanSetting("Custom Scoreboard", false, desc = "Matches Floyd's custom scoreboard HUD.")
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
     var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
-    val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
 
-    private var lastAppliedTitle: String? = null
     private var lastAppliedBorderless = false
     private var savedWindowedX = -1
     private var savedWindowedY = -1
@@ -32,34 +25,9 @@ object FloydRender : Module(
 
     init {
         on<TickEvent.ClientEnd> {
-            applyCustomTime()
-            applyWindowTitle()
             ensureBorderlessState()
         }
     }
-
-    private fun applyCustomTime() {
-        if (!shouldUseCustomTime()) return
-        applyCustomTimeOverride()
-    }
-
-    @JvmStatic
-    fun shouldUseCustomTime(): Boolean = enabled && customTime
-
-    @JvmStatic
-    fun applyCustomTimeOverride() {
-        val levelData = mc.level?.levelData ?: return
-        val ticks = customTimeTicks(customTimeValue)
-        levelData.setDayTime(ticks)
-        levelData.setGameTime(ticks)
-    }
-
-    @JvmStatic
-    fun customTimeTicks(value: Float): Long =
-        Math.round((value.coerceIn(0f, 100f) / 100f) * 23999L).coerceIn(0, 23999).toLong()
-
-    @JvmStatic
-    fun shouldUseCustomScoreboard(): Boolean = enabled && customScoreboard
 
     @JvmStatic
     fun shouldUseFullChatChroma(): Boolean = enabled && fullChatChroma
@@ -67,24 +35,10 @@ object FloydRender : Module(
     @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
-        "customTime" to customTime,
-        "customTimeValue" to customTimeValue,
-        "shouldUseCustomTime" to shouldUseCustomTime(),
-        "customScoreboard" to customScoreboard,
-        "shouldUseCustomScoreboard" to shouldUseCustomScoreboard(),
         "fullChatChroma" to fullChatChroma,
         "shouldUseFullChatChroma" to shouldUseFullChatChroma(),
-        "borderlessWindowed" to borderlessWindowed,
-        "windowTitle" to windowTitle,
-        "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" }
+        "borderlessWindowed" to borderlessWindowed
     )
-
-    private fun applyWindowTitle() {
-        val target = windowTitle.trim().ifEmpty { "Minecraft" }
-        if (lastAppliedTitle == target) return
-        mc.window.setTitle(target)
-        lastAppliedTitle = target
-    }
 
     private fun ensureBorderlessState() {
         val window = mc.window

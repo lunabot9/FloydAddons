@@ -149,6 +149,8 @@ object FloydSidecarConfig {
 
         set("Neck Hider", "Enabled", data.primitive("nickHiderEnabled"))
         set("Neck Hider", "Default Nick", data.nonEmptyStringPrimitive("nickname"))
+        set("Neck Hider", "Hide Player Level", data.primitive("hidePlayerLevel"))
+        set("Neck Hider", "Hide Rank Display", data.primitive("hideRankDisplay"))
         setModuleEnabled("Server ID Hider", data.bool("serverIdHiderEnabled"))
         setModuleEnabled("Profile ID Hider", data.boolOrDefault("profileIdHiderEnabled", true).asBoolean)
 

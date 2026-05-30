@@ -4735,6 +4735,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         )
         Page.NICK_HIDER -> listOf(
             toggleModuleRow(FloydNickHider, "Nick Hider"),
+            toggleSettingRow(FloydNickHider, "Hide Player Level", "Hide Player Level"),
+            toggleSettingRow(FloydNickHider, "Hide Rank Display", "Hide Rank Display"),
             actionRow("Name Mappings") { currentPage = Page.NAME_MAPPINGS },
             actionRow("Reload Names") {
                 ModuleManager.loadConfigurations()

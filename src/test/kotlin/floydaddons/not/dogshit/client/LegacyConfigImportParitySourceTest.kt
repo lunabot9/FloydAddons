@@ -129,7 +129,7 @@ class LegacyConfigImportParitySourceTest {
 
         for (expected in listOf(
             "set(\"Custom Skin\", \"Custom Skin\", data.boolOrDefault(\"skinCustomEnabled\", true))",
-            "set(\"Hiders\", \"Profile ID Hider\", data.boolOrDefault(\"profileIdHiderEnabled\", true))",
+            "setModuleEnabled(\"Profile ID Hider\", data.boolOrDefault(\"profileIdHiderEnabled\", true).asBoolean)",
             "set(\"Mob ESP\", \"Tracers\", data.boolOrDefault(\"mobEspTracers\", true))",
             "set(\"Mob ESP\", \"Hitboxes\", data.boolOrDefault(\"mobEspHitboxes\", true))",
             "set(\"Mob ESP\", \"Star Mobs\", data.boolOrDefault(\"mobEspStarMobs\", true))",
@@ -165,7 +165,11 @@ class LegacyConfigImportParitySourceTest {
         val activeAccumulator = source("src/main/kotlin/floydaddons/not/dogshit/client/features/impl/player/FloydServerIdAccumulator.kt")
 
         assertTrue(floyd.contains("if (!nickEnabled && !serverIdEnabled && !profileIdEnabled) return text;"))
-        assertTrue(active.contains("fun hasReplacements(): Boolean =\n        enabled || FloydHiders.serverIdHider || FloydHiders.profileIdHider"))
+        assertTrue(active.contains("fun hasReplacements(): Boolean ="))
+        assertTrue(active.contains("hidePlayerLevel"))
+        assertTrue(active.contains("hideRankDisplay"))
+        assertTrue(active.contains("FloydServerIdHider.enabled"))
+        assertTrue(active.contains("FloydProfileIdHider.enabled"))
         assertTrue(floyd.contains("return text.substring(0, idStart) + SERVER_ID_REPLACEMENT + text.substring(idEnd);"))
         assertTrue(activeAccumulator.contains("return text.substring(0, range.first) + replacement + text.substring(range.last + 1)"))
         assertTrue(floyd.contains("result = caseInsensitiveReplace(result, entry.getKey(), entry.getValue());"))
@@ -178,7 +182,7 @@ class LegacyConfigImportParitySourceTest {
         val active = source("src/main/kotlin/floydaddons/not/dogshit/client/config/FloydSidecarConfig.kt")
 
         assertTrue(floyd.contains("windowTitle = title != null ? title.trim() : \"\";"))
-        assertTrue(active.contains("set(\"Render\", \"Instance Title\", data.trimmedStringPrimitive(\"windowTitle\"))"))
+        assertTrue(active.contains("set(\"Click GUI\", \"Instance Title\", data.trimmedStringPrimitive(\"windowTitle\"))"))
     }
 
     @Test

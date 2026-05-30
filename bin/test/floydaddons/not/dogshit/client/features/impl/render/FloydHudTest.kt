@@ -42,6 +42,16 @@ class FloydHudTest {
                 hudEnabled = true
             )
         )
+        FloydHud.markVanillaScoreboardWouldRender()
+        assertTrue(
+            FloydHud.shouldDrawScoreboardHud(
+                example = false,
+                customScoreboard = true,
+                objectivePresent = true,
+                moduleEnabled = true,
+                hudEnabled = true
+            )
+        )
     }
 
     @Test
@@ -236,7 +246,7 @@ class FloydHudTest {
         assertTrue(floyd.contains("String footerText = \"FloydAddons\""))
 
         assertTrue(active.contains("sortedWith(compareByDescending<PlayerScoreEntry> { it.value() }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.owner() })"))
-        assertTrue(active.contains("return if (consumeVanillaSignal) vanillaScoreboardWouldRender.getAndSet(false) else vanillaScoreboardWouldRender.get()"))
+        assertTrue(active.contains("return vanillaScoreboardWouldRender.get()"))
         assertTrue(active.contains("fun shouldCancelVanillaScoreboard("))
         assertTrue(active.contains("moduleEnabled && hudEnabled && customScoreboard && objectivePresent"))
         assertTrue(active.contains("DisplaySlot::teamColorToSlot"))

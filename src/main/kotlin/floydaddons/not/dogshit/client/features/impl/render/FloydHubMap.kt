@@ -180,7 +180,6 @@ object FloydHubMap : Module(
             .toList()
 
         if (frames.isEmpty()) {
-            mappedTilesById = emptyMap()
             return
         }
 
@@ -190,7 +189,21 @@ object FloydHubMap : Module(
             .mapNotNull(::resolveWallBinding)
             .maxByOrNull { it.size }
 
-        mappedTilesById = bestWall ?: emptyMap()
+        updateMappedTiles(bestWall)
+    }
+
+    internal fun clearMappedTilesForTest() {
+        mappedTilesById = emptyMap()
+    }
+
+    internal fun applyResolvedWallBindingForTest(binding: Map<Int, Int>?) {
+        updateMappedTiles(binding)
+    }
+
+    private fun updateMappedTiles(bestWall: Map<Int, Int>?) {
+        if (bestWall != null) {
+            mappedTilesById = bestWall
+        }
     }
 
     private fun wallCell(frame: ItemFrame): WallCell? {

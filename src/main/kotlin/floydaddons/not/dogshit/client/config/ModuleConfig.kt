@@ -115,25 +115,20 @@ class ModuleConfig internal constructor(file: File) {
                                     if (!target.equals("Off", ignoreCase = true) && !FloydNoArmor.enabled) FloydNoArmor.toggle()
                                 }
                             }
-                            continue
                         }
                         if (canonicalModule == "render") {
                             when (key.lowercase()) {
                                 "custom time" -> {
                                     if (value.asBoolean != FloydTimeChanger.enabled) FloydTimeChanger.toggle()
-                                    continue
                                 }
                                 "custom time value" -> {
                                     (this@ModuleConfig.modules["time changer"]?.settings?.get("Time") as? Saving)?.apply { read(value, gson) }
-                                    continue
                                 }
                                 "custom scoreboard" -> {
                                     if (value.asBoolean != FloydCustomScoreboard.enabled) FloydCustomScoreboard.toggle()
-                                    continue
                                 }
                                 "window title" -> {
                                     (ClickGUIModule.settings["Instance Title"] as? Saving)?.apply { read(value, gson) }
-                                    continue
                                 }
                             }
                         }

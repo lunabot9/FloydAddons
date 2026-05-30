@@ -19,7 +19,7 @@ object FloydTaskbarIcon {
     private var applied = false
 
     fun applyOnce() {
-        if (applied || !FloydCompatibility.shouldApplyTaskbarIcon()) return
+        if (applied || !FloydTaskbarIconModule.enabled) return
         if (System.getProperty("os.name").contains("mac", ignoreCase = true)) {
             applied = true
             return

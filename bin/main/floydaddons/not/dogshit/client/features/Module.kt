@@ -38,6 +38,12 @@ abstract class Module(
     val category: Category = category ?: getCategoryFromPackage(this::class.java)
 
     /**
+     * Whether this module should appear in the click GUI/module browser.
+     */
+    @Transient
+    open val visibleInGui: Boolean = true
+
+    /**
      * Flag for if the module is enabled/disabled.
      *
      * When true, it is registered to the [EventBus].

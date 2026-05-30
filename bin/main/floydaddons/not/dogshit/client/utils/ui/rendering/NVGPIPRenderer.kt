@@ -90,11 +90,13 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureI
             val pose = Matrix3x2f(context.pose())
             val p0 = pose.transformPosition(Vector2f(x.toFloat(), y.toFloat()))
             val p1 = pose.transformPosition(Vector2f((x + width).toFloat(), (y + height).toFloat()))
+            if (!p0.x.isFinite() || !p0.y.isFinite() || !p1.x.isFinite() || !p1.y.isFinite()) return
             val screenLeft = minOf(p0.x, p1.x).roundToInt()
             val screenTop = minOf(p0.y, p1.y).roundToInt()
             val screenWidth = maxOf(p0.x, p1.x).roundToInt() - screenLeft
             val screenHeight = maxOf(p0.y, p1.y).roundToInt() - screenTop
             val renderScale = pose.transformDirection(Vector2f(1f, 0f)).length() * renderScaleMultiplier
+            if (!renderScale.isFinite()) return
             val bounds = createBounds(screenLeft, screenTop, screenLeft + screenWidth, screenTop + screenHeight, scissor)
 
             val state = NVGRenderState(

@@ -14,21 +14,43 @@ import floydaddons.not.dogshit.client.events.core.on
 import floydaddons.not.dogshit.client.keybind.KeybindSync
 import floydaddons.not.dogshit.client.features.ModuleManager.configs
 import floydaddons.not.dogshit.client.features.impl.camera.FloydCamera
+import floydaddons.not.dogshit.client.features.impl.camera.FloydF5CustomizerModule
+import floydaddons.not.dogshit.client.features.impl.camera.FloydFreecamModule
+import floydaddons.not.dogshit.client.features.impl.camera.FloydFreelookModule
 import floydaddons.not.dogshit.client.features.impl.cosmetic.FloydCape
 import floydaddons.not.dogshit.client.features.impl.cosmetic.FloydConeHat
-import floydaddons.not.dogshit.client.features.impl.hiders.FloydHiders
-import floydaddons.not.dogshit.client.features.impl.misc.FloydCompatibility
+import floydaddons.not.dogshit.client.features.impl.misc.FloydCustomMainMenu
 import floydaddons.not.dogshit.client.features.impl.misc.FloydDiscordPresence
 import floydaddons.not.dogshit.client.features.impl.misc.FloydLocalControl
+import floydaddons.not.dogshit.client.features.impl.misc.FloydSpoofClientBrand
+import floydaddons.not.dogshit.client.features.impl.misc.FloydTaskbarIconModule
+import floydaddons.not.dogshit.client.features.impl.misc.FloydUpdateCheckerModule
 import floydaddons.not.dogshit.client.features.impl.player.FloydNickHider
 import floydaddons.not.dogshit.client.features.impl.player.FloydPlayerSize
 import floydaddons.not.dogshit.client.features.impl.cosmetic.FloydSkin
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydDisableArrows
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydDisableHungerBar
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHideEntityFire
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHidePotionEffects
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHideWatchdogMessages
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydNoArmor
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydNoHurtCamera
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydProfileIdHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveExplosionParticles
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveFallingBlocks
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveFireOverlay
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveTabPing
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydModHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydServerIdHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydThirdPersonCrosshair
 import floydaddons.not.dogshit.client.features.impl.render.FloydHud
 import floydaddons.not.dogshit.client.features.impl.render.FloydMobEsp
 import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
 import floydaddons.not.dogshit.client.features.impl.render.FloydAnimations
+import floydaddons.not.dogshit.client.features.impl.render.FloydCustomScoreboard
 import floydaddons.not.dogshit.client.features.impl.render.FloydHubMap
 import floydaddons.not.dogshit.client.features.impl.render.FloydRender
+import floydaddons.not.dogshit.client.features.impl.render.FloydTimeChanger
 import floydaddons.not.dogshit.client.features.impl.render.FloydXray
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
@@ -73,12 +95,15 @@ object ModuleManager {
 
             // FloydAddons feature groups. The vendored Floyd source under
             // vendor/floydaddons-fabric is the source-of-truth for behavior.
-            FloydRender, FloydXray, FloydAnimations, FloydHud, FloydMobEsp, FloydHubMap,
-            FloydHiders,
+            FloydRender, FloydTimeChanger, FloydCustomScoreboard, FloydXray, FloydAnimations, FloydHud, FloydMobEsp, FloydHubMap,
+            FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
+            FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
+            FloydHideWatchdogMessages, FloydModHider, FloydServerIdHider, FloydProfileIdHider, FloydNoArmor,
             FloydNickHider, FloydPlayerSize,
-            FloydCamera,
+            FloydFreecamModule, FloydFreelookModule, FloydF5CustomizerModule,
             FloydSkin, FloydCape, FloydConeHat,
-            FloydDiscordPresence, FloydLocalControl, FloydCompatibility,
+            FloydDiscordPresence, FloydLocalControl,
+            FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule,
         )
 
         // hashmap, but would need to keep track when setting values change

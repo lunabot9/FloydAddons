@@ -7,7 +7,8 @@ import floydaddons.not.dogshit.client.events.TickEvent
 import floydaddons.not.dogshit.client.events.core.on
 import floydaddons.not.dogshit.client.features.Category
 import floydaddons.not.dogshit.client.features.Module
-import floydaddons.not.dogshit.client.features.impl.hiders.FloydHiders
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydProfileIdHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydServerIdHider
 import floydaddons.not.dogshit.client.utils.ChatChroma
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
@@ -26,6 +27,8 @@ object FloydNickHider : Module(
 ) {
     var nickname by StringSetting("Default Nick", "George Floyd", 32, desc = "Replacement name used by nick hider.")
     val selfNameChroma by BooleanSetting("Self Name Chroma", false, desc = "Cycles your own replaced nickname through chroma.")
+    val hidePlayerLevel by BooleanSetting("Hide Player Level", false, desc = "Hides Hypixel player level prefixes in rendered text.")
+    val hideRankDisplay by BooleanSetting("Hide Rank Display", false, desc = "Hides Hypixel rank prefixes in rendered text.")
     val nameMappings by MapSetting("Name Mappings", mutableMapOf<String, String>()).hide()
 
     private val serverIds = FloydServerIdAccumulator()
@@ -55,7 +58,7 @@ object FloydNickHider : Module(
 
     @JvmStatic
     fun hasReplacements(): Boolean =
-        enabled || FloydHiders.serverIdHider || FloydHiders.profileIdHider
+        enabled || hidePlayerLevel || hideRankDisplay || FloydServerIdHider.enabled || FloydProfileIdHider.enabled
 
     @JvmStatic
     fun replaceString(text: String): String {
@@ -71,14 +74,20 @@ object FloydNickHider : Module(
                 }
             }
         }
-        if (FloydHiders.serverIdHider) {
+        if (hidePlayerLevel) {
+            result = PLAYER_LEVEL_PATTERN.matcher(result).replaceAll("")
+        }
+        if (hideRankDisplay) {
+            result = RANK_DISPLAY_PATTERN.matcher(result).replaceAll("")
+        }
+        if (FloydServerIdHider.enabled) {
             result = serverIds.replaceDateServerId(result, SERVER_ID_REPLACEMENT)
             for (id in serverIds.cachedIds()) {
                 result = replaceIgnoreCase(result, id, SERVER_ID_REPLACEMENT)
             }
             result = FloydServerIdAccumulator.FULL_SERVER_ID_PATTERN.matcher(result).replaceAll(SERVER_ID_REPLACEMENT)
         }
-        if (FloydHiders.profileIdHider) result = PROFILE_ID_PATTERN.matcher(result).replaceAll(PROFILE_ID_REPLACEMENT)
+        if (FloydProfileIdHider.enabled) result = PROFILE_ID_PATTERN.matcher(result).replaceAll(PROFILE_ID_REPLACEMENT)
         return result
     }
 
@@ -104,7 +113,19 @@ object FloydNickHider : Module(
                 }
             }
         }
-        if (FloydHiders.serverIdHider) {
+        if (hidePlayerLevel) {
+            replaceRegexComponent(result, PLAYER_LEVEL_PATTERN, "").also { replacement ->
+                result = replacement.component
+                changed = changed || replacement.changed
+            }
+        }
+        if (hideRankDisplay) {
+            replaceRegexComponent(result, RANK_DISPLAY_PATTERN, "").also { replacement ->
+                result = replacement.component
+                changed = changed || replacement.changed
+            }
+        }
+        if (FloydServerIdHider.enabled) {
             replaceDateServerIdInComponent(result, SERVER_ID_REPLACEMENT).also { replacement ->
                 result = replacement.component
                 changed = changed || replacement.changed
@@ -120,7 +141,7 @@ object FloydNickHider : Module(
                 changed = changed || replacement.changed
             }
         }
-        if (FloydHiders.profileIdHider) {
+        if (FloydProfileIdHider.enabled) {
             replaceRegexComponent(result, PROFILE_ID_PATTERN, PROFILE_ID_REPLACEMENT).also { replacement ->
                 result = replacement.component
                 changed = changed || replacement.changed
@@ -150,14 +171,20 @@ object FloydNickHider : Module(
                 }
             }
         }
-        if (FloydHiders.serverIdHider) {
+        if (hidePlayerLevel) {
+            changed = styled.replaceRegex(PLAYER_LEVEL_PATTERN, "") || changed
+        }
+        if (hideRankDisplay) {
+            changed = styled.replaceRegex(RANK_DISPLAY_PATTERN, "") || changed
+        }
+        if (FloydServerIdHider.enabled) {
             changed = styled.replaceDateServerId(SERVER_ID_REPLACEMENT) || changed
             for (id in serverIds.cachedIds()) {
                 changed = styled.replaceIgnoreCase(id, SERVER_ID_REPLACEMENT) || changed
             }
             changed = styled.replaceRegex(FloydServerIdAccumulator.FULL_SERVER_ID_PATTERN, SERVER_ID_REPLACEMENT) || changed
         }
-        if (FloydHiders.profileIdHider) {
+        if (FloydProfileIdHider.enabled) {
             changed = styled.replaceRegex(PROFILE_ID_PATTERN, PROFILE_ID_REPLACEMENT) || changed
         }
 
@@ -171,8 +198,10 @@ object FloydNickHider : Module(
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "settings" to mapOf(
-            "serverIdHider" to FloydHiders.serverIdHider,
-            "profileIdHider" to FloydHiders.profileIdHider,
+            "hidePlayerLevel" to hidePlayerLevel,
+            "hideRankDisplay" to hideRankDisplay,
+            "serverIdHider" to FloydServerIdHider.enabled,
+            "profileIdHider" to FloydProfileIdHider.enabled,
             "nickname" to nickname,
             "selfNameChroma" to selfNameChroma,
             "nameMappings" to nameMappings.toSortedMap(String.CASE_INSENSITIVE_ORDER),
@@ -200,7 +229,7 @@ object FloydNickHider : Module(
     )
 
     fun debugScanServerIdText(text: String, scoreboard: Boolean): Boolean {
-        if (!FloydHiders.serverIdHider) return false
+        if (!FloydServerIdHider.enabled) return false
         return recordScan(
             source = if (scoreboard) ScanSource.DEBUG_SCOREBOARD else ScanSource.DEBUG_TEXT,
             text = text,
@@ -213,7 +242,7 @@ object FloydNickHider : Module(
         val currentDisplay = currentServerIdForDisplay()
         val displayIds = cachedServerIdsForDisplay()
         appendLine("--- Server ID Hider Debug ---")
-        appendLine("Enabled: ${FloydHiders.serverIdHider}")
+        appendLine("Enabled: ${FloydServerIdHider.enabled}")
         appendLine("Replacement: $SERVER_ID_REPLACEMENT")
         appendLine("Current server: ${currentDisplay.ifEmpty { "(none detected)" }}")
         appendLine(
@@ -271,7 +300,7 @@ object FloydNickHider : Module(
     fun mappingIds(): Set<String> = nameMappings.keys.toSortedSet()
 
     private fun tickServerIdTracker() {
-        if (!FloydHiders.serverIdHider) return
+        if (!FloydServerIdHider.enabled) return
         val level = mc.level
         val player = mc.player
         if (level == null || player == null) {
@@ -465,6 +494,10 @@ object FloydNickHider : Module(
 
     private const val SERVER_ID_REPLACEMENT = "fL0YD"
     private const val PROFILE_ID_REPLACEMENT = "Profile ID: [hidden]"
+    private val PLAYER_LEVEL_PATTERN = Pattern.compile("(?i)(?:[✫✪★⭐✯]\\s*)?\\[\\d{1,4}\\]\\s*(?:[✫✪★⭐✯]\\s*)?")
+    private val RANK_DISPLAY_PATTERN = Pattern.compile(
+        "(?i)\\[(?:VIP\\+\\+|MVP\\+\\+|MVP\\+|MVP|VIP\\+|VIP|HELPER|MODERATOR|ADMIN|OWNER|YOUTUBE)\\]\\s*"
+    )
     private val PROFILE_ID_PATTERN = Pattern.compile(
         "(?i)profile\\s*id:\\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     )

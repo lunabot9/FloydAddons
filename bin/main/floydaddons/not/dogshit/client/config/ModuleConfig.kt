@@ -7,6 +7,28 @@ import floydaddons.not.dogshit.client.FloydAddonsMod
 import floydaddons.not.dogshit.client.FloydAddonsMod.logger
 import floydaddons.not.dogshit.client.clickgui.settings.Saving
 import floydaddons.not.dogshit.client.features.Module
+import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
+import floydaddons.not.dogshit.client.features.impl.render.FloydCustomScoreboard
+import floydaddons.not.dogshit.client.features.impl.render.FloydTimeChanger
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydDisableArrows
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydDisableHungerBar
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHideEntityFire
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHidePotionEffects
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydHideWatchdogMessages
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydModHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydNoArmor
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydNoHurtCamera
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydProfileIdHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveExplosionParticles
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveFallingBlocks
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveFireOverlay
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydRemoveTabPing
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydServerIdHider
+import floydaddons.not.dogshit.client.features.impl.hiders.FloydThirdPersonCrosshair
+import floydaddons.not.dogshit.client.features.impl.misc.FloydCustomMainMenu
+import floydaddons.not.dogshit.client.features.impl.misc.FloydSpoofClientBrand
+import floydaddons.not.dogshit.client.features.impl.misc.FloydTaskbarIconModule
+import floydaddons.not.dogshit.client.features.impl.misc.FloydUpdateCheckerModule
 import java.io.File
 
 /**
@@ -46,10 +68,70 @@ class ModuleConfig internal constructor(file: File) {
                     val moduleObj = modules?.asJsonObject ?: continue
                     val moduleName = moduleObj.get("name").asString
                     val canonicalModule = canonicalModuleName(moduleName)
+                    if (canonicalModule == "floyd compatibility") {
+                        val compatEnabled = moduleObj.get("enabled")?.asBoolean ?: true
+                        val settingObj = moduleObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet().orEmpty()
+                        for ((key, value) in settingObj) {
+                            when (key.lowercase()) {
+                                "spoof client brand" -> if (value.asBoolean != FloydSpoofClientBrand.enabled) FloydSpoofClientBrand.toggle()
+                                "custom main menu" -> if (value.asBoolean != FloydCustomMainMenu.enabled) FloydCustomMainMenu.toggle()
+                                "taskbar icon" -> if (value.asBoolean != FloydTaskbarIconModule.enabled) FloydTaskbarIconModule.toggle()
+                                "update checker" -> if (value.asBoolean != FloydUpdateCheckerModule.enabled) FloydUpdateCheckerModule.toggle()
+                                "hide watchdog message", "hide watchdog messages" -> if (value.asBoolean != FloydHideWatchdogMessages.enabled) FloydHideWatchdogMessages.toggle()
+                                "hide loader entry" -> if (value.asBoolean != FloydModHider.enabled) FloydModHider.toggle()
+                            }
+                        }
+                        if (!compatEnabled) {
+                            if (FloydSpoofClientBrand.enabled) FloydSpoofClientBrand.toggle()
+                            if (FloydCustomMainMenu.enabled) FloydCustomMainMenu.toggle()
+                            if (FloydTaskbarIconModule.enabled) FloydTaskbarIconModule.toggle()
+                            if (FloydUpdateCheckerModule.enabled) FloydUpdateCheckerModule.toggle()
+                            if (FloydHideWatchdogMessages.enabled) FloydHideWatchdogMessages.toggle()
+                            if (FloydModHider.enabled) FloydModHider.toggle()
+                        }
+                        continue
+                    }
                     val module = this@ModuleConfig.modules[canonicalModule] ?: continue
                     if (moduleObj.get("enabled").asBoolean != module.enabled) module.toggle()
                     val settingObj = moduleObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet() ?: continue
                     for ((key, value) in settingObj) {
+                        if (canonicalModule == "hiders") {
+                            when (key.lowercase()) {
+                                "no hurt camera" -> if (value.asBoolean != FloydNoHurtCamera.enabled) FloydNoHurtCamera.toggle()
+                                "remove fire overlay" -> if (value.asBoolean != FloydRemoveFireOverlay.enabled) FloydRemoveFireOverlay.toggle()
+                                "disable hunger bar" -> if (value.asBoolean != FloydDisableHungerBar.enabled) FloydDisableHungerBar.toggle()
+                                "hide potion effects" -> if (value.asBoolean != FloydHidePotionEffects.enabled) FloydHidePotionEffects.toggle()
+                                "3rd person crosshair" -> if (value.asBoolean != FloydThirdPersonCrosshair.enabled) FloydThirdPersonCrosshair.toggle()
+                                "hide entity fire" -> if (value.asBoolean != FloydHideEntityFire.enabled) FloydHideEntityFire.toggle()
+                                "disable arrows" -> if (value.asBoolean != FloydDisableArrows.enabled) FloydDisableArrows.toggle()
+                                "remove falling blocks" -> if (value.asBoolean != FloydRemoveFallingBlocks.enabled) FloydRemoveFallingBlocks.toggle()
+                                "no explosion particles" -> if (value.asBoolean != FloydRemoveExplosionParticles.enabled) FloydRemoveExplosionParticles.toggle()
+                                "remove tab ping" -> if (value.asBoolean != FloydRemoveTabPing.enabled) FloydRemoveTabPing.toggle()
+                                "server id hider" -> if (value.asBoolean != FloydServerIdHider.enabled) FloydServerIdHider.toggle()
+                                "profile id hider" -> if (value.asBoolean != FloydProfileIdHider.enabled) FloydProfileIdHider.toggle()
+                                "target" -> {
+                                    val target = value.asString
+                                    (FloydNoArmor.settings["Target"] as? Saving)?.read(value, gson)
+                                    if (!target.equals("Off", ignoreCase = true) && !FloydNoArmor.enabled) FloydNoArmor.toggle()
+                                }
+                            }
+                        }
+                        if (canonicalModule == "render") {
+                            when (key.lowercase()) {
+                                "custom time" -> {
+                                    if (value.asBoolean != FloydTimeChanger.enabled) FloydTimeChanger.toggle()
+                                }
+                                "custom time value" -> {
+                                    (this@ModuleConfig.modules["time changer"]?.settings?.get("Time") as? Saving)?.apply { read(value, gson) }
+                                }
+                                "custom scoreboard" -> {
+                                    if (value.asBoolean != FloydCustomScoreboard.enabled) FloydCustomScoreboard.toggle()
+                                }
+                                "window title" -> {
+                                    (ClickGUIModule.settings["Instance Title"] as? Saving)?.apply { read(value, gson) }
+                                }
+                            }
+                        }
                         val settingModuleName = canonicalSettingModuleName(canonicalModule, key)
                         val settingModule = this@ModuleConfig.modules[settingModuleName] ?: continue
                         val settingKey = canonicalSettingName(settingModuleName, key)

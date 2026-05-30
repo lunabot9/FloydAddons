@@ -148,14 +148,16 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     }
 
     private fun ensurePanels() {
-        val activeCategories = Category.categories.values.filter { ModuleManager.modulesByCategory.containsKey(it) }
+        val activeCategories = Category.categories.values.filter { category ->
+            ModuleManager.modulesByCategory[category]?.any { it.visibleInGui } == true
+        }
         if (panels.size != activeCategories.size) rebuildPanels()
     }
 
     private fun rebuildPanels() {
         ClickGUIModule.ensurePanelPositionsFit()
         panels.clear()
-        for (category in Category.categories.values.filter { ModuleManager.modulesByCategory.containsKey(it) }) {
+        for (category in Category.categories.values.filter { cat -> ModuleManager.modulesByCategory[cat]?.any { it.visibleInGui } == true }) {
             panels += Panel(category)
         }
     }

@@ -6,6 +6,7 @@ import floydaddons.not.dogshit.client.features.impl.hiders.FloydHidePotionEffect
 import floydaddons.not.dogshit.client.features.impl.hiders.FloydThirdPersonCrosshair;
 import floydaddons.not.dogshit.client.features.impl.render.FloydHud;
 import floydaddons.not.dogshit.client.features.impl.render.FloydCustomScoreboard;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.scores.Objective;
@@ -17,6 +18,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Gui.class)
 public class GuiMixin {
+
+    @Inject(method = "render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"))
+    private void floydaddons$beginHudFrame(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+        FloydHud.resetVanillaScoreboardWouldRender();
+    }
 
     @Inject(method = "renderFood", at = @At("HEAD"), cancellable = true)
     private void cancelFoodBar(GuiGraphics guiGraphics, Player player, int i, int j, CallbackInfo ci) {

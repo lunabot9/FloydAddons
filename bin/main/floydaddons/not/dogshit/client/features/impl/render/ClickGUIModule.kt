@@ -1,12 +1,15 @@
 package floydaddons.not.dogshit.client.features.impl.render
 
 import floydaddons.not.dogshit.client.FloydAddonsMod
+import floydaddons.not.dogshit.client.FloydAddonsMod.mc
 import floydaddons.not.dogshit.client.clickgui.ClickGUI
 import floydaddons.not.dogshit.client.clickgui.HudManager
 import floydaddons.not.dogshit.client.clickgui.LegacyFloydClickGUI
 import floydaddons.not.dogshit.client.clickgui.Panel
 import floydaddons.not.dogshit.client.clickgui.settings.AlwaysActive
 import floydaddons.not.dogshit.client.clickgui.settings.impl.*
+import floydaddons.not.dogshit.client.events.TickEvent
+import floydaddons.not.dogshit.client.events.core.on
 import floydaddons.not.dogshit.client.features.Category
 import floydaddons.not.dogshit.client.features.Module
 import floydaddons.not.dogshit.client.utils.Color
@@ -35,6 +38,7 @@ object ClickGUIModule : Module(
     val guiBorderChroma by BooleanSetting("GUI Border Chroma", true, desc = "Cycles legacy Floyd GUI panel borders through chroma.")
     val guiBorderFadeColor by ColorSetting("GUI Border Fade Color", Color(0xFF5555FF.toInt()), desc = "Legacy Floyd GUI panel border fade color.")
     val guiBorderFade by BooleanSetting("GUI Border Fade", false, desc = "Fades legacy Floyd GUI panel borders between two colors.")
+    val instanceTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
 
     val roundedPanelBottom by BooleanSetting("Rounded Panel Bottoms", true, desc = "Whether to extend panels to make them rounded at the bottom.")
     private val openGuiKey by KeybindSetting("Open Click GUI", GLFW.GLFW_KEY_N, desc = "FloydAddons legacy GUI key.").onPress {
@@ -42,6 +46,13 @@ object ClickGUIModule : Module(
     }
 
     private val action by ActionSetting("Open HUD Editor", desc = "Opens the HUD editor when clicked.") { mc.setScreen(HudManager) }
+    private var lastAppliedTitle: String? = null
+
+    init {
+        on<TickEvent.ClientEnd> {
+            applyWindowTitle()
+        }
+    }
 
     override fun onKeybind() {
         toggle()
@@ -72,6 +83,8 @@ object ClickGUIModule : Module(
         "legacyGuiBorderChroma" to guiBorderChroma,
         "legacyGuiBorderFadeColor" to "#${guiBorderFadeColor.hex()}",
         "legacyGuiBorderFade" to guiBorderFade,
+        "instanceTitle" to instanceTitle,
+        "effectiveInstanceTitle" to instanceTitle.trim().ifEmpty { "Minecraft" },
         "roundedPanelBottoms" to roundedPanelBottom,
         "panelCount" to panelSetting.size,
         "panels" to panelSetting.mapValues { (_, panel) ->
@@ -82,6 +95,13 @@ object ClickGUIModule : Module(
             )
         }
     )
+
+    private fun applyWindowTitle() {
+        val target = instanceTitle.trim().ifEmpty { "Minecraft" }
+        if (lastAppliedTitle == target) return
+        mc.window.setTitle(target)
+        lastAppliedTitle = target
+    }
 
     fun ensurePanelPositionsFit() {
         val activeCategories = Category.categories.values.toList()

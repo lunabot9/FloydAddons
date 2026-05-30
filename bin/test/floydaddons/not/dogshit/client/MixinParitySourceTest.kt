@@ -140,6 +140,7 @@ class MixinParitySourceTest {
         assertContains(activeMixin("FloydFabricLoaderMixin.java"), "FloydCompatibility.shouldHideLoaderEntry()")
         assertContains(activeMixin("GuiMixin.java"), "FloydHud.shouldCancelVanillaScoreboard")
         assertContains(activeMixin("GuiMixin.java"), "FloydHud.markVanillaScoreboardWouldRender()")
+        assertContains(activeMixin("GuiMixin.java"), "FloydHud.resetVanillaScoreboardWouldRender()")
         assertContains(activeMixin("GuiMixin.java"), "FloydHiders.shouldDisableHungerBar()")
         assertContains(activeMixin("FloydTimeUpdateMixin.java"), "FloydRender.shouldUseCustomTime()")
         assertContains(activeMixin("FloydWatchdogMessageMixin.java"), "FloydCompatibility.shouldHideWatchdogMessages()")
