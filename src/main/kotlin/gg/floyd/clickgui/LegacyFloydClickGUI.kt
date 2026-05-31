@@ -4719,10 +4719,12 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         )
         Page.MOB_ESP_FILTERS -> listOf(
             headerRow("Filters"),
-            actionSettingRow(FloydMobEsp, "Add Looked At Name", "Add Name", RowLayout.LEFT),
-            actionSettingRow(FloydMobEsp, "Add Looked At Type", "Add Type", RowLayout.RIGHT),
-            actionSettingRow(FloydMobEsp, "List Filters", "List Filters", RowLayout.LEFT),
-            actionSettingRow(FloydMobEsp, "Clear Filters", "Clear Filters", RowLayout.RIGHT)
+            // The Mob ESP per-filter editor settings were collapsed into one searchable list in the
+            // Odin GUI; here we call the public filter APIs directly so legacy parity is preserved.
+            actionRow("Add Name", RowLayout.LEFT) { FloydMobEsp.addLookedAtNameFilter(); ModuleManager.saveConfigurations() },
+            actionRow("Add Type", RowLayout.RIGHT) { FloydMobEsp.addLookedAtTypeFilter(); ModuleManager.saveConfigurations() },
+            actionRow("List Filters", RowLayout.LEFT) { modMessage(FloydMobEsp.filterListSummary()) },
+            actionRow("Clear Filters", RowLayout.RIGHT) { FloydMobEsp.clearFilters(); ModuleManager.saveConfigurations() }
         )
         Page.ANIMATIONS -> listOf(
             toggleModuleRow(FloydAnimations, "Attack Animation"),

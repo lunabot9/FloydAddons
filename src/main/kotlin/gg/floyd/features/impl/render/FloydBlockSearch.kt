@@ -1,18 +1,18 @@
 package gg.floyd.features.impl.render
 
-import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.ColorSetting
+import gg.floyd.clickgui.settings.impl.ExtendedSearchableListSetting
 import gg.floyd.clickgui.settings.impl.MapSetting
-import gg.floyd.clickgui.settings.impl.SearchableListSetting
 import gg.floyd.clickgui.settings.impl.SelectorSetting
-import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.RenderEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.utils.Colors
+import gg.floyd.utils.Identifiers
 import gg.floyd.utils.modMessage
+import gg.floyd.utils.render.BlockIconCache
 import gg.floyd.utils.render.drawStyledBox
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
 import net.minecraft.core.BlockPos
@@ -44,32 +44,8 @@ object FloydBlockSearch : Module(
     private val color by ColorSetting("Color", Colors.ACCENT.copy().also { it.chroma = true }, desc = "Outline color (toggle chroma inside the picker).")
     private val boxStyle by SelectorSetting("Box Style", "Outline", listOf("Outline", "Filled", "Both"), desc = "How matched blocks are highlighted.")
 
-    private var editorBlock by StringSetting("Block", "minecraft:diamond_ore", 96, desc = "Block ID edited by the buttons below.")
-    private val addBlockAction by ActionSetting("Add Block", desc = "Adds the block ID above to the search list.") {
-        val id = runCatching { validBlockId(editorBlock) }.getOrElse { modMessage(it.message ?: "Invalid block ID."); return@ActionSetting }
-        addSearchBlock(id)
-        ModuleManager.saveConfigurations()
-        modMessage("Searching for block: $id")
-    }
-    private val removeBlockAction by ActionSetting("Remove Block", desc = "Removes the block ID above from the search list.") {
-        val id = runCatching { validBlockId(editorBlock) }.getOrElse { modMessage(it.message ?: "Invalid block ID."); return@ActionSetting }
-        val removed = searchBlocks.remove(id) != null
-        reindexAll()
-        ModuleManager.saveConfigurations()
-        modMessage(if (removed) "Removed block search: $id" else "Block not in search list: $id")
-    }
-    private val listBlocksAction by ActionSetting("List Blocks", desc = "Lists the searched block IDs in chat.") {
-        modMessage(blockListSummary())
-    }
-    private val clearBlocksAction by ActionSetting("Clear Blocks", desc = "Clears all searched block IDs.") {
-        searchBlocks.clear()
-        reindexAll()
-        ModuleManager.saveConfigurations()
-        modMessage("Cleared block search list.")
-    }
-
-    private val blockList by SearchableListSetting(
-        "All Blocks",
+    private val blockSearchList by ExtendedSearchableListSetting(
+        "Block List",
         optionsProvider = { allBlockIds },
         selectedProvider = { activeIds() },
         onToggle = { id ->
@@ -77,7 +53,15 @@ object FloydBlockSearch : Module(
             reindexAll()
             ModuleManager.saveConfigurations()
         },
-        desc = "Search all blocks; click to toggle highlighting."
+        desc = "Search all blocks; click to toggle highlighting.",
+        displayNameProvider = Identifiers::friendlyName,
+        iconProvider = BlockIconCache::get,
+        showActionsRow = true,
+        onClearAll = {
+            searchBlocks.clear()
+            reindexAll()
+            ModuleManager.saveConfigurations()
+        },
     )
 
     private val searchBlocks by MapSetting("Search Blocks", mutableMapOf<String, Boolean>()).hide()

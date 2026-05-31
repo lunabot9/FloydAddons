@@ -22,40 +22,40 @@ import kotlin.math.max
  *
  * Click the header to expand. Type to filter. Mouse-wheel or drag the scrollbar to scroll.
  */
-class SearchableListSetting(
+open class SearchableListSetting(
     name: String,
-    private val optionsProvider: () -> List<String>,
-    private val selectedProvider: () -> Set<String>,
-    private val onToggle: (String) -> Unit,
+    protected val optionsProvider: () -> List<String>,
+    protected val selectedProvider: () -> Set<String>,
+    protected val onToggle: (String) -> Unit,
     desc: String
 ) : RenderableSetting<Unit>(name, desc) {
 
     override val default: Unit = Unit
     override var value: Unit = Unit
 
-    private val expandAnim = EaseInOutAnimation(200)
-    private var extended = false
+    protected val expandAnim = EaseInOutAnimation(200)
+    protected var extended = false
 
-    private var searchText = ""
-    private val search = TextInputHandler(textProvider = { searchText }, textSetter = { searchText = it })
+    protected var searchText = ""
+    protected val search = TextInputHandler(textProvider = { searchText }, textSetter = { searchText = it })
 
-    private var scrollOffset = 0f
-    private var draggingScrollbar = false
+    protected var scrollOffset = 0f
+    protected var draggingScrollbar = false
 
-    private val headerH = Panel.HEIGHT
-    private val searchH = 24f
-    private val rowH = 18f
-    private val maxRows = 7
-    private val viewportH = maxRows * rowH
-    private val pad = 6f
+    protected val headerH = Panel.HEIGHT
+    protected val searchH = 24f
+    protected val rowH = 18f
+    protected val maxRows = 7
+    protected val viewportH = maxRows * rowH
+    protected val pad = 6f
 
-    private fun fullHeight(): Float = headerH + searchH + viewportH + pad
+    protected open fun fullHeight(): Float = headerH + searchH + viewportH + pad
 
     override fun getHeight(): Float = expandAnim.get(headerH, fullHeight(), !extended)
 
     override val isHovered get() = isAreaHovered(lastX, lastY, width, headerH, true)
 
-    private fun matching(all: List<String>): List<String> =
+    protected fun matching(all: List<String>): List<String> =
         if (searchText.isBlank()) all else all.filter { it.contains(searchText, true) }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {

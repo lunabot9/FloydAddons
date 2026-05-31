@@ -19,7 +19,14 @@ abstract class RenderableSetting<T>(
     protected var lastY = 0f
     var listening = false
 
-    open fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
+    open fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float = renderBase(x, y)
+
+    /**
+     * Captures [lastX]/[lastY] and runs the shared hover/description bookkeeping, returning the
+     * current height. Subclasses that fully replace [render]'s body (rather than calling
+     * `super.render`) call this directly so they still get hover descriptions and click hit-testing.
+     */
+    protected fun renderBase(x: Float, y: Float): Float {
         lastX = x
         lastY = y
         val height = getHeight()

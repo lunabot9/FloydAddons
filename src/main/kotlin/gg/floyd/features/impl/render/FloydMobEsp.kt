@@ -1,12 +1,10 @@
 package gg.floyd.features.impl.render
 
-import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.ColorSetting
+import gg.floyd.clickgui.settings.impl.ExtendedSearchableListSetting
 import gg.floyd.clickgui.settings.impl.KeybindSetting
 import gg.floyd.clickgui.settings.impl.MapSetting
-import gg.floyd.clickgui.settings.impl.SearchableListSetting
-import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.RenderEvent
 import gg.floyd.events.TickEvent
 import gg.floyd.events.core.on
@@ -16,6 +14,7 @@ import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.utils.Color
 import gg.floyd.utils.Colors
+import gg.floyd.utils.Identifiers
 import gg.floyd.utils.render.drawTracer
 import gg.floyd.utils.render.drawWireFrameBox
 import gg.floyd.utils.render.drawText
@@ -50,83 +49,26 @@ object FloydMobEsp : Module(
     }
     private val defaultColor by ColorSetting("Default ESP Color", Colors.ACCENT.copy(), desc = "Default color for Mob ESP tracers and hitboxes (toggle chroma inside the picker).")
     private val stalkColor by ColorSetting("Tracer Color", Colors.ACCENT.copy(), desc = "Color for the stalk tracer (toggle chroma inside the picker).")
-    private var editorNameFilter by StringSetting("Name Filter", "shadow assassin", 96, desc = "Name filter edited by the name buttons below.")
-    private var editorTypeFilter by StringSetting("Type Filter", "minecraft:zombie", 96, desc = "Entity type ID edited by the type buttons below.")
-    private var editorColor by StringSetting("Filter Color", "55FF55", 8, desc = "Hex color applied by the color buttons below.")
-    private val editorChroma by BooleanSetting("Filter Chroma", false, desc = "Uses chroma for the edited filter color.")
-    private val addEditorName by ActionSetting("Add Name Filter", desc = "Adds the name filter above.") {
-        val name = runCatching { validUserNameFilter(editorNameFilter) }.getOrElse {
-            modMessage(it.message ?: "Invalid name filter.")
-            return@ActionSetting
-        }
-        addNameFilter(name)
-        ModuleManager.saveConfigurations()
-        modMessage("Added mob ESP name filter: $name")
-    }
-    private val removeEditorName by ActionSetting("Remove Name Filter", desc = "Removes the name filter above.") {
-        val name = runCatching { validUserNameFilter(editorNameFilter) }.getOrElse {
-            modMessage(it.message ?: "Invalid name filter.")
-            return@ActionSetting
-        }
-        val removed = removeNameFilter(name)
-        ModuleManager.saveConfigurations()
-        modMessage(if (removed) "Removed mob ESP name filter: $name" else "Name filter not found: $name")
-    }
-    private val colorEditorName by ActionSetting("Color Name Filter", desc = "Applies the color/chroma settings above to the name filter.") {
-        updateEditorColor(isName = true)
-    }
-    private val addEditorType by ActionSetting("Add Type Filter", desc = "Adds the entity type filter above.") {
-        val type = runCatching { validTypeFilterId(editorTypeFilter) }.getOrElse {
-            modMessage(it.message ?: "Invalid entity type ID.")
-            return@ActionSetting
-        }
-        addTypeFilter(type)
-        ModuleManager.saveConfigurations()
-        modMessage("Added mob ESP type filter: $type")
-    }
-    private val removeEditorType by ActionSetting("Remove Type Filter", desc = "Removes the entity type filter above.") {
-        val type = runCatching { validTypeFilterId(editorTypeFilter) }.getOrElse {
-            modMessage(it.message ?: "Invalid entity type ID.")
-            return@ActionSetting
-        }
-        val removed = removeTypeFilter(type)
-        ModuleManager.saveConfigurations()
-        modMessage(if (removed) "Removed mob ESP type filter: $type" else "Type filter not found: $type")
-    }
-    private val colorEditorType by ActionSetting("Color Type Filter", desc = "Applies the color/chroma settings above to the type filter.") {
-        updateEditorColor(isName = false)
-    }
-    private val listEditorFilters by ActionSetting("List Filters", desc = "Prints Mob ESP filters and colors in chat.") {
-        modMessage(filterListSummary())
-    }
-    private val clearEditorFilters by ActionSetting("Clear Filters", desc = "Clears Mob ESP name/type filters and colors.") {
-        clearFilters()
-        ModuleManager.saveConfigurations()
-        modMessage("Cleared all mob ESP filters.")
-    }
-    private val addLookedAtName by ActionSetting("Add Looked At Name", desc = "Adds a name filter for the entity under the crosshair.") {
-        val target = lookedAtFilterTarget() ?: return@ActionSetting modMessage("Look at a non-player entity first.")
-        val name = suggestedName(target) ?: return@ActionSetting modMessage("Looked-at entity has no usable name.")
-        addNameFilter(name)
-        ModuleManager.saveConfigurations()
-        modMessage("Added mob ESP name filter: $name")
-    }
-    private val addLookedAtType by ActionSetting("Add Looked At Type", desc = "Adds a type filter for the entity under the crosshair.") {
-        val target = lookedAtFilterTarget() ?: return@ActionSetting modMessage("Look at a non-player entity first.")
-        val type = entityTypeId(target)
-        addTypeFilter(type)
-        ModuleManager.saveConfigurations()
-        modMessage("Added mob ESP type filter: $type")
-    }
-    private val typeList by SearchableListSetting(
-        "All Mob Types",
-        optionsProvider = { typeListOptions() },
-        selectedProvider = { typeFilterIds() },
-        onToggle = { id ->
-            if (id in typeFilterIds()) removeTypeFilter(id) else addTypeFilter(id)
+    // One searchable multi-select list covering both name and type filters. An option containing
+    // ':' is treated as a type id (e.g. "minecraft:zombie"); anything else is a free-text name
+    // filter. Selection, colors and persistence stay in the hidden MapSettings below.
+    private val mobFilterList by ExtendedSearchableListSetting(
+        "Mob Filters",
+        optionsProvider = { filterListOptions() },
+        selectedProvider = { activeNameFilters() + activeTypeFilters() },
+        onToggle = { id -> toggleFilter(id) },
+        desc = "Search nearby mobs + every vanilla mob type; click to toggle a filter, right-click to set its color.",
+        displayNameProvider = { if (it.contains(':')) Identifiers.friendlyName(it) else it },
+        // Mob icons aren't readily available as flat textures; reserve a gray placeholder box.
+        iconProvider = null,
+        colorProvider = { filterHex(it) },
+        onColorChange = { id, hex -> setFilterColor(id, hex) },
+        onAltClick = { addLookedAtTypeFilter() },
+        onClearAll = {
+            clearFilters()
             ModuleManager.saveConfigurations()
         },
-        desc = "Search nearby + all vanilla mob types; click to toggle a type filter."
+        showActionsRow = true,
     )
     private val nameFilters by MapSetting("Name Filters", mutableMapOf<String, Boolean>()).hide()
     private val typeFilters by MapSetting("Type Filters", mutableMapOf<String, Boolean>()).hide()
@@ -134,16 +76,43 @@ object FloydMobEsp : Module(
     private val typeFilterColors by MapSetting("Type Filter Colors", mutableMapOf<String, String>()).hide()
     private val rawEntries = mutableListOf<MutableMap<String, String>>()
     private val allEntityTypeIds by lazy { BuiltInRegistries.ENTITY_TYPE.keySet().map { it.toString() }.sorted() }
-    // Cache the nearby-entity scan + full registry for the "All Mob Types" list so it isn't rebuilt (with an entity walk) every frame.
-    private var cachedTypeOptions: List<String> = emptyList()
-    private var cachedTypeOptionsMs = 0L
-    private fun typeListOptions(): List<String> {
+    // Cache the nearby-entity scan + full registry for the unified list so it isn't rebuilt (with an
+    // entity walk) every frame. Unions active name filters so already-selected names stay visible.
+    private var cachedFilterOptions: List<String> = emptyList()
+    private var cachedFilterOptionsMs = 0L
+    private fun filterListOptions(): List<String> {
         val now = System.currentTimeMillis()
-        if (cachedTypeOptions.isEmpty() || now - cachedTypeOptionsMs > 500L) {
-            cachedTypeOptions = (nearbyTypeSuggestions() + allEntityTypeIds).distinct()
-            cachedTypeOptionsMs = now
+        if (cachedFilterOptions.isEmpty() || now - cachedFilterOptionsMs > 500L) {
+            cachedFilterOptions = (nameFilterIds() + nearbyNameSuggestions() +
+                typeFilterIds() + nearbyTypeSuggestions() + allEntityTypeIds).distinct()
+            cachedFilterOptionsMs = now
         }
-        return cachedTypeOptions
+        return cachedFilterOptions
+    }
+
+    /** Adds/removes [id] as a type filter when it looks like a registry id, else as a name filter. */
+    private fun toggleFilter(id: String) {
+        if (id.contains(':')) {
+            if (id in typeFilterIds()) removeTypeFilter(id) else addTypeFilter(id)
+        } else {
+            if (id.lowercase(Locale.ROOT) in activeNameFilters()) removeNameFilter(id) else addNameFilter(id)
+        }
+        ModuleManager.saveConfigurations()
+    }
+
+    /** The 6-digit hex for [id]'s filter color, or null when it uses the default color (no swatch). */
+    private fun filterHex(id: String): String? {
+        val encoded = if (id.contains(':')) typeFilterColors[id.lowercase(Locale.ROOT)]
+        else nameFilterColors[nameFilterColorKey(id)]
+        return encoded?.let(::decodeColor)?.hex
+    }
+
+    private fun setFilterColor(id: String, hex: String) {
+        runCatching {
+            if (id.contains(':')) setTypeFilterColor(id, hex, chroma = false)
+            else setNameFilterColor(id, hex, chroma = false)
+        }
+        ModuleManager.saveConfigurations()
     }
 
     private val armorStandToMob = mutableMapOf<Int, Int>()
@@ -571,23 +540,22 @@ object FloydMobEsp : Module(
 
     fun cachedNpcNameFor(entity: Entity): String? = npcNameCache[entity.id]
 
-    private fun updateEditorColor(isName: Boolean) {
-        val result = runCatching {
-            if (isName) setNameFilterColor(editorNameFilter, editorColor, editorChroma)
-            else setUserTypeFilterColor(editorTypeFilter, editorColor, editorChroma)
-        }
-        val updated = result.getOrElse {
-            modMessage(it.message ?: "Invalid mob ESP color.")
-            return
-        }
-        if (!updated) {
-            modMessage(if (isName) "Name filter not found: $editorNameFilter" else "Type filter not found: $editorTypeFilter")
-            return
-        }
+    /** Adds a name filter for the entity under the crosshair. Returns the added name, or null. */
+    fun addLookedAtNameFilter(): String? {
+        val target = lookedAtFilterTarget() ?: return null
+        val name = suggestedName(target) ?: return null
+        addNameFilter(name)
         ModuleManager.saveConfigurations()
-        val target = if (isName) editorNameFilter else editorTypeFilter
-        val color = if (isName) colorSummaryForName(target) else colorSummaryForType(target)
-        modMessage("Updated mob ESP filter color: $target -> $color")
+        return name
+    }
+
+    /** Adds a type filter for the entity under the crosshair. Returns the added type id, or null. */
+    fun addLookedAtTypeFilter(): String? {
+        val target = lookedAtFilterTarget() ?: return null
+        val type = entityTypeId(target)
+        addTypeFilter(type)
+        ModuleManager.saveConfigurations()
+        return type
     }
 
     private fun RenderEvent.Extract.drawStalkTracer() {

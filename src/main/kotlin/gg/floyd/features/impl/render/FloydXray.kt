@@ -1,18 +1,18 @@
 package gg.floyd.features.impl.render
 
-import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
+import gg.floyd.clickgui.settings.impl.ExtendedSearchableListSetting
 import gg.floyd.clickgui.settings.impl.KeybindSetting
 import gg.floyd.clickgui.settings.impl.MapSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
-import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.TickEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
-import gg.floyd.utils.modMessage
+import gg.floyd.utils.Identifiers
 import gg.floyd.utils.moduleToggle
+import gg.floyd.utils.render.BlockIconCache
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
 import net.minecraft.world.level.block.state.BlockState
@@ -71,34 +71,27 @@ object FloydXray : Module(
         val active = toggleXray()
         if (ClickGUIModule.enableNotification) moduleToggle(name, active)
     }
-    private var editorBlock by StringSetting("Opaque Block", "minecraft:glass", 96, desc = "Block ID edited by the buttons below.")
-    private val addEditorBlock by ActionSetting("Add Opaque Block", desc = "Adds the block ID above to the opaque x-ray list.") {
-        val blockId = runCatching { validOpaqueBlockId(editorBlock) }.getOrElse {
-            modMessage(it.message ?: "Invalid block ID.")
-            return@ActionSetting
-        }
-        val added = addOpaqueBlock(blockId)
-        ModuleManager.saveConfigurations()
-        modMessage(addOpaqueBlockMessage(blockId, added))
-    }
-    private val removeEditorBlock by ActionSetting("Remove Opaque Block", desc = "Removes the block ID above from the opaque x-ray list.") {
-        val blockId = runCatching { validOpaqueBlockId(editorBlock) }.getOrElse {
-            modMessage(it.message ?: "Invalid block ID.")
-            return@ActionSetting
-        }
-        val removed = removeOpaqueBlock(blockId)
-        ModuleManager.saveConfigurations()
-        modMessage(removeOpaqueBlockMessage(blockId, removed))
-    }
-    private val listEditorBlocks by ActionSetting("List Opaque Blocks", desc = "Prints the current opaque x-ray block IDs in chat.") {
-        modMessage(opaqueBlockListSummary())
-    }
-    private val clearEditorBlocks by ActionSetting("Clear Opaque Blocks", desc = "Clears the opaque x-ray block list.") {
-        clearOpaqueBlocks()
-        ModuleManager.saveConfigurations()
-        modMessage("Cleared all xray opaque blocks.")
-    }
+    private val opaqueBlockList by ExtendedSearchableListSetting(
+        "Opaque Block List",
+        optionsProvider = { allBlockIds },
+        selectedProvider = { opaqueBlockIds() },
+        onToggle = { id ->
+            if (id in opaqueBlockIds()) removeOpaqueBlock(id) else addOpaqueBlock(id)
+            ModuleManager.saveConfigurations()
+        },
+        desc = "Search all blocks; click to toggle whether x-ray treats the block as opaque.",
+        displayNameProvider = Identifiers::friendlyName,
+        iconProvider = BlockIconCache::get,
+        showActionsRow = true,
+        onClearAll = {
+            clearOpaqueBlocks()
+            ModuleManager.saveConfigurations()
+        },
+    )
+    // Backing storage for persistence; kept hidden. Name unchanged so saved configs load as-is.
     private val opaqueBlocks by MapSetting("Opaque Blocks", defaultOpaqueBlocks().associateWith { true }.toMutableMap()).hide()
+
+    private val allBlockIds by lazy { BuiltInRegistries.BLOCK.keySet().map { it.toString() }.sorted() }
 
     private var lastActive = false
 
