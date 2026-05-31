@@ -145,8 +145,8 @@ object FloydSidecarConfig {
         setModuleEnabled("Animations", data.bool("animEnabled"))
         setModuleEnabled("Mob ESP", data.bool("mobEspEnabled"))
 
-        set("Neck Hider", "Enabled", data.primitive("nickHiderEnabled"))
-        set("Neck Hider", "Default Nick", data.nonEmptyStringPrimitive("nickname"))
+        set("Nick Hider", "Enabled", data.primitive("nickHiderEnabled"))
+        set("Nick Hider", "Default Nick", data.nonEmptyStringPrimitive("nickname"))
         set("Hiders", "Server ID Hider", data.primitive("serverIdHiderEnabled"))
         set("Hiders", "Profile ID Hider", data.boolOrDefault("profileIdHiderEnabled", true))
 
@@ -168,8 +168,8 @@ object FloydSidecarConfig {
         setModuleEnabled("Time Changer", data.bool("customTimeEnabled"))
         set("Time Changer", "Time", data.primitive("customTimeValue"))
         setModuleEnabled("Custom Scoreboard", data.bool("customScoreboardEnabled"))
-        set("Render", "Borderless Window", data.primitive("borderlessWindowed"))
-        set("Render", "Instance Title", data.trimmedStringPrimitive("windowTitle"))
+        set("General", "Borderless Window", data.primitive("borderlessWindowed"))
+        set("General", "Instance Title", data.trimmedStringPrimitive("windowTitle"))
 
         set("X-Ray", "Opacity", data.positivePrimitive("xrayOpacity"))
 
@@ -217,7 +217,7 @@ object FloydSidecarConfig {
         set("Cone Hat", "Spin Speed", data.primitive("coneHatRotationSpeed"))
 
         set("HUD", "Inventory HUD Scale", data.numberOrDefault("inventoryHudScale", 0.0f))
-        set("HUD", "HUD Corner Radius", data.primitive("hudCornerRadius"))
+        set("General", "Panel Corner Radius", data.primitive("hudCornerRadius"))
         set("HUD", "Inventory HUD", hudSetting(data, "inventoryHudX", "inventoryHudY", "inventoryHudScale", "inventoryHudEnabled", 0, 0, 0.5f))
         set("HUD", "Scoreboard HUD", hudSetting(data, "customScoreboardX", "customScoreboardY", null, "customScoreboardEnabled", 0, 0, 1f))
 

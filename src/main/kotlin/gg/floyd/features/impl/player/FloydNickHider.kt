@@ -19,7 +19,7 @@ import java.util.UUID
 import java.util.regex.Pattern
 
 object FloydNickHider : Module(
-    name = "Neck Hider",
+    name = "Nick Hider",
     category = Category.PLAYER,
     description = "Floyd nickname replacement and per-player name mappings.",
     toggled = true,

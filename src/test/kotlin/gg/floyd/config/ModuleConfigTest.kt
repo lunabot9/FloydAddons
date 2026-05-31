@@ -18,22 +18,22 @@ class ModuleConfigTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `legacy Nick Hider config entries load into Floyd GUI Neck Hider module`() {
-        val module = LegacyNamedModule(name = "Neck Hider")
-        loadLegacyConfigEntry("Nick Hider", module)
+    fun `legacy Neck Hider config entries load into Floyd GUI Nick Hider module`() {
+        val module = LegacyNamedModule(name = "Nick Hider")
+        loadLegacyConfigEntry("Neck Hider", module)
 
         assertTrue(module.enabled)
         assertTrue(module.featureEnabled)
-        assertEquals("Neck Hider", module.name)
+        assertEquals("Nick Hider", module.name)
     }
 
     @Test
     fun `legacy Neck Hider id toggles load into Floyd GUI Hiders module`() {
-        val neckHider = LegacyNeckHiderModule()
+        val nickHider = LegacyNickHiderModule()
         val hiders = LegacyHidersModule()
         loadLegacyConfigEntry(
             "Neck Hider",
-            listOf(neckHider, hiders),
+            listOf(nickHider, hiders),
             """
             {
               "Server ID Hider": true,
@@ -48,11 +48,11 @@ class ModuleConfigTest {
 
     @Test
     fun `legacy Render id toggles load into Floyd GUI Hiders module`() {
-        val render = LegacyRenderModule()
+        val general = LegacyGeneralModule()
         val hiders = LegacyHidersModule()
         loadLegacyConfigEntry(
             "Render",
-            listOf(render, hiders),
+            listOf(general, hiders),
             """
             {
               "Server ID Hider": true,
@@ -157,7 +157,7 @@ class ModuleConfigTest {
 
     @Test
     fun `legacy render setting names load into Floyd GUI setting names`() {
-        val render = LegacyRenderModule()
+        val render = LegacyGeneralModule()
         loadLegacyConfigEntry(
             "Render",
             render,
@@ -194,10 +194,10 @@ class ModuleConfigTest {
 
     @Test
     fun `legacy player setting names load into Floyd GUI setting names`() {
-        val neckHider = LegacyNeckHiderModule()
+        val nickHider = LegacyNickHiderModule()
         loadLegacyConfigEntry(
             "Neck Hider",
-            neckHider,
+            nickHider,
             """
             {
               "Nickname": "Legacy Nick"
@@ -205,7 +205,7 @@ class ModuleConfigTest {
             """.trimIndent()
         )
 
-        assertEquals("Legacy Nick", neckHider.defaultNick)
+        assertEquals("Legacy Nick", nickHider.defaultNick)
 
         val playerSize = LegacyPlayerSizeModule()
         loadLegacyConfigEntry(
@@ -269,7 +269,7 @@ class ModuleConfigTest {
     fun `moved HUD keys migrate from legacy hud module into their new modules`() {
         val scoreboard = MovedScoreboardModule()
         val inventory = MovedInventoryModule()
-        val render = MovedRenderModule()
+        val general = MovedGeneralModule()
         val configPath = tempDir.resolve("floydaddons-config.json")
         java.nio.file.Files.writeString(
             configPath,
@@ -290,7 +290,7 @@ class ModuleConfigTest {
             """.trimIndent()
         )
         val config = ModuleConfig(configPath.toFile())
-        for (module in listOf(scoreboard, inventory, render)) config.modules[module.name.lowercase()] = module
+        for (module in listOf(scoreboard, inventory, general)) config.modules[module.name.lowercase()] = module
 
         config.load()
 
@@ -298,7 +298,7 @@ class ModuleConfigTest {
         assertTrue(scoreboard.fade)
         assertEquals(11, scoreboard.padding)
         assertEquals(2.5f, inventory.scale)
-        assertEquals(9, render.cornerRadius)
+        assertEquals(9, general.cornerRadius)
 
         val rewritten = java.nio.file.Files.readString(configPath)
         assertTrue("Scoreboard Color" !in jsonForModule(rewritten, "HUD"))
@@ -310,7 +310,7 @@ class ModuleConfigTest {
     fun `migrated config reloads cleanly using the new keys`() {
         val scoreboard = MovedScoreboardModule()
         val inventory = MovedInventoryModule()
-        val render = MovedRenderModule()
+        val general = MovedGeneralModule()
         val configPath = tempDir.resolve("floydaddons-config.json")
         java.nio.file.Files.writeString(
             configPath,
@@ -329,19 +329,19 @@ class ModuleConfigTest {
               {
                 "name": "Render",
                 "enabled": false,
-                "settings": { "HUD Corner Radius": 4 }
+                "settings": { "HUD Corner Radius": 7 }
               }
             ]
             """.trimIndent()
         )
         val config = ModuleConfig(configPath.toFile())
-        for (module in listOf(scoreboard, inventory, render)) config.modules[module.name.lowercase()] = module
+        for (module in listOf(scoreboard, inventory, general)) config.modules[module.name.lowercase()] = module
 
         config.load()
 
         assertEquals(5, scoreboard.padding)
         assertEquals(3.0f, inventory.scale)
-        assertEquals(4, render.cornerRadius)
+        assertEquals(7, general.cornerRadius)
     }
 
     private fun jsonForModule(configJson: String, moduleName: String): String {
@@ -439,8 +439,8 @@ class ModuleConfigTest {
         val hideHand by BooleanSetting("Hide Hand", false, desc = "Test hide.")
     }
 
-    private class LegacyRenderModule : Module(
-        name = "Render",
+    private class LegacyGeneralModule : Module(
+        name = "General",
         category = Category.RENDER,
         description = "Test module for legacy render setting aliases.",
         toggled = false
@@ -461,8 +461,8 @@ class ModuleConfigTest {
         val tracerColor by ColorSetting("Tracer Color", Color(0xFFFFFFFF.toInt()), desc = "Test color.")
     }
 
-    private class LegacyNeckHiderModule : Module(
-        name = "Neck Hider",
+    private class LegacyNickHiderModule : Module(
+        name = "Nick Hider",
         category = Category.PLAYER,
         description = "Test module for legacy hider setting aliases.",
         toggled = false
@@ -525,12 +525,12 @@ class ModuleConfigTest {
         val scale by NumberSetting("Inventory HUD Scale", 1.1f, 0.5f, 5.0f, 0.05f, desc = "Test scale.")
     }
 
-    private class MovedRenderModule : Module(
-        name = "Render",
+    private class MovedGeneralModule : Module(
+        name = "General",
         category = Category.RENDER,
         description = "Test module for migrated render settings.",
         toggled = false
     ) {
-        val cornerRadius by NumberSetting("HUD Corner Radius", 0, 0, 12, 1, desc = "Test corner radius.")
+        val cornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Test corner radius.")
     }
 }

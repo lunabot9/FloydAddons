@@ -14,7 +14,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 object FloydRender : Module(
-    name = "Render",
+    name = "General",
     category = Category.RENDER,
     description = "Floyd render settings: custom time, scoreboard, window styling, and player visuals.",
     toggled = true,
@@ -24,7 +24,6 @@ object FloydRender : Module(
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
     val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Overrides the vanilla game font with Floyd's bundled font. Reload resources (F3+T) to apply.")
     val customFontFile by StringSetting("Custom Font File", "", 128, desc = "Optional .ttf in the Floyd config dir to use instead of the bundled font. Reload resources (F3+T) to apply.")
-    val hudCornerRadius by NumberSetting("HUD Corner Radius", 0, 0, 12, 1, desc = "Rounded corner radius for Floyd HUD panels.")
 
     // Global appearance for every Floyd border+bg panel routed through HudPanel.fillPanel.
     val panelCornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Default rounded corner radius for every Floyd border+background panel.")
@@ -80,7 +79,6 @@ object FloydRender : Module(
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
         "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" },
-        "hudCornerRadius" to hudCornerRadius,
         "panelCornerRadius" to panelCornerRadius,
         "panelBorderWidth" to panelBorderWidth,
         "panelBlur" to panelBlur,

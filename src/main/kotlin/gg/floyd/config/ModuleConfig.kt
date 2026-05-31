@@ -111,7 +111,9 @@ class ModuleConfig internal constructor(file: File) {
         private val migrationLogger = LogManager.getLogger("FloydAddons")
 
         private val legacyModuleNames = mapOf(
-            "nick hider" to "neck hider",
+            // Display-name renames: the module's lowercase config key changed, so old keys remap forward.
+            "neck hider" to "nick hider",
+            "render" to "general",
             "skin" to "custom skin",
             "cape" to "custom cape"
         )
@@ -135,7 +137,7 @@ class ModuleConfig internal constructor(file: File) {
                 "rotation z" to "Rot Z",
                 "hide empty hand" to "Hide Hand"
             ),
-            "render" to mapOf(
+            "general" to mapOf(
                 "custom time" to "Time Changer",
                 "custom time value" to "Time",
                 "borderless windowed" to "Borderless Window",
@@ -151,7 +153,7 @@ class ModuleConfig internal constructor(file: File) {
                 "remove explosion particles" to "No Explosion Particles",
                 "no armor mode" to "Target"
             ),
-            "neck hider" to mapOf(
+            "nick hider" to mapOf(
                 "nickname" to "Default Nick"
             ),
             "custom skin" to mapOf(
@@ -173,11 +175,11 @@ class ModuleConfig internal constructor(file: File) {
         )
 
         private val legacySettingModuleNames = mapOf(
-            "neck hider" to mapOf(
+            "nick hider" to mapOf(
                 "server id hider" to "hiders",
                 "profile id hider" to "hiders"
             ),
-            "render" to mapOf(
+            "general" to mapOf(
                 "server id hider" to "hiders",
                 "profile id hider" to "hiders"
             )
@@ -193,26 +195,40 @@ class ModuleConfig internal constructor(file: File) {
             legacySettingNames[moduleName]?.get(settingName.lowercase()) ?: settingName
 
         /**
+         * Destination of a relocated setting key: the canonical (lowercased) name of the module that
+         * now owns it, and the setting key it is serialized under there ([toKey], same as the source
+         * key unless the setting was also renamed).
+         */
+        private data class MovedKey(val toModule: String, val toKey: String)
+
+        /**
          * Setting-name keys (as serialized under their owning module) that were relocated to a
-         * different module during the HUD/GUI reorg, paired with the canonical (lowercased) name
-         * of the module that now owns them.
+         * different module during the HUD/GUI reorg, paired with the module that now owns them and
+         * the key they are stored under there.
          *
          * The old "HUD" module owned the scoreboard appearance, the inventory HUD, and the shared
-         * HUD corner radius; those settings now live on their dedicated modules.
+         * HUD corner radius; those settings now live on their dedicated modules. The corner radius
+         * was also folded into the shared "Panel Corner Radius" on the General module (the "HUD
+         * Corner Radius" setting was deleted), so it both moves module and changes key.
          */
-        private val movedKeysByModule: Map<String, Map<String, String>> = mapOf(
+        private val movedKeysByModule: Map<String, Map<String, MovedKey>> = mapOf(
             "hud" to mapOf(
                 // scoreboard* -> Custom Scoreboard
-                "Scoreboard Color" to "custom scoreboard",
-                "Scoreboard Fade" to "custom scoreboard",
-                "Scoreboard Fade Color" to "custom scoreboard",
-                "Padding" to "custom scoreboard",
-                "Scoreboard HUD" to "custom scoreboard",
+                "Scoreboard Color" to MovedKey("custom scoreboard", "Scoreboard Color"),
+                "Scoreboard Fade" to MovedKey("custom scoreboard", "Scoreboard Fade"),
+                "Scoreboard Fade Color" to MovedKey("custom scoreboard", "Scoreboard Fade Color"),
+                "Padding" to MovedKey("custom scoreboard", "Padding"),
+                "Scoreboard HUD" to MovedKey("custom scoreboard", "Scoreboard HUD"),
                 // inventory* -> Inventory HUD
-                "Inventory HUD Scale" to "inventory hud",
-                "Inventory HUD" to "inventory hud",
-                // hudCornerRadius -> Render
-                "HUD Corner Radius" to "render"
+                "Inventory HUD Scale" to MovedKey("inventory hud", "Inventory HUD Scale"),
+                "Inventory HUD" to MovedKey("inventory hud", "Inventory HUD"),
+                // hudCornerRadius -> General "Panel Corner Radius" (setting deleted, value folded in)
+                "HUD Corner Radius" to MovedKey("general", "Panel Corner Radius")
+            ),
+            // Intermediate configs that already moved the corner radius onto the (now renamed) Render
+            // module still hold the deleted "HUD Corner Radius" key; fold it into General's shared radius.
+            "render" to mapOf(
+                "HUD Corner Radius" to MovedKey("general", "Panel Corner Radius")
             )
             // LEGACY-CLICKGUI-SPLIT HOOK: once LegacyClickGUIModule lands (UX cleanup item 4), add a
             // "clickgui" entry here remapping the legacy styling keys (Button Text*, Button Border*,
@@ -225,8 +241,10 @@ class ModuleConfig internal constructor(file: File) {
 
         /**
          * Moves any persisted [movedKeysByModule] entries from their old owning module's settings
-         * object into the settings object of the module that now owns them, creating the destination
-         * module entry if the config predates it. Returns true if anything was remapped.
+         * object into the settings object of the module that now owns them (under the new key,
+         * creating the destination module entry if the config predates it). A move is skipped when
+         * the destination already has an explicit value for the key, so a deliberately-set value is
+         * never clobbered. Returns true if anything was remapped.
          */
         private fun migrateMovedKeys(jsonArray: JsonArray): Boolean {
             var changed = false
@@ -239,18 +257,21 @@ class ModuleConfig internal constructor(file: File) {
                 val sourceObj = moduleObjects[sourceModule] ?: continue
                 val sourceSettings = sourceObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject ?: continue
 
-                for ((settingKey, targetModule) in moves) {
+                for ((settingKey, target) in moves) {
                     if (!sourceSettings.has(settingKey)) continue
                     val value = sourceSettings.get(settingKey)
                     sourceSettings.remove(settingKey)
-
-                    val targetSettings = settingsObjectFor(jsonArray, moduleObjects, targetModule)
-                    targetSettings.add(settingKey, value)
                     changed = true
+
+                    val targetSettings = settingsObjectFor(jsonArray, moduleObjects, target.toModule)
+                    if (!targetSettings.has(target.toKey)) targetSettings.add(target.toKey, value)
 
                     val logKey = "$sourceModule:$settingKey"
                     if (loggedMovedKeys.add(logKey)) {
-                        migrationLogger.info("Migrated config key '{}' from '{}' to '{}'.", settingKey, sourceModule, targetModule)
+                        migrationLogger.info(
+                            "Migrated config key '{}' from '{}' to '{}' as '{}'.",
+                            settingKey, sourceModule, target.toModule, target.toKey
+                        )
                     }
                 }
             }
