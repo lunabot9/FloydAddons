@@ -25,16 +25,23 @@ object WorldToScreen {
     @Volatile private var cameraPos: Vec3 = Vec3.ZERO
 
     /**
-     * Called each frame from the world render pass ([gg.floyd.utils.render.RenderBatchManager]'s
-     * RenderEvent.Last handler) with the live projection + camera-rotation modelview. The bob
-     * transform is not captured here, so [tracerOrigin] returns null and tracers fall back to the
-     * eye-based origin (the bob-stable tracer lock is a follow-up). [project] only needs
-     * projection + modelView and works fully.
+     * Called each frame from [gg.floyd.mixin.mixins.LevelRendererMixin] with the three Matrix4f
+     * parameters of `LevelRenderer.renderLevel` (the exact matrices the GPU renders the world with)
+     * plus the camera position. The projection is identified by its perspective structure (m33 == 0,
+     * the perspective-divide row); the view matrix is the first remaining (affine) matrix. This makes
+     * the identification independent of the renderLevel parameter order.
+     *
+     * The bob transform is not captured, so [tracerOrigin] returns null and tracers fall back to the
+     * eye-based origin (the bob-stable tracer lock is a follow-up). [project] only needs projection +
+     * view and works fully.
      */
     @JvmStatic
-    fun capture(projection: Matrix4f, modelView: Matrix4f, cameraPos: Vec3) {
-        this.projection = Matrix4f(projection)
-        this.modelView = Matrix4f(modelView)
+    fun capture(m1: Matrix4f, m2: Matrix4f, m3: Matrix4f, cameraPos: Vec3) {
+        val mats = arrayOf(m1, m2, m3)
+        val proj = mats.firstOrNull { kotlin.math.abs(it.m33()) < 1.0e-4f } ?: return
+        val view = mats.firstOrNull { it !== proj } ?: return
+        this.projection = Matrix4f(proj)
+        this.modelView = Matrix4f(view)
         this.cameraPos = cameraPos
     }
 
