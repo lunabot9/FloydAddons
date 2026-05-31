@@ -1,5 +1,6 @@
 package gg.floyd.mixin.mixins;
 
+import gg.floyd.features.impl.render.FloydBlockSearch;
 import gg.floyd.features.impl.render.FloydXray;
 import net.minecraft.client.renderer.chunk.VisGraph;
 import net.minecraft.core.BlockPos;
@@ -12,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class XrayOcclusionMixin {
     @Inject(method = "setOpaque", at = @At("HEAD"), cancellable = true)
     private void floydaddons$disableOcclusion(BlockPos pos, CallbackInfo ci) {
-        if (FloydXray.isActive()) {
+        if (FloydXray.isActive() || FloydBlockSearch.isActive()) {
             ci.cancel();
         }
     }

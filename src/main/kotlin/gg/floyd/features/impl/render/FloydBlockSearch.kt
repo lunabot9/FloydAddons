@@ -79,6 +79,10 @@ object FloydBlockSearch : Module(
     private var scanCooldown = 0
     private var lastScanCenter: BlockPos? = null
 
+    // Pull the highlight faces a hair off the block surface so they never sit exactly coplanar
+    // with the chunk geometry (which otherwise causes the highlight to half-clip / vanish).
+    private const val HIGHLIGHT_INFLATE = 0.002
+
     // The GUI list (nearby + full registry) cached with a short TTL so the dropdown does not rebuild a ~1000-entry list every frame.
     private var cachedOptions: List<String> = emptyList()
     private var cachedOptionsMs = 0L
@@ -110,9 +114,28 @@ object FloydBlockSearch : Module(
                 2 -> 2 // Both
                 else -> 1 // Outline (wireframe)
             }
-            for (pos in matched) drawStyledBox(AABB(pos), color, drawStyle, depth = false)
+            // depth = false renders the highlight through occlusion (no depth test), like X-Ray's
+            // through-walls pass; the tiny inflate keeps every face off the exact block surface so the
+            // highlight never z-fights / half-clips with the chunk geometry it is sitting on.
+            for (pos in matched) drawStyledBox(AABB(pos).inflate(HIGHLIGHT_INFLATE), color, drawStyle, depth = false)
         }
     }
+
+    override fun onEnable() {
+        super.onEnable()
+        // Disable section occlusion culling (see XrayOcclusionMixin) so a section the player can see
+        // through never gets fully culled and drops the highlights of matching blocks behind it.
+        FloydXray.rebuildChunks()
+    }
+
+    override fun onDisable() {
+        FloydXray.rebuildChunks()
+        super.onDisable()
+    }
+
+    /** True while highlights are being drawn; consumed by XrayOcclusionMixin to bypass occlusion culling. */
+    @JvmStatic
+    fun isActive(): Boolean = enabled
 
     private fun rescan(level: ClientLevel, center: BlockPos) {
         matched.clear()
