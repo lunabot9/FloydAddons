@@ -36,6 +36,7 @@ import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydHud
+import gg.floyd.features.impl.render.FloydTimeChanger
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.render.FloydXray
@@ -2931,7 +2932,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         drawButton(context, animations, "Attack Animation", alpha)
         hits += RenderHitEntry(animations, "Attack Animation", RenderHitKind.NAV_ANIMATIONS)
         val timeToggle = Rect(controlLeft, renderRowY(top, 10), renderHalfWidth, renderRowHeight)
-        drawButton(context, timeToggle, "Time Changer: ${onOff(booleanSetting(FloydRender, "Time Changer")?.enabled ?: false)}", alpha)
+        drawButton(context, timeToggle, "Time Changer: ${onOff(FloydTimeChanger.enabled)}", alpha)
         hits += RenderHitEntry(timeToggle, "Time Changer", RenderHitKind.BOOLEAN_TOGGLE)
         val time = renderSliderSpecs().first { it.settingName == "Time" }
         val timeRect = Rect(controlLeft + renderHalfWidth + renderPairGap, renderRowY(top, 10), renderHalfWidth, renderRowHeight)
@@ -3006,7 +3007,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
     private fun renderSliderSpecs(): List<RenderSliderSpec> = listOf(
         RenderSliderSpec(FloydXray, "Opacity", "X-Ray Opacity", 0.05, 1.0) { "${(it * 100).roundToInt()}%" },
-        RenderSliderSpec(FloydRender, "Time", "Time", 0.0, 100.0) { "${it.roundToInt()}%" }
+        RenderSliderSpec(FloydTimeChanger, "Time", "Time", 0.0, 100.0) { "${it.roundToInt()}%" }
     )
 
     private fun renderStalkLabel(): String =
@@ -3957,7 +3958,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 }
             LegacyModuleBrowserKind.RENDER_BOOLEAN ->
                 when (entry.settingName) {
-                    "Time Changer" -> listOfNotNull(numberSetting(FloydRender, "Time"))
+                    "Time Changer" -> listOfNotNull(numberSetting(FloydTimeChanger, "Time"))
                     else -> emptyList()
                 }
             LegacyModuleBrowserKind.RENDER_STALK ->
@@ -4495,7 +4496,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 moduleEntry(FloydBlockSearch),
                 LegacyModuleBrowserEntry(FloydHiders, "Profile ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Profile ID Hider"),
                 LegacyModuleBrowserEntry(FloydHiders, "Server ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Server ID Hider"),
-                LegacyModuleBrowserEntry(FloydRender, "Time Changer", LegacyModuleBrowserKind.RENDER_BOOLEAN, "Time Changer"),
+                moduleEntry(FloydTimeChanger),
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
                 moduleEntry(FloydCustomScoreboard),
@@ -4624,8 +4625,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             headerRow("Other"),
             navRow("Hiders", Page.HIDERS, RowLayout.LEFT),
             navRow("Attack Animation", Page.ANIMATIONS, RowLayout.RIGHT),
-            toggleSettingRow(FloydRender, "Time Changer", "Time Changer", RowLayout.LEFT),
-            numberRow(FloydRender, "Time", "Time", RowLayout.RIGHT) { "${it.roundToInt()}%" },
+            toggleModuleRow(FloydTimeChanger, "Time Changer", RowLayout.LEFT),
+            numberRow(FloydTimeChanger, "Time", "Time", RowLayout.RIGHT) { "${it.roundToInt()}%" },
             stalkRow(),
             toggleSettingRow(FloydRender, "Borderless Window", "Borderless Window"),
             actionRow({ "Window Title: ${stringSetting(FloydRender, "Instance Title")?.value?.ifBlank { "(default)" } ?: "?"}" }) {
@@ -5482,10 +5483,15 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         renderTitleFocused = hit.kind == RenderHitKind.TITLE_FIELD
         when (hit.kind) {
             RenderHitKind.BOOLEAN_TOGGLE -> {
-                val module = if (hit.settingName == "Server ID Hider" || hit.settingName == "Profile ID Hider") FloydHiders else FloydRender
-                booleanSetting(module, hit.settingName)?.let { setting ->
-                    setting.enabled = !setting.enabled
+                if (hit.settingName == "Time Changer") {
+                    FloydTimeChanger.toggle()
                     ModuleManager.saveConfigurations()
+                } else {
+                    val module = if (hit.settingName == "Server ID Hider" || hit.settingName == "Profile ID Hider") FloydHiders else FloydRender
+                    booleanSetting(module, hit.settingName)?.let { setting ->
+                        setting.enabled = !setting.enabled
+                        ModuleManager.saveConfigurations()
+                    }
                 }
             }
             RenderHitKind.XRAY_TOGGLE -> {

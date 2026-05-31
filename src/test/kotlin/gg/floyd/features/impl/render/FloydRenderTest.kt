@@ -9,9 +9,6 @@ class FloydRenderTest {
         val state = FloydRender.state()
 
         assertEquals(true, state["enabled"])
-        assertEquals(false, state["customTime"])
-        assertEquals(50f, state["customTimeValue"])
-        assertEquals(false, state["shouldUseCustomTime"])
         assertEquals(false, state["fullChatChroma"])
         assertEquals(false, state["shouldUseFullChatChroma"])
         assertEquals(false, state["borderlessWindowed"])
@@ -21,10 +18,10 @@ class FloydRenderTest {
 
     @Test
     fun `custom time tick conversion rounds like vendored Floyd`() {
-        assertEquals(0L, FloydRender.customTimeTicks(0f))
-        assertEquals(12000L, FloydRender.customTimeTicks(50f))
-        assertEquals(23999L, FloydRender.customTimeTicks(100f))
-        assertEquals(0L, FloydRender.customTimeTicks(-1f))
-        assertEquals(23999L, FloydRender.customTimeTicks(101f))
+        assertEquals(0L, FloydTimeChanger.customTimeTicks(0f))
+        assertEquals(12000L, FloydTimeChanger.customTimeTicks(50f))
+        assertEquals(23999L, FloydTimeChanger.customTimeTicks(100f))
+        assertEquals(0L, FloydTimeChanger.customTimeTicks(-1f))
+        assertEquals(23999L, FloydTimeChanger.customTimeTicks(101f))
     }
 }

@@ -165,8 +165,8 @@ object FloydSidecarConfig {
         set("Player Size", "Z", if (useLegacyUniformScale) JsonPrimitive(legacyScale) else scaleZ)
         set("Player Size", "Target", data.string("playerSizeTarget")?.let(::playerSizeTarget)?.let(::JsonPrimitive))
 
-        set("Render", "Time Changer", data.primitive("customTimeEnabled"))
-        set("Render", "Time", data.primitive("customTimeValue"))
+        setModuleEnabled("Time Changer", data.bool("customTimeEnabled"))
+        set("Time Changer", "Time", data.primitive("customTimeValue"))
         setModuleEnabled("Custom Scoreboard", data.bool("customScoreboardEnabled"))
         set("Render", "Borderless Window", data.primitive("borderlessWindowed"))
         set("Render", "Instance Title", data.trimmedStringPrimitive("windowTitle"))

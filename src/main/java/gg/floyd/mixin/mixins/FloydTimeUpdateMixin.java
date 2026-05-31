@@ -1,6 +1,6 @@
 package gg.floyd.mixin.mixins;
 
-import gg.floyd.features.impl.render.FloydRender;
+import gg.floyd.features.impl.render.FloydTimeChanger;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class FloydTimeUpdateMixin {
     @Inject(method = "handleSetTime", at = @At("HEAD"), cancellable = true)
     private void floydaddons$blockServerTime(ClientboundSetTimePacket packet, CallbackInfo ci) {
-        if (!FloydRender.shouldUseCustomTime()) return;
-        FloydRender.applyCustomTimeOverride();
+        if (!FloydTimeChanger.shouldUseCustomTime()) return;
+        FloydTimeChanger.applyCustomTimeOverride();
         ci.cancel();
     }
 }

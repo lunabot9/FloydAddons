@@ -16,8 +16,6 @@ object FloydRender : Module(
     description = "Floyd render settings: custom time, scoreboard, window styling, and player visuals.",
     toggled = true,
 ) {
-    val customTime by BooleanSetting("Time Changer", false, desc = "Matches Floyd's custom time override.")
-    val customTimeValue by NumberSetting("Time", 50f, 0f, 100f, 1f, desc = "World time slider used by custom time.")
     var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
     val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
@@ -31,41 +29,17 @@ object FloydRender : Module(
 
     init {
         on<TickEvent.ClientEnd> {
-            applyCustomTime()
             applyWindowTitle()
             ensureBorderlessState()
         }
     }
 
-    private fun applyCustomTime() {
-        if (!shouldUseCustomTime()) return
-        applyCustomTimeOverride()
-    }
-
-    @JvmStatic
-    fun shouldUseCustomTime(): Boolean = enabled && customTime
-
     @JvmStatic
     fun shouldUseFullChatChroma(): Boolean = enabled && fullChatChroma
 
     @JvmStatic
-    fun applyCustomTimeOverride() {
-        val levelData = mc.level?.levelData ?: return
-        val ticks = customTimeTicks(customTimeValue)
-        levelData.setDayTime(ticks)
-        levelData.setGameTime(ticks)
-    }
-
-    @JvmStatic
-    fun customTimeTicks(value: Float): Long =
-        Math.round((value.coerceIn(0f, 100f) / 100f) * 23999L).coerceIn(0, 23999).toLong()
-
-    @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
-        "customTime" to customTime,
-        "customTimeValue" to customTimeValue,
-        "shouldUseCustomTime" to shouldUseCustomTime(),
         "fullChatChroma" to fullChatChroma,
         "shouldUseFullChatChroma" to shouldUseFullChatChroma(),
         "borderlessWindowed" to borderlessWindowed,
