@@ -57,6 +57,7 @@ import gg.floyd.features.impl.render.LegacyClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.render.FloydXray
+import gg.floyd.keybind.KeybindSync
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.minecraft.client.DeltaTracker
@@ -144,7 +145,10 @@ object ModuleManager {
 
             for ((_, setting) in module.settings) {
                 when (setting) {
-                    is KeybindSetting -> keybindSettingsCache.add(setting)
+                    is KeybindSetting -> {
+                        keybindSettingsCache.add(setting)
+                        KeybindSync.register(setting, keybindTranslationKey(module, setting))
+                    }
                     is HUDSetting -> hudSettingsCache.add(setting)
                 }
             }
@@ -201,6 +205,29 @@ object ModuleManager {
             )
         }
     )
+
+    /**
+     * Resolves the lang translation key used for [setting]'s vanilla [net.minecraft.client.KeyMapping].
+     *
+     * Known FloydAddons keybinds reuse the pretty lang keys already present in en_us.json; anything
+     * else falls back to a generated `key.floydaddons.module.<slug>` key (which simply renders as the
+     * raw key if no translation exists).
+     */
+    private fun keybindTranslationKey(module: Module, setting: KeybindSetting): String {
+        when (setting.name) {
+            "Open GUI Key" -> return "key.floydaddons.open_gui"
+            "Toggle X-Ray" -> return "key.floydaddons.toggle_xray"
+            "Toggle Freecam" -> return "key.floydaddons.toggle_freecam"
+            "Toggle Freelook" -> return "key.floydaddons.toggle_freelook"
+            "Toggle Mob ESP" -> return "key.floydaddons.toggle_mob_esp"
+        }
+        // The Legacy Click GUI's auto-registered module-toggle keybind is the "click gui" key.
+        if (setting.name == "Keybind" && module === LegacyClickGUIModule) return "key.floydaddons.click_gui"
+        return "key.floydaddons.module.${moduleSlug(module)}"
+    }
+
+    private fun moduleSlug(module: Module): String =
+        module.name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 
     fun render(guiGraphics: GuiGraphics, tickCounter: DeltaTracker) {
         if (mc.level == null || mc.player == null || mc.screen == HudManager || mc.options.hideGui) return

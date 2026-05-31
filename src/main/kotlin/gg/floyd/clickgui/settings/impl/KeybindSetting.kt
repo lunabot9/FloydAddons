@@ -9,9 +9,11 @@ import gg.floyd.clickgui.ClickGUI.gray38
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.clickgui.settings.Saving
 import gg.floyd.features.impl.render.ClickGUIModule
+import gg.floyd.keybind.KeybindSync
 import gg.floyd.utils.Colors
 import gg.floyd.utils.ui.isAreaHovered
 import gg.floyd.utils.ui.rendering.NVGRenderer
+import net.minecraft.client.KeyMapping
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import org.lwjgl.glfw.GLFW
@@ -25,16 +27,39 @@ class KeybindSetting(
     constructor(name: String, defaultKeyCode: Int, desc: String = "") : this(name, InputConstants.Type.KEYSYM.getOrCreate(defaultKeyCode), desc)
 
     override var value: InputConstants.Key = default
+        set(newKey) {
+            if (newKey == field) return
+            field = newKey
+            keyNameWidth = NVGRenderer.textWidth(newKey.displayName.string, 16f, NVGRenderer.defaultFont)
+            if (!suppressSync && !KeybindSync.isSyncing()) KeybindSync.syncFromSetting(this, newKey)
+        }
     var onPress: (() -> Unit)? = null
     private var keyNameWidth = -1f
 
-    private var key: InputConstants.Key
-        get() = value
-        set(newKey) {
-            if (newKey == value) return
+    /** The vanilla [KeyMapping] this setting is mirrored to, if [KeybindSync.register] has run. */
+    internal var keyMapping: KeyMapping? = null
+        private set
+
+    /** When true, value-setter sync to the vanilla binding is suppressed (used by [applyExternalKey]). */
+    private var suppressSync = false
+
+    /** Wires this setting to its vanilla [KeyMapping]. Called by [KeybindSync.register]. */
+    fun bindKeyMapping(mapping: KeyMapping) {
+        keyMapping = mapping
+    }
+
+    /**
+     * Applies a key that originated from the vanilla Controls screen, without pushing it back to the
+     * vanilla binding (that would loop). Called by [KeybindSync.syncFromBinding].
+     */
+    fun applyExternalKey(newKey: InputConstants.Key) {
+        suppressSync = true
+        try {
             value = newKey
-            keyNameWidth = NVGRenderer.textWidth(value.displayName.string, 16f, NVGRenderer.defaultFont)
+        } finally {
+            suppressSync = false
         }
+    }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
@@ -57,7 +82,7 @@ class KeybindSetting(
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
         if (listening) {
-            key = InputConstants.Type.MOUSE.getOrCreate(click.button())
+            value = InputConstants.Type.MOUSE.getOrCreate(click.button())
             listening = false
             return true
         } else if (click.button() == 0 && isHovered) {
@@ -71,9 +96,9 @@ class KeybindSetting(
         if (!listening) return false
 
         when (input.key) {
-            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_BACKSPACE -> key = InputConstants.UNKNOWN
+            GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_BACKSPACE -> value = InputConstants.UNKNOWN
             GLFW.GLFW_KEY_ENTER -> listening = false
-            else -> key = InputConstants.getKey(input)
+            else -> value = InputConstants.getKey(input)
         }
 
         listening = false

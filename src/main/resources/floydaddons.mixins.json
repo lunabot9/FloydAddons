@@ -9,6 +9,8 @@
   "client": [
     "accessors.BeaconBeamAccessor",
     "accessors.CameraAccessor",
+    "accessors.KeyMappingAccessor",
+    "accessors.KeyMappingCategoryAccessor",
     "mixins.AnimationItemInHandRendererMixin",
     "mixins.AnimationLivingEntityMixin",
     "mixins.AnimationToggleKeyMappingMixin",
