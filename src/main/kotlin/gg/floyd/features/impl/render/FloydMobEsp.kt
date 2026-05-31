@@ -657,15 +657,17 @@ object FloydMobEsp : Module(
         BuiltInRegistries.ENTITY_TYPE.getKey(entity.type).toString().lowercase(Locale.ROOT)
 
     private fun filterColorFor(entity: Entity): FilterColor? {
+        // activeNameFilters() rebuilds a Set each call; resolve it once and reuse across both loops.
+        val activeNames = activeNameFilters()
         val resolvedName = resolvedMobNames[entity.id]
         if (resolvedName != null) {
-            for (filter in activeNameFilters()) {
+            for (filter in activeNames) {
                 if (resolvedName.contains(filter)) return nameFilterColors[filter]?.let(::decodeColor)
             }
         }
 
         val entityNames = entityNames(entity)
-        for (filter in activeNameFilters()) {
+        for (filter in activeNames) {
             if (entityNames.any { it.contains(filter) }) return nameFilterColors[filter]?.let(::decodeColor)
         }
 
@@ -806,7 +808,7 @@ object FloydMobEsp : Module(
 
     private data class FilterColor(val hex: String, val chroma: Boolean)
 
-    private fun stripFormatting(text: String): String = text.replace(Regex("§."), "")
+    private fun stripFormatting(text: String): String = text.replace(FORMATTING_CODE, "")
 
     private val playerMobNames = setOf(
         "shadow assassin",
@@ -816,6 +818,9 @@ object FloydMobEsp : Module(
     )
 
     private val ignoredNpcLabels = setOf("click", "armor stand")
+    // Compiled once and reused: stripFormatting runs per-entity inside per-frame and every-10-frame
+    // scans, so compiling a fresh Regex on each call was pure waste.
+    private val FORMATTING_CODE = Regex("§.")
     private val npcNamePattern: Pattern = Pattern.compile("^[a-z0-9]{8,12}$")
     private val playerNamePattern: Pattern = Pattern.compile("[a-zA-Z0-9_]{3,16}")
     private const val TAB_LIST_CACHE_MS = 1_000L

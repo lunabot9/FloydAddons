@@ -65,8 +65,25 @@ inline val Entity.renderZ: Double
     get() =
         zo + (z - zo) * mc.deltaTracker.getGameTimeDeltaPartialTick(true)
 
+// Fetch the partial tick once and reuse it across all three axes. The value is identical for every
+// axis within a frame, so this is byte-identical to reading renderX/Y/Z separately while avoiding the
+// extra deltaTracker fetches (ESP loops hit these once per entity per frame).
 inline val Entity.renderPos: Vec3
-    get() = Vec3(renderX, renderY, renderZ)
+    get() {
+        val partial = mc.deltaTracker.getGameTimeDeltaPartialTick(true)
+        return Vec3(
+            xo + (x - xo) * partial,
+            yo + (y - yo) * partial,
+            zo + (z - zo) * partial
+        )
+    }
 
 inline val Entity.renderBoundingBox: AABB
-    get() = boundingBox.move(renderX - x, renderY - y, renderZ - z)
+    get() {
+        val partial = mc.deltaTracker.getGameTimeDeltaPartialTick(true)
+        return boundingBox.move(
+            (xo + (x - xo) * partial) - x,
+            (yo + (y - yo) * partial) - y,
+            (zo + (z - zo) * partial) - z
+        )
+    }

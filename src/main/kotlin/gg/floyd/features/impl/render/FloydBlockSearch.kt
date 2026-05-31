@@ -118,7 +118,18 @@ object FloydBlockSearch : Module(
             // depth = false renders the highlight through occlusion (no depth test), like X-Ray's
             // through-walls pass; the tiny inflate keeps every face off the exact block surface so the
             // highlight never z-fights / half-clips with the chunk geometry it is sitting on.
-            for (pos in nearest) drawStyledBox(AABB(pos).inflate(HIGHLIGHT_INFLATE), color, drawStyle, depth = false)
+            // Build the inflated AABB directly (one allocation) instead of AABB(pos).inflate(...) (two)
+            // — identical bounds, but it runs once per matched block every frame.
+            for (pos in nearest) {
+                val x = pos.x.toDouble()
+                val y = pos.y.toDouble()
+                val z = pos.z.toDouble()
+                val box = AABB(
+                    x - HIGHLIGHT_INFLATE, y - HIGHLIGHT_INFLATE, z - HIGHLIGHT_INFLATE,
+                    x + 1.0 + HIGHLIGHT_INFLATE, y + 1.0 + HIGHLIGHT_INFLATE, z + 1.0 + HIGHLIGHT_INFLATE
+                )
+                drawStyledBox(box, color, drawStyle, depth = false)
+            }
 
             // Warn once per interval that we are capped, so the user knows the highlight is partial.
             if (capped) {
