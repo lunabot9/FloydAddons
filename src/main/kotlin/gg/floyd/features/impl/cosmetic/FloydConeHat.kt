@@ -56,6 +56,9 @@ object FloydConeHat : Module(
     private var cachedTexture: Identifier? = null
     private var cachedSelection: String? = null
     private var defaultExtracted = false
+    private var spinAngle = 0.0f
+    private var lastSpinSampleMs = System.currentTimeMillis()
+    private var lastSpinSpeed = 0.0f
 
     @JvmStatic
     fun isActive(): Boolean = enabled && coneHatEnabled
@@ -76,8 +79,14 @@ object FloydConeHat : Module(
 
     @JvmStatic
     fun currentRotation(): Float {
-        val animated = if (rotationSpeed == 0.0f) rotation else rotation + (System.currentTimeMillis() / 1000.0f) * rotationSpeed
-        return ((animated % 360.0f) + 360.0f) % 360.0f
+        val now = System.currentTimeMillis()
+        val elapsedSeconds = ((now - lastSpinSampleMs).coerceAtLeast(0L)) / 1000.0f
+        if (elapsedSeconds > 0.0f) {
+            spinAngle = normalizeRotation(spinAngle + elapsedSeconds * lastSpinSpeed)
+            lastSpinSampleMs = now
+        }
+        lastSpinSpeed = rotationSpeed
+        return normalizeRotation(rotation + spinAngle)
     }
 
     private fun loadTexture() {
@@ -203,4 +212,7 @@ object FloydConeHat : Module(
         FloydAddonsMod.mc.resourceManager.getResource(builtinTexture).map { resource ->
             resource.open().use(NativeImage::read)
         }.orElse(null)
+
+    private fun normalizeRotation(value: Float): Float =
+        ((value % 360.0f) + 360.0f) % 360.0f
 }

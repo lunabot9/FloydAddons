@@ -8,6 +8,7 @@ import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.impl.hiders.FloydHiders
+import gg.floyd.utils.ChatChroma
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
 import net.minecraft.util.FormattedCharSequence
@@ -25,6 +26,7 @@ object FloydNickHider : Module(
 ) {
     val nickHiderEnabled by BooleanSetting("Enabled", false, desc = "Enables nickname and name-mapping replacement.")
     var nickname by StringSetting("Default Nick", "George Floyd", 32, desc = "Replacement name used by nick hider.")
+    val selfNameChroma by BooleanSetting("Self Name Chroma", false, desc = "Cycles your own replaced nickname through chroma.")
     val nameMappings by MapSetting("Name Mappings", mutableMapOf<String, String>()).hide()
 
     private val serverIds = FloydServerIdAccumulator()
@@ -137,7 +139,11 @@ object FloydNickHider : Module(
 
         if (nickHiderEnabled) {
             mc.user.name.takeIf { it.isNotBlank() }?.let {
-                changed = styled.replaceIgnoreCase(it, nickname) || changed
+                changed = styled.replaceIgnoreCase(
+                    it,
+                    nickname,
+                    if (selfNameChroma) { index, style -> ChatChroma.applyToStyle(style, index, speedMs = 12.0) } else null
+                ) || changed
             }
             for ((find, replace) in nameMappings) {
                 if (find.isNotEmpty()) {
@@ -170,6 +176,7 @@ object FloydNickHider : Module(
             "serverIdHider" to FloydHiders.serverIdHider,
             "profileIdHider" to FloydHiders.profileIdHider,
             "nickname" to nickname,
+            "selfNameChroma" to selfNameChroma,
             "nameMappings" to nameMappings.toSortedMap(String.CASE_INSENSITIVE_ORDER),
             "mappingCount" to nameMappings.size
         ),
@@ -540,7 +547,7 @@ object FloydNickHider : Module(
             for (codePoint in codePoints) appendCodePoint(codePoint)
         }
 
-        fun replaceIgnoreCase(find: String, replace: String): Boolean {
+        fun replaceIgnoreCase(find: String, replace: String, styleTransform: ((Int, Style) -> Style)? = null): Boolean {
             if (find.isEmpty()) return false
             val text = string()
             if (text.length != codePoints.size) return replaceWholeIfChanged(text.replace(Regex(Pattern.quote(find), RegexOption.IGNORE_CASE), replace))
@@ -558,7 +565,7 @@ object FloydNickHider : Module(
                     break
                 }
                 appendRange(index, hit, resultCodePoints, resultStyles)
-                appendReplacement(replace, styles.getOrElse(hit) { Style.EMPTY }, resultCodePoints, resultStyles)
+                appendReplacement(replace, styles.getOrElse(hit) { Style.EMPTY }, resultCodePoints, resultStyles, styleTransform)
                 index = hit + find.length
             }
             replaceWith(resultCodePoints, resultStyles)
@@ -634,10 +641,13 @@ object FloydNickHider : Module(
             style: Style,
             targetCodePoints: MutableList<Int>,
             targetStyles: MutableList<Style>,
+            styleTransform: ((Int, Style) -> Style)? = null,
         ) {
+            var replacementIndex = 0
             replace.codePoints().forEach { codePoint ->
                 targetCodePoints.add(codePoint)
-                targetStyles.add(style)
+                targetStyles.add(styleTransform?.invoke(replacementIndex, style) ?: style)
+                replacementIndex++
             }
         }
 
