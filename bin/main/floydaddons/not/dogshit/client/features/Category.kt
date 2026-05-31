@@ -25,9 +25,6 @@ data class Category private constructor(val name: String) {
         val QOL = custom(name = "QOL")
         @JvmField
         val MISC = custom(name = "Misc")
-        @JvmField
-        val HUD = custom(name = "HUD")
-
         /**
          * Returns a category with name provided.
          *

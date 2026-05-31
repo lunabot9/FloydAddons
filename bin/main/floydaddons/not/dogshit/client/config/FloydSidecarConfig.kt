@@ -238,7 +238,8 @@ object FloydSidecarConfig {
         set("Cone Hat", "Spin Speed", data.primitive("coneHatRotationSpeed"))
 
         set("HUD", "Inventory HUD Scale", data.numberOrDefault("inventoryHudScale", 0.0f))
-        set("HUD", "HUD Corner Radius", data.primitive("hudCornerRadius"))
+        set("HUD", "Inventory HUD Corner Radius", data.primitive("hudCornerRadius"))
+        set("HUD", "Scoreboard HUD Corner Radius", data.primitive("hudCornerRadius"))
         set("HUD", "Inventory HUD", hudSetting(data, "inventoryHudX", "inventoryHudY", "inventoryHudScale", "inventoryHudEnabled", 1540, 24, 2f))
         set("HUD", "Scoreboard HUD", hudSetting(data, "customScoreboardX", "customScoreboardY", null, "customScoreboardEnabled", 1680, 250, 1f))
 

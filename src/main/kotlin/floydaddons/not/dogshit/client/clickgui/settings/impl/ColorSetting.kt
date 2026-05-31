@@ -128,7 +128,7 @@ class ColorSetting(
         val actualHeight = defaultHeight + if (allowAlpha) 250f else 230f
 
         NVGRenderer.rect(rectX, y + actualHeight - 28f, width / 2, 24f, gray38.rgba, 4f)
-        NVGRenderer.hollowRect(rectX, y + actualHeight - 28f, width / 2, 24f, 2f, ClickGUIModule.clickGUIColor.rgba, 4f)
+        NVGRenderer.hollowRect(rectX, y + actualHeight - 28f, width / 2, 24f, 2f, ClickGUIModule.guiAccentColor(), 4f)
 
         textInputHandler.x = rectX + (width / 4) - (hexWidth / 2)
         textInputHandler.y = y + actualHeight - 26f

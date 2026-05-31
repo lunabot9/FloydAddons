@@ -42,11 +42,11 @@ private class BoundBooleanSetting(
                 y + height / 2f - 10f,
                 34f,
                 20f,
-                ClickGUIModule.clickGUIColor.rgba,
+                ClickGUIModule.guiAccentColor(),
                 9f
             )
         }
-        NVGRenderer.hollowRect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.clickGUIColor.rgba, 9f)
+        NVGRenderer.hollowRect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.guiAccentColor(), 9f)
         NVGRenderer.circle(x + width - if (enabled) 16f else 30f, y + height / 2f, 6f, Colors.WHITE.rgba)
         return height
     }
@@ -117,7 +117,7 @@ private class BoundNumberSetting(
         NVGRenderer.text(displayValue, x + width - valueWidth - 4f, y + height / 2f - 15f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         NVGRenderer.rect(x + 6f, y + 24f, width - 12f, 8f, gray38.rgba, 3f)
-        NVGRenderer.rect(x + 6f, y + 24f, sliderPercentage * (width - 12f), 8f, ClickGUIModule.clickGUIColor.rgba, 3f)
+        NVGRenderer.rect(x + 6f, y + 24f, sliderPercentage * (width - 12f), 8f, ClickGUIModule.guiAccentColor(), 3f)
         NVGRenderer.circle(x + 6f + sliderPercentage * (width - 12f), y + 28f, 7f, Colors.WHITE.rgba)
         return height
     }
@@ -272,3 +272,4 @@ object FloydF5CustomizerModule : Module(
         "distance" to distance
     )
 }
+

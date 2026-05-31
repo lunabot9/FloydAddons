@@ -34,6 +34,7 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         for (hud in hudSettingsCache) {
             clampHudToScreen(hud)
         }
+        resolveHudOverlap()
         super.init()
     }
 
@@ -147,6 +148,7 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
             it.value.scale = it.default.scale
             it.value.enabled = it.default.enabled
         }
+        resolveHudOverlap()
     }
 
     private fun clampHudToScreen(hud: HUDSetting) {
@@ -173,6 +175,47 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
     private fun shouldUpdateHudLayout(): Boolean {
         if (!mc.isWindowActive) return false
         return mc.window.screenWidth > 0 && mc.window.screenHeight > 0
+    }
+
+    private fun resolveHudOverlap() {
+        val inventory = hudSettingsCache.firstOrNull { it.name == "Inventory HUD" } ?: return
+        val dayTracker = hudSettingsCache.firstOrNull { it.name == "Day Tracker" } ?: return
+        if (!inventory.module.enabled || !dayTracker.module.enabled) return
+
+        val (inventoryWidth, inventoryHeight) = estimatedHudSize(inventory)
+        val (dayTrackerWidth, dayTrackerHeight) = estimatedHudSize(dayTracker)
+
+        val inventoryPixelWidth = ceil((inventory.value.width.takeIf { it > 0 } ?: inventoryWidth).toFloat() * inventory.value.scale).toInt()
+        val inventoryPixelHeight = ceil((inventory.value.height.takeIf { it > 0 } ?: inventoryHeight).toFloat() * inventory.value.scale).toInt()
+        val dayTrackerPixelWidth = ceil((dayTracker.value.width.takeIf { it > 0 } ?: dayTrackerWidth).toFloat() * dayTracker.value.scale).toInt()
+        val dayTrackerPixelHeight = ceil((dayTracker.value.height.takeIf { it > 0 } ?: dayTrackerHeight).toFloat() * dayTracker.value.scale).toInt()
+
+        val inventoryLeft = inventory.value.x
+        val inventoryTop = inventory.value.y
+        val inventoryRight = inventoryLeft + inventoryPixelWidth
+        val inventoryBottom = inventoryTop + inventoryPixelHeight
+
+        val dayLeft = dayTracker.value.x
+        val dayTop = dayTracker.value.y
+        val dayRight = dayLeft + dayTrackerPixelWidth
+        val dayBottom = dayTop + dayTrackerPixelHeight
+
+        val overlaps = dayLeft < inventoryRight &&
+            dayRight > inventoryLeft &&
+            dayTop < inventoryBottom &&
+            dayBottom > inventoryTop
+        if (!overlaps) return
+
+        val gap = 12
+        val leftCandidate = inventoryLeft - dayTrackerPixelWidth - gap
+        if (leftCandidate >= 0) {
+            dayTracker.value.x = leftCandidate
+            return
+        }
+
+        dayTracker.value.x = inventoryRight + gap
+        dayTracker.value.y = inventoryBottom + gap
+        clampHudToScreen(dayTracker)
     }
 
     private fun clearInteractionState() {

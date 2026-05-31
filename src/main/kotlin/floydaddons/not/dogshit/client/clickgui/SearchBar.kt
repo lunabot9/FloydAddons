@@ -29,7 +29,7 @@ object SearchBar {
     fun draw(x: Float, y: Float, mouseX: Float, mouseY: Float) {
         NVGRenderer.dropShadow(x, y, 350f, 40f, 10f, 0.75f, 9f)
         NVGRenderer.rect(x, y, 350f, 40f, gray38.rgba, 9f)
-        NVGRenderer.hollowRect(x, y, 350f, 40f, 3f, ClickGUIModule.clickGUIColor.rgba, 9f)
+        NVGRenderer.hollowRect(x, y, 350f, 40f, 3f, ClickGUIModule.guiAccentColor(), 9f)
 
         val textY = y + 10f
 

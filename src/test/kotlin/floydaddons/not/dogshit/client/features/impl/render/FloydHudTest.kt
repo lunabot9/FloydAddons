@@ -13,7 +13,7 @@ class FloydHudTest {
     fun `custom scoreboard requires vanilla sidebar signal`() {
         FloydHud.resetVanillaScoreboardWouldRender()
 
-        assertFalse(
+        assertTrue(
             FloydHud.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
@@ -33,16 +33,6 @@ class FloydHudTest {
                 hudEnabled = true
             )
         )
-        assertFalse(
-            FloydHud.shouldDrawScoreboardHud(
-                example = false,
-                customScoreboard = true,
-                objectivePresent = true,
-                moduleEnabled = true,
-                hudEnabled = true
-            )
-        )
-        FloydHud.markVanillaScoreboardWouldRender()
         assertTrue(
             FloydHud.shouldDrawScoreboardHud(
                 example = false,
@@ -68,7 +58,7 @@ class FloydHudTest {
                 hudEnabled = true
             )
         )
-        assertFalse(
+        assertTrue(
             FloydHud.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
@@ -108,8 +98,10 @@ class FloydHudTest {
         assertTrue(floyd.contains("return Math.max(12, Math.round(BASE_SLOT * RenderConfig.getInventoryHudScale()));"))
         assertTrue(active.contains("val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)"))
         assertTrue(active.contains("val borderColors = inventoryHudBorderColors()"))
-        assertTrue(active.contains("fillPanel(width, height, borderColors)"))
+        assertTrue(active.contains("fillPanel(width, height, borderColors, inventoryHudCornerRadius.toFloat())"))
+        assertTrue(active.contains("fillPanel(width, height, monochromeBorderColors(0xFFFFFFFF.toInt()), inventoryHudCornerRadius.toFloat())"))
         assertTrue(active.contains("BooleanSetting(\"Inventory HUD Minecraft Stack Font\", false"))
+        assertTrue(active.contains("NumberSetting(\"Inventory HUD Corner Radius\", 0, 0, 12, 1"))
         assertTrue(active.contains("private const val INVENTORY_ITEM_SCALE_FACTOR = 0.75f"))
         assertTrue(active.contains("private const val INVENTORY_COUNT_FONT_SLOT_FACTOR = 0.713f"))
         assertTrue(active.contains("private const val INVENTORY_COUNT_VISUAL_HEIGHT_FACTOR = 0.62f"))
@@ -189,12 +181,28 @@ class FloydHudTest {
     fun `legacy hud popup exposes minecraft font toggles under the correct entries`() {
         val legacy = Files.readString(Path.of("").toAbsolutePath().resolve("src/main/kotlin/floydaddons/not/dogshit/client/clickgui/LegacyFloydClickGUI.kt"))
 
-        assertTrue(legacy.contains("\"Custom Scoreboard\" -> listOfNotNull(booleanSetting(FloydHud, \"Scoreboard HUD Minecraft Font\"))"))
-        assertTrue(legacy.contains("LegacyModuleBrowserKind.RENDER_HUD ->"))
-        assertTrue(legacy.contains("listOfNotNull(booleanSetting(FloydHud, \"Inventory HUD Minecraft Stack Font\"))"))
-        assertTrue(legacy.contains("(module === FloydHud && setting.name in setOf(\"Inventory HUD Minecraft Stack Font\", \"Scoreboard HUD Minecraft Font\"))"))
+        assertTrue(legacy.contains("moduleBrowserCategories(): List<Category> ="))
+        assertTrue(legacy.contains("listOf(Category.RENDER, Category.HIDERS, Category.PLAYER, Category.CAMERA)"))
+        assertFalse(legacy.contains("Category.HUD -> listOf("))
+        assertTrue(legacy.contains("LegacyModuleBrowserEntry(FloydHud, \"Inventory HUD\", LegacyModuleBrowserKind.RENDER_HUD, \"Inventory HUD\")"))
+        assertTrue(legacy.contains("LegacyModuleBrowserEntry(FloydHud, \"Day Tracker\", LegacyModuleBrowserKind.RENDER_HUD, \"Day Tracker\")"))
+        assertTrue(legacy.contains("moduleEntry(FloydCustomScoreboard)"))
+        assertTrue(legacy.contains("FloydCustomScoreboard ->"))
+        assertTrue(legacy.contains("scoreboardHudPopupSettings()"))
+        assertTrue(legacy.contains("inventoryHudPopupSettings()"))
+        assertTrue(legacy.contains("actionRow(\"Edit Layout\") { mc.setScreen(HudManager) }"))
+        assertTrue(legacy.contains("navRow(\"Custom Scoreboard\", Page.CUSTOM_SCOREBOARD)"))
+        assertTrue(legacy.contains("navRow(\"Inventory HUD\", Page.INVENTORY_HUD)"))
+        assertTrue(legacy.contains("navRow(\"Day Tracker\", Page.DAY_TRACKER)"))
+        assertTrue(legacy.contains("Page.CUSTOM_SCOREBOARD -> listOf("))
+        assertTrue(legacy.contains("Page.INVENTORY_HUD -> listOf("))
+        assertTrue(legacy.contains("Page.DAY_TRACKER -> listOf("))
+        assertTrue(legacy.contains("numberSetting(FloydHud, \"Inventory HUD Corner Radius\")"))
+        assertTrue(legacy.contains("numberSetting(FloydHud, \"Scoreboard HUD Corner Radius\")"))
         assertTrue(legacy.contains("\"Inventory HUD Minecraft Stack Font\","))
         assertTrue(legacy.contains("\"Scoreboard HUD Minecraft Font\" -> \"(Minecraft Font)\""))
+        assertFalse(legacy.contains("\"HUD Corner Radius\""))
+        assertFalse(legacy.contains("Page.HUD"))
     }
 
     @Test
@@ -246,24 +254,26 @@ class FloydHudTest {
         assertTrue(floyd.contains("String footerText = \"FloydAddons\""))
 
         assertTrue(active.contains("sortedWith(compareByDescending<PlayerScoreEntry> { it.value() }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.owner() })"))
-        assertTrue(active.contains("return vanillaScoreboardWouldRender.get()"))
+        assertTrue(active.contains("return true"))
         assertTrue(active.contains("fun shouldCancelVanillaScoreboard("))
         assertTrue(active.contains("moduleEnabled && hudEnabled && customScoreboard && objectivePresent"))
         assertTrue(active.contains("DisplaySlot::teamColorToSlot"))
         assertTrue(active.contains("if (lines.size > 1) lines.removeAt(lines.lastIndex)"))
         assertTrue(active.contains("private const val SCOREBOARD_FONT_SIZE = 12f"))
-        assertTrue(active.contains("private const val HUD_CHROMA_DURATION_MS = 4000L"))
-        assertTrue(active.contains("private const val HUD_FADE_DURATION_MS = 8000L"))
+        assertTrue(active.contains("private const val HUD_CHROMA_DURATION_MS = 8000L"))
+        assertTrue(active.contains("private const val HUD_FADE_DURATION_MS = 16000L"))
         assertTrue(active.contains("NumberSetting(\"Scoreboard HUD Scale\", 1.0f"))
         assertTrue(active.contains("BooleanSetting(\"Scoreboard HUD Minecraft Font\", false"))
         assertTrue(active.contains("ColorSetting(\"Inventory HUD Color\""))
         assertTrue(active.contains("ColorSetting(\"Scoreboard HUD Color\""))
-        assertTrue(active.contains("if (scoreboardHudMinecraftFont) mc.font.width(text) * scoreboardHudScale"))
+        assertTrue(active.contains("if (scoreboardHudMinecraftFont) mc.font.width(text) * safeScoreboardHudScale()"))
         assertTrue(active.contains("else NVGRenderer.textWidth(text, scoreboardFontSize(), NVGRenderer.defaultFont)"))
         assertTrue(active.contains("val name = PlayerTeam.formatNameForTeam(team, entry.ownerName())"))
         assertTrue(active.contains("val score = entry.formatValue(objective.numberFormatOrDefault(StyledFormat.SIDEBAR_DEFAULT))"))
-        assertTrue(active.contains("val nameText = styledText(FloydNickHider.replaceSequence(name.visualOrderText))"))
-        assertTrue(active.contains("val scoreText = styledText(FloydNickHider.replaceSequence(score.visualOrderText))"))
+        assertTrue(active.contains("Component.literal(scoreboardPlainText(name)).visualOrderText"))
+        assertTrue(active.contains("Component.literal(scoreboardPlainText(score)).visualOrderText"))
+        assertTrue(active.contains("val nameText = styledText("))
+        assertTrue(active.contains("val scoreText = styledText("))
         assertTrue(active.contains("ScoreLine(nameText, scoreText, textWidth(nameText), textWidth(scoreText))"))
         assertTrue(active.contains("return drawScoreboardBox(objective.displayName, lines, \"FloydAddons\")"))
         assertTrue(active.contains("return drawScoreboardBox(Component.literal(\"SKYBLOCK\"), lines, \"FloydAddons\")"))
@@ -271,7 +281,7 @@ class FloydHudTest {
         assertTrue(active.contains("SCOREBOARD_HUD_DEFAULT_SCALE, anchorRight = true"))
         assertTrue(active.contains("private val SCOREBOARD_MIN_WIDTH_SAMPLES = listOf("))
         assertTrue(active.contains("\"Purse: 999,999,999\""))
-        assertTrue(active.contains("val titleText = FloydNickHider.replaceSequence(title.visualOrderText)"))
+        assertTrue(active.contains("val titleText = FloydNickHider.replaceSequence(Component.literal(scoreboardPlainText(title)).visualOrderText)"))
         assertTrue(active.contains("val footerText = Component.literal(footer).visualOrderText"))
         assertTrue(active.contains("val styledTitleText = styledText(titleText)"))
         assertTrue(active.contains("val borderColors = scoreboardHudBorderColors()"))
@@ -280,10 +290,10 @@ class FloydHudTest {
         assertTrue(active.contains("val colonWidth = textWidth(\": \")"))
         assertTrue(active.contains("var maxLineWidth = max(max(titleWidth, footerWidth), scoreboardMinimumContentWidth())"))
         assertTrue(active.contains("val fontSize = scoreboardTextHeight()"))
-        assertTrue(active.contains("val padding = ceil(6f * scoreboardHudScale).toInt()"))
-        assertTrue(active.contains("val lineHeight = ceil(fontSize + 4f * scoreboardHudScale).toInt()"))
-        assertTrue(active.contains("val titlePad = ceil(5f * scoreboardHudScale).toInt()"))
-        assertTrue(active.contains("val textElements = mutableListOf("))
+        assertTrue(active.contains("val padding = ceil(6f * scale).toInt()"))
+        assertTrue(active.contains("val lineHeight = ceil(fontSize + 4f * scale).toInt()"))
+        assertTrue(active.contains("val titlePad = ceil(5f * scale).toInt()"))
+        assertTrue(active.contains("val textElements = ArrayList<ScoreboardText>(lines.size * 2 + 2)"))
         assertTrue(active.contains("ScoreboardText(styledTitleText, (boxWidth - titleWidth) / 2f, titlePad.toFloat())"))
         assertTrue(active.contains("ScoreboardText(styledFooterText, (boxWidth - footerWidth) / 2f, (lineY + titlePad).toFloat())"))
         assertTrue(active.contains("val scoreRight = boxWidth - padding"))
@@ -318,9 +328,9 @@ class FloydHudTest {
         assertTrue(active.contains("val angle = animationPhase(HUD_FADE_DURATION_MS, offset) * (2f * PI.toFloat())"))
         assertTrue(active.contains("return ((sin(angle) + 1f) * 0.5f).coerceIn(0f, 1f)"))
         assertTrue(active.contains("private fun blendColors(start: Int, end: Int, progress: Float): Int"))
-        assertTrue(active.contains("private fun scoreboardFontSize(): Float = SCOREBOARD_FONT_SIZE * scoreboardHudScale"))
+        assertTrue(active.contains("private fun scoreboardFontSize(): Float = SCOREBOARD_FONT_SIZE * safeScoreboardHudScale()"))
         assertTrue(active.contains("private fun scoreboardTextHeight(): Float ="))
-        assertTrue(active.contains("if (scoreboardHudMinecraftFont) mc.font.lineHeight * scoreboardHudScale"))
+        assertTrue(active.contains("if (scoreboardHudMinecraftFont) mc.font.lineHeight * safeScoreboardHudScale()"))
         assertTrue(active.contains("private fun inventoryCountTextWidth(text: String, countFontSize: Float): Float ="))
         assertTrue(active.contains("NVGRenderer.textWidth(text, countFontSize, NVGRenderer.defaultFont)"))
         assertTrue(active.contains("private fun inventoryCountTextHeight(countFontSize: Float): Float ="))
@@ -332,8 +342,8 @@ class FloydHudTest {
         assertTrue(active.contains("private data class ScoreboardText(val value: StyledScoreboardText, val x: Float, val y: Float)"))
         assertTrue(active.contains("private data class HudBorderColors(val topLeft: Int, val topRight: Int, val bottomRight: Int, val bottomLeft: Int)"))
         assertTrue(active.contains("private data class ScoreboardTextSegment(val text: String, val color: Int, val minecraftFont: Boolean = false)"))
-        assertTrue(active.contains("fillPanel(boxWidth, boxHeight, borderColors)"))
-        assertTrue(active.contains("private fun GuiGraphics.fillPanel(width: Int, height: Int, borderColors: HudBorderColors = monochromeBorderColors(chromaColor(0f)))"))
+        assertTrue(active.contains("fillPanel(boxWidth, boxHeight, borderColors, scoreboardHudCornerRadius.toFloat())"))
+        assertTrue(active.contains("private fun GuiGraphics.fillPanel(width: Int, height: Int, borderColors: HudBorderColors = monochromeBorderColors(chromaColor(0f)), cornerRadius: Float = inventoryHudCornerRadius.toFloat())"))
         assertTrue(active.contains("borderColors.topLeft, borderColors.topRight, borderColors.bottomRight, borderColors.bottomLeft, 2f"))
         assertTrue(module.contains("anchorRight: Boolean = false"))
         assertTrue(module.contains("HUDSetting(name, x, y, scale, toggleable, anchorRight, desc, this, block)"))

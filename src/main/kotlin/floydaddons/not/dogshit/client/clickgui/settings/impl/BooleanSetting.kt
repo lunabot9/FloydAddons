@@ -7,6 +7,7 @@ import floydaddons.not.dogshit.client.clickgui.ClickGUI.gray38
 import floydaddons.not.dogshit.client.clickgui.settings.RenderableSetting
 import floydaddons.not.dogshit.client.clickgui.settings.Saving
 import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
+import floydaddons.not.dogshit.client.utils.Color
 import floydaddons.not.dogshit.client.utils.Color.Companion.brighter
 import floydaddons.not.dogshit.client.utils.Colors
 import floydaddons.not.dogshit.client.utils.ui.animations.LinearAnimation
@@ -34,7 +35,7 @@ class BooleanSetting(
         NVGRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
         if (enabled || toggleAnimation.isAnimating()) {
-            val color = ClickGUIModule.clickGUIColor
+            val color = Color(ClickGUIModule.guiAccentColor())
             NVGRenderer.rect(
                 x + width - 40f,
                 y + height / 2f - 10f,
@@ -51,7 +52,7 @@ class BooleanSetting(
             34f,
             20f,
             2f,
-            ClickGUIModule.clickGUIColor.rgba,
+            ClickGUIModule.guiAccentColor(),
             9f
         )
         NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)
@@ -97,7 +98,7 @@ class RuntimeBooleanSetting(
         NVGRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
         if (enabled || toggleAnimation.isAnimating()) {
-            val color = ClickGUIModule.clickGUIColor
+            val color = Color(ClickGUIModule.guiAccentColor())
             NVGRenderer.rect(
                 x + width - 40f,
                 y + height / 2f - 10f,
@@ -114,7 +115,7 @@ class RuntimeBooleanSetting(
             34f,
             20f,
             2f,
-            ClickGUIModule.clickGUIColor.rgba,
+            ClickGUIModule.guiAccentColor(),
             9f
         )
         NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)

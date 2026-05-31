@@ -26,6 +26,7 @@ object ClickGUIModule : Module(
 ) {
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
     val clickGUIColor by ColorSetting("Color", Color(50, 150, 220), desc = "The color of the Click GUI.")
+    val clickGUIChroma by BooleanSetting("GUI Chroma", true, desc = "Cycles the Click GUI accent color through chroma.")
     val buttonTextColor by ColorSetting("Button Text Color", Color(0xFFFFFFFF.toInt()), desc = "Legacy Floyd GUI button text color.")
     val buttonTextChroma by BooleanSetting("Button Text Chroma", true, desc = "Cycles legacy Floyd GUI button text through chroma.")
     val buttonTextFadeColor by ColorSetting("Button Text Fade Color", Color(0xFFFF55FF.toInt()), desc = "Legacy Floyd GUI button text fade color.")
@@ -71,6 +72,7 @@ object ClickGUIModule : Module(
         "enabled" to enabled,
         "chatNotifications" to enableNotification,
         "color" to "#${clickGUIColor.hex()}",
+        "chroma" to clickGUIChroma,
         "legacyButtonTextColor" to "#${buttonTextColor.hex()}",
         "legacyButtonTextChroma" to buttonTextChroma,
         "legacyButtonTextFadeColor" to "#${buttonTextFadeColor.hex()}",
@@ -134,6 +136,13 @@ object ClickGUIModule : Module(
         val defaultWidth = 20f + Panel.WIDTH * panelCount + defaultGap * (panelCount - 1)
         if (defaultWidth <= availableWidth) return defaultGap
         return ((availableWidth - 20f - Panel.WIDTH * panelCount) / (panelCount - 1)).coerceAtLeast(4f)
+    }
+
+    fun guiAccentColor(offset: Float = 0f): Int = if (clickGUIChroma) chromaColor(offset) else clickGUIColor.rgba
+
+    private fun chromaColor(offset: Float): Int {
+        val hue = (((System.currentTimeMillis() % 5000L) / 5000f) + offset).mod(1f)
+        return 0xFF000000.toInt() or (java.awt.Color.HSBtoRGB(hue, 1f, 1f) and 0x00FFFFFF)
     }
 
     fun getStandardGuiScale(): Float {

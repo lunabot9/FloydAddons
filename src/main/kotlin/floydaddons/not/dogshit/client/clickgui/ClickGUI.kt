@@ -40,15 +40,13 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
             val scaledMouseX = odinMouseX / ClickGUIModule.getStandardGuiScale()
             val scaledMouseY = odinMouseY / ClickGUIModule.getStandardGuiScale()
+            val searchBarX = mc.window.screenWidth / (2f * ClickGUIModule.getStandardGuiScale()) - 175f
+            val searchBarY = (mc.window.screenHeight - 110f) / ClickGUIModule.getStandardGuiScale() - 20f
 
             NVGRenderer.scale(ClickGUIModule.getStandardGuiScale(), ClickGUIModule.getStandardGuiScale())
 
-            SearchBar.draw(
-                mc.window.screenWidth / (2f * ClickGUIModule.getStandardGuiScale()) - 175f,
-                (mc.window.screenHeight - 110f) / ClickGUIModule.getStandardGuiScale() - 20f,
-                scaledMouseX,
-                scaledMouseY
-            )
+            drawTitle(searchBarX, searchBarY, 22f)
+            SearchBar.draw(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
 
             if (openAnim.isAnimating()) {
                 val scale = openAnim.get(0f, 1f)
@@ -192,10 +190,23 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
                 area[2] - area[0] + 16f,
                 area[3] - area[1] + 16f,
                 1.5f,
-                ClickGUIModule.clickGUIColor.rgba,
+                ClickGUIModule.guiAccentColor(),
                 5f
             )
             NVGRenderer.drawWrappedString(text, x + 8f, y + 8f, 300f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        }
+    }
+
+    private fun drawTitle(x: Float, searchBarY: Float, size: Float) {
+        val title = "FloydAddons"
+        val titleWidth = NVGRenderer.textWidth(title, size, NVGRenderer.defaultFont)
+        var cursorX = x + 175f - titleWidth / 2f
+        val titleY = searchBarY - size - 4f
+        for (char in title) {
+            val text = char.toString()
+            val offset = 1f - ((cursorX - (x + 175f - titleWidth / 2f)) / titleWidth)
+            NVGRenderer.text(text, cursorX, titleY, size, ClickGUIModule.guiAccentColor(offset), NVGRenderer.defaultFont)
+            cursorX += NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont)
         }
     }
 

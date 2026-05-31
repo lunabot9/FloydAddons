@@ -1609,6 +1609,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.ANIMATIONS -> animationsPanelWidth
         Page.CAMERA -> cameraPanelWidth
         Page.RENDER -> renderPanelWidth
+        Page.CUSTOM_SCOREBOARD, Page.INVENTORY_HUD, Page.DAY_TRACKER -> renderPanelWidth
         Page.MOB_ESP -> mobEspPanelWidth
         Page.COSMETIC -> cosmeticPanelWidth
         Page.PLAYER_SIZE -> cosmeticPanelWidth
@@ -1627,6 +1628,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.XRAY -> xrayEditorPanelHeight
         Page.NAME_MAPPINGS -> nameMappingPanelHeight
         Page.RENDER -> renderPanelHeight
+        Page.CUSTOM_SCOREBOARD, Page.INVENTORY_HUD, Page.DAY_TRACKER -> renderPanelHeight
         Page.MOB_ESP -> mobEspPanelHeight
         Page.COSMETIC -> cosmeticPanelHeight
         Page.PLAYER_SIZE -> 220
@@ -2899,45 +2901,49 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val hits = mutableListOf<RenderHitEntry>()
         val controlLeft = left + (panelWidth() - renderFullWidth) / 2
 
-        drawRenderHeader(context, controlLeft, renderRowY(top, 0), "X-Ray", alpha)
-        renderFullButton(context, hits, controlLeft, top, 1, "X-Ray: ${onOff(FloydXray.enabled)}", "X-Ray", RenderHitKind.XRAY_TOGGLE, alpha)
+        renderFullButton(context, hits, controlLeft, top, 0, "Custom Scoreboard", "Custom Scoreboard", RenderHitKind.NAV_CUSTOM_SCOREBOARD, alpha)
+        renderFullButton(context, hits, controlLeft, top, 1, "Inventory HUD", "Inventory HUD", RenderHitKind.NAV_INVENTORY_HUD, alpha)
+        renderFullButton(context, hits, controlLeft, top, 2, "Day Tracker", "Day Tracker", RenderHitKind.NAV_DAY_TRACKER, alpha)
+
+        drawRenderHeader(context, controlLeft, renderRowY(top, 3), "X-Ray", alpha)
+        renderFullButton(context, hits, controlLeft, top, 4, "X-Ray: ${onOff(FloydXray.enabled)}", "X-Ray", RenderHitKind.XRAY_TOGGLE, alpha)
         val opacity = renderSliderSpecs().first { it.settingName == "Opacity" }
-        val opacityRect = Rect(controlLeft, renderRowY(top, 2), renderFullWidth, renderRowHeight)
+        val opacityRect = Rect(controlLeft, renderRowY(top, 5), renderFullWidth, renderRowHeight)
         drawRenderSlider(context, opacityRect, opacity, alpha)
         hits += RenderHitEntry(opacityRect, opacity.settingName, RenderHitKind.SLIDER)
-        val editBlocks = Rect(controlLeft, renderRowY(top, 3), renderHalfWidth, renderRowHeight)
+        val editBlocks = Rect(controlLeft, renderRowY(top, 6), renderHalfWidth, renderRowHeight)
         drawButton(context, editBlocks, "Edit Blocks", alpha)
         hits += RenderHitEntry(editBlocks, "Edit Blocks", RenderHitKind.NAV_XRAY)
-        val reloadBlocks = Rect(controlLeft + renderHalfWidth + renderPairGap, renderRowY(top, 3), renderHalfWidth, renderRowHeight)
+        val reloadBlocks = Rect(controlLeft + renderHalfWidth + renderPairGap, renderRowY(top, 6), renderHalfWidth, renderRowHeight)
         drawButton(context, reloadBlocks, "Reload Blocks", alpha)
         hits += RenderHitEntry(reloadBlocks, "Reload Blocks", RenderHitKind.RELOAD_XRAY)
 
-        drawRenderHeader(context, controlLeft, renderRowY(top, 4), "Mob ESP", alpha)
-        val mobToggle = Rect(controlLeft, renderRowY(top, 5), renderMainWidth, renderRowHeight)
+        drawRenderHeader(context, controlLeft, renderRowY(top, 7), "Mob ESP", alpha)
+        val mobToggle = Rect(controlLeft, renderRowY(top, 8), renderMainWidth, renderRowHeight)
         drawButton(context, mobToggle, "Mob ESP: ${onOff(FloydMobEsp.enabled)}", alpha)
         hits += RenderHitEntry(mobToggle, "Mob ESP", RenderHitKind.MODULE_TOGGLE)
-        val mobConfig = Rect(controlLeft + renderMainWidth + renderPairGap, renderRowY(top, 5), renderSecondaryWidth, renderRowHeight)
+        val mobConfig = Rect(controlLeft + renderMainWidth + renderPairGap, renderRowY(top, 8), renderSecondaryWidth, renderRowHeight)
         drawButton(context, mobConfig, "Config", alpha)
         hits += RenderHitEntry(mobConfig, "Config", RenderHitKind.NAV_MOB_ESP)
 
-        drawRenderHeader(context, controlLeft, renderRowY(top, 6), "Other", alpha)
-        val animations = Rect(controlLeft, renderRowY(top, 7), renderHalfWidth, renderRowHeight)
+        drawRenderHeader(context, controlLeft, renderRowY(top, 9), "Other", alpha)
+        val animations = Rect(controlLeft, renderRowY(top, 10), renderHalfWidth, renderRowHeight)
         drawButton(context, animations, "Attack Animation", alpha)
         hits += RenderHitEntry(animations, "Attack Animation", RenderHitKind.NAV_ANIMATIONS)
-        val timeToggle = Rect(controlLeft + renderHalfWidth + renderPairGap, renderRowY(top, 7), renderHalfWidth, renderRowHeight)
+        val timeToggle = Rect(controlLeft + renderHalfWidth + renderPairGap, renderRowY(top, 10), renderHalfWidth, renderRowHeight)
         drawButton(context, timeToggle, "Time Changer: ${onOff(FloydTimeChanger.enabled)}", alpha)
         hits += RenderHitEntry(timeToggle, "Time Changer", RenderHitKind.MODULE_TOGGLE)
         val time = renderSliderSpecs().first { it.settingName == "Time" }
-        val timeRect = Rect(controlLeft, renderRowY(top, 8), renderHalfWidth, renderRowHeight)
+        val timeRect = Rect(controlLeft, renderRowY(top, 11), renderHalfWidth, renderRowHeight)
         drawRenderSlider(context, timeRect, time, alpha)
         hits += RenderHitEntry(timeRect, time.settingName, RenderHitKind.SLIDER)
 
-        val stalk = Rect(controlLeft, renderRowY(top, 9), renderFullWidth, renderRowHeight)
+        val stalk = Rect(controlLeft, renderRowY(top, 12), renderFullWidth, renderRowHeight)
         drawButton(context, stalk, renderStalkLabel(), alpha)
         hits += RenderHitEntry(stalk, "Stalk", RenderHitKind.STALK)
-        renderFullButton(context, hits, controlLeft, top, 10, "Borderless Window: ${onOff(booleanSetting(FloydRender, "Borderless Window")?.enabled ?: false)}", "Borderless Window", RenderHitKind.BORDERLESS, alpha)
+        renderFullButton(context, hits, controlLeft, top, 13, "Borderless Window: ${onOff(booleanSetting(FloydRender, "Borderless Window")?.enabled ?: false)}", "Borderless Window", RenderHitKind.BORDERLESS, alpha)
 
-        val title = Rect(controlLeft, renderRowY(top, 11), renderFullWidth, renderRowHeight)
+        val title = Rect(controlLeft, renderRowY(top, 14), renderFullWidth, renderRowHeight)
         drawRenderTitleField(context, title, alpha)
         hits += RenderHitEntry(title, "Instance Title", RenderHitKind.TITLE_FIELD)
 
@@ -3805,6 +3811,15 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val labelColor = if (hover) legacyTextColor(0.15f, alpha) else applyAlpha(0xFFFFFFFF.toInt(), alpha)
         val label = mc.font.plainSubstrByWidth(modulePopupSettingLabel(popup, setting), row.width - 16)
         when (setting) {
+            is HUDSetting -> {
+                context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
+                val moveRect = modulePopupHudMoveButtonBounds(row)
+                drawButton(context, moveRect, "Move", alpha)
+                if (setting.toggleable) {
+                    val toggleRect = modulePopupHudToggleBounds(row)
+                    drawButton(context, toggleRect, if (setting.value.enabled) "On" else "Off", alpha)
+                }
+            }
             is BooleanSetting -> {
                 context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
                 drawPopupDot(context, row, setting.enabled, alpha)
@@ -3875,6 +3890,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         }
         if (setting !is ActionSetting) {
             val hint = when (setting) {
+                is HUDSetting -> if (setting.toggleable) "Toggle / Move" else "Move"
                 is NumberSetting<*> -> "+/-"
                 is ColorSetting -> "Pick"
                 is StringSetting -> "Edit"
@@ -3940,25 +3956,34 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun popupVisibleSettings(module: Module): List<Setting<*>> =
         when (module) {
             FloydHud -> listOfNotNull(
-                numberSetting(FloydHud, "Inventory HUD Scale"),
-                numberSetting(FloydHud, "Scoreboard HUD Scale"),
-                numberSetting(FloydHud, "HUD Corner Radius"),
-                colorSetting(FloydHud, "Inventory HUD Color"),
-                booleanSetting(FloydHud, "Inventory HUD Chroma"),
-                colorSetting(FloydHud, "Inventory HUD Fade Color"),
-                booleanSetting(FloydHud, "Inventory HUD Fade"),
-                hudSetting(FloydHud, "Inventory HUD"),
-                booleanSetting(FloydHud, "Inventory HUD Minecraft Stack Font"),
-                colorSetting(FloydHud, "Scoreboard HUD Color"),
-                booleanSetting(FloydHud, "Scoreboard HUD Chroma"),
-                colorSetting(FloydHud, "Scoreboard HUD Fade Color"),
-                booleanSetting(FloydHud, "Scoreboard HUD Fade"),
-                hudSetting(FloydHud, "Scoreboard HUD"),
-                booleanSetting(FloydHud, "Scoreboard HUD Minecraft Font"),
+                numberSetting(FloydHud, "Inventory HUD Corner Radius"),
+                numberSetting(FloydHud, "Scoreboard HUD Corner Radius"),
                 keybindSetting(FloydHud, "Keybind")
             )
             else -> module.settings.values.filter { it.isVisible && !modulePopupHiddenSetting(module, it) }
         }
+
+    private fun inventoryHudPopupSettings(): List<Setting<*>> = listOfNotNull(
+        hudSetting(FloydHud, "Inventory HUD"),
+        numberSetting(FloydHud, "Inventory HUD Scale"),
+        numberSetting(FloydHud, "Inventory HUD Corner Radius"),
+        colorSetting(FloydHud, "Inventory HUD Color"),
+        booleanSetting(FloydHud, "Inventory HUD Chroma"),
+        colorSetting(FloydHud, "Inventory HUD Fade Color"),
+        booleanSetting(FloydHud, "Inventory HUD Fade"),
+        booleanSetting(FloydHud, "Inventory HUD Minecraft Stack Font")
+    )
+
+    private fun scoreboardHudPopupSettings(): List<Setting<*>> = listOfNotNull(
+        hudSetting(FloydHud, "Scoreboard HUD"),
+        numberSetting(FloydHud, "Scoreboard HUD Scale"),
+        numberSetting(FloydHud, "Scoreboard HUD Corner Radius"),
+        colorSetting(FloydHud, "Scoreboard HUD Color"),
+        booleanSetting(FloydHud, "Scoreboard HUD Chroma"),
+        colorSetting(FloydHud, "Scoreboard HUD Fade Color"),
+        booleanSetting(FloydHud, "Scoreboard HUD Fade"),
+        booleanSetting(FloydHud, "Scoreboard HUD Minecraft Font")
+    )
 
     private fun popupVisibleSettings(popup: ModulePopup): List<Setting<*>> =
         popup.entry?.let(::popupVisibleSettings) ?: popupVisibleSettings(popup.module)
@@ -3976,6 +4001,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                             booleanSetting(FloydMobEsp, "Star Mobs"),
                             colorSetting(FloydMobEsp, "Default ESP Color")
                         )
+                    FloydCustomScoreboard ->
+                        scoreboardHudPopupSettings()
                     else -> popupVisibleSettings(entry.module)
                 }
             LegacyModuleBrowserKind.RENDER_BOOLEAN ->
@@ -4002,7 +4029,11 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             LegacyModuleBrowserKind.HIDER_NO_ARMOR ->
                 listOfNotNull(selectorSetting(FloydNoArmor, "Target"))
             LegacyModuleBrowserKind.RENDER_HUD ->
-                listOfNotNull(booleanSetting(FloydHud, "Inventory HUD Minecraft Stack Font"))
+                when (entry.label) {
+                    "Inventory HUD" -> inventoryHudPopupSettings()
+                    "Day Tracker" -> listOfNotNull(hudSetting(FloydHud, "Day Tracker"))
+                    else -> emptyList()
+                }
             LegacyModuleBrowserKind.RENDER_BORDERLESS ->
                 emptyList()
             LegacyModuleBrowserKind.RENDER_INSTANCE_NAME ->
@@ -4097,7 +4128,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 listOf(ModulePopupExtra("Target: ${FloydMobEsp.stalkTarget().ifBlank { "<none>" }}", ModulePopupExtraKind.STALK_TARGET))
             LegacyModuleBrowserKind.RENDER_HUD,
             LegacyModuleBrowserKind.RENDER_BOOLEAN ->
-                if (entry.label in setOf("Inventory HUD", "Custom Scoreboard")) listOf(ModulePopupExtra("Edit Layout", ModulePopupExtraKind.HUD_LAYOUT)) else emptyList()
+                if (entry.label in setOf("Inventory HUD", "Day Tracker", "Custom Scoreboard")) listOf(ModulePopupExtra("Edit Layout", ModulePopupExtraKind.HUD_LAYOUT)) else emptyList()
+            LegacyModuleBrowserKind.MODULE ->
+                if (entry.module === FloydCustomScoreboard) listOf(ModulePopupExtra("Edit Layout", ModulePopupExtraKind.HUD_LAYOUT)) else modulePopupExtras(entry.module)
             else -> modulePopupExtras(entry.module)
         }
 
@@ -4108,6 +4141,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         when (popup.entry?.kind) {
             LegacyModuleBrowserKind.RENDER_GUI_STYLE -> when (setting.name) {
                 "Button Text Color" -> "Text Color"
+                else -> setting.name
+            }
+            LegacyModuleBrowserKind.MODULE -> when {
+                popup.entry?.label == "Custom Scoreboard" && setting.name == "Scoreboard HUD Minecraft Font" -> "(Minecraft Font)"
                 else -> setting.name
             }
             LegacyModuleBrowserKind.RENDER_HUD,
@@ -4283,6 +4320,12 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             else -> modulePopupRowHeight
         }
 
+    private fun modulePopupHudToggleBounds(row: Rect): Rect =
+        Rect(row.right - 68, row.top + 2, 30, row.height - 4)
+
+    private fun modulePopupHudMoveButtonBounds(row: Rect): Rect =
+        Rect(row.right - 34, row.top + 2, 28, row.height - 4)
+
     private fun modulePopupSliderBounds(row: Rect): Rect =
         Rect(row.left + 8, row.bottom - 8, row.width - 16, 4)
 
@@ -4388,6 +4431,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         }
 
     private fun modulePopupHitKind(setting: Setting<*>): ModulePopupHitKind = when (setting) {
+        is HUDSetting -> ModulePopupHitKind.HUD
         is BooleanSetting, is RuntimeBooleanSetting -> ModulePopupHitKind.TOGGLE
         is NumberSetting<*> -> ModulePopupHitKind.NUMBER
         is SelectorSetting -> ModulePopupHitKind.SELECTOR
@@ -4405,6 +4449,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         if (value % 1.0 == 0.0) value.roundToInt().toString() else "%.2f".format(value)
 
     private fun modulePopupDebugValue(setting: Setting<*>): Any? = when (setting) {
+        is HUDSetting -> setting.value.enabled
         is BooleanSetting -> setting.enabled
         is RuntimeBooleanSetting -> setting.enabled
         is NumberSetting<*> -> setting.numericValue()
@@ -4449,7 +4494,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun moduleBrowserCategories(): List<Category> =
-        listOf(Category.RENDER, Category.HIDERS, Category.PLAYER, Category.CAMERA, Category.HUD)
+        listOf(Category.RENDER, Category.HIDERS, Category.PLAYER, Category.CAMERA)
 
     private fun drawModuleBrowserSearch(context: GuiGraphics, alpha: Float) {
         val x = (width - moduleBrowserSearchWidth) / 2
@@ -4546,6 +4591,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydTimeChanger, "Time Changer", LegacyModuleBrowserKind.MODULE, "Time Changer"),
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
+                LegacyModuleBrowserEntry(FloydHud, "Day Tracker", LegacyModuleBrowserKind.RENDER_HUD, "Day Tracker"),
+                moduleEntry(FloydCustomScoreboard),
                 LegacyModuleBrowserEntry(FloydHubMap, "Custom Hub Map", LegacyModuleBrowserKind.MODULE),
                 LegacyModuleBrowserEntry(FloydRender, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
                 LegacyModuleBrowserEntry(ClickGUIModule, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
@@ -4580,9 +4627,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydFreecamModule, "Freecam", LegacyModuleBrowserKind.CAMERA_FREECAM),
                 LegacyModuleBrowserEntry(FloydFreelookModule, "Freelook", LegacyModuleBrowserKind.CAMERA_FREELOOK),
                 LegacyModuleBrowserEntry(FloydF5CustomizerModule, "F5 Customizer", LegacyModuleBrowserKind.CAMERA_F5)
-            )
-            Category.HUD -> listOf(
-                LegacyModuleBrowserEntry(FloydCustomScoreboard, "Custom Scoreboard", LegacyModuleBrowserKind.MODULE, "Custom Scoreboard")
             )
             else -> emptyList()
         }.filter { entry -> ModuleManager.modules.containsValue(entry.module) }
@@ -4668,6 +4712,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.CONE_HAT -> emptyList()
         Page.XRAY -> emptyList()
         Page.RENDER -> listOf(
+            navRow("Custom Scoreboard", Page.CUSTOM_SCOREBOARD),
+            navRow("Inventory HUD", Page.INVENTORY_HUD),
+            navRow("Day Tracker", Page.DAY_TRACKER),
             headerRow("X-Ray"),
             toggleModuleRow(FloydXray, "X-Ray"),
             numberRow(FloydXray, "Opacity", "X-Ray Opacity") { "${(it * 100).roundToInt()}%" },
@@ -4693,6 +4740,32 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             actionRow({ "Window Title: ${stringSetting(ClickGUIModule, "Instance Title")?.value?.ifBlank { "(default)" } ?: "?"}" }) {
                 openWindowTitleEditor()
             }
+        )
+        Page.CUSTOM_SCOREBOARD -> listOf(
+            headerRow("Custom Scoreboard"),
+            actionRow("Edit Layout") { mc.setScreen(HudManager) },
+            numberRow(FloydHud, "Scoreboard HUD Scale", "Scale") { oneDecimal(it) },
+            numberRow(FloydHud, "Scoreboard HUD Corner Radius", "Corner Radius") { it.roundToInt().toString() },
+            colorRow(FloydHud, "Scoreboard HUD Color", "Color"),
+            toggleSettingRow(FloydHud, "Scoreboard HUD Chroma", "Chroma"),
+            colorRow(FloydHud, "Scoreboard HUD Fade Color", "Fade Color"),
+            toggleSettingRow(FloydHud, "Scoreboard HUD Fade", "Fade"),
+            toggleSettingRow(FloydHud, "Scoreboard HUD Minecraft Font", "Minecraft Font")
+        )
+        Page.INVENTORY_HUD -> listOf(
+            headerRow("Inventory HUD"),
+            actionRow("Edit Layout") { mc.setScreen(HudManager) },
+            numberRow(FloydHud, "Inventory HUD Scale", "Scale") { oneDecimal(it) },
+            numberRow(FloydHud, "Inventory HUD Corner Radius", "Corner Radius") { it.roundToInt().toString() },
+            colorRow(FloydHud, "Inventory HUD Color", "Color"),
+            toggleSettingRow(FloydHud, "Inventory HUD Chroma", "Chroma"),
+            colorRow(FloydHud, "Inventory HUD Fade Color", "Fade Color"),
+            toggleSettingRow(FloydHud, "Inventory HUD Fade", "Fade"),
+            toggleSettingRow(FloydHud, "Inventory HUD Minecraft Stack Font", "Minecraft Font")
+        )
+        Page.DAY_TRACKER -> listOf(
+            headerRow("Day Tracker"),
+            actionRow("Edit Layout") { mc.setScreen(HudManager) }
         )
         Page.HIDERS -> listOf(
             toggleModuleRow(FloydNoHurtCamera, "No Hurt Camera"),
@@ -5615,6 +5688,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 FloydXray.rebuildChunks()
                 modMessage("Reloaded xray opaque blocks.")
             }
+            RenderHitKind.NAV_CUSTOM_SCOREBOARD -> currentPage = Page.CUSTOM_SCOREBOARD
+            RenderHitKind.NAV_INVENTORY_HUD -> currentPage = Page.INVENTORY_HUD
+            RenderHitKind.NAV_DAY_TRACKER -> currentPage = Page.DAY_TRACKER
             RenderHitKind.NAV_MOB_ESP -> currentPage = Page.MOB_ESP
             RenderHitKind.NAV_HIDERS -> currentPage = Page.HIDERS
             RenderHitKind.NAV_ANIMATIONS -> currentPage = Page.ANIMATIONS
@@ -5897,6 +5973,15 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                     is RuntimeBooleanSetting -> setting.enabled = !setting.enabled
                 }
                 ModuleManager.saveConfigurations()
+            }
+            ModulePopupHitKind.HUD -> {
+                val setting = hit.setting as? HUDSetting ?: return true
+                if (setting.toggleable && modulePopupHudToggleBounds(hit.bounds).contains(x, y)) {
+                    setting.value.enabled = !setting.value.enabled
+                    ModuleManager.saveConfigurations()
+                } else {
+                    mc.setScreen(HudManager)
+                }
             }
             ModulePopupHitKind.NUMBER -> {
                 val setting = hit.setting as? NumberSetting<*> ?: return true
@@ -6419,6 +6504,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun pageTitle(page: Page): String = when (page) {
         Page.HUB -> "FloydAddons"
         Page.RENDER -> "Render"
+        Page.CUSTOM_SCOREBOARD -> "Custom Scoreboard"
+        Page.INVENTORY_HUD -> "Inventory HUD"
+        Page.DAY_TRACKER -> "Day Tracker"
         Page.HIDERS -> "Hiders"
         Page.CAMERA -> "Camera"
         Page.COSMETIC -> "Cosmetic"
@@ -6437,6 +6525,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun pageParent(page: Page): Page = pageReturnOverrides[page] ?: when (page) {
+        Page.CUSTOM_SCOREBOARD, Page.INVENTORY_HUD, Page.DAY_TRACKER -> Page.RENDER
         Page.HIDERS, Page.MOB_ESP, Page.ANIMATIONS, Page.XRAY -> Page.RENDER
         Page.MOB_ESP_FILTERS -> Page.MOB_ESP
         Page.SKIN, Page.CAPE, Page.CONE_HAT -> Page.COSMETIC
@@ -6608,7 +6697,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val fade = booleanSetting(ClickGUIModule, target.fadeSetting)?.enabled ?: false
         if (!fade) return base
         val fadeColor = colorSetting(ClickGUIModule, target.fadeColorSetting)?.value?.rgba ?: base
-        val t = ((kotlin.math.sin((((System.currentTimeMillis() % 2500L) / 2500f) + offset) * Math.PI * 2.0) + 1.0) / 2.0).toFloat()
+        val t = ((kotlin.math.sin((((System.currentTimeMillis() % 5000L) / 5000f) + offset) * Math.PI * 2.0) + 1.0) / 2.0).toFloat()
         return blendColors(base, fadeColor, t)
     }
 
@@ -6620,7 +6709,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     )
 
     private fun chromaColor(offset: Float): Int {
-        val hue = (((System.currentTimeMillis() % 2500L) / 2500f) + offset).mod(1f)
+        val hue = (((System.currentTimeMillis() % 5000L) / 5000f) + offset).mod(1f)
         return 0xFF000000.toInt() or (HSBtoRGB(hue, 1f, 1f) and 0x00FFFFFF)
     }
 
@@ -6653,6 +6742,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private enum class Page {
         HUB,
         RENDER,
+        CUSTOM_SCOREBOARD,
+        INVENTORY_HUD,
+        DAY_TRACKER,
         HIDERS,
         CAMERA,
         COSMETIC,
@@ -6951,6 +7043,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         SLIDER,
         NAV_XRAY,
         RELOAD_XRAY,
+        NAV_CUSTOM_SCOREBOARD,
+        NAV_INVENTORY_HUD,
+        NAV_DAY_TRACKER,
         NAV_MOB_ESP,
         NAV_HIDERS,
         NAV_ANIMATIONS,
@@ -6973,6 +7068,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
     private enum class ModulePopupHitKind {
         TOGGLE,
+        HUD,
         NUMBER,
         SELECTOR,
         CYCLE_STRING,

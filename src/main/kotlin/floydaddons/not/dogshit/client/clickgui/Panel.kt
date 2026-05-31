@@ -89,7 +89,7 @@ class Panel(private val category: Category) {
                 panelSetting.y + startY,
                 WIDTH,
                 10f,
-                if (lastModuleButton?.module?.enabled == true) ClickGUIModule.clickGUIColor.rgba else gray26.rgba,
+                if (lastModuleButton?.module?.enabled == true) ClickGUIModule.guiAccentColor() else gray26.rgba,
                 5f,
                 false
             )
@@ -171,6 +171,14 @@ class Panel(private val category: Category) {
     }
 
     private fun panelSortPriority(module: Module): Int {
+        if (category == Category.RENDER) {
+            return when (module.name) {
+                "Custom Scoreboard" -> 0
+                "Inventory HUD" -> 1
+                "Day Tracker" -> 2
+                else -> 3
+            }
+        }
         if (category != Category.HIDERS) return 0
         return when (module.name) {
             "Server ID Hider", "Profile ID Hider" -> 1

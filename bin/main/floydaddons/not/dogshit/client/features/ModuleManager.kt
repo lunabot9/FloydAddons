@@ -48,8 +48,10 @@ import floydaddons.not.dogshit.client.features.impl.render.FloydMobEsp
 import floydaddons.not.dogshit.client.features.impl.render.ClickGUIModule
 import floydaddons.not.dogshit.client.features.impl.render.FloydAnimations
 import floydaddons.not.dogshit.client.features.impl.render.FloydCustomScoreboard
+import floydaddons.not.dogshit.client.features.impl.render.FloydDayTrackerModule
 import floydaddons.not.dogshit.client.features.impl.render.FloydHubMap
 import floydaddons.not.dogshit.client.features.impl.render.FloydRender
+import floydaddons.not.dogshit.client.features.impl.render.FloydInventoryHudModule
 import floydaddons.not.dogshit.client.features.impl.render.FloydTimeChanger
 import floydaddons.not.dogshit.client.features.impl.render.FloydXray
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
@@ -95,7 +97,7 @@ object ModuleManager {
 
             // FloydAddons feature groups. The vendored Floyd source under
             // vendor/floydaddons-fabric is the source-of-truth for behavior.
-            FloydRender, FloydTimeChanger, FloydCustomScoreboard, FloydXray, FloydAnimations, FloydHud, FloydMobEsp, FloydHubMap,
+            FloydRender, FloydTimeChanger, FloydCustomScoreboard, FloydInventoryHudModule, FloydDayTrackerModule, FloydXray, FloydAnimations, FloydHud, FloydMobEsp, FloydHubMap,
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
             FloydHideWatchdogMessages, FloydModHider, FloydServerIdHider, FloydProfileIdHider, FloydNoArmor,
@@ -141,7 +143,7 @@ object ModuleManager {
                         keybindSettingsCache.add(setting)
                         KeybindSync.register(setting, keybindTranslationKey(module, setting))
                     }
-                    is HUDSetting -> hudSettingsCache.add(setting)
+                    is HUDSetting -> if (!hudSettingsCache.contains(setting)) hudSettingsCache.add(setting)
                 }
             }
         }

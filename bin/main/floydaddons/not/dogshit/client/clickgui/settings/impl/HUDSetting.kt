@@ -23,7 +23,7 @@ import net.minecraft.client.input.MouseButtonEvent
 class HUDSetting(
     name: String,
     hud: HudElement,
-    private val toggleable: Boolean = false,
+    val toggleable: Boolean = false,
     description: String,
     val module: Module,
 ) : RenderableSetting<HudElement>(name, description), Saving {

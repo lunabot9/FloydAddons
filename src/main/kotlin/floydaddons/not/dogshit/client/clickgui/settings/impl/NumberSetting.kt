@@ -105,7 +105,7 @@ class NumberSetting<E>(
         NVGRenderer.rect(x + 6f, y + 24f, width - 12f, 8f, gray38.rgba, 3f)
 
         if (x + sliderPercentage * (width - 12f) > x + 6)
-            NVGRenderer.rect(x + 6f, y + 24f, sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), 8f, ClickGUIModule.clickGUIColor.rgba, 3f)
+            NVGRenderer.rect(x + 6f, y + 24f, sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), 8f, ClickGUIModule.guiAccentColor(), 3f)
 
         NVGRenderer.circle(x + 6f + sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), y + 28f, handler.anim.get(7f, 9f, !isHovered), Colors.WHITE.rgba)
 
@@ -182,3 +182,4 @@ class NumberSetting<E>(
         else
             "${(valueDouble * 100.0).roundToInt() / 100.0}${unit}"
 }
+

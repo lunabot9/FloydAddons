@@ -32,7 +32,7 @@ class ModuleButton(val module: Module, val panel: Panel) {
 
     private val color: Color
         get() =
-            colorAnim.get(ClickGUIModule.clickGUIColor, gray26, module.enabled).brighter(1 + hover.percent() / 500f)
+            colorAnim.get(Color(ClickGUIModule.guiAccentColor()), gray26, module.enabled).brighter(1 + hover.percent() / 500f)
 
     private val nameWidth = NVGRenderer.textWidth(module.name, 18f, NVGRenderer.defaultFont)
     private val hoverHandler = HoverHandler(750)

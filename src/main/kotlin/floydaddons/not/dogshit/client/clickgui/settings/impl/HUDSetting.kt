@@ -23,7 +23,7 @@ import net.minecraft.client.input.MouseButtonEvent
 class HUDSetting(
     name: String,
     hud: HudElement,
-    private val toggleable: Boolean = false,
+    val toggleable: Boolean = false,
     description: String,
     val module: Module,
 ) : RenderableSetting<HudElement>(name, description), Saving {
@@ -67,7 +67,7 @@ class HUDSetting(
             NVGRenderer.rect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, if (hovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
             if (value.enabled || toggleAnimation.isAnimating()) {
-                val color = ClickGUIModule.clickGUIColor
+                val color = floydaddons.not.dogshit.client.utils.Color(ClickGUIModule.guiAccentColor())
                 NVGRenderer.rect(
                     x + width - 70f,
                     y + height / 2f - 10f,
@@ -78,7 +78,7 @@ class HUDSetting(
                 )
             }
 
-            NVGRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.clickGUIColor.rgba, 9f)
+            NVGRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.guiAccentColor(), 9f)
             NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !value.enabled) - 30f, y + height / 2f, 6f, Colors.WHITE.rgba)
         }
         return height

@@ -30,19 +30,23 @@ object FloydAddonsMod : ClientModInitializer {
     val logger: Logger = LogManager.getLogger("FloydAddons")
 
     @JvmStatic
-    val mc: Minecraft = Minecraft.getInstance()
+    val mc: Minecraft
+        get() = Minecraft.getInstance() ?: error("Minecraft client is not initialized yet")
 
     /**
      * Main config file location.
      * @see floydaddons.not.dogshit.client.config.ModuleConfig
      */
-    val configFile: File = File(mc.gameDirectory, "config/floydaddons/").apply {
+    val configFile: File by lazy {
+        val gameDirectory = Minecraft.getInstance()?.gameDirectory ?: File("run")
+        File(gameDirectory, "config/floydaddons/").apply {
         try {
             if (isFile) delete() // Delete old bugged files that prevent creating the directory
             if (!exists()) mkdirs()
         } catch (e: Exception) {
             println("Error initializing module config\n${e.message}")
             logger.error("Error initializing module config", e)
+        }
         }
     }
 

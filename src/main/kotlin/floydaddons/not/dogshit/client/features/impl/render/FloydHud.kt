@@ -3,6 +3,7 @@ package floydaddons.not.dogshit.client.features.impl.render
 import floydaddons.not.dogshit.client.FloydAddonsMod.mc
 import floydaddons.not.dogshit.client.clickgui.settings.impl.BooleanSetting
 import floydaddons.not.dogshit.client.clickgui.settings.impl.ColorSetting
+import floydaddons.not.dogshit.client.clickgui.settings.impl.HUDSetting
 import floydaddons.not.dogshit.client.clickgui.settings.impl.NumberSetting
 import floydaddons.not.dogshit.client.features.Category
 import floydaddons.not.dogshit.client.features.Module
@@ -35,11 +36,13 @@ object FloydHud : Module(
     description = "Floyd inventory HUD, scoreboard HUD, and movable HUD editors.",
     toggled = true,
 ) {
+    override val visibleInGui: Boolean = false
+
     private const val INVENTORY_HUD_DEFAULT_X = 1540
     private const val INVENTORY_HUD_DEFAULT_Y = 24
     private const val INVENTORY_HUD_DEFAULT_SCALE = 2f
 
-    private const val DAY_TRACKER_DEFAULT_X = 1680
+    private const val DAY_TRACKER_DEFAULT_X = 24
     private const val DAY_TRACKER_DEFAULT_Y = 180
     private const val DAY_TRACKER_DEFAULT_SCALE = 1f
 
@@ -58,8 +61,8 @@ object FloydHud : Module(
     private const val INVENTORY_MINECRAFT_COUNT_OFFSET_RIGHT = 1f
     private const val INVENTORY_MINECRAFT_COUNT_OFFSET_BOTTOM = 2f
     private const val SCOREBOARD_FONT_SIZE = 12f
-    private const val HUD_CHROMA_DURATION_MS = 4000L
-    private const val HUD_FADE_DURATION_MS = 8000L
+    private const val HUD_CHROMA_DURATION_MS = 8000L
+    private const val HUD_FADE_DURATION_MS = 16000L
     private val SCOREBOARD_MIN_WIDTH_SAMPLES = listOf(
         "05/25/26 fL0YD",
         "Early Autumn 13th",
@@ -72,7 +75,8 @@ object FloydHud : Module(
 
     val inventoryHudScale by NumberSetting("Inventory HUD Scale", 1.1f, 0.5f, 5.0f, 0.05f, desc = "Inventory HUD scale.")
     val scoreboardHudScale by NumberSetting("Scoreboard HUD Scale", 1.0f, 0.5f, 3.0f, 0.05f, desc = "Scoreboard HUD scale.")
-    private val hudCornerRadius by NumberSetting("HUD Corner Radius", 0, 0, 12, 1, desc = "Rounded corner radius for Floyd HUD panels.")
+    val inventoryHudCornerRadius by NumberSetting("Inventory HUD Corner Radius", 0, 0, 12, 1, desc = "Rounded corner radius for the inventory HUD and day tracker.")
+    val scoreboardHudCornerRadius by NumberSetting("Scoreboard HUD Corner Radius", 0, 0, 12, 1, desc = "Rounded corner radius for the scoreboard HUD.")
     private val inventoryHudMinecraftStackFont by BooleanSetting("Inventory HUD Minecraft Stack Font", false, desc = "Uses Minecraft's default font for inventory stack counts.")
     private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard HUD Minecraft Font", false, desc = "Uses Minecraft's default font for the scoreboard text.")
     private val inventoryHudColor by ColorSetting("Inventory HUD Color", Color(0xFFFFFFFF.toInt()), desc = "Primary color for the inventory HUD border.")
@@ -88,11 +92,11 @@ object FloydHud : Module(
         drawInventoryHud(it)
     }
 
-    private val dayTrackerHud by HUD("Day Tracker", "Displays the current server day in a movable Floyd HUD.", true, DAY_TRACKER_DEFAULT_X, DAY_TRACKER_DEFAULT_Y, DAY_TRACKER_DEFAULT_SCALE, anchorRight = true) {
+    private val dayTrackerHud by HUD("Day Tracker", "Displays the current server day in a movable Floyd HUD.", true, DAY_TRACKER_DEFAULT_X, DAY_TRACKER_DEFAULT_Y, DAY_TRACKER_DEFAULT_SCALE, anchorRight = false) {
         drawDayTrackerHud(it)
     }
 
-    private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", true, SCOREBOARD_HUD_DEFAULT_X, SCOREBOARD_HUD_DEFAULT_Y, SCOREBOARD_HUD_DEFAULT_SCALE, anchorRight = true) { example ->
+    private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", false, SCOREBOARD_HUD_DEFAULT_X, SCOREBOARD_HUD_DEFAULT_Y, SCOREBOARD_HUD_DEFAULT_SCALE, anchorRight = true) { example ->
         drawScoreboardHud(example)
     }
 
@@ -139,7 +143,8 @@ object FloydHud : Module(
                 "fade" to scoreboardHudFade,
                 "fadeColor" to "#${scoreboardHudFadeColor.hex()}"
             ),
-            "cornerRadius" to hudCornerRadius
+            "inventoryHudCornerRadius" to inventoryHudCornerRadius,
+            "scoreboardHudCornerRadius" to scoreboardHudCornerRadius
         )
     }
 
@@ -166,7 +171,7 @@ object FloydHud : Module(
             if (consumeVanillaSignal) vanillaScoreboardWouldRender.set(false)
             return false
         }
-        return vanillaScoreboardWouldRender.get()
+        return true
     }
 
     @JvmStatic
@@ -189,7 +194,7 @@ object FloydHud : Module(
         val width = 9 * slotSize
         val height = 3 * slotSize
         val borderColors = inventoryHudBorderColors()
-        fillPanel(width, height, borderColors)
+        fillPanel(width, height, borderColors, inventoryHudCornerRadius.toFloat())
 
         if (inventory != null) {
             for (slot in 0 until 27) {
@@ -234,8 +239,10 @@ object FloydHud : Module(
         val width = ceil(textWidth + paddingX * 2f).toInt()
         val height = ceil(fontSize + paddingY * 2f).toInt()
 
-        fillPanel(width, height, monochromeBorderColors(0xFFFFFFFF.toInt()))
-        NVGRenderer.text(label, paddingX, paddingY, fontSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        fillPanel(width, height, monochromeBorderColors(0xFFFFFFFF.toInt()), inventoryHudCornerRadius.toFloat())
+        NVGPIPRenderer.draw(this, 0, 0, width, height, renderScaleMultiplier = mc.window.guiScale.toFloat()) {
+            NVGRenderer.text(label, paddingX, paddingY, fontSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        }
         return width to height
     }
 
@@ -311,8 +318,16 @@ object FloydHud : Module(
             val team = scoreboard.getPlayersTeam(entry.owner())
             val name = PlayerTeam.formatNameForTeam(team, entry.ownerName())
             val score = entry.formatValue(objective.numberFormatOrDefault(StyledFormat.SIDEBAR_DEFAULT))
-            val nameText = styledText(FloydNickHider.replaceSequence(name.visualOrderText))
-            val scoreText = styledText(FloydNickHider.replaceSequence(score.visualOrderText))
+            val nameText = styledText(
+                FloydNickHider.replaceSequence(
+                    Component.literal(scoreboardPlainText(name)).visualOrderText
+                )
+            )
+            val scoreText = styledText(
+                FloydNickHider.replaceSequence(
+                    Component.literal(scoreboardPlainText(score)).visualOrderText
+                )
+            )
             lines += ScoreLine(nameText, scoreText, textWidth(nameText), textWidth(scoreText))
         }
 
@@ -343,7 +358,8 @@ object FloydHud : Module(
         lines: List<ScoreLine>,
         footer: String
     ): Pair<Int, Int> {
-        val titleText = FloydNickHider.replaceSequence(title.visualOrderText)
+        val scale = safeScoreboardHudScale()
+        val titleText = FloydNickHider.replaceSequence(Component.literal(scoreboardPlainText(title)).visualOrderText)
         val footerText = Component.literal(footer).visualOrderText
         val styledTitleText = styledText(titleText)
         val borderColors = scoreboardHudBorderColors()
@@ -358,9 +374,9 @@ object FloydHud : Module(
         }
 
         val fontSize = scoreboardTextHeight()
-        val padding = ceil(6f * scoreboardHudScale).toInt()
-        val lineHeight = ceil(fontSize + 4f * scoreboardHudScale).toInt()
-        val titlePad = ceil(5f * scoreboardHudScale).toInt()
+        val padding = ceil(6f * scale).toInt()
+        val lineHeight = ceil(fontSize + 4f * scale).toInt()
+        val titlePad = ceil(5f * scale).toInt()
         val boxWidth = ceil(maxLineWidth + padding * 2).toInt()
         val titleBarHeight = lineHeight + titlePad * 2
         val footerBarHeight = lineHeight + titlePad * 2
@@ -392,17 +408,19 @@ object FloydHud : Module(
     }
 
     private fun textWidth(text: String): Float =
-        if (scoreboardHudMinecraftFont) mc.font.width(text) * scoreboardHudScale
+        if (scoreboardHudMinecraftFont) mc.font.width(text) * safeScoreboardHudScale()
         else NVGRenderer.textWidth(text, scoreboardFontSize(), NVGRenderer.defaultFont)
 
     private fun textWidth(text: FormattedCharSequence): Float =
         textWidth(styledText(text))
 
     private fun textWidth(text: StyledScoreboardText): Float {
+        val scale = safeScoreboardHudScale()
+        val useMinecraftFont = scoreboardHudMinecraftFont || text.segments.any { it.minecraftFont }
         var width = 0f
         for (segment in text.segments) {
-            width += if (scoreboardHudMinecraftFont || segment.minecraftFont) {
-                mc.font.width(segment.text) * scoreboardHudScale
+            width += if (useMinecraftFont) {
+                mc.font.width(segment.text) * scale
             } else {
                 NVGRenderer.textWidth(segment.text, scoreboardFontSize(), NVGRenderer.defaultFont)
             }
@@ -425,10 +443,10 @@ object FloydHud : Module(
         texts: List<ScoreboardText>,
         borderColors: HudBorderColors
     ) {
-        fillPanel(boxWidth, boxHeight, borderColors)
+        fillPanel(boxWidth, boxHeight, borderColors, scoreboardHudCornerRadius.toFloat())
         if (scoreboardHudMinecraftFont) {
             pose().pushMatrix()
-            pose().scale(scoreboardHudScale, scoreboardHudScale)
+            pose().scale(safeScoreboardHudScale(), safeScoreboardHudScale())
             for (text in texts) {
                 drawMinecraftScoreboardText(text)
             }
@@ -439,45 +457,30 @@ object FloydHud : Module(
                     drawScoreboardText(text)
                 }
             }
-            pose().pushMatrix()
-            pose().scale(scoreboardHudScale, scoreboardHudScale)
-            for (text in texts) {
-                drawScoreboardMinecraftFallbacks(text)
-            }
-            pose().popMatrix()
         }
     }
 
-    private fun drawScoreboardText(text: ScoreboardText) {
+    private fun GuiGraphics.drawScoreboardText(text: ScoreboardText) {
+        val scale = safeScoreboardHudScale()
+        val useMinecraftFont = scoreboardHudMinecraftFont || text.value.segments.any { it.minecraftFont }
+        if (useMinecraftFont) {
+            drawMinecraftScoreboardText(text)
+            return
+        }
         var segmentX = text.x
         for (segment in text.value.segments) {
-            if (segment.minecraftFont) {
-                segmentX += mc.font.width(segment.text) * scoreboardHudScale
-                continue
-            }
             NVGRenderer.text(segment.text, segmentX, text.y, scoreboardFontSize(), segment.color, NVGRenderer.defaultFont)
             segmentX += NVGRenderer.textWidth(segment.text, scoreboardFontSize(), NVGRenderer.defaultFont)
         }
     }
 
     private fun GuiGraphics.drawMinecraftScoreboardText(text: ScoreboardText) {
-        var segmentX = text.x / scoreboardHudScale
-        val textY = text.y / scoreboardHudScale
+        val scale = safeScoreboardHudScale()
+        var segmentX = text.x / scale
+        val textY = text.y / scale
         for (segment in text.value.segments) {
             drawString(mc.font, segment.text, segmentX.roundToInt(), textY.roundToInt(), segment.color, false)
             segmentX += mc.font.width(segment.text)
-        }
-    }
-
-    private fun GuiGraphics.drawScoreboardMinecraftFallbacks(text: ScoreboardText) {
-        var segmentX = text.x / scoreboardHudScale
-        val textY = text.y / scoreboardHudScale
-        for (segment in text.value.segments) {
-            if (segment.minecraftFont) {
-                drawString(mc.font, segment.text, segmentX.roundToInt(), textY.roundToInt(), segment.color, false)
-            }
-            segmentX += if (segment.minecraftFont) mc.font.width(segment.text).toFloat()
-            else NVGRenderer.textWidth(segment.text, scoreboardFontSize(), NVGRenderer.defaultFont) / scoreboardHudScale
         }
     }
 
@@ -508,8 +511,10 @@ object FloydHud : Module(
 
     private fun styledFooterText(text: FormattedCharSequence): StyledScoreboardText {
         val chars = ArrayList<String>()
+        val fontHints = ArrayList<Boolean>()
         text.accept { _, _, codePoint ->
             chars += String(Character.toChars(codePoint))
+            fontHints += shouldUseMinecraftFontCodePoint(codePoint)
             true
         }
         if (chars.isEmpty()) return StyledScoreboardText.EMPTY
@@ -522,7 +527,7 @@ object FloydHud : Module(
             segments += ScoreboardTextSegment(
                 char,
                 accentColor(scoreboardHudColor, scoreboardHudChroma, scoreboardHudFade, scoreboardHudFadeColor, phase),
-                minecraftFont = false
+                minecraftFont = fontHints[index]
             )
         }
         return StyledScoreboardText(segments)
@@ -541,8 +546,8 @@ object FloydHud : Module(
         return teamObjective ?: scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR)
     }
 
-    private fun GuiGraphics.fillPanel(width: Int, height: Int, borderColors: HudBorderColors = monochromeBorderColors(chromaColor(0f))) {
-        val radius = hudCornerRadius.toFloat().coerceAtLeast(0f)
+    private fun GuiGraphics.fillPanel(width: Int, height: Int, borderColors: HudBorderColors = monochromeBorderColors(chromaColor(0f)), cornerRadius: Float = inventoryHudCornerRadius.toFloat()) {
+        val radius = cornerRadius.coerceAtLeast(0f)
         val fillColor = 0x40000000
         RoundRectPIPRenderer.submit(
             this,
@@ -610,10 +615,10 @@ object FloydHud : Module(
         return (alpha shl 24) or (red shl 16) or (green shl 8) or blue
     }
 
-    private fun scoreboardFontSize(): Float = SCOREBOARD_FONT_SIZE * scoreboardHudScale
+    private fun scoreboardFontSize(): Float = SCOREBOARD_FONT_SIZE * safeScoreboardHudScale()
 
     private fun scoreboardTextHeight(): Float =
-        if (scoreboardHudMinecraftFont) mc.font.lineHeight * scoreboardHudScale
+        if (scoreboardHudMinecraftFont) mc.font.lineHeight * safeScoreboardHudScale()
         else scoreboardFontSize()
 
     private fun shouldUseMinecraftFontCodePoint(codePoint: Int): Boolean =
@@ -640,6 +645,9 @@ object FloydHud : Module(
         return 0xFF000000.toInt() or (java.awt.Color.HSBtoRGB(hue, 1.0f, 1.0f) and 0x00FFFFFF)
     }
 
+    private fun safeScoreboardHudScale(): Float =
+        scoreboardHudScale.takeIf { it.isFinite() && it > 0f } ?: SCOREBOARD_HUD_DEFAULT_SCALE
+
     private fun animationPhase(durationMs: Long, offset: Float): Float =
         ((((System.currentTimeMillis() % durationMs) / durationMs.toFloat()) + offset) % 1f + 1f) % 1f
 
@@ -652,4 +660,67 @@ object FloydHud : Module(
     }
     private data class HudBorderColors(val topLeft: Int, val topRight: Int, val bottomRight: Int, val bottomLeft: Int)
     private data class ScoreboardTextSegment(val text: String, val color: Int, val minecraftFont: Boolean = false)
+}
+
+object FloydInventoryHudModule : Module(
+    name = "Inventory HUD",
+    category = Category.RENDER,
+    description = "Displays and configures the movable inventory HUD.",
+    toggled = true,
+) {
+    init {
+        registerFloydHudSettings(
+            "Inventory HUD",
+            "Inventory HUD Scale",
+            "Inventory HUD Corner Radius",
+            "Inventory HUD Color",
+            "Inventory HUD Chroma",
+            "Inventory HUD Fade Color",
+            "Inventory HUD Fade",
+            "Inventory HUD Minecraft Stack Font"
+        )
+    }
+
+    override fun onEnable() {
+        super.onEnable()
+        inventoryHudSetting()?.value?.enabled = true
+    }
+
+    override fun onDisable() {
+        super.onDisable()
+        inventoryHudSetting()?.value?.enabled = false
+    }
+
+    private fun inventoryHudSetting(): HUDSetting? =
+        FloydHud.settings["Inventory HUD"] as? HUDSetting
+}
+
+object FloydDayTrackerModule : Module(
+    name = "Day Tracker",
+    category = Category.RENDER,
+    description = "Displays and configures the movable day tracker HUD.",
+    toggled = true,
+) {
+    init {
+        registerFloydHudSettings("Day Tracker")
+    }
+
+    override fun onEnable() {
+        super.onEnable()
+        dayTrackerSetting()?.value?.enabled = true
+    }
+
+    override fun onDisable() {
+        super.onDisable()
+        dayTrackerSetting()?.value?.enabled = false
+    }
+
+    private fun dayTrackerSetting(): HUDSetting? =
+        FloydHud.settings["Day Tracker"] as? HUDSetting
+}
+
+internal fun Module.registerFloydHudSettings(vararg names: String) {
+    for (name in names) {
+        FloydHud.settings[name]?.let(::registerSetting)
+    }
 }

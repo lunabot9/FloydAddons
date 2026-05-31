@@ -21,25 +21,25 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
 
     var hue = hue
         set(value) {
-            field = value
+            field = normalizeHue(value)
             needsUpdate = true
         }
 
     var saturation = saturation
         set(value) {
-            field = value
+            field = normalizeUnit(value)
             needsUpdate = true
         }
 
     var brightness = brightness
         set(value) {
-            field = value
+            field = normalizeUnit(value)
             needsUpdate = true
         }
 
     var alphaFloat = alpha
         set(value) {
-            field = value
+            field = normalizeUnit(value)
             needsUpdate = true
         }
 
@@ -51,6 +51,13 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
     @Transient
     private var needsUpdate = true
 
+    init {
+        this.hue = hue
+        this.saturation = saturation
+        this.brightness = brightness
+        this.alphaFloat = alpha
+    }
+
     /**
      * RGBA value from a color.
      *
@@ -61,7 +68,7 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
         get() {
             if (needsUpdate) {
                 field =
-                    (HSBtoRGB(hue, saturation, brightness) and 0X00FFFFFF) or ((this.alphaFloat * 255).toInt() shl 24)
+                    (HSBtoRGB(normalizeHue(hue), normalizeUnit(saturation), normalizeUnit(brightness)) and 0X00FFFFFF) or ((this.alphaFloat * 255).toInt() shl 24)
                 needsUpdate = false
             }
             return field
@@ -152,6 +159,12 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
         fun Color.hsbMax(): Color {
             return Color(hue, 1f, 1f)
         }
+
+        private fun normalizeHue(value: Float): Float =
+            if (!value.isFinite()) 0f else ((value % 1f) + 1f) % 1f
+
+        private fun normalizeUnit(value: Float): Float =
+            if (!value.isFinite()) 0f else value.coerceIn(0f, 1f)
     }
 }
 
