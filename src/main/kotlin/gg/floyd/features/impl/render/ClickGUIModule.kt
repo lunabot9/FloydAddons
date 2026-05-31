@@ -7,6 +7,7 @@ import gg.floyd.clickgui.settings.AlwaysActive
 import gg.floyd.clickgui.settings.impl.*
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.ModuleManager
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
 import gg.floyd.utils.ui.rendering.NVGRenderer
@@ -61,34 +62,47 @@ object ClickGUIModule : Module(
         val activeCategories = Category.categories.values.toList()
         val availableWidth = mc.window.screenWidth / getStandardGuiScale()
         val hasMissing = activeCategories.any { panelSetting[it.name] == null }
+        // Any panel whose right edge falls past the window means the layout no longer fits (e.g. the
+        // window shrank, or categories changed) — re-flow. Wrapped rows (y > 10) are NOT a trigger;
+        // they are a valid multi-row layout and may also be the user's own dragged arrangement.
         val hasOffscreen = activeCategories.any { category ->
             panelSetting[category.name]?.let { it.x < 0f || it.x + Panel.WIDTH > availableWidth } ?: true
         }
-        val hasWrappedDefaults = activeCategories.any { category ->
-            panelSetting[category.name]?.let { it.y > 10f } ?: true
-        }
-        if (hasMissing || hasOffscreen || hasWrappedDefaults) resetPositions()
+        if (hasMissing || hasOffscreen) resetPositions()
     }
 
     fun resetPositions() {
         val activeCategories = Category.categories.values.toList()
         val availableWidth = mc.window.screenWidth / getStandardGuiScale()
-        val gap = topRowPanelGap(availableWidth, activeCategories.size)
-        activeCategories.forEachIndexed { index, category ->
+        val gap = 20f
+        val rowGap = 14f
+        var x = 10f
+        var y = 10f
+        var rowMaxHeight = 0f
+        activeCategories.forEach { category ->
+            // Wrap to a new row when the panel would extend past the right edge, so no panel is ever
+            // pushed off-screen regardless of window width or how many categories exist.
+            if (x > 10f && x + Panel.WIDTH > availableWidth) {
+                x = 10f
+                y += rowMaxHeight + rowGap
+                rowMaxHeight = 0f
+            }
             val setting = panelSetting.getOrPut(category.name) { PanelData() }
-            setting.x = 10f + (Panel.WIDTH + gap) * index
-            setting.y = 10f
+            setting.x = x
+            setting.y = y
             setting.extended = true
+            rowMaxHeight = max(rowMaxHeight, estimatedPanelHeight(category))
+            x += Panel.WIDTH + gap
         }
     }
 
-    private fun topRowPanelGap(availableWidth: Float, panelCount: Int): Float {
-        if (panelCount <= 1) return 20f
-        val defaultGap = 20f
-        val defaultWidth = 20f + Panel.WIDTH * panelCount + defaultGap * (panelCount - 1)
-        if (defaultWidth <= availableWidth) return defaultGap
-        return ((availableWidth - 20f - Panel.WIDTH * panelCount) / (panelCount - 1)).coerceAtLeast(4f)
+    /** Rough extended-panel height (header + one row per module) used for default row-wrapping spacing. */
+    private fun estimatedPanelHeight(category: Category): Float {
+        val moduleCount = ModuleManager.modulesByCategory[category]?.size ?: 0
+        return Panel.HEIGHT + moduleCount * MODULE_ROW_HEIGHT
     }
+
+    private const val MODULE_ROW_HEIGHT = 16f
 
     /**
      * The Click GUI accent color. When [clickGUIChroma] is enabled it chroma-cycles

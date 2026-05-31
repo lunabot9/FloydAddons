@@ -24,8 +24,6 @@ data class Category private constructor(val name: String) {
         @JvmField
         val PVP = custom(name = "PvP")
         @JvmField
-        val QOL = custom(name = "QOL")
-        @JvmField
         val MISC = custom(name = "Misc")
 
         /**

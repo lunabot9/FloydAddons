@@ -139,12 +139,11 @@ abstract class Module(
                 packageName.contains("camera") -> Category.CAMERA
                 packageName.contains("cosmetic") -> Category.COSMETIC
                 packageName.contains("pvp") -> Category.PVP
-                packageName.contains("qol") -> Category.QOL
                 packageName.contains("misc") -> Category.MISC
                 else -> throw IllegalStateException(
                     "Module ${clazz.name} failed to get category from the package it is in." +
                             "Either manually assign a category," +
-                            " or put it under any valid Floyd package (render, hiders, player, camera, cosmetic, qol, misc))"
+                            " or put it under any valid Floyd package (render, hiders, player, camera, cosmetic, misc))"
                 )
             }
         }
