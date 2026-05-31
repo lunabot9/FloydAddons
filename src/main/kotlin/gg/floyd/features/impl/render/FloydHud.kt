@@ -7,8 +7,8 @@ import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.utils.Color
+import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemStack
-import gg.floyd.utils.render.RoundRectPIPRenderer
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.numbers.StyledFormat
@@ -18,10 +18,8 @@ import net.minecraft.world.scores.Objective
 import net.minecraft.world.scores.PlayerScoreEntry
 import net.minecraft.world.scores.PlayerTeam
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 object FloydHud : Module(
     name = "HUD",
@@ -107,7 +105,7 @@ object FloydHud : Module(
         val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)
         val width = 9 * slotSize
         val height = 3 * slotSize
-        fillPanel(width, height)
+        HudPanel.fillPanel(this, 0, 0, width, height, HudPanel.monochrome(HudPanel.chromaColor(0f)), cornerRadius = hudCornerRadius.toFloat())
 
         if (inventory != null) {
             for (slot in 0 until 27) {
@@ -187,7 +185,7 @@ object FloydHud : Module(
         val footerBarHeight = lineHeight + titlePad * 2 + padding
         val boxHeight = titleBarHeight + lines.size * lineHeight + footerBarHeight
 
-        fillPanel(boxWidth, boxHeight, scoreboardHudBorderColors(), scoreboardHudCornerRadius.toFloat())
+        HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, scoreboardHudBorderColors(), cornerRadius = scoreboardHudCornerRadius.toFloat())
         drawString(mc.font, title, (boxWidth - titleWidth) / 2, padding + titlePad, scoreboardAccentColor(0f), true)
 
         var lineY = titleBarHeight
@@ -210,74 +208,14 @@ object FloydHud : Module(
         return teamObjective ?: scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR)
     }
 
-    private fun GuiGraphics.fillPanel(
-        width: Int,
-        height: Int,
-        borderColors: HudBorderColors = monochromeBorderColors(chromaColor(0f)),
-        cornerRadius: Float = hudCornerRadius.toFloat()
-    ) {
-        val radius = cornerRadius.coerceAtLeast(0f)
-        val fillColor = 0x40000000
-        RoundRectPIPRenderer.submit(
-            this,
-            0, 0, width, height,
-            fillColor, fillColor, fillColor, fillColor,
-            radius, radius, radius, radius,
-            borderColors.topLeft, borderColors.topRight, borderColors.bottomRight, borderColors.bottomLeft, 2f
-        )
-    }
-
-    private fun chromaColor(offset: Float): Int {
-        val hue = (((System.currentTimeMillis() % 4000) / 4000.0f) + offset) % 1.0f
-        return 0xFF000000.toInt() or (java.awt.Color.HSBtoRGB(hue, 1.0f, 1.0f) and 0x00FFFFFF)
-    }
-
     /** Rotating gradient border for the scoreboard panel (chroma/fade/solid per the Color settings). */
-    private fun scoreboardHudBorderColors(): HudBorderColors =
-        circularBorderColors(scoreboardHudColor, scoreboardHudFade, scoreboardHudFadeColor,
-            hudRotationOffset(scoreboardHud.x, scoreboardHud.y, 0.38f))
+    private fun scoreboardHudBorderColors(): HudPanel.BorderColors =
+        HudPanel.circularBorderColors(scoreboardHudColor, scoreboardHudFade, scoreboardHudFadeColor,
+            HudPanel.hudRotationOffset(scoreboardHud.x, scoreboardHud.y, 0.38f))
 
     private fun scoreboardAccentColor(offset: Float): Int =
-        accentColor(scoreboardHudColor, scoreboardHudFade, scoreboardHudFadeColor,
-            offsetPhase(hudRotationOffset(scoreboardHud.x, scoreboardHud.y, 0.38f), offset))
-
-    private fun circularBorderColors(base: Color, fade: Boolean, fadeColor: Color, offset: Float): HudBorderColors =
-        HudBorderColors(
-            accentColor(base, fade, fadeColor, offset),
-            accentColor(base, fade, fadeColor, offsetPhase(offset, 0.25f)),
-            accentColor(base, fade, fadeColor, offsetPhase(offset, 0.5f)),
-            accentColor(base, fade, fadeColor, offsetPhase(offset, 0.75f))
-        )
-
-    private fun monochromeBorderColors(color: Int): HudBorderColors = HudBorderColors(color, color, color, color)
-
-    /** chroma flag lives on the Color (our model); fade blends base<->fadeColor; otherwise the static color. */
-    private fun accentColor(base: Color, fade: Boolean, fadeColor: Color, offset: Float): Int {
-        if (base.chroma) return chromaColor(offset)
-        if (fade) return blendColors(base.baseRgba, fadeColor.baseRgba, fadeProgress(offset))
-        return base.baseRgba
-    }
-
-    private fun hudRotationOffset(x: Int, y: Int, seed: Float): Float =
-        (((x * 0.00035f) + (y * 0.0002f) + seed) % 1f + 1f) % 1f
-
-    private fun offsetPhase(offset: Float, delta: Float): Float = ((offset + delta) % 1f + 1f) % 1f
-
-    private fun fadeProgress(offset: Float): Float {
-        val angle = ((((System.currentTimeMillis() % 2500L) / 2500f) + offset) * (2f * PI.toFloat()))
-        return ((sin(angle) + 1f) * 0.5f).coerceIn(0f, 1f)
-    }
-
-    private fun blendColors(start: Int, end: Int, progress: Float): Int {
-        val t = progress.coerceIn(0f, 1f)
-        val sa = start ushr 24 and 0xFF; val sr = start ushr 16 and 0xFF; val sg = start ushr 8 and 0xFF; val sb = start and 0xFF
-        val ea = end ushr 24 and 0xFF; val er = end ushr 16 and 0xFF; val eg = end ushr 8 and 0xFF; val eb = end and 0xFF
-        val a = (sa + (ea - sa) * t).roundToInt(); val r = (sr + (er - sr) * t).roundToInt()
-        val g = (sg + (eg - sg) * t).roundToInt(); val b = (sb + (eb - sb) * t).roundToInt()
-        return (a shl 24) or (r shl 16) or (g shl 8) or b
-    }
-
-    private data class HudBorderColors(val topLeft: Int, val topRight: Int, val bottomRight: Int, val bottomLeft: Int)
+        HudPanel.accentColor(scoreboardHudColor, scoreboardHudFade, scoreboardHudFadeColor,
+            HudPanel.offsetPhase(HudPanel.hudRotationOffset(scoreboardHud.x, scoreboardHud.y, 0.38f), offset))
 
     private data class ScoreLine(val name: FormattedCharSequence, val score: Component, val scoreWidth: Int)
 }
