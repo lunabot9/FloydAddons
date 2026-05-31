@@ -265,6 +265,91 @@ class ModuleConfigTest {
         assertEquals(1, hiders.target)
     }
 
+    @Test
+    fun `moved HUD keys migrate from legacy hud module into their new modules`() {
+        val scoreboard = MovedScoreboardModule()
+        val inventory = MovedInventoryModule()
+        val render = MovedRenderModule()
+        val configPath = tempDir.resolve("floydaddons-config.json")
+        java.nio.file.Files.writeString(
+            configPath,
+            """
+            [
+              {
+                "name": "HUD",
+                "enabled": true,
+                "settings": {
+                  "Scoreboard Color": "#112233FF",
+                  "Scoreboard Fade": true,
+                  "Padding": 11,
+                  "Inventory HUD Scale": 2.5,
+                  "HUD Corner Radius": 9
+                }
+              }
+            ]
+            """.trimIndent()
+        )
+        val config = ModuleConfig(configPath.toFile())
+        for (module in listOf(scoreboard, inventory, render)) config.modules[module.name.lowercase()] = module
+
+        config.load()
+
+        assertEquals(Color("112233FF"), scoreboard.color)
+        assertTrue(scoreboard.fade)
+        assertEquals(11, scoreboard.padding)
+        assertEquals(2.5f, inventory.scale)
+        assertEquals(9, render.cornerRadius)
+
+        val rewritten = java.nio.file.Files.readString(configPath)
+        assertTrue("Scoreboard Color" !in jsonForModule(rewritten, "HUD"))
+        assertTrue("Inventory HUD Scale" !in jsonForModule(rewritten, "HUD"))
+        assertTrue("HUD Corner Radius" !in jsonForModule(rewritten, "HUD"))
+    }
+
+    @Test
+    fun `migrated config reloads cleanly using the new keys`() {
+        val scoreboard = MovedScoreboardModule()
+        val inventory = MovedInventoryModule()
+        val render = MovedRenderModule()
+        val configPath = tempDir.resolve("floydaddons-config.json")
+        java.nio.file.Files.writeString(
+            configPath,
+            """
+            [
+              {
+                "name": "Custom Scoreboard",
+                "enabled": false,
+                "settings": { "Padding": 5 }
+              },
+              {
+                "name": "Inventory HUD",
+                "enabled": false,
+                "settings": { "Inventory HUD Scale": 3.0 }
+              },
+              {
+                "name": "Render",
+                "enabled": false,
+                "settings": { "HUD Corner Radius": 4 }
+              }
+            ]
+            """.trimIndent()
+        )
+        val config = ModuleConfig(configPath.toFile())
+        for (module in listOf(scoreboard, inventory, render)) config.modules[module.name.lowercase()] = module
+
+        config.load()
+
+        assertEquals(5, scoreboard.padding)
+        assertEquals(3.0f, inventory.scale)
+        assertEquals(4, render.cornerRadius)
+    }
+
+    private fun jsonForModule(configJson: String, moduleName: String): String {
+        val array = com.google.gson.JsonParser.parseString(configJson).asJsonArray
+        val obj = array.first { it.asJsonObject.get("name").asString == moduleName }.asJsonObject
+        return obj.toString()
+    }
+
     private fun loadLegacyConfigEntry(
         legacyName: String,
         module: Module,
@@ -418,5 +503,34 @@ class ModuleConfigTest {
     ) {
         val image by gg.floyd.clickgui.settings.impl.StringSetting("Image", "", 96, desc = "Test image.")
         val spinSpeed by NumberSetting("Spin Speed", 0.0f, 0.0f, 360.0f, 1.0f, desc = "Test spin.")
+    }
+
+    private class MovedScoreboardModule : Module(
+        name = "Custom Scoreboard",
+        category = Category.RENDER,
+        description = "Test module for migrated scoreboard settings.",
+        toggled = false
+    ) {
+        val color by ColorSetting("Scoreboard Color", Color(0xFFFFFFFF.toInt()), desc = "Test color.")
+        val fade by BooleanSetting("Scoreboard Fade", false, desc = "Test fade.")
+        val padding by NumberSetting("Padding", 7, 0, 16, 1, desc = "Test padding.")
+    }
+
+    private class MovedInventoryModule : Module(
+        name = "Inventory HUD",
+        category = Category.RENDER,
+        description = "Test module for migrated inventory settings.",
+        toggled = false
+    ) {
+        val scale by NumberSetting("Inventory HUD Scale", 1.1f, 0.5f, 5.0f, 0.05f, desc = "Test scale.")
+    }
+
+    private class MovedRenderModule : Module(
+        name = "Render",
+        category = Category.RENDER,
+        description = "Test module for migrated render settings.",
+        toggled = false
+    ) {
+        val cornerRadius by NumberSetting("HUD Corner Radius", 0, 0, 12, 1, desc = "Test corner radius.")
     }
 }

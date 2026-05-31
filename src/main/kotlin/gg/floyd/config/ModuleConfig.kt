@@ -7,6 +7,7 @@ import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.logger
 import gg.floyd.clickgui.settings.Saving
 import gg.floyd.features.Module
+import org.apache.logging.log4j.LogManager
 import java.io.File
 
 /**
@@ -42,12 +43,18 @@ class ModuleConfig internal constructor(file: File) {
                 if (isEmpty()) return
 
                 val jsonArray = JsonParser.parseString(this).asJsonArray ?: return
+                // Remap keys that moved between modules in the HUD/GUI reorg before reading them.
+                // Persisted immediately so the on-disk config uses the new keys on subsequent loads.
+                if (migrateMovedKeys(jsonArray)) {
+                    file.bufferedWriter().use { it.write(gson.toJson(jsonArray)) }
+                }
                 for (modules in jsonArray) {
                     val moduleObj = modules?.asJsonObject ?: continue
                     val moduleName = moduleObj.get("name").asString
                     val canonicalModule = canonicalModuleName(moduleName)
                     val module = this@ModuleConfig.modules[canonicalModule] ?: continue
-                    if (moduleObj.get("enabled").asBoolean != module.enabled) module.toggle()
+                    val enabledElement = moduleObj.get("enabled")
+                    if (enabledElement != null && enabledElement.asBoolean != module.enabled) module.toggle()
                     val settingObj = moduleObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet() ?: continue
                     for ((key, value) in settingObj) {
                         val settingModuleName = canonicalSettingModuleName(canonicalModule, key)
@@ -98,6 +105,10 @@ class ModuleConfig internal constructor(file: File) {
 
     private companion object {
         private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
+
+        // Resolved directly (not via FloydAddonsMod.logger) so migration logging does not force
+        // Minecraft client initialization, keeping the load/migrate path unit-testable.
+        private val migrationLogger = LogManager.getLogger("FloydAddons")
 
         private val legacyModuleNames = mapOf(
             "nick hider" to "neck hider",
@@ -180,6 +191,96 @@ class ModuleConfig internal constructor(file: File) {
 
         private fun canonicalSettingName(moduleName: String, settingName: String): String =
             legacySettingNames[moduleName]?.get(settingName.lowercase()) ?: settingName
+
+        /**
+         * Setting-name keys (as serialized under their owning module) that were relocated to a
+         * different module during the HUD/GUI reorg, paired with the canonical (lowercased) name
+         * of the module that now owns them.
+         *
+         * The old "HUD" module owned the scoreboard appearance, the inventory HUD, and the shared
+         * HUD corner radius; those settings now live on their dedicated modules.
+         */
+        private val movedKeysByModule: Map<String, Map<String, String>> = mapOf(
+            "hud" to mapOf(
+                // scoreboard* -> Custom Scoreboard
+                "Scoreboard Color" to "custom scoreboard",
+                "Scoreboard Fade" to "custom scoreboard",
+                "Scoreboard Fade Color" to "custom scoreboard",
+                "Padding" to "custom scoreboard",
+                "Scoreboard HUD" to "custom scoreboard",
+                // inventory* -> Inventory HUD
+                "Inventory HUD Scale" to "inventory hud",
+                "Inventory HUD" to "inventory hud",
+                // hudCornerRadius -> Render
+                "HUD Corner Radius" to "render"
+            )
+            // LEGACY-CLICKGUI-SPLIT HOOK: once LegacyClickGUIModule lands (UX cleanup item 4), add a
+            // "clickgui" entry here remapping the legacy styling keys (Button Text*, Button Border*,
+            // GUI Border*, Chat notifications) to "legacy click gui". Absent that module the keys
+            // stay on ClickGUIModule and must NOT be moved, so leave this commented until it exists.
+        )
+
+        // Tracks which (source module -> setting) remaps have already been logged so each is noted once.
+        private val loggedMovedKeys: MutableSet<String> = hashSetOf()
+
+        /**
+         * Moves any persisted [movedKeysByModule] entries from their old owning module's settings
+         * object into the settings object of the module that now owns them, creating the destination
+         * module entry if the config predates it. Returns true if anything was remapped.
+         */
+        private fun migrateMovedKeys(jsonArray: JsonArray): Boolean {
+            var changed = false
+            val moduleObjects: MutableMap<String, JsonObject> = jsonArray.asSequence()
+                .mapNotNull { it as? JsonObject }
+                .filter { it.get("name")?.asString != null }
+                .associateByTo(hashMapOf()) { it.get("name").asString.lowercase() }
+
+            for ((sourceModule, moves) in movedKeysByModule) {
+                val sourceObj = moduleObjects[sourceModule] ?: continue
+                val sourceSettings = sourceObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject ?: continue
+
+                for ((settingKey, targetModule) in moves) {
+                    if (!sourceSettings.has(settingKey)) continue
+                    val value = sourceSettings.get(settingKey)
+                    sourceSettings.remove(settingKey)
+
+                    val targetSettings = settingsObjectFor(jsonArray, moduleObjects, targetModule)
+                    targetSettings.add(settingKey, value)
+                    changed = true
+
+                    val logKey = "$sourceModule:$settingKey"
+                    if (loggedMovedKeys.add(logKey)) {
+                        migrationLogger.info("Migrated config key '{}' from '{}' to '{}'.", settingKey, sourceModule, targetModule)
+                    }
+                }
+            }
+            return changed
+        }
+
+        /**
+         * Returns the settings [JsonObject] for [targetModule], creating and appending a module
+         * entry (and its empty settings object) to [jsonArray] if the config has none yet.
+         */
+        private fun settingsObjectFor(
+            jsonArray: JsonArray,
+            moduleObjects: MutableMap<String, JsonObject>,
+            targetModule: String
+        ): JsonObject {
+            moduleObjects[targetModule]?.let { obj ->
+                obj.get("settings")?.takeIf { it.isJsonObject }?.let { return it.asJsonObject }
+                return JsonObject().also { obj.add("settings", it) }
+            }
+            // Config predates the destination module: append a fresh entry. The post-load save()
+            // re-normalizes the "name" casing from the in-memory module, and load() lowercases names.
+            val moduleObj = JsonObject().apply {
+                addProperty("name", targetModule)
+            }
+            val settings = JsonObject()
+            moduleObj.add("settings", settings)
+            jsonArray.add(moduleObj)
+            moduleObjects[targetModule] = moduleObj
+            return settings
+        }
     }
 
     override fun toString(): String {
