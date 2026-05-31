@@ -14,9 +14,9 @@ import kotlin.math.roundToInt
  * Standalone toggle for the Floyd inventory HUD.
  *
  * Previously this was a buried HUD element + private `inventoryHudScale` inside [FloydHud]; it is
- * now its own module so the inventory HUD can be toggled and configured independently. The shared
- * rounded-corner radius, border width and frosted backdrop come from the global panel-appearance
- * settings on [FloydRender].
+ * now its own module so the inventory HUD can be toggled and configured independently. All panel
+ * cosmetics (background, border color/chroma/fade, corner radius, border width and frosted backdrop)
+ * come from the global [FloydPanelStyle] via [HudPanel], so it matches every other Floyd panel.
  */
 object FloydInventoryHud : Module(
     name = "Inventory HUD",
@@ -46,7 +46,7 @@ object FloydInventoryHud : Module(
             "y" to inventoryHud.y,
             "hudScale" to inventoryHud.scale
         ),
-        "cornerRadius" to FloydRender.panelCornerRadius
+        "cornerRadius" to FloydPanelStyle.panelCornerRadius
     )
 
     private fun GuiGraphics.drawInventoryHud(example: Boolean): Pair<Int, Int> {
@@ -54,7 +54,7 @@ object FloydInventoryHud : Module(
         val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)
         val width = 9 * slotSize
         val height = 3 * slotSize
-        HudPanel.fillPanel(this, 0, 0, width, height, HudPanel.monochrome(HudPanel.chromaColor(0f)))
+        HudPanel.fillPanel(this, 0, 0, width, height)
 
         if (inventory != null) {
             for (slot in 0 until 27) {

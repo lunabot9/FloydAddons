@@ -1,6 +1,6 @@
 package gg.floyd.utils.render
 
-import gg.floyd.features.impl.render.FloydRender
+import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
 import net.minecraft.client.gui.GuiGraphics
@@ -27,9 +27,11 @@ object HudPanel {
      * caller's current gui-pose space, so a scaled pose scales the whole panel (the
      * [RoundRectPIPRenderer] picks up the pose scale for the radius and outline width too).
      *
-     * [cornerRadius] and [outlineWidth] default to the global panel-appearance settings on
-     * [FloydRender] (Panel Corner Radius / Panel Border Width) so every Floyd border+bg panel
-     * honours the unified control; callers may still pass explicit values to override.
+     * Every styling input defaults to the unified [FloydPanelStyle] globals so all Floyd panels
+     * share one look: [border] defaults to the global border (color/chroma/fade), [fillColor] to the
+     * global Panel Background Color, and [cornerRadius]/[outlineWidth] to the global Panel Corner
+     * Radius / Panel Border Width. Callers may still pass explicit values to override (e.g. Player
+     * ESP's "Border = ESP Color").
      *
      * When the global Panel Blur setting is on, a frosted (extra semi-opaque) backdrop is composited
      * behind the panel before the tinted fill so the panel reads against busy world content. A true
@@ -39,15 +41,15 @@ object HudPanel {
     fun fillPanel(
         graphics: GuiGraphics,
         x0: Int, y0: Int, x1: Int, y1: Int,
-        border: BorderColors,
-        fillColor: Int = DEFAULT_FILL,
-        cornerRadius: Float = FloydRender.panelCornerRadius.toFloat(),
-        outlineWidth: Float = FloydRender.panelBorderWidth.toFloat()
+        border: BorderColors = panelBorderColors(x0, y0),
+        fillColor: Int = FloydPanelStyle.panelBackgroundColor.rgba,
+        cornerRadius: Float = FloydPanelStyle.panelCornerRadius.toFloat(),
+        outlineWidth: Float = FloydPanelStyle.panelBorderWidth.toFloat()
     ) {
         val radius = cornerRadius.coerceAtLeast(0f)
         val width = outlineWidth.coerceAtLeast(0f)
 
-        if (FloydRender.panelBlur) {
+        if (FloydPanelStyle.panelBlur) {
             val frost = frostedBackdrop()
             if (frost != 0) {
                 RoundRectPIPRenderer.submit(
@@ -80,7 +82,7 @@ object HudPanel {
      * frost is the crash-safe approximation; true per-region blur is a precise followup.
      */
     private fun frostedBackdrop(): Int {
-        val strength = FloydRender.panelBlurStrength.coerceAtLeast(0)
+        val strength = FloydPanelStyle.panelBlurStrength.coerceAtLeast(0)
         if (strength <= 0) return 0
         // Map 0..20 strength onto ~0..192 alpha of black so the backdrop frosts without going opaque.
         val alpha = ((strength / 20f) * 192f).roundToInt().coerceIn(0, 192)
@@ -90,6 +92,20 @@ object HudPanel {
     fun chromaColor(offset: Float): Int = 0xFF000000.toInt() or ChromaCache.rgbFor(offset)
 
     fun monochrome(color: Int): BorderColors = BorderColors(color, color, color, color)
+
+    /**
+     * The unified global panel border (color/chroma/fade) from [FloydPanelStyle], as a rotating
+     * gradient seeded by the panel's top-left position so adjacent panels animate out of phase. This
+     * is the default border for [fillPanel]; panels needing a custom border (e.g. an ESP-colored
+     * nameplate) pass their own [BorderColors] instead.
+     */
+    fun panelBorderColors(x: Int = 0, y: Int = 0, seed: Float = 0.38f): BorderColors =
+        circularBorderColors(
+            FloydPanelStyle.effectiveBorderColor(),
+            FloydPanelStyle.borderFade,
+            FloydPanelStyle.borderFadeColor,
+            hudRotationOffset(x, y, seed)
+        )
 
     /** Rotating gradient around the four corners (chroma/fade/solid per the [base] color settings). */
     fun circularBorderColors(base: Color, fade: Boolean, fadeColor: Color, offset: Float): BorderColors =

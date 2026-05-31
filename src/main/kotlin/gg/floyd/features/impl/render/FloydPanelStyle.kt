@@ -1,0 +1,78 @@
+package gg.floyd.features.impl.render
+
+import gg.floyd.clickgui.settings.AlwaysActive
+import gg.floyd.clickgui.settings.impl.BooleanSetting
+import gg.floyd.clickgui.settings.impl.ColorSetting
+import gg.floyd.clickgui.settings.impl.NumberSetting
+import gg.floyd.clickgui.settings.impl.SelectorSetting
+import gg.floyd.features.Category
+import gg.floyd.features.Module
+import gg.floyd.utils.Color
+import gg.floyd.utils.render.HudPanel
+
+/**
+ * Owns the cosmetics shared by every Floyd border+background panel.
+ *
+ * Each Floyd panel that routes through [HudPanel.fillPanel] reads its background color, border
+ * color, chroma/fade, corner radius and border width from here, so the whole HUD has one unified,
+ * configurable look instead of each feature duplicating the same color/fade/padding settings. The
+ * panel-cosmetic settings (corner radius, border width, blur, and the chat-wide chroma toggle) used
+ * to be buried on the General module ([FloydRender]); they now live here, and the per-panel
+ * scoreboard / overhead color+fade+padding settings were deleted in favour of these globals.
+ *
+ * [AlwaysActive] so the panel style is always consulted even when no module is "on"; it carries no
+ * runtime event handlers (it is purely a settings holder), and it does NOT touch GL at init.
+ */
+@AlwaysActive
+object FloydPanelStyle : Module(
+    name = "Panel Style",
+    category = Category.RENDER,
+    description = "Global look for every Floyd border+background panel: background, border, corner radius, blur.",
+    toggled = true,
+) {
+    val panelCornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Default rounded corner radius for every Floyd border+background panel.")
+    val panelBorderWidth by NumberSetting("Panel Border Width", 2, 0, 6, 1, desc = "Default outline width for every Floyd border+background panel.")
+    val panelPadding by NumberSetting("Panel Padding", 6, 0, 16, 1, desc = "Default internal padding between a panel's border and its contents.")
+
+    // Background fill keeps the historic translucent feel (~25% black) as the default; alpha is
+    // editable in the picker so the tint can be lightened/darkened or made opaque.
+    val panelBackgroundColor by ColorSetting("Panel Background Color", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color (with opacity) behind every Floyd panel.")
+    val panelBorderColor by ColorSetting("Panel Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for every Floyd panel (toggle chroma inside the picker).")
+    val borderChroma by BooleanSetting("Border Chroma", false, desc = "Forces the panel border to cycle through chroma (independent of the color picker's chroma toggle).")
+    val borderFade by BooleanSetting("Border Fade", false, desc = "Fades the panel border between the border color and the fade color.")
+    val borderFadeColor by ColorSetting("Border Fade Color", Color(0xFF55FFFF.toInt()), desc = "Secondary color for the panel border fade.")
+
+    val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a frosted backdrop behind every Floyd panel.")
+    val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Strength of the frosted backdrop behind Floyd panels.")
+    val panelBlurType by SelectorSetting("Panel Blur Type", "Gaussian", listOf("Gaussian", "Box"), desc = "Blur kernel used for the panel backdrop (wired into the blur shader separately).")
+
+    val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
+
+    /** Whether all visible chat text should cycle through chroma. */
+    @JvmStatic
+    fun shouldUseFullChatChroma(): Boolean = fullChatChroma
+
+    /**
+     * Effective border color (a [Color]) for panels, with the global [borderChroma] toggle applied
+     * on top of the color's own chroma flag. Returns a fresh color so the global setting's color is
+     * never mutated.
+     */
+    fun effectiveBorderColor(): Color =
+        if (borderChroma) panelBorderColor.copy().also { it.chroma = true } else panelBorderColor
+
+    fun state(): Map<String, Any?> = mapOf(
+        "enabled" to enabled,
+        "panelCornerRadius" to panelCornerRadius,
+        "panelBorderWidth" to panelBorderWidth,
+        "panelPadding" to panelPadding,
+        "panelBackgroundColor" to panelBackgroundColor.rgba,
+        "panelBorderColor" to panelBorderColor.rgba,
+        "borderChroma" to borderChroma,
+        "borderFade" to borderFade,
+        "panelBlur" to panelBlur,
+        "panelBlurStrength" to panelBlurStrength,
+        "panelBlurType" to panelBlurType,
+        "fullChatChroma" to fullChatChroma,
+        "shouldUseFullChatChroma" to shouldUseFullChatChroma()
+    )
+}

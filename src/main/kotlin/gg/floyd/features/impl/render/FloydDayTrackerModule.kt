@@ -13,9 +13,9 @@ import kotlin.math.roundToInt
 /**
  * Standalone toggle for the Floyd day tracker HUD.
  *
- * Draws the current server day (derived from the level's day-time) in a movable Floyd HUD. The
- * shared rounded-corner radius, border width and frosted backdrop come from the global panel
- * appearance settings on [FloydRender] via [HudPanel], so it inherits the unified panel style.
+ * Draws the current server day (derived from the level's day-time) in a movable Floyd HUD. All
+ * panel cosmetics (background, border color/chroma/fade, corner radius, border width and frosted
+ * backdrop) come from the global [FloydPanelStyle] via [HudPanel], so it inherits the unified style.
  *
  * The module owns its own [HUD] element (mirroring [FloydInventoryHud]) so the day tracker can be
  * toggled and positioned independently without sharing a HUDSetting with another module (which
@@ -41,7 +41,7 @@ object FloydDayTrackerModule : Module(
             "day" to currentServerDay(),
             "label" to currentServerDayLabel()
         ),
-        "cornerRadius" to FloydRender.panelCornerRadius
+        "cornerRadius" to FloydPanelStyle.panelCornerRadius
     )
 
     private fun currentServerDay(): Long? = mc.level?.let { (it.dayTime / 24000L) + 1L }
@@ -57,7 +57,7 @@ object FloydDayTrackerModule : Module(
         val width = (NVGRenderer.textWidth(label, fontSize, NVGRenderer.defaultFont) + paddingX * 2f).roundToInt()
         val height = (fontSize + paddingY * 2f).roundToInt()
 
-        HudPanel.fillPanel(this, 0, 0, width, height, HudPanel.monochrome(0xFFFFFFFF.toInt()))
+        HudPanel.fillPanel(this, 0, 0, width, height)
 
         NVGPIPRenderer.draw(this, 0, 0, width, height) {
             NVGRenderer.text(label, paddingX, paddingY, fontSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)

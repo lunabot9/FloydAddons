@@ -55,6 +55,7 @@ import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.LegacyClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
+import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.render.FloydXray
 import gg.floyd.keybind.KeybindSync
@@ -99,7 +100,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydRender, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch,
+            FloydRender, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,

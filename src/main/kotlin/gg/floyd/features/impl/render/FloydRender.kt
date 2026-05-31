@@ -2,7 +2,6 @@ package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.settings.impl.BooleanSetting
-import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.TickEvent
 import gg.floyd.events.core.on
@@ -21,15 +20,8 @@ object FloydRender : Module(
 ) {
     var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
     val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
-    val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
     val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Overrides the vanilla game font with Floyd's bundled font. Reload resources (F3+T) to apply.")
     val customFontFile by StringSetting("Custom Font File", "", 128, desc = "Optional .ttf in the Floyd config dir to use instead of the bundled font. Reload resources (F3+T) to apply.")
-
-    // Global appearance for every Floyd border+bg panel routed through HudPanel.fillPanel.
-    val panelCornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Default rounded corner radius for every Floyd border+background panel.")
-    val panelBorderWidth by NumberSetting("Panel Border Width", 2, 0, 6, 1, desc = "Default outline width for every Floyd border+background panel.")
-    val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a frosted backdrop behind every Floyd panel.")
-    val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Strength of the frosted backdrop behind Floyd panels.")
 
     private var lastAppliedTitle: String? = null
     private var lastAppliedBorderless = false
@@ -45,8 +37,12 @@ object FloydRender : Module(
         }
     }
 
+    /**
+     * Facade kept on [FloydRender] so existing callsites compile; the Full Chat Chroma toggle now
+     * lives on [FloydPanelStyle], so the chat gate reads it from there.
+     */
     @JvmStatic
-    fun shouldUseFullChatChroma(): Boolean = enabled && fullChatChroma
+    fun shouldUseFullChatChroma(): Boolean = FloydPanelStyle.shouldUseFullChatChroma()
 
     /** Whether the bundled font should override the vanilla game font. OFF renders with the vanilla font. */
     @JvmStatic
@@ -71,18 +67,16 @@ object FloydRender : Module(
     @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
-        "fullChatChroma" to fullChatChroma,
+        // Full Chat Chroma moved to FloydPanelStyle; these keys mirror it so existing readers/tests
+        // that probe FloydRender's chat gate keep working.
+        "fullChatChroma" to FloydPanelStyle.fullChatChroma,
         "shouldUseFullChatChroma" to shouldUseFullChatChroma(),
         "globalCustomFont" to globalCustomFont,
         "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
         "customFontFile" to customFontFile,
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
-        "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" },
-        "panelCornerRadius" to panelCornerRadius,
-        "panelBorderWidth" to panelBorderWidth,
-        "panelBlur" to panelBlur,
-        "panelBlurStrength" to panelBlurStrength
+        "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" }
     )
 
     private fun applyWindowTitle() {

@@ -9,7 +9,7 @@ import gg.floyd.events.RenderEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
-import gg.floyd.utils.Color
+import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.utils.Colors
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.render.HudPanel
@@ -45,10 +45,11 @@ object FloydPlayerEsp : Module(
 
     // Overhead nameplate: a panel pinned a fixed distance above the head that scales with distance
     // exactly like the ESP box (it is a physical, constant-world-size object — like a real nametag).
+    // Background, corner radius, border width and padding come from the global FloydPanelStyle; only
+    // the optional "Border = ESP Color" override is kept here so the nameplate border can track the
+    // ESP color instead of the global panel border.
     private val overheadScale by NumberSetting("Overhead Scale", 1.0f, 0.25f, 5.0f, 0.05f, desc = "Multiplier on the overhead nameplate's world size. It still shrinks with distance like a real nametag.")
-    private val overheadPadding by NumberSetting("Overhead Padding", 4, 0, 16, 1, desc = "Internal padding between the overhead panel border and its contents.")
-    private val overheadFade by BooleanSetting("Overhead Fade", false, desc = "Fades the overhead panel border between the ESP color and a second color.")
-    private val overheadFadeColor by ColorSetting("Overhead Fade Color", Color(0xFF55FFFF.toInt()), desc = "Secondary color for the overhead border fade.")
+    private val borderIsEspColor by BooleanSetting("Border = ESP Color", true, desc = "Use the ESP color for the overhead nameplate border instead of the global panel border.")
 
     // Helmet, chestplate, leggings, boots, main hand, off hand.
     private val equipmentSlots = arrayOf(
@@ -151,7 +152,7 @@ object FloydPlayerEsp : Module(
     }
 
     private fun drawOverheadEntry(graphics: GuiGraphics, player: AbstractClientPlayer, anchorX: Float, anchorY: Float, scale: Float) {
-        val pad = overheadPadding.coerceAtLeast(0)
+        val pad = FloydPanelStyle.panelPadding.coerceAtLeast(0)
         val hpText = if (showHealth) "$HEART ${player.health.toInt()}" else null
         val hpWidth = hpText?.let { mc.font.width(it) } ?: 0
         val items = if (showEquipment) equipmentOf(player).filter { !it.isEmpty } else emptyList()
@@ -181,8 +182,13 @@ object FloydPlayerEsp : Module(
         graphics.pose().translate(anchorX, anchorY)
         graphics.pose().scale(drawScale, drawScale)
 
-        val border = HudPanel.circularBorderColors(color, overheadFade, overheadFadeColor, 0f)
-        HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, border)
+        // "Border = ESP Color" tints the nameplate border with this player's ESP color (honouring its
+        // chroma flag); otherwise it falls back to the global FloydPanelStyle border.
+        if (borderIsEspColor) {
+            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, HudPanel.monochrome(color.rgba))
+        } else {
+            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight)
+        }
 
         val rowHeight = if (items.isNotEmpty()) ICON_SIZE else mc.font.lineHeight
         val rowTop = top + pad

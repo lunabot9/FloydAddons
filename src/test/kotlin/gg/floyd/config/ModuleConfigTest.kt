@@ -266,10 +266,9 @@ class ModuleConfigTest {
     }
 
     @Test
-    fun `moved HUD keys migrate from legacy hud module into their new modules`() {
-        val scoreboard = MovedScoreboardModule()
+    fun `moved HUD keys migrate from legacy hud module into Panel Style and Inventory HUD`() {
+        val panelStyle = MovedPanelStyleModule()
         val inventory = MovedInventoryModule()
-        val general = MovedGeneralModule()
         val configPath = tempDir.resolve("floydaddons-config.json")
         java.nio.file.Files.writeString(
             configPath,
@@ -290,15 +289,17 @@ class ModuleConfigTest {
             """.trimIndent()
         )
         val config = ModuleConfig(configPath.toFile())
-        for (module in listOf(scoreboard, inventory, general)) config.modules[module.name.lowercase()] = module
+        for (module in listOf(panelStyle, inventory)) config.modules[module.name.lowercase()] = module
 
         config.load()
 
-        assertEquals(Color("112233FF"), scoreboard.color)
-        assertTrue(scoreboard.fade)
-        assertEquals(11, scoreboard.padding)
+        // Legacy scoreboard cosmetics fold into the unified Panel Style.
+        assertEquals(Color("112233FF"), panelStyle.borderColor)
+        assertTrue(panelStyle.borderFade)
+        assertEquals(11, panelStyle.padding)
+        assertEquals(9, panelStyle.cornerRadius)
+        // Inventory scale is not a panel cosmetic and stays on the Inventory HUD module.
         assertEquals(2.5f, inventory.scale)
-        assertEquals(9, general.cornerRadius)
 
         val rewritten = java.nio.file.Files.readString(configPath)
         assertTrue("Scoreboard Color" !in jsonForModule(rewritten, "HUD"))
@@ -307,10 +308,9 @@ class ModuleConfigTest {
     }
 
     @Test
-    fun `migrated config reloads cleanly using the new keys`() {
-        val scoreboard = MovedScoreboardModule()
+    fun `per-panel cosmetics migrate into the unified Panel Style module`() {
+        val panelStyle = MovedPanelStyleModule()
         val inventory = MovedInventoryModule()
-        val general = MovedGeneralModule()
         val configPath = tempDir.resolve("floydaddons-config.json")
         java.nio.file.Files.writeString(
             configPath,
@@ -329,19 +329,25 @@ class ModuleConfigTest {
               {
                 "name": "Render",
                 "enabled": false,
-                "settings": { "HUD Corner Radius": 7 }
+                "settings": { "HUD Corner Radius": 7, "Full Chat Chroma": true }
+              },
+              {
+                "name": "Player ESP",
+                "enabled": false,
+                "settings": { "Overhead Fade": true }
               }
             ]
             """.trimIndent()
         )
         val config = ModuleConfig(configPath.toFile())
-        for (module in listOf(scoreboard, inventory, general)) config.modules[module.name.lowercase()] = module
+        for (module in listOf(panelStyle, inventory)) config.modules[module.name.lowercase()] = module
 
         config.load()
 
-        assertEquals(5, scoreboard.padding)
+        assertEquals(5, panelStyle.padding)
+        assertEquals(7, panelStyle.cornerRadius)
+        assertTrue(panelStyle.borderFade)
         assertEquals(3.0f, inventory.scale)
-        assertEquals(7, general.cornerRadius)
     }
 
     private fun jsonForModule(configJson: String, moduleName: String): String {
@@ -505,17 +511,6 @@ class ModuleConfigTest {
         val spinSpeed by NumberSetting("Spin Speed", 0.0f, 0.0f, 360.0f, 1.0f, desc = "Test spin.")
     }
 
-    private class MovedScoreboardModule : Module(
-        name = "Custom Scoreboard",
-        category = Category.RENDER,
-        description = "Test module for migrated scoreboard settings.",
-        toggled = false
-    ) {
-        val color by ColorSetting("Scoreboard Color", Color(0xFFFFFFFF.toInt()), desc = "Test color.")
-        val fade by BooleanSetting("Scoreboard Fade", false, desc = "Test fade.")
-        val padding by NumberSetting("Padding", 7, 0, 16, 1, desc = "Test padding.")
-    }
-
     private class MovedInventoryModule : Module(
         name = "Inventory HUD",
         category = Category.RENDER,
@@ -525,12 +520,16 @@ class ModuleConfigTest {
         val scale by NumberSetting("Inventory HUD Scale", 1.1f, 0.5f, 5.0f, 0.05f, desc = "Test scale.")
     }
 
-    private class MovedGeneralModule : Module(
-        name = "General",
+    /** Mirrors the unified [gg.floyd.features.impl.render.FloydPanelStyle] settings under test. */
+    private class MovedPanelStyleModule : Module(
+        name = "Panel Style",
         category = Category.RENDER,
-        description = "Test module for migrated render settings.",
-        toggled = false
+        description = "Test module for migrated unified panel cosmetics.",
+        toggled = true
     ) {
         val cornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Test corner radius.")
+        val borderColor by ColorSetting("Panel Border Color", Color(0xFFFFFFFF.toInt()), desc = "Test border color.")
+        val borderFade by BooleanSetting("Border Fade", false, desc = "Test fade.")
+        val padding by NumberSetting("Panel Padding", 6, 0, 16, 1, desc = "Test padding.")
     }
 }

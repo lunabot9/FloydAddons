@@ -207,29 +207,64 @@ class ModuleConfig internal constructor(file: File) {
          * different module during the HUD/GUI reorg, paired with the module that now owns them and
          * the key they are stored under there.
          *
-         * The old "HUD" module owned the scoreboard appearance, the inventory HUD, and the shared
-         * HUD corner radius; those settings now live on their dedicated modules. The corner radius
-         * was also folded into the shared "Panel Corner Radius" on the General module (the "HUD
-         * Corner Radius" setting was deleted), so it both moves module and changes key.
+         * Every Floyd panel cosmetic now lives on the unified "Panel Style" module ([FloydPanelStyle]):
+         * background, border color/chroma/fade, padding, corner radius, border width, blur, and the
+         * chat-wide chroma toggle. So beyond the original HUD→per-module reorg, all of those keys also
+         * funnel into "panel style":
+         *  - legacy "HUD" / per-panel scoreboard color+fade+padding -> Panel Style border color/fade/padding,
+         *  - the General (a.k.a. "Render") panel and Full Chat Chroma keys -> Panel Style,
+         *  - Player ESP's removed Overhead padding/fade -> Panel Style.
+         *
+         * Order matters: "hud" is migrated DIRECTLY to its final Panel Style destinations (one hop) so
+         * legacy configs never depend on a second pass; the per-module entries below catch configs that
+         * already adopted the intermediate dedicated modules. The inventory HUD keys are NOT panel
+         * cosmetics, so they still land on the Inventory HUD module.
          */
         private val movedKeysByModule: Map<String, Map<String, MovedKey>> = mapOf(
             "hud" to mapOf(
-                // scoreboard* -> Custom Scoreboard
-                "Scoreboard Color" to MovedKey("custom scoreboard", "Scoreboard Color"),
-                "Scoreboard Fade" to MovedKey("custom scoreboard", "Scoreboard Fade"),
-                "Scoreboard Fade Color" to MovedKey("custom scoreboard", "Scoreboard Fade Color"),
-                "Padding" to MovedKey("custom scoreboard", "Padding"),
+                // Legacy scoreboard cosmetics -> unified Panel Style.
+                "Scoreboard Color" to MovedKey("panel style", "Panel Border Color"),
+                "Scoreboard Fade" to MovedKey("panel style", "Border Fade"),
+                "Scoreboard Fade Color" to MovedKey("panel style", "Border Fade Color"),
+                "Padding" to MovedKey("panel style", "Panel Padding"),
                 "Scoreboard HUD" to MovedKey("custom scoreboard", "Scoreboard HUD"),
-                // inventory* -> Inventory HUD
+                // inventory* -> Inventory HUD (not a panel cosmetic).
                 "Inventory HUD Scale" to MovedKey("inventory hud", "Inventory HUD Scale"),
                 "Inventory HUD" to MovedKey("inventory hud", "Inventory HUD"),
-                // hudCornerRadius -> General "Panel Corner Radius" (setting deleted, value folded in)
-                "HUD Corner Radius" to MovedKey("general", "Panel Corner Radius")
+                // hudCornerRadius -> Panel Style "Panel Corner Radius" (setting deleted, value folded in).
+                "HUD Corner Radius" to MovedKey("panel style", "Panel Corner Radius")
             ),
             // Intermediate configs that already moved the corner radius onto the (now renamed) Render
-            // module still hold the deleted "HUD Corner Radius" key; fold it into General's shared radius.
+            // module still hold the deleted "HUD Corner Radius" key; fold it into the shared radius.
             "render" to mapOf(
-                "HUD Corner Radius" to MovedKey("general", "Panel Corner Radius")
+                "HUD Corner Radius" to MovedKey("panel style", "Panel Corner Radius"),
+                "Panel Corner Radius" to MovedKey("panel style", "Panel Corner Radius"),
+                "Panel Border Width" to MovedKey("panel style", "Panel Border Width"),
+                "Panel Blur" to MovedKey("panel style", "Panel Blur"),
+                "Panel Blur Strength" to MovedKey("panel style", "Panel Blur Strength"),
+                "Full Chat Chroma" to MovedKey("panel style", "Full Chat Chroma")
+            ),
+            // General is the renamed Render module; the panel*/Full Chat Chroma settings moved off it
+            // onto Panel Style.
+            "general" to mapOf(
+                "Panel Corner Radius" to MovedKey("panel style", "Panel Corner Radius"),
+                "Panel Border Width" to MovedKey("panel style", "Panel Border Width"),
+                "Panel Blur" to MovedKey("panel style", "Panel Blur"),
+                "Panel Blur Strength" to MovedKey("panel style", "Panel Blur Strength"),
+                "Full Chat Chroma" to MovedKey("panel style", "Full Chat Chroma")
+            ),
+            // Custom Scoreboard owned per-panel scoreboard cosmetics before they were unified.
+            "custom scoreboard" to mapOf(
+                "Scoreboard Color" to MovedKey("panel style", "Panel Border Color"),
+                "Scoreboard Fade" to MovedKey("panel style", "Border Fade"),
+                "Scoreboard Fade Color" to MovedKey("panel style", "Border Fade Color"),
+                "Padding" to MovedKey("panel style", "Panel Padding")
+            ),
+            // Player ESP owned per-panel overhead cosmetics before they were unified.
+            "player esp" to mapOf(
+                "Overhead Padding" to MovedKey("panel style", "Panel Padding"),
+                "Overhead Fade" to MovedKey("panel style", "Border Fade"),
+                "Overhead Fade Color" to MovedKey("panel style", "Border Fade Color")
             )
             // LEGACY-CLICKGUI-SPLIT HOOK: once LegacyClickGUIModule lands (UX cleanup item 4), add a
             // "clickgui" entry here remapping the legacy styling keys (Button Text*, Button Border*,
