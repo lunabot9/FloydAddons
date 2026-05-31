@@ -3,7 +3,6 @@ package gg.floyd.mixin.mixins;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import gg.floyd.features.impl.hiders.FloydHiders;
 import gg.floyd.features.impl.render.FloydCustomScoreboard;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.scores.Objective;
@@ -16,10 +15,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Gui.class)
 public class GuiMixin {
 
-    @Inject(method = "render", at = @At("HEAD"))
-    private void floydaddons$resetVanillaScoreboardSignal(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        FloydCustomScoreboard.resetVanillaScoreboardWouldRender();
-    }
+    // NOTE: do NOT reset the vanilla-scoreboard signal in render() HEAD. The Floyd HUD pass races
+    // vanilla's displayScoreboardSidebar within the frame; a per-frame reset there makes the HUD pass
+    // read a stale false and the custom scoreboard never draws. The signal self-clears via
+    // FloydCustomScoreboard.shouldDrawScoreboardHud()'s objective check when the sidebar disappears.
 
     @Inject(method = "renderFood", at = @At("HEAD"), cancellable = true)
     private void cancelFoodBar(GuiGraphics guiGraphics, Player player, int i, int j, CallbackInfo ci) {
