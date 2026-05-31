@@ -79,8 +79,7 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
      */
     val rgba: Int
         get() = if (chroma) {
-            val chromaHue = (System.currentTimeMillis() % 4000L) / 4000f
-            (HSBtoRGB(chromaHue, 1f, 1f) and 0X00FFFFFF) or ((this.alphaFloat * 255).toInt() shl 24)
+            (ChromaCache.rgbFor(0f)) or ((this.alphaFloat * 255).toInt() shl 24)
         } else baseRgba
 
     inline val red get() = rgba.red
@@ -177,6 +176,37 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
         fun Color.hsbMax(): Color {
             return Color(hue, 1f, 1f)
         }
+    }
+}
+
+/**
+ * Memoizes the rotating chroma RGB (`HSBtoRGB(hue, 1, 1)` with a time-driven hue) so the
+ * relatively expensive `java.awt.Color.HSBtoRGB` conversion runs at most once per frame per
+ * distinct hue offset instead of once per corner / panel / ESP box / line endpoint per frame.
+ *
+ * The hue is fully determined by the integer `System.currentTimeMillis() % 4000` plus the
+ * caller's offset, so caching on that exact time bucket is lossless: the returned RGB is
+ * byte-identical to recomputing it, while every call within the same frame (same millisecond
+ * bucket) reuses the cached value. The result is the lower 24 bits (`0x00RRGGBB`); callers OR in
+ * their own alpha / opaque high byte.
+ */
+object ChromaCache {
+    private const val PERIOD_MS = 4000L
+
+    private class Slot(@JvmField var bucket: Long, @JvmField var rgb: Int)
+
+    private val slots = java.util.concurrent.ConcurrentHashMap<Float, Slot>()
+
+    /** Lower 24 bits (`0x00RRGGBB`) of the rotating chroma color for [offset], cached per frame. */
+    fun rgbFor(offset: Float): Int {
+        val bucket = System.currentTimeMillis() % PERIOD_MS
+        val slot = slots.getOrPut(offset) { Slot(-1L, 0) }
+        if (slot.bucket != bucket) {
+            val hue = ((bucket / PERIOD_MS.toFloat()) + offset) % 1f
+            slot.rgb = HSBtoRGB(hue, 1f, 1f) and 0x00FFFFFF
+            slot.bucket = bucket
+        }
+        return slot.rgb
     }
 }
 

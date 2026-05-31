@@ -1,5 +1,6 @@
 package gg.floyd.utils.render
 
+import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
 import net.minecraft.client.gui.GuiGraphics
 import kotlin.math.PI
@@ -43,10 +44,7 @@ object HudPanel {
         )
     }
 
-    fun chromaColor(offset: Float): Int {
-        val hue = (((System.currentTimeMillis() % 4000) / 4000.0f) + offset) % 1.0f
-        return 0xFF000000.toInt() or (java.awt.Color.HSBtoRGB(hue, 1.0f, 1.0f) and 0x00FFFFFF)
-    }
+    fun chromaColor(offset: Float): Int = 0xFF000000.toInt() or ChromaCache.rgbFor(offset)
 
     fun monochrome(color: Int): BorderColors = BorderColors(color, color, color, color)
 

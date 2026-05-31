@@ -7,7 +7,10 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.events.RenderEvent
 import gg.floyd.events.core.on
 import gg.floyd.utils.Color
+import gg.floyd.utils.Color.Companion.blue
+import gg.floyd.utils.Color.Companion.green
 import gg.floyd.utils.Color.Companion.multiplyAlpha
+import gg.floyd.utils.Color.Companion.red
 import gg.floyd.utils.addVec
 import gg.floyd.utils.renderPos
 import gg.floyd.utils.unaryMinus
@@ -291,14 +294,18 @@ fun RenderEvent.Extract.drawLine(points: Collection<Vec3>, color1: Color, color2
 }
 
 fun RenderEvent.Extract.drawWireFrameBox(aabb: AABB, color: Color, thickness: Float = 3f, depth: Boolean = false) {
+    // Read the (possibly chroma) rgba once so all three channels come from the same hue and we
+    // do a single cache lookup instead of three.
+    val rgba = color.rgba
     consumer.wireBoxes.add(
-        BoxData(aabb, color.redFloat, color.greenFloat, color.blueFloat, color.alphaFloat, thickness, depth)
+        BoxData(aabb, rgba.red / 255f, rgba.green / 255f, rgba.blue / 255f, color.alphaFloat, thickness, depth)
     )
 }
 
 fun RenderEvent.Extract.drawFilledBox(aabb: AABB, color: Color, depth: Boolean = false) {
+    val rgba = color.rgba
     consumer.filledBoxes.add(
-        BoxData(aabb, color.redFloat, color.greenFloat, color.blueFloat, color.alphaFloat, 3f, depth)
+        BoxData(aabb, rgba.red / 255f, rgba.green / 255f, rgba.blue / 255f, color.alphaFloat, 3f, depth)
     )
 }
 
