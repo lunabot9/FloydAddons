@@ -30,11 +30,11 @@ class FloydLocalControlTest {
 
     @Test
     fun `persisted control bridge ports normalize like Floyd settings loader`() {
-        assertEquals(38765, FloydLocalControlSettings.normalizePort(0))
-        assertEquals(38765, FloydLocalControlSettings.normalizePort(-1))
+        assertEquals(38769, FloydLocalControlSettings.normalizePort(0))
+        assertEquals(38769, FloydLocalControlSettings.normalizePort(-1))
         assertEquals(1024, FloydLocalControlSettings.normalizePort(1024))
         assertEquals(65536, FloydLocalControlSettings.normalizePort(65536))
-        assertEquals(38765, FloydLocalControlSettings.newSettingsPort())
+        assertEquals(38769, FloydLocalControlSettings.newSettingsPort())
     }
 
     @Test
