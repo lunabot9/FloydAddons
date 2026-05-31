@@ -75,6 +75,12 @@ object FloydPlayerEsp : Module(
     private const val OVERHEAD_WORLD_HEIGHT = 0.55f
     // World height above the player's bounding box where the plate's bottom edge floats (above the nametag).
     private const val OVERHEAD_ANCHOR_OFFSET = 0.6
+    // Sub-pixel plates are invisible AND would allocate a degenerate 0-size GPU texture (OpenGL error
+    // 1281). Skip below this on-screen size. Not a scaling cap — just a "too far to see" cull.
+    private const val OVERHEAD_MIN_PX = 2f
+    // GPU safety: keep the panel texture well under the driver's max texture size. Only reached at
+    // point-blank range; does not affect the scaling at normal distances.
+    private const val OVERHEAD_MAX_PX = 4000f
 
     private val stalkAllAction by ActionSetting("Stalk All Players", desc = "Toggles Player ESP for all players (same as /fa stalk all).") {
         val on = stalkAll()
@@ -154,13 +160,27 @@ object FloydPlayerEsp : Module(
         val dims = overheadDimensions(hpWidth, items.size, pad, mc.font.lineHeight)
         if (dims.panelWidth <= 0) return
 
+        // Per-frame on-screen size of the plate (the panel extends UP from the anchor).
+        val scaledW = scale * dims.panelWidth
+        val scaledH = scale * dims.panelHeight
+        if (scaledW < OVERHEAD_MIN_PX || scaledH < OVERHEAD_MIN_PX) return
+        // Cull plates entirely off-screen so we don't render (and texture-allocate) a plate per
+        // off-screen player on a crowded server.
+        val guiW = mc.window.guiScaledWidth.toFloat()
+        val guiH = mc.window.guiScaledHeight.toFloat()
+        val halfW = scaledW / 2f
+        if (anchorX + halfW < 0f || anchorX - halfW > guiW || anchorY < 0f || anchorY - scaledH > guiH) return
+        // Clamp only when the texture would approach the GPU's max size (point-blank); preserves aspect.
+        val drawScale = if (scaledW > OVERHEAD_MAX_PX || scaledH > OVERHEAD_MAX_PX)
+            scale * (OVERHEAD_MAX_PX / maxOf(scaledW, scaledH)) else scale
+
         // Plate bottom-center sits at the anchor and extends upward; everything inside the pushed
         // pose (panel, text, icons) is scaled together by the per-frame perspective factor.
         val left = -dims.panelWidth / 2
         val top = -dims.panelHeight
         graphics.pose().pushMatrix()
         graphics.pose().translate(anchorX, anchorY)
-        graphics.pose().scale(scale, scale)
+        graphics.pose().scale(drawScale, drawScale)
 
         val border = HudPanel.circularBorderColors(color, overheadFade, overheadFadeColor, 0f)
         HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, border, cornerRadius = overheadCornerRadius.toFloat())
