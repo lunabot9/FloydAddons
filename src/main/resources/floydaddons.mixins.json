@@ -1,7 +1,7 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.odtheking.mixin",
+  "package": "gg.floyd.mixin",
   "compatibilityLevel": "JAVA_21",
   "injectors": {
     "defaultRequire": 1
@@ -19,6 +19,7 @@
     "mixins.CameraMouseMixin",
     "mixins.CameraTypeMixin",
     "mixins.ClientPacketListenerMixin",
+    "mixins.CustomFontMixin",
     "mixins.FontMixin",
     "mixins.FloydBrandSpoofMixin",
     "mixins.FloydFabricLoaderMixin",

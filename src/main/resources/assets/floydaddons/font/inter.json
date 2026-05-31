@@ -1,0 +1,8 @@
+{
+  "providers": [
+    { "type": "reference", "id": "minecraft:include/space" },
+    { "type": "reference", "id": "minecraft:include/default" },
+    { "type": "reference", "id": "minecraft:include/unifont" },
+    { "type": "ttf", "file": "floydaddons:inter_regular.ttf", "size": 9.0, "oversample": 4.0, "shift": [0.0, 1.0] }
+  ]
+}
