@@ -117,7 +117,7 @@ object FloydCustomScoreboard : Module(
         if (lines.size > 1) lines.removeAt(lines.lastIndex)
         if (lines.isEmpty()) return if (example) drawScoreboardExample() else 0 to 0
 
-        return drawScoreboardBox(objective.displayName, lines, Component.literal("FloydAddons").visualOrderText)
+        return drawScoreboardBox(objective.displayName, Component.literal("FloydAddons"), lines, Component.literal(".gg/FLOYD").visualOrderText)
     }
 
     private fun GuiGraphics.drawScoreboardExample(): Pair<Int, Int> {
@@ -126,14 +126,15 @@ object FloydCustomScoreboard : Module(
             ScoreLine(Component.literal("Bits: 12,345").visualOrderText, Component.empty(), 0),
             ScoreLine(Component.literal("Location: Dungeon Hub").visualOrderText, Component.empty(), 0),
         )
-        return drawScoreboardBox(Component.literal("SKYBLOCK"), lines, Component.literal("FloydAddons").visualOrderText)
+        return drawScoreboardBox(Component.literal("SKYBLOCK"), Component.literal("FloydAddons"), lines, Component.literal(".gg/FLOYD").visualOrderText)
     }
 
-    private fun GuiGraphics.drawScoreboardBox(title: Component, lines: List<ScoreLine>, footer: FormattedCharSequence): Pair<Int, Int> {
+    private fun GuiGraphics.drawScoreboardBox(title: Component, brand: Component, lines: List<ScoreLine>, footer: FormattedCharSequence): Pair<Int, Int> {
         val titleWidth = mc.font.width(title)
+        val brandWidth = mc.font.width(brand)
         val footerWidth = mc.font.width(footer)
         val colonWidth = mc.font.width(": ")
-        var maxLineWidth = max(titleWidth, footerWidth)
+        var maxLineWidth = max(max(titleWidth, brandWidth), footerWidth)
         for (line in lines) {
             val width = mc.font.width(line.name) + if (line.scoreWidth > 0) colonWidth + line.scoreWidth else 0
             maxLineWidth = max(maxLineWidth, width)
@@ -143,14 +144,16 @@ object FloydCustomScoreboard : Module(
         val lineHeight = 9
         val titlePad = 2
         val boxWidth = maxLineWidth + padding * 2
-        val titleBarHeight = padding + lineHeight + titlePad * 2
+        // Header holds the Floyd brand line on top, then the server objective title beneath it.
+        val headerHeight = padding + lineHeight * 2 + titlePad * 2
         val footerBarHeight = lineHeight + titlePad * 2 + padding
-        val boxHeight = titleBarHeight + lines.size * lineHeight + footerBarHeight
+        val boxHeight = headerHeight + lines.size * lineHeight + footerBarHeight
 
         HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, HudPanel.panelBorderColors(scoreboardHud.x, scoreboardHud.y))
-        drawString(mc.font, title, (boxWidth - titleWidth) / 2, padding + titlePad, scoreboardAccentColor(0f), true)
+        drawString(mc.font, brand, (boxWidth - brandWidth) / 2, padding + titlePad, scoreboardAccentColor(0f), true)
+        drawString(mc.font, title, (boxWidth - titleWidth) / 2, padding + titlePad + lineHeight, scoreboardAccentColor(0.25f), true)
 
-        var lineY = titleBarHeight
+        var lineY = headerHeight
         val scoreRight = boxWidth - padding
         for (line in lines) {
             drawString(mc.font, line.name, padding, lineY, 0xFFFFFFFF.toInt(), false)
