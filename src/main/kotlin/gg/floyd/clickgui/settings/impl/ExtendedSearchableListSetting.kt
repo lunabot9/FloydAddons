@@ -61,6 +61,20 @@ class ExtendedSearchableListSetting(
             (if (colorEditId != null) rowH + 4f else 0f) +
             (if (showActionsRow) actionsH + 4f else 0f)
 
+    /**
+     * Like the base filter, but with currently-selected options stably hoisted to the TOP:
+     * the selected block keeps its existing relative order, followed by the unselected block in
+     * theirs. This is the single ordering chokepoint shared by both the render loop and the
+     * click hit-testing (which indexes into this same list), so rows and clicks stay aligned.
+     */
+    override fun matching(all: List<String>): List<String> {
+        val filtered = super.matching(all)
+        val selected = selectedProvider()
+        if (selected.isEmpty()) return filtered
+        // Two stable passes: `filter` preserves input order within each block.
+        return filtered.filter { it in selected } + filtered.filter { it !in selected }
+    }
+
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         // Shared hover/description + lastX/lastY bookkeeping (the base's render body is fully
         // replaced below so we can add icons, friendly names, checkbox, swatch, inline color

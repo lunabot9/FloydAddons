@@ -55,7 +55,7 @@ open class SearchableListSetting(
 
     override val isHovered get() = isAreaHovered(lastX, lastY, width, headerH, true)
 
-    protected fun matching(all: List<String>): List<String> =
+    protected open fun matching(all: List<String>): List<String> =
         if (searchText.isBlank()) all else all.filter { it.contains(searchText, true) }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
