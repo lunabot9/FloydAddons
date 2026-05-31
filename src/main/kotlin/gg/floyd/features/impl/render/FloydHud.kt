@@ -36,6 +36,8 @@ object FloydHud : Module(
     private val scoreboardHudColor by ColorSetting("Scoreboard Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Scoreboard border + footer accent (toggle chroma inside the picker).")
     private val scoreboardHudFade by BooleanSetting("Scoreboard Fade", false, desc = "Fades the scoreboard accent between two colors.")
     private val scoreboardHudFadeColor by ColorSetting("Scoreboard Fade Color", Color(0xFF55FFFF.toInt()), desc = "Secondary color for the scoreboard fade.")
+    private val scoreboardHudCornerRadius by NumberSetting("Corner Radius", 0, 0, 20, 1, desc = "Rounded corner radius for the scoreboard HUD panel.")
+    private val scoreboardHudPadding by NumberSetting("Padding", 7, 0, 16, 1, desc = "Internal padding between the scoreboard border and its text.")
 
     private val inventoryHud by HUD("Inventory HUD", "Displays the main inventory in a movable Floyd HUD.", true, 12, 12, 1f) {
         drawInventoryHud(it)
@@ -177,16 +179,16 @@ object FloydHud : Module(
             maxLineWidth = max(maxLineWidth, width)
         }
 
-        val padding = 3
+        val padding = scoreboardHudPadding.coerceAtLeast(0)
         val lineHeight = 9
         val titlePad = 2
         val boxWidth = maxLineWidth + padding * 2
-        val titleBarHeight = lineHeight + titlePad * 2
-        val footerBarHeight = lineHeight + titlePad * 2
+        val titleBarHeight = padding + lineHeight + titlePad * 2
+        val footerBarHeight = lineHeight + titlePad * 2 + padding
         val boxHeight = titleBarHeight + lines.size * lineHeight + footerBarHeight
 
-        fillPanel(boxWidth, boxHeight, scoreboardHudBorderColors())
-        drawString(mc.font, title, (boxWidth - titleWidth) / 2, titlePad, scoreboardAccentColor(0f), true)
+        fillPanel(boxWidth, boxHeight, scoreboardHudBorderColors(), scoreboardHudCornerRadius.toFloat())
+        drawString(mc.font, title, (boxWidth - titleWidth) / 2, padding + titlePad, scoreboardAccentColor(0f), true)
 
         var lineY = titleBarHeight
         val scoreRight = boxWidth - padding
@@ -211,9 +213,10 @@ object FloydHud : Module(
     private fun GuiGraphics.fillPanel(
         width: Int,
         height: Int,
-        borderColors: HudBorderColors = monochromeBorderColors(chromaColor(0f))
+        borderColors: HudBorderColors = monochromeBorderColors(chromaColor(0f)),
+        cornerRadius: Float = hudCornerRadius.toFloat()
     ) {
-        val radius = hudCornerRadius.toFloat().coerceAtLeast(0f)
+        val radius = cornerRadius.coerceAtLeast(0f)
         val fillColor = 0x40000000
         RoundRectPIPRenderer.submit(
             this,

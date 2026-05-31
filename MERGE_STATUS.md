@@ -1,24 +1,33 @@
-# v2.1 merge status — honest gap report
+# V2 → v2.1 merge gap (authoritative audit, 2026-05-31)
 
-Branch `feature/v2.1` (fork-floyd) → draft target `lunabot9/FloydAddons` PR #23. Base = our gg.floyd branch.
+Branch `feature/v2.1`. Audit compared `upstream-floyd/V2` (pkg `floydaddons.not.dogshit.client`) vs ours (`gg.floyd`), semantically (package rename ignored). 5/6 subsystems auto-audited; the player/cosmetic/misc subsystem agent failed structured output — **NickHider `selfNameChroma` + cosmetic deltas still need a manual re-check** (tracked below).
 
-## Done + verified in-client
-- **Global custom font (FIXED).** `assets/minecraft/font/default.json` overrides `minecraft:default` with `floydaddons:font.ttf` (the exact font V2's scoreboard/NVG uses) at the resource level → ALL Minecraft `Font` text renders in it. Verified: title-screen text is the smooth font, not vanilla. (Prior mixin-redirect approach never worked.)
-- **Gradient scoreboard + standalone `Custom Scoreboard` module** (un-nested from FloydRender). Panel/gradient verified via HUD editor; module registers.
-- **ChatChroma** (animated "FloydAddons" chat prefix) — `ChatComponentMixin` + `FontMixin` transform; mixins apply, no crash.
-- **Custom Hub Map** (`FloydHubMap` + `HubMapRendererMixin`) — registers, mixin applies, no crash.
-- **Time Changer** standalone module (un-nested from FloydRender) — registers.
-- gg.floyd hygiene, PvP suite, version 2.1.0, build + 69 tests green.
+## Architecture decision (user)
+Un-nesting uses: **each feature is its own top-level Module that OWNS its settings; the old mega-object becomes an unregistered backing object whose `shouldXxx()` helpers READ the new modules.** Mixins/callsites keep calling the mega-object facade → no mixin churn. We do NOT copy V2's `Bound*Setting` getter/setter glue.
 
-## NOT done / broken (what's left)
-1. **Camera & Hiders nesting (NOT done — your original ask).** In the Odin ClickGUI, category `Camera` holds a single module also named `Camera` (Freecam/Freelook/F5 all crammed in one module); category `Hiders` holds a single module `Hiders`. These should be split into separate top-level modules (e.g. Freecam, Freelook, F5 Customizer; and the individual hiders) so there's no redundant same-named nesting. **Requires restructuring `FloydCamera` and `FloydHiders` into multiple `Module`s.**
-2. **Scoreboard HUD drag misaligned on high-DPI/retina (NOT fixed).** The hit-box is offset from the visual by ~`devicePixelRatio` — `isAreaHovered` uses `mc.mouseHandler.xpos()` while the HUD-editor render uses a `1/guiScale` transform + `mc.window.screenWidth`; the two coordinate spaces diverge on retina. Needs the editor hover/drag to use the same transform as the render (empirically verified).
-3. **V2 `FloydHud` rework only partially ported.** I did a surgical scoreboard upgrade, NOT the full V2 FloydHud. Still missing from V2 2.0.3:
-   - `FloydInventoryHudModule` + `FloydDayTrackerModule` as standalone modules (the full HUD un-nesting + `registerFloydHudSettings` sharing).
-   - Per-HUD inventory theming (Inventory Color/Chroma/Fade) + per-HUD scale settings.
-   - The NVG `styledText` scoreboard path (we deliberately use `mc.font` instead so the global font + blur apply — this is intentional, but the V2 NVG path is not present).
-4. **Font sizing not fully verified.** Confirmed on the title screen; needs in-world/chat/scoreboard confirmation that `font.ttf` size 9 doesn't overlap or misalign vanilla layouts (tune `size`/`shift` in `default.json` if needed).
-5. **Possible other V2 2.0.3 items not audited:** NickHider `selfNameChroma` (uses ChatChroma.applyToStyle), keybind-sync feature, `FloydXray`/`FloydAnimations`/`FloydPlayerSize` deltas. A full `git diff upstream-floyd/V2 -- src/main` vs our tree has NOT been exhaustively reconciled.
+## Done + verified
+- ✅ **Global custom font** — `default.json` provider order fixed (removed `include/default` that shadowed the TTF). Verified in-client: title screen, in-world chat, holograms all render Inter. (`e630984`)
 
-## Honest note
-Earlier in this effort I marked several things "verified" that were not actually working (the font, the scoreboard drag). The items under "Done + verified" above were each confirmed with an in-client screenshot or a live `/state` check; the items under "NOT done" are genuinely incomplete.
+## Priority order (remaining)
+1. [ ] **`Module.visibleInGui`** (low) — restore `@Transient open val visibleInGui = true`; blocker for un-nesting.
+2. [ ] **Camera un-nest** → `Freecam` / `Freelook` / `F5 Customizer` (medium) — settings move onto modules; `FloydCamera` backing keeps runtime state + reads modules. Add `setF5CustomizerEnabled`.
+3. [ ] **Hiders un-nest** → 15 modules (medium) — pure toggles; `FloydHiders` facade reads `<module>.enabled`. Watchdog/ModHider facade reads new modules (backing stays in FloydCompatibility).
+4. [ ] **Compat un-nest** → `Spoof Client Brand` / `Custom Main Menu` / `Taskbar Icon` (visibleInGui=false) / `Update Checker` (medium).
+5. [ ] **Scoreboard configurable settings** (user ask #2) — restore corner-radius + color settings + add internal padding so the border sits further from text. (FloydHud)
+6. [ ] **ESP tracer view-bobbing lock** (user ask #1) — tracers wobble with view bobbing; lock origin to crosshair regardless of bob.
+7. [ ] **Keybind sync** (medium) — `KeyMappingAccessor` + `KeyMappingCategoryAccessor` + `KeyBindingSyncMixin` + `KeybindSync.kt`; `KeybindSetting.bindKeyMapping/applyExternalKey`. Bidirectional with MC controls menu.
+8. [ ] **GUI accent chroma** (low) — `guiAccentColor(offset)` + `clickGUIChroma` setting; rewire Panel bottom / Description border / title gradient.
+9. [ ] **GuiMixin.render() HEAD reset** (low) — `FloydHud.resetVanillaScoreboardWouldRender()` each frame (method already exists). Resolve with `displayScoreboardSidebar()` objective-check question.
+10. [ ] **FloydDayTrackerModule** (medium) — port `drawDayTrackerHud()`.
+11. [ ] **FloydInventoryHudModule + per-HUD inventory theming** (low).
+12. [ ] **Re-check player/cosmetic/misc** — NickHider selfNameChroma, Skin/Cape/ConeHat, DiscordPresence deltas (audit gap).
+
+## Preserve (ours, no V2 equivalent)
+FloydAutoTotem, FloydPlayerEsp, FloydMobEsp, FloydBlockSearch, Category.PVP, SearchableListSetting (+ scroll consumption), Color.chroma model, mc.font scoreboard rendering, FloydRender windowTitle, font JSON providers.
+
+## Open questions / risks
+- `displayScoreboardSidebar()`: V2 marks vanilla-scoreboard only when an objective exists; ours marks unconditionally when custom scoreboard on — investigate (may strand the vanilla signal).
+- `FloydBrandSpoofMixin` dropped `remap=false` — verify brand spoof still fires on target MC, else it silently no-ops.
+- Ported Java mixins must compile under our newer mixin AP (no explicit refmap).
+- HUD default positions differ (V2 right-anchored large vs ours top-left small) — preserve saved positions when adding day-tracker/inventory.
+- Camera config keys change when settings move off FloydCamera → existing saved camera settings reset (acceptable mid-dev).
