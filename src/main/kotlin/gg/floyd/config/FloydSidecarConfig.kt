@@ -145,8 +145,8 @@ object FloydSidecarConfig {
         setModuleEnabled("Animations", data.bool("animEnabled"))
         setModuleEnabled("Mob ESP", data.bool("mobEspEnabled"))
 
-        set("Nick Hider", "Enabled", data.primitive("nickHiderEnabled"))
-        set("Nick Hider", "Default Nick", data.nonEmptyStringPrimitive("nickname"))
+        set("Neck Hider", "Enabled", data.primitive("nickHiderEnabled"))
+        set("Neck Hider", "Default Nick", data.nonEmptyStringPrimitive("nickname"))
         set("Hiders", "Server ID Hider", data.primitive("serverIdHiderEnabled"))
         set("Hiders", "Profile ID Hider", data.boolOrDefault("profileIdHiderEnabled", true))
 

@@ -112,7 +112,8 @@ class ModuleConfig internal constructor(file: File) {
 
         private val legacyModuleNames = mapOf(
             // Display-name renames: the module's lowercase config key changed, so old keys remap forward.
-            "neck hider" to "nick hider",
+            // "Neck Hider" is the intentional canonical name; the brief "Nick Hider" build remaps back.
+            "nick hider" to "neck hider",
             "render" to "general",
             "skin" to "custom skin",
             "cape" to "custom cape"
@@ -153,7 +154,7 @@ class ModuleConfig internal constructor(file: File) {
                 "remove explosion particles" to "No Explosion Particles",
                 "no armor mode" to "Target"
             ),
-            "nick hider" to mapOf(
+            "neck hider" to mapOf(
                 "nickname" to "Default Nick"
             ),
             "custom skin" to mapOf(
@@ -175,7 +176,7 @@ class ModuleConfig internal constructor(file: File) {
         )
 
         private val legacySettingModuleNames = mapOf(
-            "nick hider" to mapOf(
+            "neck hider" to mapOf(
                 "server id hider" to "hiders",
                 "profile id hider" to "hiders"
             ),

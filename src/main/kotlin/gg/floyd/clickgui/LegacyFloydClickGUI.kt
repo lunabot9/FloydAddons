@@ -224,7 +224,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private val nickPresets = listOf("George Floyd", "Floyd", "Dream", "Technoblade", "Steve", "Alex")
 
     private val background = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "textures/gui/floydbg.png")
-    private val labels = listOf("Cosmetic", "Render", "Nick Hider", "Camera", "PvP")
+    private val labels = listOf("Cosmetic", "Render", "Neck Hider", "Camera", "PvP")
     private val labelHover = MutableList(labels.size) { 0f }
 
     private var openStartMs = 0L
@@ -1523,7 +1523,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         currentPage = when (label) {
             "Cosmetic" -> Page.COSMETIC
             "Render" -> Page.RENDER
-            "Nick Hider" -> Page.NICK_HIDER
+            "Neck Hider" -> Page.NICK_HIDER
             "Camera" -> Page.CAMERA
             "PvP" -> Page.PVP
             else -> Page.HUB
@@ -2966,14 +2966,14 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val hits = mutableListOf<NickHiderHitEntry>()
         val controlLeft = left + (panelWidth() - nickFullWidth) / 2
 
-        val title = "Nick Hider"
+        val title = "Neck Hider"
         context.drawString(mc.font, title, left + (panelWidth() - mc.font.width(title)) / 2, top + 4, applyAlpha(chromaColor(0f), alpha), true)
 
         nickInputBounds = Rect(controlLeft, top + 16, nickFullWidth, 20)
         drawNickInput(context, nickInputBounds, alpha)
 
         val toggle = Rect(controlLeft, top + 40, nickFullWidth, 20)
-        drawButton(context, toggle, "Nick Hider: ${onOff(booleanSetting(FloydNickHider, "Enabled")?.enabled ?: false)}", alpha)
+        drawButton(context, toggle, "Neck Hider: ${onOff(booleanSetting(FloydNickHider, "Enabled")?.enabled ?: false)}", alpha)
         hits += NickHiderHitEntry(toggle, NickHiderHitKind.TOGGLE)
 
         val editNames = Rect(controlLeft, top + 68, 107, 20)
@@ -4421,7 +4421,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             Category.PLAYER -> listOf(
                 LegacyModuleBrowserEntry(FloydCape, "Cape", LegacyModuleBrowserKind.PLAYER_CAPE, "Enabled"),
                 LegacyModuleBrowserEntry(FloydConeHat, "Cone Hat", LegacyModuleBrowserKind.PLAYER_CONE_HAT, "Enabled"),
-                LegacyModuleBrowserEntry(FloydNickHider, "Nick Hider", LegacyModuleBrowserKind.PLAYER_NICK_HIDER, "Enabled"),
+                LegacyModuleBrowserEntry(FloydNickHider, "Neck Hider", LegacyModuleBrowserKind.PLAYER_NICK_HIDER, "Enabled"),
                 LegacyModuleBrowserEntry(FloydSkin, "Custom Skin", LegacyModuleBrowserKind.PLAYER_CUSTOM_SKIN, "Custom Skin"),
                 LegacyModuleBrowserEntry(FloydPlayerSize, "Player Size", LegacyModuleBrowserKind.PLAYER_SIZE)
             )
@@ -4592,7 +4592,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             numberRow(FloydPlayerSize, "Z", "Size Z") { oneDecimal(it) }
         )
         Page.NICK_HIDER -> listOf(
-            toggleSettingRow(FloydNickHider, "Enabled", "Nick Hider"),
+            toggleSettingRow(FloydNickHider, "Enabled", "Neck Hider"),
             actionRow("Name Mappings") { currentPage = Page.NAME_MAPPINGS },
             actionRow("Reload Names") {
                 ModuleManager.loadConfigurations()
@@ -6265,7 +6265,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.COSMETIC -> "Cosmetic"
         Page.CAPE -> "Cape Config"
         Page.CONE_HAT -> "Cone Hat Config"
-        Page.NICK_HIDER -> "Nick Hider"
+        Page.NICK_HIDER -> "Neck Hider"
         Page.SKIN -> "Skin"
         Page.MOB_ESP -> "Mob ESP Config"
         Page.MOB_ESP_FILTERS -> "Mob ESP Filters"

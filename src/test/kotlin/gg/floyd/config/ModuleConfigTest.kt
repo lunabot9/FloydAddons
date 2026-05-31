@@ -18,22 +18,22 @@ class ModuleConfigTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `legacy Neck Hider config entries load into Floyd GUI Nick Hider module`() {
-        val module = LegacyNamedModule(name = "Nick Hider")
-        loadLegacyConfigEntry("Neck Hider", module)
+    fun `legacy Nick Hider config entries load into Floyd GUI Neck Hider module`() {
+        val module = LegacyNamedModule(name = "Neck Hider")
+        loadLegacyConfigEntry("Nick Hider", module)
 
         assertTrue(module.enabled)
         assertTrue(module.featureEnabled)
-        assertEquals("Nick Hider", module.name)
+        assertEquals("Neck Hider", module.name)
     }
 
     @Test
     fun `legacy Neck Hider id toggles load into Floyd GUI Hiders module`() {
-        val nickHider = LegacyNickHiderModule()
+        val neckHider = LegacyNeckHiderModule()
         val hiders = LegacyHidersModule()
         loadLegacyConfigEntry(
             "Neck Hider",
-            listOf(nickHider, hiders),
+            listOf(neckHider, hiders),
             """
             {
               "Server ID Hider": true,
@@ -194,10 +194,10 @@ class ModuleConfigTest {
 
     @Test
     fun `legacy player setting names load into Floyd GUI setting names`() {
-        val nickHider = LegacyNickHiderModule()
+        val neckHider = LegacyNeckHiderModule()
         loadLegacyConfigEntry(
             "Neck Hider",
-            nickHider,
+            neckHider,
             """
             {
               "Nickname": "Legacy Nick"
@@ -205,7 +205,7 @@ class ModuleConfigTest {
             """.trimIndent()
         )
 
-        assertEquals("Legacy Nick", nickHider.defaultNick)
+        assertEquals("Legacy Nick", neckHider.defaultNick)
 
         val playerSize = LegacyPlayerSizeModule()
         loadLegacyConfigEntry(
@@ -461,8 +461,8 @@ class ModuleConfigTest {
         val tracerColor by ColorSetting("Tracer Color", Color(0xFFFFFFFF.toInt()), desc = "Test color.")
     }
 
-    private class LegacyNickHiderModule : Module(
-        name = "Nick Hider",
+    private class LegacyNeckHiderModule : Module(
+        name = "Neck Hider",
         category = Category.PLAYER,
         description = "Test module for legacy hider setting aliases.",
         toggled = false
