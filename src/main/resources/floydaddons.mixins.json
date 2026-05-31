@@ -13,6 +13,7 @@
     "mixins.AnimationLivingEntityMixin",
     "mixins.AnimationToggleKeyMappingMixin",
     "mixins.AvatarRendererMixin",
+    "mixins.BlockSearchChunkMixin",
     "mixins.CameraClientControlMixin",
     "mixins.CameraLocalPlayerInputMixin",
     "mixins.CameraMixin",
