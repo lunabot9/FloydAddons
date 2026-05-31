@@ -261,9 +261,12 @@ private fun PoseStack.renderQueuedTexts(consumer: List<TextData>, bufferSource: 
 }
 
 fun RenderEvent.Extract.drawTracer(to: Vec3, color: Color, depth: Boolean, thickness: Float = 3f) {
-    val from = mc.player?.let { player ->
-        player.renderPos.add(player.forward.add(0.0, player.eyeHeight.toDouble(), 0.0))
-    } ?: return
+    if (mc.player == null) return
+    // Lock the origin to the crosshair / screen-center so the tracer does not wobble with
+    // view bobbing. Fall back to the eye position if the render matrices are unavailable.
+    val from = WorldToScreen.tracerOrigin()
+        ?: mc.player?.let { it.renderPos.add(it.forward.add(0.0, it.eyeHeight.toDouble(), 0.0)) }
+        ?: return
     drawLine(listOf(from, to), color, depth, thickness)
 }
 

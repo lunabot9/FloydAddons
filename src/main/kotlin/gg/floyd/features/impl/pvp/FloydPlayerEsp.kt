@@ -11,7 +11,7 @@ import gg.floyd.features.Module
 import gg.floyd.utils.Colors
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemStack
-import gg.floyd.utils.render.drawText
+import gg.floyd.utils.render.WorldToScreen
 import gg.floyd.utils.render.drawTracer
 import gg.floyd.utils.render.drawWireFrameBox
 import gg.floyd.utils.renderBoundingBox
@@ -19,6 +19,7 @@ import gg.floyd.utils.renderPos
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.player.AbstractClientPlayer
 import net.minecraft.world.entity.EquipmentSlot
+import net.minecraft.world.item.ItemStack
 
 /**
  * ESP scoped to other players. Shows health and equipped items either as an
@@ -36,7 +37,21 @@ object FloydPlayerEsp : Module(
     private val boxes by BooleanSetting("Boxes", true, desc = "Draws a box around each player.")
     private val tracers by BooleanSetting("Tracers", false, desc = "Draws a tracer line to each player.")
     private val showHealth by BooleanSetting("Show Health", true, desc = "Shows each player's health.")
-    private val showHeldItem by BooleanSetting("Show Held Item", true, desc = "Shows each player's held item.")
+    private val showEquipment by BooleanSetting("Show Equipment", true, desc = "Shows each player's equipped item icons.")
+
+    // Helmet, chestplate, leggings, boots, main hand, off hand.
+    private val equipmentSlots = arrayOf(
+        EquipmentSlot.HEAD,
+        EquipmentSlot.CHEST,
+        EquipmentSlot.LEGS,
+        EquipmentSlot.FEET,
+        EquipmentSlot.MAINHAND,
+        EquipmentSlot.OFFHAND,
+    )
+
+    private const val HEART = "❤"
+    private const val ICON_SIZE = 16
+    private const val ICON_SPACING = 18
 
     private val stalkAllAction by ActionSetting("Stalk All Players", desc = "Toggles Player ESP for all players (same as /fa stalk all).") {
         val on = stalkAll()
@@ -50,17 +65,13 @@ object FloydPlayerEsp : Module(
     init {
         on<RenderEvent.Extract> {
             if (!enabled) return@on
-            // World overlay only for Overhead (0) or Both (2).
+            // World overlay (boxes + tracers) only for Overhead (0) or Both (2).
             if (display != 0 && display != 2) return@on
             if (mc.player == null) return@on
             for (other in otherPlayers()) {
                 val c = color
                 if (boxes) drawWireFrameBox(other.renderBoundingBox, c, thickness = 2f, depth = false)
                 if (tracers) drawTracer(other.renderPos.add(0.0, other.bbHeight / 2.0, 0.0), c, depth = false, thickness = 2f)
-                val label = overheadLabel(other)
-                if (label.isNotEmpty()) {
-                    drawText(label, other.renderPos.add(0.0, other.bbHeight + 0.5, 0.0), 1f, depth = false)
-                }
             }
         }
     }
@@ -70,20 +81,64 @@ object FloydPlayerEsp : Module(
         return mc.level?.players()?.filter { it !== self && !it.isSpectator } ?: emptyList()
     }
 
-    private fun overheadLabel(player: AbstractClientPlayer): String {
-        val parts = mutableListOf<String>()
-        if (showHealth) parts.add("${player.health.toInt()}/${player.maxHealth.toInt()} HP")
-        if (showHeldItem) {
-            val held = player.mainHandItem
-            if (!held.isEmpty) parts.add(held.hoverName.string)
-        }
-        return parts.joinToString("  ")
-    }
+    private fun equipmentOf(player: AbstractClientPlayer): List<ItemStack> =
+        equipmentSlots.map { player.getItemBySlot(it) }
 
     /** Enables/disables the all-players ESP. Returns the new enabled state. */
     fun stalkAll(): Boolean {
         toggle()
         return enabled
+    }
+
+    /**
+     * Screen-space overhead ESP: a heart + health number and a row of equipment item icons
+     * rendered well above each player's head (above the vanilla/server nametag). Drawn in the
+     * HUD pass because item icons require GuiGraphics; positions are projected from world space
+     * through the bob-stable render matrices so they track players without view-bob wobble.
+     */
+    fun drawOverheadOverlay(graphics: GuiGraphics) {
+        if (!enabled) return
+        if (display != 0 && display != 2) return
+        if (!showHealth && !showEquipment) return
+        val self = mc.player ?: return
+
+        for (player in otherPlayers()) {
+            if (player.distanceToSqr(self) > 64.0 * 64.0) continue
+            // Project a point clearly above the head + nametag so the overlay does not overlap it.
+            val anchorY = player.bbHeight + 1.2
+            val screen = WorldToScreen.project(player.renderPos.add(0.0, anchorY, 0.0)) ?: continue
+            drawOverheadEntry(graphics, player, screen.x, screen.y)
+        }
+    }
+
+    private fun drawOverheadEntry(graphics: GuiGraphics, player: AbstractClientPlayer, centerX: Float, baseY: Float) {
+        var rowY = baseY
+
+        if (showHealth) {
+            val text = "$HEART ${player.health.toInt()}"
+            val textWidth = mc.font.width(text)
+            val textX = (centerX - textWidth / 2f).toInt()
+            graphics.drawString(mc.font, text, textX, rowY.toInt(), Colors.MINECRAFT_RED.rgba, true)
+            rowY += mc.font.lineHeight + 2
+        }
+
+        if (showEquipment) {
+            val items = equipmentOf(player)
+            val present = items.count { !it.isEmpty }
+            if (present > 0) {
+                val totalWidth = items.size * ICON_SPACING - (ICON_SPACING - ICON_SIZE)
+                var iconX = (centerX - totalWidth / 2f)
+                for (stack in items) {
+                    if (!stack.isEmpty) {
+                        graphics.pose().pushMatrix()
+                        graphics.pose().translate(iconX, rowY)
+                        graphics.drawItemStack(stack, 0, 0)
+                        graphics.pose().popMatrix()
+                    }
+                    iconX += ICON_SPACING
+                }
+            }
+        }
     }
 
     private fun GuiGraphics.drawPlayerList(example: Boolean): Pair<Int, Int> {
@@ -92,8 +147,8 @@ object FloydPlayerEsp : Module(
         val players = if (example || self == null) emptyList()
         else otherPlayers().sortedBy { it.distanceToSqr(self) }.take(12)
 
-        val rowH = 20
-        val width = 190
+        val rowH = 22
+        val width = 200
         val rows = if (players.isEmpty()) 1 else players.size
         val height = rows * rowH + 4
 
@@ -107,46 +162,28 @@ object FloydPlayerEsp : Module(
 
         var y = 2
         for (p in players) {
-            // Held item icon
-            val held = p.mainHandItem
-            if (!held.isEmpty) {
-                pose().pushMatrix()
-                pose().translate(4f, (y + 1).toFloat())
-                drawItemStack(held, 0, 0)
-                pose().popMatrix()
-            }
-            drawString(mc.font, p.name.string, 24, y, 0xFFFFFFFF.toInt(), true)
+            drawString(mc.font, p.name.string, 6, y, 0xFFFFFFFF.toInt(), true)
 
-            // Health bar
-            val ratio = (p.health / p.maxHealth.coerceAtLeast(1f)).coerceIn(0f, 1f)
-            val barX = 24
-            val barY = y + 11
-            val barW = 55
-            fill(barX, barY, barX + barW, barY + 5, 0xFF333333.toInt())
-            fill(barX, barY, barX + (barW * ratio).toInt(), barY + 5, healthColor(ratio))
-            drawString(mc.font, "${p.health.toInt()}/${p.maxHealth.toInt()}", barX + barW + 4, y + 8, 0xFFFFFFFF.toInt(), true)
+            // Heart + health number.
+            val health = "$HEART ${p.health.toInt()}"
+            drawString(mc.font, health, 6, y + 10, Colors.MINECRAFT_RED.rgba, true)
 
-            // Armor icons on the right
-            var ax = width - 4 - 16
-            for (slot in arrayOf(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET)) {
-                val piece = p.getItemBySlot(slot)
+            // The SAME six equipment icons as the overhead entry, right-aligned.
+            val items = equipmentOf(p)
+            var ax = width - 4 - ICON_SIZE
+            for (i in items.indices.reversed()) {
+                val piece = items[i]
                 if (!piece.isEmpty) {
                     pose().pushMatrix()
-                    pose().translate(ax.toFloat(), (y + 1).toFloat())
+                    pose().translate(ax.toFloat(), (y + 2).toFloat())
                     drawItemStack(piece, 0, 0)
                     pose().popMatrix()
-                    ax -= 17
                 }
+                ax -= ICON_SPACING
             }
             y += rowH
         }
         return width to height
-    }
-
-    private fun healthColor(ratio: Float): Int {
-        val red = ((1f - ratio) * 255).toInt().coerceIn(0, 255)
-        val green = (ratio * 255).toInt().coerceIn(0, 255)
-        return (0xFF shl 24) or (red shl 16) or (green shl 8)
     }
 
     fun state(): Map<String, Any?> = mapOf(
