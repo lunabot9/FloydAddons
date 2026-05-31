@@ -34,6 +34,7 @@ import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydBlockSearch
+import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydRender
@@ -4497,7 +4498,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydRender, "Time Changer", LegacyModuleBrowserKind.RENDER_BOOLEAN, "Time Changer"),
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
-                LegacyModuleBrowserEntry(FloydRender, "Custom Scoreboard", LegacyModuleBrowserKind.RENDER_BOOLEAN, "Custom Scoreboard"),
+                moduleEntry(FloydCustomScoreboard),
                 LegacyModuleBrowserEntry(FloydRender, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
                 LegacyModuleBrowserEntry(FloydRender, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
                 LegacyModuleBrowserEntry(ClickGUIModule, "GUI Style", LegacyModuleBrowserKind.RENDER_GUI_STYLE),

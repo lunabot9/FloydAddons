@@ -46,7 +46,10 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             Std140Builder.intoBuffer(buffer)
                 .putVec4(w * 0.5f, h * 0.5f, w, h)                                          // u_Rect
                 .putVec4(state.topLeftRadius * state.scale, state.topRightRadius * state.scale, state.bottomRightRadius * state.scale, state.bottomLeftRadius * state.scale) // u_Radii
-                .putVec4(state.outlineRed, state.outlineGreen, state.outlineBlue, state.outlineAlpha) // u_OutlineColor
+                .putVec4(state.outlineTopLeftRed, state.outlineTopLeftGreen, state.outlineTopLeftBlue, state.outlineTopLeftAlpha)
+                .putVec4(state.outlineTopRightRed, state.outlineTopRightGreen, state.outlineTopRightBlue, state.outlineTopRightAlpha)
+                .putVec4(state.outlineBottomRightRed, state.outlineBottomRightGreen, state.outlineBottomRightBlue, state.outlineBottomRightAlpha)
+                .putVec4(state.outlineBottomLeftRed, state.outlineBottomLeftGreen, state.outlineBottomLeftBlue, state.outlineBottomLeftAlpha)
                 .putVec4(state.outlineWidth * state.scale, 0f, 0f, 0f)                       // u_OutlineWidth (std140 padded)
         }
 
@@ -91,7 +94,10 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         val topRightRadius: Float,
         val bottomRightRadius: Float,
         val bottomLeftRadius: Float,
-        val outlineColor: Int,
+        val outlineTopLeftColor: Int,
+        val outlineTopRightColor: Int,
+        val outlineBottomRightColor: Int,
+        val outlineBottomLeftColor: Int,
         val outlineWidth: Float,
         private val scissorArea: ScreenRectangle?,
         private val bounds: ScreenRectangle?
@@ -99,10 +105,22 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
 
         val scale = Minecraft.getInstance().window.guiScale.toFloat()
 
-        val outlineRed   = (outlineColor shr 16 and 0xFF) / 255f
-        val outlineGreen = (outlineColor shr 8  and 0xFF) / 255f
-        val outlineBlue  = (outlineColor        and 0xFF) / 255f
-        val outlineAlpha = (outlineColor shr 24 and 0xFF) / 255f
+        val outlineTopLeftRed = (outlineTopLeftColor shr 16 and 0xFF) / 255f
+        val outlineTopLeftGreen = (outlineTopLeftColor shr 8 and 0xFF) / 255f
+        val outlineTopLeftBlue = (outlineTopLeftColor and 0xFF) / 255f
+        val outlineTopLeftAlpha = (outlineTopLeftColor shr 24 and 0xFF) / 255f
+        val outlineTopRightRed = (outlineTopRightColor shr 16 and 0xFF) / 255f
+        val outlineTopRightGreen = (outlineTopRightColor shr 8 and 0xFF) / 255f
+        val outlineTopRightBlue = (outlineTopRightColor and 0xFF) / 255f
+        val outlineTopRightAlpha = (outlineTopRightColor shr 24 and 0xFF) / 255f
+        val outlineBottomRightRed = (outlineBottomRightColor shr 16 and 0xFF) / 255f
+        val outlineBottomRightGreen = (outlineBottomRightColor shr 8 and 0xFF) / 255f
+        val outlineBottomRightBlue = (outlineBottomRightColor and 0xFF) / 255f
+        val outlineBottomRightAlpha = (outlineBottomRightColor shr 24 and 0xFF) / 255f
+        val outlineBottomLeftRed = (outlineBottomLeftColor shr 16 and 0xFF) / 255f
+        val outlineBottomLeftGreen = (outlineBottomLeftColor shr 8 and 0xFF) / 255f
+        val outlineBottomLeftBlue = (outlineBottomLeftColor and 0xFF) / 255f
+        val outlineBottomLeftAlpha = (outlineBottomLeftColor shr 24 and 0xFF) / 255f
 
         override fun x0() = x
         override fun y0() = y
@@ -124,7 +142,10 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 topRightRadius == other.topRightRadius &&
                 bottomRightRadius == other.bottomRightRadius &&
                 bottomLeftRadius == other.bottomLeftRadius &&
-                outlineColor == other.outlineColor &&
+                outlineTopLeftColor == other.outlineTopLeftColor &&
+                outlineTopRightColor == other.outlineTopRightColor &&
+                outlineBottomRightColor == other.outlineBottomRightColor &&
+                outlineBottomLeftColor == other.outlineBottomLeftColor &&
                 outlineWidth == other.outlineWidth &&
                 scale == other.scale
         }
@@ -136,7 +157,10 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             Std140SizeCalculator()
                 .putVec4() // u_Rect
                 .putVec4() // u_Radii
-                .putVec4() // u_OutlineColor
+                .putVec4() // u_OutlineTopLeftColor
+                .putVec4() // u_OutlineTopRightColor
+                .putVec4() // u_OutlineBottomRightColor
+                .putVec4() // u_OutlineBottomLeftColor
                 .putVec4() // u_OutlineWidth (std140 padded)
                 .get(),
             4
@@ -149,7 +173,8 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             x0: Int, y0: Int, x1: Int, y1: Int,
             topLeftColor: Int, topRightColor: Int, bottomRightColor: Int, bottomLeftColor: Int,
             topLeftRadius: Float, topRightRadius: Float, bottomRightRadius: Float, bottomLeftRadius: Float,
-            outlineColor: Int, outlineWidth: Float
+            outlineTopLeftColor: Int, outlineTopRightColor: Int, outlineBottomRightColor: Int, outlineBottomLeftColor: Int,
+            outlineWidth: Float
         ) {
             val scissor = context.scissorStack.peek()
             val pose = Matrix3x2f(context.pose())
@@ -173,7 +198,7 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                     topLeftColor, topRightColor, bottomRightColor, bottomLeftColor,
                     topLeftRadius * poseScale, topRightRadius * poseScale,
                     bottomRightRadius * poseScale, bottomLeftRadius * poseScale,
-                    outlineColor, outlineWidth * poseScale,
+                    outlineTopLeftColor, outlineTopRightColor, outlineBottomRightColor, outlineBottomLeftColor, outlineWidth * poseScale,
                     scissor, bounds
                 )
             )

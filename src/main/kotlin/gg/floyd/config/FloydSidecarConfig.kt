@@ -167,7 +167,7 @@ object FloydSidecarConfig {
 
         set("Render", "Time Changer", data.primitive("customTimeEnabled"))
         set("Render", "Time", data.primitive("customTimeValue"))
-        set("Render", "Custom Scoreboard", data.primitive("customScoreboardEnabled"))
+        setModuleEnabled("Custom Scoreboard", data.bool("customScoreboardEnabled"))
         set("Render", "Borderless Window", data.primitive("borderlessWindowed"))
         set("Render", "Instance Title", data.trimmedStringPrimitive("windowTitle"))
 

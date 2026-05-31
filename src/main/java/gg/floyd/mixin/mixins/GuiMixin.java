@@ -2,8 +2,8 @@ package gg.floyd.mixin.mixins;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import gg.floyd.features.impl.hiders.FloydHiders;
+import gg.floyd.features.impl.render.FloydCustomScoreboard;
 import gg.floyd.features.impl.render.FloydHud;
-import gg.floyd.features.impl.render.FloydRender;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.scores.Objective;
@@ -34,7 +34,7 @@ public class GuiMixin {
 
     @Inject(method = "displayScoreboardSidebar", at = @At("HEAD"), cancellable = true)
     private void floydaddons$cancelVanillaScoreboard(GuiGraphics guiGraphics, Objective objective, CallbackInfo ci) {
-        if (FloydRender.shouldUseCustomScoreboard()) {
+        if (FloydCustomScoreboard.shouldUseCustomScoreboard()) {
             FloydHud.markVanillaScoreboardWouldRender();
             ci.cancel();
         }

@@ -18,7 +18,6 @@ object FloydRender : Module(
 ) {
     val customTime by BooleanSetting("Time Changer", false, desc = "Matches Floyd's custom time override.")
     val customTimeValue by NumberSetting("Time", 50f, 0f, 100f, 1f, desc = "World time slider used by custom time.")
-    val customScoreboard by BooleanSetting("Custom Scoreboard", false, desc = "Matches Floyd's custom scoreboard HUD.")
     var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
     val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
 
@@ -58,16 +57,11 @@ object FloydRender : Module(
         Math.round((value.coerceIn(0f, 100f) / 100f) * 23999L).coerceIn(0, 23999).toLong()
 
     @JvmStatic
-    fun shouldUseCustomScoreboard(): Boolean = enabled && customScoreboard
-
-    @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "customTime" to customTime,
         "customTimeValue" to customTimeValue,
         "shouldUseCustomTime" to shouldUseCustomTime(),
-        "customScoreboard" to customScoreboard,
-        "shouldUseCustomScoreboard" to shouldUseCustomScoreboard(),
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
         "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" }
