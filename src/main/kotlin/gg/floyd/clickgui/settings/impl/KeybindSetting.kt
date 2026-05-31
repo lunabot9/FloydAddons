@@ -30,7 +30,9 @@ class KeybindSetting(
         set(newKey) {
             if (newKey == field) return
             field = newKey
-            keyNameWidth = NVGRenderer.textWidth(newKey.displayName.string, 16f, NVGRenderer.defaultFont)
+            // Invalidate the cached label width; render() recomputes it lazily (line ~66). Computing it
+            // here would touch NVGRenderer during config load — before the GL context exists — and crash.
+            keyNameWidth = -1f
             if (!suppressSync && !KeybindSync.isSyncing()) KeybindSync.syncFromSetting(this, newKey)
         }
     var onPress: (() -> Unit)? = null
