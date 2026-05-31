@@ -4,7 +4,6 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.settings.impl.HudElement
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.ModuleManager.hudSettingsCache
-import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.utils.Colors
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.Screen
@@ -13,7 +12,6 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import gg.floyd.utils.ui.activeMouseOverride
 import org.lwjgl.glfw.GLFW
-import kotlin.math.roundToInt
 import kotlin.math.sign
 
 object HudManager : Screen(Component.literal("HUD Manager")) {
@@ -168,14 +166,8 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         hud.value.y = hud.value.y.coerceIn(0, (mc.window.height - height).toInt().coerceAtLeast(0))
     }
 
-    private fun estimatedHudSize(hud: gg.floyd.clickgui.settings.impl.HUDSetting): Pair<Int, Int> = when (hud.name) {
-        "Inventory HUD" -> {
-            val slotSize = (18 * FloydHud.inventoryHudScale).roundToInt().coerceAtLeast(12)
-            9 * slotSize to 3 * slotSize
-        }
-        "Scoreboard HUD" -> 180 to 120
-        else -> 120 to 40
-    }
+    private fun estimatedHudSize(hud: gg.floyd.clickgui.settings.impl.HUDSetting): Pair<Int, Int> =
+        HudSizeRegistry.estimate(hud.name)
 
     override fun isPauseScreen(): Boolean = false
 }

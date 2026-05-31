@@ -19,6 +19,7 @@ object FloydRender : Module(
     var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
     val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
+    val hudCornerRadius by NumberSetting("HUD Corner Radius", 0, 0, 12, 1, desc = "Rounded corner radius for Floyd HUD panels.")
 
     private var lastAppliedTitle: String? = null
     private var lastAppliedBorderless = false
@@ -44,7 +45,8 @@ object FloydRender : Module(
         "shouldUseFullChatChroma" to shouldUseFullChatChroma(),
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
-        "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" }
+        "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" },
+        "hudCornerRadius" to hudCornerRadius
     )
 
     private fun applyWindowTitle() {

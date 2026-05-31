@@ -50,6 +50,7 @@ import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydHud
+import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydTimeChanger
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydRender
@@ -4512,7 +4513,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydServerIdHider, "Server ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Server ID Hider"),
                 moduleEntry(FloydTimeChanger),
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
-                LegacyModuleBrowserEntry(FloydHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
+                LegacyModuleBrowserEntry(FloydInventoryHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
                 moduleEntry(FloydCustomScoreboard),
                 LegacyModuleBrowserEntry(FloydRender, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
                 LegacyModuleBrowserEntry(FloydRender, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
@@ -5715,8 +5716,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 }
             }
             LegacyModuleBrowserKind.RENDER_HUD -> {
-                val setting = entry.settingName?.let { hudSetting(FloydHud, it) } ?: return
-                if (!FloydHud.enabled) FloydHud.toggle()
+                val setting = entry.settingName?.let { hudSetting(entry.module, it) } ?: return
+                if (!entry.module.enabled) entry.module.toggle()
                 setting.value.enabled = !setting.value.enabled
                 ModuleManager.saveConfigurations()
             }
@@ -6685,7 +6686,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 settingName?.let { FloydRender.settings[it] as? BooleanSetting }?.enabled == true
             LegacyModuleBrowserKind.RENDER_STALK -> FloydMobEsp.stalkEnabled()
             LegacyModuleBrowserKind.RENDER_HUD ->
-                settingName?.let { FloydHud.settings[it] as? HUDSetting }?.isEnabled == true
+                settingName?.let { module.settings[it] as? HUDSetting }?.isEnabled == true
             LegacyModuleBrowserKind.RENDER_BORDERLESS ->
                 (FloydRender.settings["Borderless Window"] as? BooleanSetting)?.enabled == true
             LegacyModuleBrowserKind.RENDER_INSTANCE_NAME ->

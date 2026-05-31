@@ -2,7 +2,6 @@ package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.ClickGUI
-import gg.floyd.clickgui.HudManager
 import gg.floyd.clickgui.Panel
 import gg.floyd.clickgui.settings.AlwaysActive
 import gg.floyd.clickgui.settings.impl.*
@@ -36,8 +35,6 @@ object ClickGUIModule : Module(
     private val openGuiKey by KeybindSetting("Open GUI Key", GLFW.GLFW_KEY_N, desc = "FloydAddons alternate GUI key.").onPress {
         mc.setScreen(ClickGUI)
     }
-
-    private val action by ActionSetting("Open HUD Editor", desc = "Opens the HUD editor when clicked.") { mc.setScreen(HudManager) }
 
     override fun onKeybind() {
         toggle()

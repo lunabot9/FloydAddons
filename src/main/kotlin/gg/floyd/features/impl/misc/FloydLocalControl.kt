@@ -19,7 +19,9 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.impl.camera.FloydCamera
 import gg.floyd.features.impl.hiders.FloydHiders
+import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydHud
+import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.cosmetic.FloydCape
@@ -293,7 +295,9 @@ object FloydLocalControl : Module(
             "animations" to FloydAnimations.state(),
             "hiders" to FloydHiders.state(),
             "mobEsp" to FloydMobEsp.state(),
-            "hud" to FloydHud.state()
+            "hud" to FloydHud.state(),
+            "inventoryHud" to FloydInventoryHud.state(),
+            "customScoreboard" to FloydCustomScoreboard.state()
         )
         root["qol"] = emptyMap<String, Any?>()
         root["cosmetics"] = mapOf(

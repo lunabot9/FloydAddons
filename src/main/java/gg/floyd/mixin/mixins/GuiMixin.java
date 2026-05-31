@@ -3,7 +3,7 @@ package gg.floyd.mixin.mixins;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import gg.floyd.features.impl.hiders.FloydHiders;
 import gg.floyd.features.impl.render.FloydCustomScoreboard;
-import gg.floyd.features.impl.render.FloydHud;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.scores.Objective;
@@ -15,6 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Gui.class)
 public class GuiMixin {
+
+    @Inject(method = "render", at = @At("HEAD"))
+    private void floydaddons$resetVanillaScoreboardSignal(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+        FloydCustomScoreboard.resetVanillaScoreboardWouldRender();
+    }
 
     @Inject(method = "renderFood", at = @At("HEAD"), cancellable = true)
     private void cancelFoodBar(GuiGraphics guiGraphics, Player player, int i, int j, CallbackInfo ci) {
@@ -35,7 +40,7 @@ public class GuiMixin {
     @Inject(method = "displayScoreboardSidebar", at = @At("HEAD"), cancellable = true)
     private void floydaddons$cancelVanillaScoreboard(GuiGraphics guiGraphics, Objective objective, CallbackInfo ci) {
         if (FloydCustomScoreboard.shouldUseCustomScoreboard()) {
-            FloydHud.markVanillaScoreboardWouldRender();
+            FloydCustomScoreboard.markVanillaScoreboardWouldRender();
             ci.cancel();
         }
     }

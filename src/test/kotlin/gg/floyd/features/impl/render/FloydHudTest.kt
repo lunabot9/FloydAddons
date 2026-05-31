@@ -7,10 +7,10 @@ import kotlin.test.assertTrue
 class FloydHudTest {
     @Test
     fun `custom scoreboard keeps drawing after vanilla sidebar signal`() {
-        FloydHud.resetVanillaScoreboardWouldRender()
+        FloydCustomScoreboard.resetVanillaScoreboardWouldRender()
 
         assertFalse(
-            FloydHud.shouldDrawScoreboardHud(
+            FloydCustomScoreboard.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
                 objectivePresent = true,
@@ -19,9 +19,9 @@ class FloydHudTest {
             )
         )
 
-        FloydHud.markVanillaScoreboardWouldRender()
+        FloydCustomScoreboard.markVanillaScoreboardWouldRender()
         assertTrue(
-            FloydHud.shouldDrawScoreboardHud(
+            FloydCustomScoreboard.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
                 objectivePresent = true,
@@ -30,7 +30,7 @@ class FloydHudTest {
             )
         )
         assertTrue(
-            FloydHud.shouldDrawScoreboardHud(
+            FloydCustomScoreboard.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
                 objectivePresent = true,
@@ -42,11 +42,11 @@ class FloydHudTest {
 
     @Test
     fun `scoreboard gate still blocks disabled custom scoreboard or missing objective`() {
-        FloydHud.resetVanillaScoreboardWouldRender()
-        FloydHud.markVanillaScoreboardWouldRender()
+        FloydCustomScoreboard.resetVanillaScoreboardWouldRender()
+        FloydCustomScoreboard.markVanillaScoreboardWouldRender()
 
         assertFalse(
-            FloydHud.shouldDrawScoreboardHud(
+            FloydCustomScoreboard.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = false,
                 objectivePresent = true,
@@ -55,7 +55,7 @@ class FloydHudTest {
             )
         )
         assertFalse(
-            FloydHud.shouldDrawScoreboardHud(
+            FloydCustomScoreboard.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
                 objectivePresent = true,
@@ -64,9 +64,9 @@ class FloydHudTest {
             )
         )
 
-        FloydHud.markVanillaScoreboardWouldRender()
+        FloydCustomScoreboard.markVanillaScoreboardWouldRender()
         assertFalse(
-            FloydHud.shouldDrawScoreboardHud(
+            FloydCustomScoreboard.shouldDrawScoreboardHud(
                 example = false,
                 customScoreboard = true,
                 objectivePresent = false,
