@@ -15,7 +15,8 @@ import kotlin.math.roundToInt
  *
  * Previously this was a buried HUD element + private `inventoryHudScale` inside [FloydHud]; it is
  * now its own module so the inventory HUD can be toggled and configured independently. The shared
- * rounded-corner radius is read from [FloydRender.hudCornerRadius].
+ * rounded-corner radius, border width and frosted backdrop come from the global panel-appearance
+ * settings on [FloydRender].
  */
 object FloydInventoryHud : Module(
     name = "Inventory HUD",
@@ -45,7 +46,7 @@ object FloydInventoryHud : Module(
             "y" to inventoryHud.y,
             "hudScale" to inventoryHud.scale
         ),
-        "cornerRadius" to FloydRender.hudCornerRadius
+        "cornerRadius" to FloydRender.panelCornerRadius
     )
 
     private fun GuiGraphics.drawInventoryHud(example: Boolean): Pair<Int, Int> {
@@ -53,7 +54,7 @@ object FloydInventoryHud : Module(
         val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)
         val width = 9 * slotSize
         val height = 3 * slotSize
-        HudPanel.fillPanel(this, 0, 0, width, height, HudPanel.monochrome(HudPanel.chromaColor(0f)), cornerRadius = FloydRender.hudCornerRadius.toFloat())
+        HudPanel.fillPanel(this, 0, 0, width, height, HudPanel.monochrome(HudPanel.chromaColor(0f)))
 
         if (inventory != null) {
             for (slot in 0 until 27) {

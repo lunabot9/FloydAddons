@@ -29,7 +29,8 @@ import kotlin.math.max
  *
  * Previously this was a buried `Custom Scoreboard` BooleanSetting inside [FloydRender]; it is now
  * its own module, and it owns the scoreboard appearance settings + movable HUD element that used
- * to live in [FloydHud]. The shared rounded-corner radius is read from [FloydRender.hudCornerRadius].
+ * to live in [FloydHud]. The shared rounded-corner radius, border width and frosted backdrop come
+ * from the global panel-appearance settings on [FloydRender].
  */
 object FloydCustomScoreboard : Module(
     name = "Custom Scoreboard",
@@ -42,7 +43,6 @@ object FloydCustomScoreboard : Module(
     private val scoreboardHudColor by ColorSetting("Scoreboard Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Scoreboard border + footer accent (toggle chroma inside the picker).")
     private val scoreboardHudFade by BooleanSetting("Scoreboard Fade", false, desc = "Fades the scoreboard accent between two colors.")
     private val scoreboardHudFadeColor by ColorSetting("Scoreboard Fade Color", Color(0xFF55FFFF.toInt()), desc = "Secondary color for the scoreboard fade.")
-    private val scoreboardHudCornerRadius by NumberSetting("Corner Radius", 0, 0, 20, 1, desc = "Rounded corner radius for the scoreboard HUD panel.")
     private val scoreboardHudPadding by NumberSetting("Padding", 7, 0, 16, 1, desc = "Internal padding between the scoreboard border and its text.")
 
     private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", true, 10, 80, 1f) { example ->
@@ -75,7 +75,7 @@ object FloydCustomScoreboard : Module(
                 "y" to scoreboardHud.y,
                 "hudScale" to scoreboardHud.scale
             ),
-            "cornerRadius" to FloydRender.hudCornerRadius
+            "cornerRadius" to FloydRender.panelCornerRadius
         )
     }
 
@@ -156,7 +156,7 @@ object FloydCustomScoreboard : Module(
         val footerBarHeight = lineHeight + titlePad * 2 + padding
         val boxHeight = titleBarHeight + lines.size * lineHeight + footerBarHeight
 
-        HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, scoreboardHudBorderColors(), cornerRadius = scoreboardHudCornerRadius.toFloat())
+        HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, scoreboardHudBorderColors())
         drawString(mc.font, title, (boxWidth - titleWidth) / 2, padding + titlePad, scoreboardAccentColor(0f), true)
 
         var lineY = titleBarHeight

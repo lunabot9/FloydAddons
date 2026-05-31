@@ -21,6 +21,12 @@ object FloydRender : Module(
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
     val hudCornerRadius by NumberSetting("HUD Corner Radius", 0, 0, 12, 1, desc = "Rounded corner radius for Floyd HUD panels.")
 
+    // Global appearance for every Floyd border+bg panel routed through HudPanel.fillPanel.
+    val panelCornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Default rounded corner radius for every Floyd border+background panel.")
+    val panelBorderWidth by NumberSetting("Panel Border Width", 2, 0, 6, 1, desc = "Default outline width for every Floyd border+background panel.")
+    val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a frosted backdrop behind every Floyd panel.")
+    val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Strength of the frosted backdrop behind Floyd panels.")
+
     private var lastAppliedTitle: String? = null
     private var lastAppliedBorderless = false
     private var savedWindowedX = -1
@@ -46,7 +52,11 @@ object FloydRender : Module(
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
         "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" },
-        "hudCornerRadius" to hudCornerRadius
+        "hudCornerRadius" to hudCornerRadius,
+        "panelCornerRadius" to panelCornerRadius,
+        "panelBorderWidth" to panelBorderWidth,
+        "panelBlur" to panelBlur,
+        "panelBlurStrength" to panelBlurStrength
     )
 
     private fun applyWindowTitle() {

@@ -47,7 +47,6 @@ object FloydPlayerEsp : Module(
     // exactly like the ESP box (it is a physical, constant-world-size object — like a real nametag).
     private val overheadScale by NumberSetting("Overhead Scale", 1.0f, 0.25f, 5.0f, 0.05f, desc = "Multiplier on the overhead nameplate's world size. It still shrinks with distance like a real nametag.")
     private val overheadPadding by NumberSetting("Overhead Padding", 4, 0, 16, 1, desc = "Internal padding between the overhead panel border and its contents.")
-    private val overheadCornerRadius by NumberSetting("Overhead Corner Radius", 4, 0, 16, 1, desc = "Rounded corner radius for the overhead nameplate panel.")
     private val overheadFade by BooleanSetting("Overhead Fade", false, desc = "Fades the overhead panel border between the ESP color and a second color.")
     private val overheadFadeColor by ColorSetting("Overhead Fade Color", Color(0xFF55FFFF.toInt()), desc = "Secondary color for the overhead border fade.")
 
@@ -183,7 +182,7 @@ object FloydPlayerEsp : Module(
         graphics.pose().scale(drawScale, drawScale)
 
         val border = HudPanel.circularBorderColors(color, overheadFade, overheadFadeColor, 0f)
-        HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, border, cornerRadius = overheadCornerRadius.toFloat())
+        HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, border)
 
         val rowHeight = if (items.isNotEmpty()) ICON_SIZE else mc.font.lineHeight
         val rowTop = top + pad

@@ -16,6 +16,6 @@ object FloydHud : Module(
 
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
-        "cornerRadius" to FloydRender.hudCornerRadius
+        "cornerRadius" to FloydRender.panelCornerRadius
     )
 }
