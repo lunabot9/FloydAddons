@@ -242,16 +242,22 @@ class ModuleConfig internal constructor(file: File) {
                 "Panel Border Width" to MovedKey("panel style", "Panel Border Width"),
                 "Panel Blur" to MovedKey("panel style", "Panel Blur"),
                 "Panel Blur Strength" to MovedKey("panel style", "Panel Blur Strength"),
-                "Full Chat Chroma" to MovedKey("panel style", "Full Chat Chroma")
+                "Full Chat Chroma" to MovedKey("panel style", "Full Chat Chroma"),
+                // Global custom font split off onto its own Font module; the raw-path "Custom Font File"
+                // becomes the picker's selected-file "Font" key.
+                "Global Custom Font" to MovedKey("font", "Global Custom Font"),
+                "Custom Font File" to MovedKey("font", "Font")
             ),
             // General is the renamed Render module; the panel*/Full Chat Chroma settings moved off it
-            // onto Panel Style.
+            // onto Panel Style, and the global-font settings moved onto the Font module.
             "general" to mapOf(
                 "Panel Corner Radius" to MovedKey("panel style", "Panel Corner Radius"),
                 "Panel Border Width" to MovedKey("panel style", "Panel Border Width"),
                 "Panel Blur" to MovedKey("panel style", "Panel Blur"),
                 "Panel Blur Strength" to MovedKey("panel style", "Panel Blur Strength"),
-                "Full Chat Chroma" to MovedKey("panel style", "Full Chat Chroma")
+                "Full Chat Chroma" to MovedKey("panel style", "Full Chat Chroma"),
+                "Global Custom Font" to MovedKey("font", "Global Custom Font"),
+                "Custom Font File" to MovedKey("font", "Font")
             ),
             // Custom Scoreboard owned per-panel scoreboard cosmetics before they were unified.
             "custom scoreboard" to mapOf(

@@ -1,0 +1,173 @@
+package gg.floyd.features.impl.render
+
+import gg.floyd.FloydAddonsMod
+import gg.floyd.clickgui.settings.impl.ActionSetting
+import gg.floyd.clickgui.settings.impl.BooleanSetting
+import gg.floyd.clickgui.settings.impl.StringSetting
+import gg.floyd.features.Category
+import gg.floyd.features.Module
+import gg.floyd.features.ModuleManager
+import gg.floyd.utils.modMessage
+import gg.floyd.utils.openDirectory
+import net.minecraft.resources.Identifier
+import java.nio.file.Files
+import java.nio.file.Path
+
+/**
+ * Owns the global custom-font toggle and the selected .ttf, mirroring the cosmetic file-browser
+ * modules ([gg.floyd.features.impl.cosmetic.FloydSkin] etc.): a `fonts/` dir under the FloydAddons
+ * config dir is scanned for .ttf files, with Previous/Next/List/Open Folder/Reload actions and a
+ * selected-file [StringSetting].
+ *
+ * The actual font application stays in [gg.floyd.utils.FloydFontProviders] /
+ * [gg.floyd.mixin.mixins.FloydDefaultFontMixin]; this module just exposes the toggle and the
+ * resolved .ttf path they read. Everything here is crash-safe: an invalid/missing selection resolves
+ * to null so the provider path falls back to the bundled (and ultimately vanilla) font, and nothing
+ * touches GL/NVGRenderer at init or config load.
+ */
+object FloydFont : Module(
+    name = "Font",
+    category = Category.RENDER,
+    description = "Global custom font: toggle the bundled font override and pick a .ttf from config/floydaddons/fonts.",
+    toggled = true,
+) {
+    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Overrides the vanilla game font with Floyd's bundled font. Reload resources (F3+T) to apply.")
+    var selectedFont by StringSetting("Font", "", 96, desc = "Optional .ttf in config/floydaddons/fonts to use instead of the bundled font. Reload resources (F3+T) to apply.")
+    private val listFonts by ActionSetting("List Fonts", desc = "Prints available .ttf files in chat.") {
+        val fonts = availableFonts()
+        modMessage(if (fonts.isEmpty()) "No custom font .ttf files found." else "Available fonts:\n${fonts.joinToString("\n")}")
+    }
+    private val previousFont by ActionSetting("Previous Font", desc = "Selects the previous available .ttf file.") {
+        cycleFont(-1)
+    }
+    private val nextFont by ActionSetting("Next Font", desc = "Selects the next available .ttf file.") {
+        cycleFont(1)
+    }
+    private val openFontFolder by ActionSetting("Open Font Folder", desc = "Opens config/floydaddons/fonts.") {
+        modMessage(if (openDirectory(fontDir)) "Opened font folder." else "Could not open font folder: $fontDir")
+    }
+    private val reloadFont by ActionSetting("Reload Font", desc = "Reloads font resources to apply the selected .ttf.") {
+        ModuleManager.saveConfigurations()
+        reloadResources()
+        modMessage("Reloading resources to apply font: ${selectedFont.ifBlank { "(bundled)" }}")
+    }
+
+    // Resolved lazily so loading this object's class never forces Minecraft/config init (keeps the
+    // toggle + selected-file reads GL/MC-safe at module init and config load).
+    private val fontDir: Path by lazy { FloydAddonsMod.configFile.toPath().resolve("fonts") }
+    private val bundledFont: Identifier by lazy { Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "font.ttf") }
+    private var defaultExtracted = false
+
+    /** Whether the bundled font should override the vanilla game font. OFF renders with the vanilla font. */
+    @JvmStatic
+    fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont
+
+    /**
+     * Resolved path to the selected .ttf inside `config/floydaddons/fonts`, or null when unset or
+     * the file is missing/unreadable. Crash-safe: any resolution failure returns null so callers
+     * fall back to the bundled font.
+     */
+    @JvmStatic
+    fun customFontPath(): Path? {
+        val name = selectedFont.trim()
+        if (name.isEmpty()) return null
+        return try {
+            val path = fontDir.resolve(name).normalize()
+            // Keep the resolved file inside the fonts dir and verify it is a readable .ttf.
+            if (!path.startsWith(fontDir)) return null
+            if (!name.lowercase().endsWith(".ttf")) return null
+            if (Files.isRegularFile(path) && Files.isReadable(path)) path else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun availableFontFiles(): List<String> = availableFonts()
+
+    fun selectFont(name: String): Boolean {
+        val font = availableFonts().firstOrNull { it.equals(name, ignoreCase = true) } ?: return false
+        selectedFont = font
+        ModuleManager.saveConfigurations()
+        reloadResources()
+        modMessage("Selected font: $selectedFont")
+        return true
+    }
+
+    fun cycleFontFile(direction: Int): Boolean = cycleFont(direction)
+
+    @JvmStatic
+    fun state(): Map<String, Any?> = mapOf(
+        "enabled" to enabled,
+        "globalCustomFont" to globalCustomFont,
+        "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
+        "selectedFont" to selectedFont,
+        "availableFonts" to availableFonts(),
+        "fontDir" to fontDir.toString(),
+        "customFontPath" to customFontPath()?.toString()
+    )
+
+    private fun cycleFont(direction: Int): Boolean {
+        val fonts = availableFonts()
+        if (fonts.isEmpty()) {
+            modMessage("No custom font .ttf files found.")
+            return false
+        }
+        val current = fonts.indexOfFirst { it.equals(selectedFont, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
+        selectedFont = fonts[(current + direction).floorMod(fonts.size)]
+        ModuleManager.saveConfigurations()
+        reloadResources()
+        modMessage("Selected font: $selectedFont")
+        return true
+    }
+
+    private fun ensureExternalDir() {
+        Files.createDirectories(fontDir)
+    }
+
+    /**
+     * Seeds the fonts dir on first scan with the bundled font so the picker is never empty. Pulled
+     * from the resource manager lazily (never at init/config load), so it is GL-safe.
+     */
+    private fun extractDefaultFont() {
+        if (defaultExtracted) return
+        defaultExtracted = true
+        try {
+            ensureExternalDir()
+            val target = fontDir.resolve("inter.ttf")
+            if (Files.exists(target)) return
+            FloydAddonsMod.mc.resourceManager.getResource(bundledFont).ifPresent { resource ->
+                resource.open().use { input -> Files.copy(input, target) }
+            }
+        } catch (_: Exception) {
+            // Seeding is best-effort; an empty fonts dir simply falls back to the bundled font.
+        }
+    }
+
+    private fun availableFonts(): List<String> {
+        return try {
+            extractDefaultFont()
+            ensureExternalDir()
+            Files.list(fontDir).use { stream ->
+                stream.filter { it.isRegularFileSafe() && it.fileName.toString().lowercase().endsWith(".ttf") }
+                    .map { it.fileName.toString() }
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .toList()
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    /** Triggers a resource reload (F3+T equivalent) so the new font provider list is rebuilt. */
+    private fun reloadResources() {
+        try {
+            FloydAddonsMod.mc.reloadResourcePacks()
+        } catch (_: Exception) {
+            // Resources will pick up the new selection on the next manual F3+T if this fails.
+        }
+    }
+
+    private fun Path.isRegularFileSafe(): Boolean = Files.isRegularFile(this)
+
+    private fun Int.floorMod(modulus: Int): Int = ((this % modulus) + modulus) % modulus
+}

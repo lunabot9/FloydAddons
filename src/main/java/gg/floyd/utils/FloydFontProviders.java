@@ -7,7 +7,7 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import gg.floyd.FloydAddonsMod;
-import gg.floyd.features.impl.render.FloydRender;
+import gg.floyd.features.impl.render.FloydFont;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.font.providers.FreeTypeUtil;
 import net.minecraft.client.gui.font.providers.GlyphProviderDefinition;
@@ -62,8 +62,8 @@ public final class FloydFontProviders {
         if (loaded == null || loaded.isEmpty()) return loaded;
         if (!fontId.equals(Minecraft.DEFAULT_FONT)) return loaded;
 
-        boolean enabled = FloydRender.isGlobalCustomFontEnabled();
-        Path byoPath = FloydRender.customFontPath();
+        boolean enabled = FloydFont.isGlobalCustomFontEnabled();
+        Path byoPath = FloydFont.customFontPath();
 
         List<Pair<?, GlyphProviderDefinition.Conditional>> result = new ArrayList<>(loaded.size());
         for (Pair<?, GlyphProviderDefinition.Conditional> entry : loaded) {
