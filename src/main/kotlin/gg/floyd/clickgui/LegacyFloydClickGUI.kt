@@ -100,7 +100,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private const val rowHeight = 18
     private const val rowGap = 5
     private const val styleButtonWidth = 64
-    private const val clickGuiButtonWidth = 74
     private const val v2ButtonWidth = 74
     private const val chromaSegmentsPerEdge = 16
     private const val colorPickerWidth = 360
@@ -240,7 +239,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private var dragStartPanelY = 0
     private var styleButton = Rect.ZERO
     private var hudButton = Rect.ZERO
-    private var clickGuiButton = Rect.ZERO
     private var v2Button = Rect.ZERO
     private var linkBounds = Rect.ZERO
     private var labelBounds = emptyList<Rect>()
@@ -388,19 +386,17 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             activeModulePopupColorDrag = null
             activeModulePopupString = null
             modulePopupStringBuffer = ""
-            if (value != Page.CLICK_GUI) {
-                modulePopup = null
-                modulePopupMappingFocusedField = null
-                modulePopupMappingOriginalBuffer = ""
-                modulePopupMappingFakeBuffer = ""
-            }
+            modulePopup = null
+            modulePopupMappingFocusedField = null
+            modulePopupMappingOriginalBuffer = ""
+            modulePopupMappingFakeBuffer = ""
             nickInputBounds = Rect.ZERO
             nickInputFocused = value == Page.NICK_HIDER
             if (width > 0 && height > 0) {
                 panelX = (panelX + (previousWidth - panelWidth()) / 2).coerceIn(0, max(0, width - panelWidth()))
                 panelY = (panelY + (previousHeight - panelHeight()) / 2).coerceIn(0, max(0, height - panelHeight()))
             }
-            if (value == Page.HUB || value == Page.CLICK_GUI) pageReturnOverrides.clear()
+            if (value == Page.HUB) pageReturnOverrides.clear()
         }
 
     override fun init() {
@@ -527,8 +523,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         "doneButton" to rectState(pageDoneButton),
         "hubButtons" to mapOf(
             "editHud" to rectState(hudButton),
-            "clickGui" to rectState(clickGuiButton),
-            "v2" to rectState(v2Button),
+            "clickGui" to rectState(v2Button),
             "editUi" to rectState(styleButton)
         ),
         "textEditor" to textEditor?.title,
@@ -737,7 +732,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     )
 
     private fun debugPageRows(): List<Map<String, Any?>> {
-        if (currentPage == Page.HUB || currentPage == Page.CLICK_GUI) return emptyList()
+        if (currentPage == Page.HUB) return emptyList()
         val contentWidth = 240
         val contentLeft = panelX + (panelWidth() - contentWidth) / 2
         val contentTop = panelY + 26
@@ -769,12 +764,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         }
         val alpha = if (closing) 1f - closeProgress else ((now - openStartMs) / fadeDurationMs.toFloat()).coerceIn(0f, 1f)
         if (alpha <= 0f) return
-        if (currentPage == Page.CLICK_GUI) {
-            context.fill(0, 0, width, height, applyAlpha(0x88000000.toInt(), alpha))
-            drawModuleBrowserPage(context, alpha)
-            super.render(context, mouseX, mouseY, deltaTicks)
-            return
-        }
         val scale = lerp(0.85f, 1f, alpha)
         val centerX = panelX + panelWidth() / 2
         val centerY = panelY + panelHeight() / 2
@@ -797,17 +786,14 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
         if (currentPage == Page.HUB) {
             hudButton = Rect(left + 6, top + 4, styleButtonWidth, buttonHeight)
-            clickGuiButton = Rect(left + 6, hudButton.bottom + 4, clickGuiButtonWidth, buttonHeight)
-            v2Button = Rect(left + 6, clickGuiButton.bottom + 4, v2ButtonWidth, buttonHeight)
+            v2Button = Rect(left + 6, hudButton.bottom + 4, v2ButtonWidth, buttonHeight)
             styleButton = Rect(right - styleButtonWidth - 6, top + 4, styleButtonWidth, buttonHeight)
             drawButton(context, hudButton, "Edit HUD", alpha)
-            drawButton(context, clickGuiButton, "ClickGUI", alpha)
-            drawButton(context, v2Button, "Open V2 UI", alpha)
+            drawButton(context, v2Button, "ClickGUI", alpha)
             drawButton(context, styleButton, "Edit UI", alpha)
             drawTitle(context, centerX, top + scaleY(20), alpha)
         } else {
             hudButton = Rect.ZERO
-            clickGuiButton = Rect.ZERO
             v2Button = Rect.ZERO
             styleButton = Rect.ZERO
         }
@@ -835,7 +821,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     override fun onClose() {
         if (closing) return
         finishModulePopupStringEdit()
-        if (currentPage == Page.CLICK_GUI) saveModuleBrowserPanelStates()
         ModuleManager.saveConfigurations()
         closing = true
         closeStartMs = System.currentTimeMillis()
@@ -945,19 +930,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             points.firstOrNull { point -> handleGuiStyleClick(point.first, point.second) }?.let { return true }
         }
 
-        if (currentPage == Page.CLICK_GUI && (button == 0 || button == 1)) {
-            points.firstOrNull { point -> handleModulePopupClick(point.first, point.second, button) }?.let { return true }
-            if (button == 0 && modulePopup != null && points.any { point -> !modulePopupBoundsContains(point.first, point.second) }) {
-                closeModulePopup()
-            }
-            points.firstOrNull { point -> handleModuleBrowserChromeClick(point.first, point.second, button) }?.let { return true }
-            points.firstOrNull { point -> handleModuleBrowserClick(point.first, point.second, button) }?.let { return true }
-            if (button == 0 && modulePopup != null) {
-                closeModulePopup()
-                return true
-            }
-        }
-
         when {
             button == 0 && points.any { styleButton.contains(it.first, it.second) } -> {
                 currentPage = Page.GUI_STYLE
@@ -965,10 +937,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
             button == 0 && points.any { hudButton.contains(it.first, it.second) } -> {
                 mc.setScreen(HudManager)
-                return true
-            }
-            button == 0 && points.any { clickGuiButton.contains(it.first, it.second) } -> {
-                currentPage = Page.CLICK_GUI
                 return true
             }
             button == 0 && points.any { v2Button.contains(it.first, it.second) } -> {
@@ -1151,16 +1119,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
             return true
         }
-        if (currentPage == Page.CLICK_GUI && moduleBrowserSearchFocused) {
-            when (keyEvent.key) {
-                GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> moduleBrowserSearchFocused = false
-                GLFW.GLFW_KEY_BACKSPACE -> if (moduleBrowserSearchQuery.isNotEmpty()) moduleBrowserSearchQuery = moduleBrowserSearchQuery.dropLast(1)
-                GLFW.GLFW_KEY_DELETE -> moduleBrowserSearchQuery = ""
-                else -> return true
-            }
-            clampModuleBrowserScrolls()
-            return true
-        }
         colorPicker?.let { picker ->
             when (keyEvent.key) {
                 GLFW.GLFW_KEY_ESCAPE -> colorPicker = null
@@ -1236,13 +1194,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             } else {
                 modulePopupMappingFakeBuffer = appended.take(32)
             }
-            return true
-        }
-        if (currentPage == Page.CLICK_GUI && moduleBrowserSearchFocused) {
-            if (!characterEvent.isAllowedChatCharacter) return true
-            val appended = moduleBrowserSearchQuery + characterEvent.codepointAsString()
-            moduleBrowserSearchQuery = appended.take(64)
-            clampModuleBrowserScrolls()
             return true
         }
         colorPicker?.let { picker ->
@@ -1346,7 +1297,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun currentMouseHitRects(): List<Rect> = buildList {
         add(styleButton)
         add(hudButton)
-        add(clickGuiButton)
         add(v2Button)
         add(linkBounds)
         add(pageBackButton)
@@ -1434,36 +1384,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             updateCosmeticSlider(activeCosmeticSlider ?: return true, clickPoints(mouseButtonEvent).first().first)
             return true
         }
-        if (currentPage == Page.CLICK_GUI && mouseButtonEvent.button() == 0 && activeModulePopupSlider != null) {
-            updateModulePopupSlider(activeModulePopupSlider ?: return true, clickPoints(mouseButtonEvent).first().first)
-            return true
-        }
-        if (currentPage == Page.CLICK_GUI && mouseButtonEvent.button() == 0 && activeModulePopupColorDrag != null) {
-            val point = clickPoints(mouseButtonEvent).first()
-            updateModulePopupColorDrag(point.first, point.second)
-            return true
-        }
-        draggingModuleBrowserCategory?.let { category ->
-            if (currentPage == Page.CLICK_GUI && mouseButtonEvent.button() == 0) {
-                val state = moduleBrowserPanelState(category)
-                val point = clickPoints(mouseButtonEvent).first()
-                val panelWidth = moduleBrowserPanelWidth(category)
-                state.x = (point.first.roundToInt() - moduleBrowserDragOffsetX).coerceIn(0, max(0, width - panelWidth))
-                state.y = (point.second.roundToInt() - moduleBrowserDragOffsetY).coerceIn(moduleBrowserSearchHeight + 6, max(moduleBrowserSearchHeight + 6, height - moduleBrowserHeaderHeight))
-                return true
-            }
-        }
-        if (draggingModulePopup && currentPage == Page.CLICK_GUI && mouseButtonEvent.button() == 0) {
-            val popup = modulePopup ?: return true
-            val point = clickPoints(mouseButtonEvent).first()
-            popup.bounds = Rect(
-                (point.first.roundToInt() - modulePopupDragOffsetX).coerceIn(0, max(0, width - popup.bounds.width)),
-                (point.second.roundToInt() - modulePopupDragOffsetY).coerceIn(0, max(0, height - popup.bounds.height)),
-                popup.bounds.width,
-                popup.bounds.height
-            )
-            return true
-        }
         if (dragging && mouseButtonEvent.button() == 0) {
             panelX = (dragStartPanelX + (mouseButtonEvent.x() - dragStartMouseX).roundToInt()).coerceIn(0, max(0, width - panelWidth()))
             panelY = (dragStartPanelY + (mouseButtonEvent.y() - dragStartMouseY).roundToInt()).coerceIn(0, max(0, height - panelHeight()))
@@ -1525,38 +1445,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, horizontalAmount: Double, verticalAmount: Double): Boolean {
         if (currentPage == Page.HUB || textEditor != null || colorPicker != null) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
-        if (currentPage == Page.CLICK_GUI) {
-            modulePopup?.let { popup ->
-                if (popup.bounds.contains(mouseX, mouseY)) {
-                    val extra = expandedModulePopupExtra
-                    if (extra != null && modulePopupExpandedExtraContentRows > modulePopupExpandedExtraVisibleRows) {
-                        val maxScroll = modulePopupExpandedExtraContentRows - modulePopupExpandedExtraVisibleRows
-                        val next = modulePopupExtraScroll(extra) - verticalAmount.roundToInt()
-                        modulePopupExtraScrolls[extra] = next.coerceIn(0, maxScroll)
-                    }
-                    return true
-                }
-            }
-            val extra = expandedModulePopupExtra
-            if (
-                extra != null &&
-                modulePopupExpandedExtraBounds.contains(mouseX, mouseY) &&
-                modulePopupExpandedExtraContentRows > modulePopupExpandedExtraVisibleRows
-            ) {
-                val maxScroll = modulePopupExpandedExtraContentRows - modulePopupExpandedExtraVisibleRows
-                val next = modulePopupExtraScroll(extra) - verticalAmount.roundToInt()
-                modulePopupExtraScrolls[extra] = next.coerceIn(0, maxScroll)
-                return true
-            }
-            val header = moduleBrowserHeaderHitEntries.firstOrNull { hit ->
-                val state = moduleBrowserPanelState(hit.category)
-                val height = moduleBrowserPanelHeight(hit.category)
-                mouseX >= state.x && mouseX <= state.x + moduleBrowserPanelWidth(hit.category) && mouseY >= state.y && mouseY <= state.y + height
-            } ?: return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
-            val state = moduleBrowserPanelState(header.category)
-            state.scroll = (state.scroll - (verticalAmount * moduleBrowserRowHeight * 2).roundToInt()).coerceIn(0, moduleBrowserMaxScroll(header.category))
-            return true
-        }
         if (currentPage == Page.SKIN && skinDropdownOpen && skinDropdownList.contains(mouseX, mouseY)) {
             val maxScroll = max(0, FloydSkin.availableSkinFiles().size - skinDropdownMaxVisible)
             skinDropdownScroll = (skinDropdownScroll - verticalAmount.roundToInt()).coerceIn(0, maxScroll)
@@ -1608,7 +1496,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.HIDERS -> hidersPanelWidth
         Page.NICK_HIDER -> nickPanelWidth
         Page.GUI_STYLE -> guiStylePanelWidth
-        Page.CLICK_GUI -> width
+        Page.PVP -> cameraPanelWidth
     }
 
     private fun panelHeight(): Int = when (currentPage) {
@@ -1626,7 +1514,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.HIDERS -> hidersPanelHeight
         Page.NICK_HIDER -> nickPanelHeight
         Page.GUI_STYLE -> guiStylePanelHeight
-        Page.CLICK_GUI -> height
+        Page.PVP -> cameraPanelHeight
         Page.ANIMATIONS -> animationsPanelHeight
         Page.CAMERA -> cameraPanelHeight
     }
@@ -1637,7 +1525,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             "Render" -> Page.RENDER
             "Neck Hider" -> Page.NICK_HIDER
             "Camera" -> Page.CAMERA
-            "PvP" -> Page.CLICK_GUI
+            "PvP" -> Page.PVP
             else -> Page.HUB
         }
     }
@@ -1697,10 +1585,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         }
         if (currentPage == Page.GUI_STYLE) {
             drawGuiStylePage(context, left, top, bottom, alpha)
-            return
-        }
-        if (currentPage == Page.CLICK_GUI) {
-            drawModuleBrowserPage(context, alpha)
             return
         }
         val title = pageTitle(currentPage)
@@ -4617,7 +4501,25 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun rowsFor(page: Page): List<LegacyRow> = when (page) {
         Page.HUB -> emptyList()
         Page.GUI_STYLE -> emptyList()
-        Page.CLICK_GUI -> emptyList()
+        Page.PVP -> listOf(
+            headerRow("Player ESP"),
+            toggleModuleRow(FloydPlayerEsp, "Player ESP"),
+            selectorRow(FloydPlayerEsp, "Display", "Display", listOf("Overhead", "HUD List", "Both", "None")),
+            colorRow(FloydPlayerEsp, "Color", "Color"),
+            toggleSettingRow(FloydPlayerEsp, "Boxes", "Boxes", RowLayout.LEFT),
+            toggleSettingRow(FloydPlayerEsp, "Tracers", "Tracers", RowLayout.RIGHT),
+            toggleSettingRow(FloydPlayerEsp, "Show Health", "Show Health", RowLayout.LEFT),
+            toggleSettingRow(FloydPlayerEsp, "Show Equipment", "Show Equipment", RowLayout.RIGHT),
+            actionSettingRow(FloydPlayerEsp, "Stalk All Players", "Stalk All Players"),
+            headerRow("Overhead"),
+            numberRow(FloydPlayerEsp, "Overhead Scale", "Scale", RowLayout.LEFT) { twoDecimal(it) },
+            numberRow(FloydPlayerEsp, "Overhead Padding", "Padding", RowLayout.RIGHT) { it.roundToInt().toString() },
+            toggleSettingRow(FloydPlayerEsp, "Overhead Fade", "Fade"),
+            colorRow(FloydPlayerEsp, "Overhead Fade Color", "Fade Color"),
+            headerRow("Auto Totem"),
+            toggleModuleRow(FloydAutoTotem, "Auto Totem", RowLayout.LEFT),
+            numberRow(FloydAutoTotem, "Delay", "Delay", RowLayout.RIGHT) { "${oneDecimal(it)}s" }
+        )
         Page.CAPE -> emptyList()
         Page.CONE_HAT -> emptyList()
         Page.XRAY -> emptyList()
@@ -6135,7 +6037,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         modulePopupMobFilterHitEntries = emptyList()
         modulePopupNameMappingHitEntries = emptyList()
         expandedModulePopupExtra = null
-        pageReturnOverrides[page] = Page.CLICK_GUI
+        pageReturnOverrides[page] = Page.HUB
         currentPage = page
     }
 
@@ -6372,7 +6274,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.PLAYER_SIZE -> "Player Size"
         Page.NAME_MAPPINGS -> "Name Mappings"
         Page.GUI_STYLE -> "GUI Style"
-        Page.CLICK_GUI -> "ClickGUI"
+        Page.PVP -> "PvP"
     }
 
     private fun pageParent(page: Page): Page = pageReturnOverrides[page] ?: when (page) {
@@ -6381,7 +6283,6 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.SKIN, Page.CAPE, Page.CONE_HAT -> Page.COSMETIC
         Page.PLAYER_SIZE, Page.NAME_MAPPINGS -> Page.NICK_HIDER
         Page.GUI_STYLE -> Page.HUB
-        Page.CLICK_GUI -> Page.HUB
         else -> Page.HUB
     }
 
@@ -6596,7 +6497,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         PLAYER_SIZE,
         NAME_MAPPINGS,
         GUI_STYLE,
-        CLICK_GUI
+        PVP
     }
 
     private enum class RowKind {
