@@ -20,6 +20,7 @@ object FloydRender : Module(
     val customTimeValue by NumberSetting("Time", 50f, 0f, 100f, 1f, desc = "World time slider used by custom time.")
     var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
     val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
+    val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
 
     private var lastAppliedTitle: String? = null
     private var lastAppliedBorderless = false
@@ -45,6 +46,9 @@ object FloydRender : Module(
     fun shouldUseCustomTime(): Boolean = enabled && customTime
 
     @JvmStatic
+    fun shouldUseFullChatChroma(): Boolean = enabled && fullChatChroma
+
+    @JvmStatic
     fun applyCustomTimeOverride() {
         val levelData = mc.level?.levelData ?: return
         val ticks = customTimeTicks(customTimeValue)
@@ -62,6 +66,8 @@ object FloydRender : Module(
         "customTime" to customTime,
         "customTimeValue" to customTimeValue,
         "shouldUseCustomTime" to shouldUseCustomTime(),
+        "fullChatChroma" to fullChatChroma,
+        "shouldUseFullChatChroma" to shouldUseFullChatChroma(),
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
         "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" }

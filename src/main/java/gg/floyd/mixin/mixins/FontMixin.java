@@ -1,6 +1,7 @@
 package gg.floyd.mixin.mixins;
 
 import gg.floyd.features.impl.render.CustomNameReplacer;
+import gg.floyd.utils.ChatChroma;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
@@ -20,8 +21,10 @@ public class FontMixin {
 
     @ModifyVariable(method = "prepareText(Lnet/minecraft/util/FormattedCharSequence;FFIZZI)Lnet/minecraft/client/gui/Font$PreparedText;", at = @At("HEAD"), argsOnly = true)
     private FormattedCharSequence onPrepareTextSequence(FormattedCharSequence text) {
-        if (!CustomNameReplacer.isEnabled()) return text;
-        return CustomNameReplacer.replaceSequenceIfNeeded(text);
+        if (CustomNameReplacer.isEnabled()) {
+            text = CustomNameReplacer.replaceSequenceIfNeeded(text);
+        }
+        return ChatChroma.INSTANCE.transform(text);
     }
 
     @ModifyVariable(method = "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"), argsOnly = true)

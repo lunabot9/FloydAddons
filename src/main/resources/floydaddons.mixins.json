@@ -18,6 +18,7 @@
     "mixins.CameraMixin",
     "mixins.CameraMouseMixin",
     "mixins.CameraTypeMixin",
+    "mixins.ChatComponentMixin",
     "mixins.ClientPacketListenerMixin",
     "mixins.CustomFontMixin",
     "mixins.FontMixin",
