@@ -16,20 +16,10 @@ import kotlin.math.round
 @AlwaysActive
 object ClickGUIModule : Module(
     name = "Click GUI",
-    description = "Allows you to customize the UI.",
-    key = GLFW.GLFW_KEY_RIGHT_SHIFT
+    description = "Allows you to customize the UI."
 ) {
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
     val clickGUIColor by ColorSetting("Color", Color(50, 150, 220), desc = "The color of the Click GUI.")
-    val buttonTextColor by ColorSetting("Button Text Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Legacy Floyd GUI button text color (toggle chroma inside the picker).")
-    val buttonTextFadeColor by ColorSetting("Button Text Fade Color", Color(0xFFFF55FF.toInt()), desc = "Legacy Floyd GUI button text fade color.")
-    val buttonTextFade by BooleanSetting("Button Text Fade", false, desc = "Fades legacy Floyd GUI button text between two colors.")
-    val buttonBorderColor by ColorSetting("Button Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Legacy Floyd GUI button border color (toggle chroma inside the picker).")
-    val buttonBorderFadeColor by ColorSetting("Button Border Fade Color", Color(0xFF55FFFF.toInt()), desc = "Legacy Floyd GUI button border fade color.")
-    val buttonBorderFade by BooleanSetting("Button Border Fade", false, desc = "Fades legacy Floyd GUI button borders between two colors.")
-    val guiBorderColor by ColorSetting("GUI Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Legacy Floyd GUI panel border color (toggle chroma inside the picker).")
-    val guiBorderFadeColor by ColorSetting("GUI Border Fade Color", Color(0xFF5555FF.toInt()), desc = "Legacy Floyd GUI panel border fade color.")
-    val guiBorderFade by BooleanSetting("GUI Border Fade", false, desc = "Fades legacy Floyd GUI panel borders between two colors.")
 
     val roundedPanelBottom by BooleanSetting("Rounded Panel Bottoms", true, desc = "Whether to extend panels to make them rounded at the bottom.")
     private val openGuiKey by KeybindSetting("Open GUI Key", GLFW.GLFW_KEY_N, desc = "FloydAddons alternate GUI key.").onPress {
@@ -53,18 +43,6 @@ object ClickGUIModule : Module(
         "enabled" to enabled,
         "chatNotifications" to enableNotification,
         "color" to "#${clickGUIColor.hex()}",
-        "legacyButtonTextColor" to "#${buttonTextColor.hex()}",
-        "legacyButtonTextChroma" to buttonTextColor.chroma,
-        "legacyButtonTextFadeColor" to "#${buttonTextFadeColor.hex()}",
-        "legacyButtonTextFade" to buttonTextFade,
-        "legacyButtonBorderColor" to "#${buttonBorderColor.hex()}",
-        "legacyButtonBorderChroma" to buttonBorderColor.chroma,
-        "legacyButtonBorderFadeColor" to "#${buttonBorderFadeColor.hex()}",
-        "legacyButtonBorderFade" to buttonBorderFade,
-        "legacyGuiBorderColor" to "#${guiBorderColor.hex()}",
-        "legacyGuiBorderChroma" to guiBorderColor.chroma,
-        "legacyGuiBorderFadeColor" to "#${guiBorderFadeColor.hex()}",
-        "legacyGuiBorderFade" to guiBorderFade,
         "roundedPanelBottoms" to roundedPanelBottom,
         "panelCount" to panelSetting.size,
         "panels" to panelSetting.mapValues { (_, panel) ->

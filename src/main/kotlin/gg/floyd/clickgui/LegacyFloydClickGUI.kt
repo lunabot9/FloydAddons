@@ -46,6 +46,7 @@ import gg.floyd.features.impl.player.FloydPlayerSize
 import gg.floyd.features.impl.pvp.FloydAutoTotem
 import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.render.ClickGUIModule
+import gg.floyd.features.impl.render.LegacyClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
@@ -4001,9 +4002,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 listOfNotNull(stringSetting(FloydRender, "Instance Title"))
             LegacyModuleBrowserKind.RENDER_GUI_STYLE ->
                 listOfNotNull(
-                    colorSetting(ClickGUIModule, "Button Text Color"),
-                    colorSetting(ClickGUIModule, "Button Border Color"),
-                    colorSetting(ClickGUIModule, "GUI Border Color")
+                    colorSetting(LegacyClickGUIModule, "Button Text Color"),
+                    colorSetting(LegacyClickGUIModule, "Button Border Color"),
+                    colorSetting(LegacyClickGUIModule, "GUI Border Color")
                 )
             LegacyModuleBrowserKind.RENDER_ANIMATIONS ->
                 popupVisibleSettings(FloydAnimations)
@@ -4340,17 +4341,17 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
     private fun modulePopupFadeColorSetting(setting: ColorSetting): ColorSetting? =
         when (setting.name) {
-            "Button Text Color" -> colorSetting(ClickGUIModule, "Button Text Fade Color")
-            "Button Border Color" -> colorSetting(ClickGUIModule, "Button Border Fade Color")
-            "GUI Border Color" -> colorSetting(ClickGUIModule, "GUI Border Fade Color")
+            "Button Text Color" -> colorSetting(LegacyClickGUIModule, "Button Text Fade Color")
+            "Button Border Color" -> colorSetting(LegacyClickGUIModule, "Button Border Fade Color")
+            "GUI Border Color" -> colorSetting(LegacyClickGUIModule, "GUI Border Fade Color")
             else -> null
         }
 
     private fun modulePopupFadeToggleSetting(setting: ColorSetting): BooleanSetting? =
         when (setting.name) {
-            "Button Text Color" -> booleanSetting(ClickGUIModule, "Button Text Fade")
-            "Button Border Color" -> booleanSetting(ClickGUIModule, "Button Border Fade")
-            "GUI Border Color" -> booleanSetting(ClickGUIModule, "GUI Border Fade")
+            "Button Text Color" -> booleanSetting(LegacyClickGUIModule, "Button Text Fade")
+            "Button Border Color" -> booleanSetting(LegacyClickGUIModule, "Button Border Fade")
+            "GUI Border Color" -> booleanSetting(LegacyClickGUIModule, "GUI Border Fade")
             else -> null
         }
 
@@ -4517,7 +4518,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 moduleEntry(FloydCustomScoreboard),
                 LegacyModuleBrowserEntry(FloydRender, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
                 LegacyModuleBrowserEntry(FloydRender, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
-                LegacyModuleBrowserEntry(ClickGUIModule, "GUI Style", LegacyModuleBrowserKind.RENDER_GUI_STYLE),
+                LegacyModuleBrowserEntry(LegacyClickGUIModule, "GUI Style", LegacyModuleBrowserKind.RENDER_GUI_STYLE),
                 LegacyModuleBrowserEntry(FloydAnimations, "Attack Animation", LegacyModuleBrowserKind.RENDER_ANIMATIONS)
             )
             Category.HIDERS -> listOf(
@@ -4599,7 +4600,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun moduleSettingsPage(module: Module): Page? = when (module) {
-        ClickGUIModule -> Page.GUI_STYLE
+        LegacyClickGUIModule -> Page.GUI_STYLE
         FloydRender -> Page.RENDER
         FloydXray -> Page.XRAY
         FloydAnimations -> Page.ANIMATIONS
@@ -4894,15 +4895,15 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun openStyleColorEditor(target: StyleTarget) {
-        val setting = colorSetting(ClickGUIModule, target.colorSetting) ?: return
-        val fadeSetting = colorSetting(ClickGUIModule, target.fadeColorSetting)
+        val setting = colorSetting(LegacyClickGUIModule, target.colorSetting) ?: return
+        val fadeSetting = colorSetting(LegacyClickGUIModule, target.fadeColorSetting)
         val hsb = RGBtoHSB(setting.value.red, setting.value.green, setting.value.blue, FloatArray(3))
         val fade = fadeSetting?.value ?: setting.value
         val fadeHsb = RGBtoHSB(fade.red, fade.green, fade.blue, FloatArray(3))
         textEditor = null
         colorPicker = ColorPickerEditor(
             title = target.label,
-            module = ClickGUIModule,
+            module = LegacyClickGUIModule,
             settingName = target.colorSetting,
             chromaSettingName = null,
             originalColor = setting.value.copy(),
@@ -4916,7 +4917,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             fadeSettingName = target.fadeColorSetting,
             fadeEnabledSettingName = target.fadeSetting,
             originalFadeColor = fade.copy(),
-            originalFadeEnabled = booleanSetting(ClickGUIModule, target.fadeSetting)?.enabled ?: false,
+            originalFadeEnabled = booleanSetting(LegacyClickGUIModule, target.fadeSetting)?.enabled ?: false,
             fadeHue = fadeHsb[0],
             fadeSaturation = fadeHsb[1],
             fadeBrightness = fadeHsb[2]
@@ -6530,21 +6531,21 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun legacyTextColor(offset: Float, alpha: Float): Int = applyAlpha(legacyStyleColor(StyleTarget.TEXT, offset), alpha)
 
     private fun legacyStyleColor(target: StyleTarget, offset: Float): Int {
-        val colorSetting = colorSetting(ClickGUIModule, target.colorSetting)
+        val colorSetting = colorSetting(LegacyClickGUIModule, target.colorSetting)
         if (colorSetting?.value?.chroma == true) return chromaColor(offset)
         val base = colorSetting?.value?.rgba ?: 0xFFFFFFFF.toInt()
-        val fade = booleanSetting(ClickGUIModule, target.fadeSetting)?.enabled ?: false
+        val fade = booleanSetting(LegacyClickGUIModule, target.fadeSetting)?.enabled ?: false
         if (!fade) return base
-        val fadeColor = colorSetting(ClickGUIModule, target.fadeColorSetting)?.value?.rgba ?: base
+        val fadeColor = colorSetting(LegacyClickGUIModule, target.fadeColorSetting)?.value?.rgba ?: base
         val t = ((kotlin.math.sin((((System.currentTimeMillis() % 2500L) / 2500f) + offset) * Math.PI * 2.0) + 1.0) / 2.0).toFloat()
         return blendColors(base, fadeColor, t)
     }
 
     private fun legacyStyleState(target: StyleTarget): Map<String, Any?> = mapOf(
-        "color" to "#${colorSetting(ClickGUIModule, target.colorSetting)?.value?.hex(includeAlpha = false)}",
-        "chroma" to (colorSetting(ClickGUIModule, target.colorSetting)?.value?.chroma ?: false),
-        "fadeColor" to "#${colorSetting(ClickGUIModule, target.fadeColorSetting)?.value?.hex(includeAlpha = false)}",
-        "fade" to (booleanSetting(ClickGUIModule, target.fadeSetting)?.enabled ?: false)
+        "color" to "#${colorSetting(LegacyClickGUIModule, target.colorSetting)?.value?.hex(includeAlpha = false)}",
+        "chroma" to (colorSetting(LegacyClickGUIModule, target.colorSetting)?.value?.chroma ?: false),
+        "fadeColor" to "#${colorSetting(LegacyClickGUIModule, target.fadeColorSetting)?.value?.hex(includeAlpha = false)}",
+        "fade" to (booleanSetting(LegacyClickGUIModule, target.fadeSetting)?.enabled ?: false)
     )
 
     private fun chromaColor(offset: Float): Int {
@@ -6694,12 +6695,12 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             LegacyModuleBrowserKind.RENDER_INSTANCE_NAME ->
                 stringSetting(FloydRender, "Instance Title")?.value?.isNotBlank() == true
             LegacyModuleBrowserKind.RENDER_GUI_STYLE ->
-                ClickGUIModule.buttonTextColor.chroma ||
-                    ClickGUIModule.buttonBorderColor.chroma ||
-                    ClickGUIModule.guiBorderColor.chroma ||
-                    booleanSetting(ClickGUIModule, "Button Text Fade")?.enabled == true ||
-                    booleanSetting(ClickGUIModule, "Button Border Fade")?.enabled == true ||
-                    booleanSetting(ClickGUIModule, "GUI Border Fade")?.enabled == true
+                LegacyClickGUIModule.buttonTextColor.chroma ||
+                    LegacyClickGUIModule.buttonBorderColor.chroma ||
+                    LegacyClickGUIModule.guiBorderColor.chroma ||
+                    booleanSetting(LegacyClickGUIModule, "Button Text Fade")?.enabled == true ||
+                    booleanSetting(LegacyClickGUIModule, "Button Border Fade")?.enabled == true ||
+                    booleanSetting(LegacyClickGUIModule, "GUI Border Fade")?.enabled == true
             LegacyModuleBrowserKind.RENDER_ANIMATIONS -> FloydAnimations.enabled
             LegacyModuleBrowserKind.PLAYER_CAPE -> FloydCape.isActive()
             LegacyModuleBrowserKind.PLAYER_CONE_HAT -> FloydConeHat.isActive()

@@ -52,6 +52,7 @@ import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.ClickGUIModule
+import gg.floyd.features.impl.render.LegacyClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.render.FloydXray
@@ -93,7 +94,7 @@ object ModuleManager {
 
     init {
         registerModules(config = ModuleConfig(file = File(FloydAddonsMod.configFile, "floydaddons-config.json")),
-            ClickGUIModule,
+            ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
             FloydRender, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch,
