@@ -7,7 +7,7 @@ import gg.floyd.clickgui.settings.impl.SelectorSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
-import gg.floyd.utils.modMessage
+import gg.floyd.utils.moduleToggle
 import net.minecraft.world.entity.player.Player
 
 internal object FloydPlayerSizeControls {
@@ -27,7 +27,7 @@ object FloydPlayerSize : Module(
     private val togglePlayerSizeAction by ActionSetting("Toggle Player Size", desc = "Matches Floyd's Player Size module toggle.") {
         togglePlayerSize()
         ModuleManager.saveConfigurations()
-        modMessage("Player size ${if (playerSizeActive()) "enabled" else "disabled"}")
+        moduleToggle(name, playerSizeActive())
     }
     var scaleX by NumberSetting("X", 1.0f, -1.0f, 5.0f, 0.05f, desc = "Player X scale.")
     var scaleY by NumberSetting("Y", 1.0f, -1.0f, 5.0f, 0.05f, desc = "Player Y scale.")

@@ -12,6 +12,7 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.utils.modMessage
+import gg.floyd.utils.moduleToggle
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
 import net.minecraft.world.level.block.state.BlockState
@@ -68,7 +69,7 @@ object FloydXray : Module(
     val opacity by NumberSetting("Opacity", 0.3f, 0.05f, 1f, 0.05f, desc = "Opacity for non-opaque x-ray blocks.")
     private val toggleKey by KeybindSetting("Toggle X-Ray", GLFW.GLFW_KEY_UNKNOWN, desc = "Floyd X-Ray toggle key.").onPress {
         val active = toggleXray()
-        modMessage(if (active) "X-Ray enabled" else "X-Ray disabled")
+        if (ClickGUIModule.enableNotification) moduleToggle(name, active)
     }
     private var editorBlock by StringSetting("Opaque Block", "minecraft:glass", 96, desc = "Block ID edited by the buttons below.")
     private val addEditorBlock by ActionSetting("Add Opaque Block", desc = "Adds the block ID above to the opaque x-ray list.") {

@@ -6,7 +6,7 @@ import gg.floyd.clickgui.settings.Setting
 import gg.floyd.clickgui.settings.impl.HUDSetting
 import gg.floyd.events.core.EventBus
 import gg.floyd.features.impl.render.ClickGUIModule
-import gg.floyd.utils.modMessage
+import gg.floyd.utils.moduleToggle
 import net.minecraft.client.gui.GuiGraphics
 import org.lwjgl.glfw.GLFW
 import kotlin.reflect.full.hasAnnotation
@@ -96,7 +96,7 @@ abstract class Module(
      */
     open fun onKeybind() {
         toggle()
-        if (ClickGUIModule.enableNotification) modMessage("$name ${if (enabled) "§aenabled" else "§cdisabled"}.")
+        if (ClickGUIModule.enableNotification) moduleToggle(name, enabled)
     }
 
     /**

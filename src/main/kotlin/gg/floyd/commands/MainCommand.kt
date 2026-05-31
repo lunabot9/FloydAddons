@@ -17,6 +17,7 @@ import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.FloydXray
 import gg.floyd.utils.handlers.schedule
 import gg.floyd.utils.modMessage
+import gg.floyd.utils.moduleToggle
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 
@@ -105,8 +106,8 @@ val mainCommand = Commodore("floydaddons", "floyd", "fa") {
         }
 
         runs {
-            val enabled = FloydXray.toggleXray()
-            modMessage(if (enabled) "X-Ray enabled" else "X-Ray disabled")
+            val active = FloydXray.toggleXray()
+            moduleToggle(FloydXray.name, active)
         }
     }
 
@@ -122,7 +123,7 @@ val mainCommand = Commodore("floydaddons", "floyd", "fa") {
         }
         runs {
             FloydBlockSearch.toggle()
-            modMessage(if (FloydBlockSearch.enabled) "Block Search enabled" else "Block Search disabled")
+            moduleToggle(FloydBlockSearch.name, FloydBlockSearch.enabled)
         }
     }
 
@@ -279,7 +280,7 @@ val mainCommand = Commodore("floydaddons", "floyd", "fa") {
 
         runs {
             FloydMobEsp.toggle()
-            modMessage(mobEspToggleMessage())
+            moduleToggle(FloydMobEsp.name, FloydMobEsp.enabled)
         }
     }
 
@@ -392,7 +393,7 @@ val mainCommand = Commodore("floydaddons", "floyd", "fa") {
 
         runs {
             FloydMobEsp.toggle()
-            modMessage(mobEspToggleMessage())
+            moduleToggle(FloydMobEsp.name, FloydMobEsp.enabled)
         }
     }
 
@@ -471,9 +472,6 @@ private fun showMobEspDebug() {
     FloydMobEsp.enableDebugLabels()
     modMessage(FloydMobEsp.debugSummary())
 }
-
-private fun mobEspToggleMessage(): String =
-    FloydMobEsp.toggleSummary()
 
 val stalkCommand = Commodore("stalk") {
     literal("all").runs {

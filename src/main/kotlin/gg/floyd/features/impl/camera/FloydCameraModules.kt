@@ -5,7 +5,8 @@ import gg.floyd.clickgui.settings.impl.KeybindSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
-import gg.floyd.utils.modMessage
+import gg.floyd.features.impl.render.ClickGUIModule
+import gg.floyd.utils.moduleToggle
 import org.lwjgl.glfw.GLFW
 
 /**
@@ -27,7 +28,7 @@ object FloydFreecam : Module(
     val speed by NumberSetting("Speed", 1.0f, 0.1f, 10.0f, 0.1f, desc = "Movement speed for freecam.")
     private val toggleKey by KeybindSetting("Toggle Freecam", GLFW.GLFW_KEY_UNKNOWN, desc = "Floyd freecam toggle key.").onPress {
         toggle()
-        modMessage(if (enabled) "Freecam enabled." else "Freecam disabled.")
+        if (ClickGUIModule.enableNotification) moduleToggle(name, enabled)
     }
 
     override fun onEnable() {
@@ -49,7 +50,7 @@ object FloydFreelook : Module(
     var distance by NumberSetting("Distance", 4.0f, 1.0f, 20.0f, 0.5f, desc = "Third-person freelook distance.")
     private val toggleKey by KeybindSetting("Toggle Freelook", GLFW.GLFW_KEY_V, desc = "Floyd freelook toggle key.").onPress {
         toggle()
-        modMessage(if (enabled) "Freelook enabled." else "Freelook disabled.")
+        if (ClickGUIModule.enableNotification) moduleToggle(name, enabled)
     }
 
     override fun onEnable() {

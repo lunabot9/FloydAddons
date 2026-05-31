@@ -22,6 +22,7 @@ import gg.floyd.utils.render.drawText
 import gg.floyd.utils.renderBoundingBox
 import gg.floyd.utils.renderPos
 import gg.floyd.utils.modMessage
+import gg.floyd.utils.moduleToggle
 import net.minecraft.resources.Identifier
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.entity.Entity
@@ -45,7 +46,7 @@ object FloydMobEsp : Module(
     val starMobs by BooleanSetting("Star Mobs", false, desc = "Highlights starred mob labels and nearby mobs.")
     private val toggleKey by KeybindSetting("Toggle Mob ESP", GLFW.GLFW_KEY_UNKNOWN, desc = "Floyd Mob ESP toggle key.").onPress {
         toggle()
-        modMessage(toggleSummary())
+        if (ClickGUIModule.enableNotification) moduleToggle(name, enabled)
     }
     private val defaultColor by ColorSetting("Default ESP Color", Colors.ACCENT.copy(), desc = "Default color for Mob ESP tracers and hitboxes (toggle chroma inside the picker).")
     private val stalkColor by ColorSetting("Tracer Color", Colors.ACCENT.copy(), desc = "Color for the stalk tracer (toggle chroma inside the picker).")
