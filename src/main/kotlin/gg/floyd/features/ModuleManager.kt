@@ -25,7 +25,6 @@ import gg.floyd.features.impl.pvp.FloydAutoTotem
 import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.FloydBlockSearch
-import gg.floyd.features.impl.render.FloydCustomFont
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydHubMap
 import gg.floyd.features.impl.render.FloydTimeChanger
@@ -76,7 +75,7 @@ object ModuleManager {
             ClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydRender, FloydXray, FloydAnimations, FloydHud, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydCustomFont,
+            FloydRender, FloydXray, FloydAnimations, FloydHud, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch,
             FloydHiders,
             FloydNickHider, FloydPlayerSize,
             FloydCamera,

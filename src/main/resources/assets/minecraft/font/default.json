@@ -1,0 +1,7 @@
+{
+  "providers": [
+    { "type": "reference", "id": "minecraft:include/space" },
+    { "type": "reference", "id": "minecraft:include/default" },
+    { "type": "ttf", "file": "floydaddons:font.ttf", "size": 9.0, "oversample": 4.0, "shift": [0.0, 1.0] }
+  ]
+}

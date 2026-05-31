@@ -20,7 +20,6 @@
     "mixins.CameraTypeMixin",
     "mixins.ChatComponentMixin",
     "mixins.ClientPacketListenerMixin",
-    "mixins.CustomFontMixin",
     "mixins.FontMixin",
     "mixins.FloydBrandSpoofMixin",
     "mixins.FloydFabricLoaderMixin",
