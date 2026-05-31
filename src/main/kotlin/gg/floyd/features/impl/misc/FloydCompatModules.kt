@@ -2,10 +2,13 @@ package gg.floyd.features.impl.misc
 
 import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.settings.impl.ActionSetting
+import gg.floyd.clickgui.settings.impl.BooleanSetting
+import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.TickEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.openDirectory
 import java.nio.file.Path
@@ -53,6 +56,28 @@ object FloydTaskbarIconModule : Module(
     init {
         on<TickEvent.ClientEnd> {
             FloydTaskbarIcon.applyOnce()
+        }
+    }
+}
+
+/**
+ * Owns the window-styling toggles that used to live on the old `General`/`Render` module
+ * ([FloydRender]). Both settings are pure data holders here; the runtime that actually retitles or
+ * borderless-izes the window lives on [FloydRender] (kept as an unregistered backing object), which
+ * reads these values and drives GLFW from its per-tick handler — never from setting init/setters.
+ */
+object FloydWindowModule : Module(
+    name = "Window",
+    category = Category.MISC,
+    description = "Borderless window toggle and custom instance/taskbar title.",
+    toggled = true,
+) {
+    var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
+    val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
+
+    init {
+        on<TickEvent.ClientEnd> {
+            FloydRender.tickWindowState()
         }
     }
 }

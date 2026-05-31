@@ -246,10 +246,18 @@ class ModuleConfig internal constructor(file: File) {
                 // Global custom font split off onto its own Font module; the raw-path "Custom Font File"
                 // becomes the picker's selected-file "Font" key.
                 "Global Custom Font" to MovedKey("font", "Global Custom Font"),
-                "Custom Font File" to MovedKey("font", "Font")
+                "Custom Font File" to MovedKey("font", "Font"),
+                // Window styling (borderless + instance title) un-nested onto the Misc "Window" module
+                // when the Render/General module was dissolved. Both the recent display-name keys and the
+                // oldest raw lowercase keys are caught so no saved value is lost.
+                "Borderless Window" to MovedKey("window", "Borderless Window"),
+                "Instance Title" to MovedKey("window", "Instance Title"),
+                "Borderless Windowed" to MovedKey("window", "Borderless Window"),
+                "Window Title" to MovedKey("window", "Instance Title")
             ),
             // General is the renamed Render module; the panel*/Full Chat Chroma settings moved off it
-            // onto Panel Style, and the global-font settings moved onto the Font module.
+            // onto Panel Style, the global-font settings moved onto the Font module, and the window
+            // styling toggles moved onto the Misc Window module when the module was dissolved.
             "general" to mapOf(
                 "Panel Corner Radius" to MovedKey("panel style", "Panel Corner Radius"),
                 "Panel Border Width" to MovedKey("panel style", "Panel Border Width"),
@@ -257,7 +265,11 @@ class ModuleConfig internal constructor(file: File) {
                 "Panel Blur Strength" to MovedKey("panel style", "Panel Blur Strength"),
                 "Full Chat Chroma" to MovedKey("panel style", "Full Chat Chroma"),
                 "Global Custom Font" to MovedKey("font", "Global Custom Font"),
-                "Custom Font File" to MovedKey("font", "Font")
+                "Custom Font File" to MovedKey("font", "Font"),
+                "Borderless Window" to MovedKey("window", "Borderless Window"),
+                "Instance Title" to MovedKey("window", "Instance Title"),
+                "Borderless Windowed" to MovedKey("window", "Borderless Window"),
+                "Window Title" to MovedKey("window", "Instance Title")
             ),
             // Custom Scoreboard owned per-panel scoreboard cosmetics before they were unified.
             "custom scoreboard" to mapOf(

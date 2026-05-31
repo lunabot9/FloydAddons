@@ -37,6 +37,7 @@ import gg.floyd.features.impl.misc.FloydSpoofClientBrand
 import gg.floyd.features.impl.misc.FloydCustomMainMenu
 import gg.floyd.features.impl.misc.FloydTaskbarIconModule
 import gg.floyd.features.impl.misc.FloydUpdateCheckerModule
+import gg.floyd.features.impl.misc.FloydWindowModule
 import gg.floyd.features.impl.misc.FloydDiscordPresence
 import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
@@ -57,7 +58,6 @@ import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.LegacyClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydPanelStyle
-import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.render.FloydXray
 import gg.floyd.keybind.KeybindSync
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
@@ -101,7 +101,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydRender, FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch,
+            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
@@ -113,7 +113,7 @@ object ModuleManager {
             FloydAutoTotem, FloydPlayerEsp,
             FloydDiscordPresence, FloydLocalControl,
             // Misc compatibility (each feature is its own module).
-            FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule,
+            FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule,
         )
 
         // hashmap, but would need to keep track when setting values change

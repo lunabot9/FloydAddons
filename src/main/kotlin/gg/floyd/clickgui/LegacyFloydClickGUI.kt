@@ -54,6 +54,7 @@ import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydTimeChanger
 import gg.floyd.features.impl.render.FloydMobEsp
+import gg.floyd.features.impl.misc.FloydWindowModule
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.render.FloydXray
 import gg.floyd.utils.Color
@@ -1028,14 +1029,14 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             when (keyEvent.key) {
                 GLFW.GLFW_KEY_ESCAPE, GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> renderTitleFocused = false
                 GLFW.GLFW_KEY_BACKSPACE -> {
-                    val setting = stringSetting(FloydRender, "Instance Title") ?: return true
+                    val setting = stringSetting(FloydWindowModule, "Instance Title") ?: return true
                     if (setting.value.isNotEmpty()) {
                         setting.value = setting.value.dropLast(1)
                         ModuleManager.saveConfigurations()
                     }
                 }
                 GLFW.GLFW_KEY_DELETE -> {
-                    stringSetting(FloydRender, "Instance Title")?.value = ""
+                    stringSetting(FloydWindowModule, "Instance Title")?.value = ""
                     ModuleManager.saveConfigurations()
                 }
                 else -> return true
@@ -1153,7 +1154,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         }
         if (currentPage == Page.RENDER && renderTitleFocused) {
             if (!characterEvent.isAllowedChatCharacter) return true
-            val setting = stringSetting(FloydRender, "Instance Title") ?: return true
+            val setting = stringSetting(FloydWindowModule, "Instance Title") ?: return true
             val appended = setting.value + characterEvent.codepointAsString()
             if (appended.length <= 64) {
                 setting.value = appended
@@ -2842,7 +2843,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val stalk = Rect(controlLeft, renderRowY(top, 11), renderFullWidth, renderRowHeight)
         drawButton(context, stalk, renderStalkLabel(), alpha)
         hits += RenderHitEntry(stalk, "Stalk", RenderHitKind.STALK)
-        renderFullButton(context, hits, controlLeft, top, 12, "Borderless Window: ${onOff(booleanSetting(FloydRender, "Borderless Window")?.enabled ?: false)}", "Borderless Window", RenderHitKind.BORDERLESS, alpha)
+        renderFullButton(context, hits, controlLeft, top, 12, "Borderless Window: ${onOff(booleanSetting(FloydWindowModule, "Borderless Window")?.enabled ?: false)}", "Borderless Window", RenderHitKind.BORDERLESS, alpha)
 
         val title = Rect(controlLeft, renderRowY(top, 13), renderFullWidth, renderRowHeight)
         drawRenderTitleField(context, title, alpha)
@@ -2892,7 +2893,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun drawRenderTitleField(context: GuiGraphics, rect: Rect, alpha: Float) {
         context.fill(rect.left, rect.top, rect.right, rect.bottom, applyAlpha(if (renderTitleFocused) 0xFF222222.toInt() else 0xFF000000.toInt(), alpha))
         drawChromaBorder(context, rect.left - 1, rect.top - 1, rect.right + 1, rect.bottom + 1, alpha)
-        val value = stringSetting(FloydRender, "Instance Title")?.value.orEmpty()
+        val value = stringSetting(FloydWindowModule, "Instance Title")?.value.orEmpty()
         val display = if (value.isBlank() && !renderTitleFocused) "Instance name / taskbar title" else value
         val trimmed = mc.font.plainSubstrByWidth(display, rect.width - 8)
         val color = if (value.isBlank() && !renderTitleFocused) 0xFF777777.toInt() else 0xFFCCCCCC.toInt()
@@ -3883,7 +3884,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             LegacyModuleBrowserKind.RENDER_BORDERLESS ->
                 emptyList()
             LegacyModuleBrowserKind.RENDER_INSTANCE_NAME ->
-                listOfNotNull(stringSetting(FloydRender, "Instance Title"))
+                listOfNotNull(stringSetting(FloydWindowModule, "Instance Title"))
             LegacyModuleBrowserKind.RENDER_GUI_STYLE ->
                 listOfNotNull(
                     colorSetting(LegacyClickGUIModule, "Button Text Color"),
@@ -4400,8 +4401,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydInventoryHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
                 moduleEntry(FloydCustomScoreboard),
-                LegacyModuleBrowserEntry(FloydRender, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
-                LegacyModuleBrowserEntry(FloydRender, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
+                LegacyModuleBrowserEntry(FloydWindowModule, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
+                LegacyModuleBrowserEntry(FloydWindowModule, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),
                 LegacyModuleBrowserEntry(LegacyClickGUIModule, "GUI Style", LegacyModuleBrowserKind.RENDER_GUI_STYLE),
                 LegacyModuleBrowserEntry(FloydAnimations, "Attack Animation", LegacyModuleBrowserKind.RENDER_ANIMATIONS)
             )
@@ -4485,7 +4486,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
     private fun moduleSettingsPage(module: Module): Page? = when (module) {
         LegacyClickGUIModule -> Page.GUI_STYLE
-        FloydRender -> Page.RENDER
+        FloydWindowModule -> Page.RENDER
         FloydXray -> Page.XRAY
         FloydAnimations -> Page.ANIMATIONS
         FloydMobEsp -> Page.MOB_ESP
@@ -4544,8 +4545,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             toggleModuleRow(FloydTimeChanger, "Time Changer", RowLayout.LEFT),
             numberRow(FloydTimeChanger, "Time", "Time", RowLayout.RIGHT) { "${it.roundToInt()}%" },
             stalkRow(),
-            toggleSettingRow(FloydRender, "Borderless Window", "Borderless Window"),
-            actionRow({ "Window Title: ${stringSetting(FloydRender, "Instance Title")?.value?.ifBlank { "(default)" } ?: "?"}" }) {
+            toggleSettingRow(FloydWindowModule, "Borderless Window", "Borderless Window"),
+            actionRow({ "Window Title: ${stringSetting(FloydWindowModule, "Instance Title")?.value?.ifBlank { "(default)" } ?: "?"}" }) {
                 openWindowTitleEditor()
             }
         )
@@ -4764,7 +4765,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun openWindowTitleEditor() {
-        val setting = stringSetting(FloydRender, "Instance Title") ?: return
+        val setting = stringSetting(FloydWindowModule, "Instance Title") ?: return
         textEditor = TextEditor(
             title = "Window Title",
             value = setting.value,
@@ -5407,7 +5408,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 } else if (hit.settingName == "Server ID Hider" || hit.settingName == "Profile ID Hider") {
                     toggleHider(hit.settingName)
                 } else {
-                    booleanSetting(FloydRender, hit.settingName)?.let { setting ->
+                    booleanSetting(FloydWindowModule, hit.settingName)?.let { setting ->
                         setting.enabled = !setting.enabled
                         ModuleManager.saveConfigurations()
                     }
@@ -5443,7 +5444,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 modMessage(if (previous == null) "Usage: /fa stalk <name>" else "Stopped stalking $previous")
             }
             RenderHitKind.BORDERLESS -> {
-                FloydRender.setBorderlessWindowed(!(booleanSetting(FloydRender, "Borderless Window")?.enabled ?: false), force = true)
+                FloydRender.setBorderlessWindowed(!(booleanSetting(FloydWindowModule, "Borderless Window")?.enabled ?: false), force = true)
                 ModuleManager.saveConfigurations()
             }
             RenderHitKind.TITLE_FIELD -> {
@@ -5610,7 +5611,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 ModuleManager.saveConfigurations()
             }
             LegacyModuleBrowserKind.RENDER_BOOLEAN -> {
-                val setting = entry.settingName?.let { booleanSetting(FloydRender, it) } ?: return
+                val setting = entry.settingName?.let { booleanSetting(FloydWindowModule, it) } ?: return
                 setting.enabled = !setting.enabled
                 ModuleManager.saveConfigurations()
             }
@@ -5627,12 +5628,12 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 ModuleManager.saveConfigurations()
             }
             LegacyModuleBrowserKind.RENDER_BORDERLESS -> {
-                val next = !(booleanSetting(FloydRender, "Borderless Window")?.enabled ?: false)
+                val next = !(booleanSetting(FloydWindowModule, "Borderless Window")?.enabled ?: false)
                 FloydRender.setBorderlessWindowed(next, force = true)
                 ModuleManager.saveConfigurations()
             }
             LegacyModuleBrowserKind.RENDER_INSTANCE_NAME -> {
-                stringSetting(FloydRender, "Instance Title")?.let { setting ->
+                stringSetting(FloydWindowModule, "Instance Title")?.let { setting ->
                     if (setting.value.isNotEmpty()) {
                         setting.value = ""
                         ModuleManager.saveConfigurations()
@@ -6587,14 +6588,14 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 (FloydNoArmor.settings["Target"] as? SelectorSetting)?.value != 0
             LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN -> module.enabled
             LegacyModuleBrowserKind.RENDER_BOOLEAN ->
-                settingName?.let { FloydRender.settings[it] as? BooleanSetting }?.enabled == true
+                settingName?.let { FloydWindowModule.settings[it] as? BooleanSetting }?.enabled == true
             LegacyModuleBrowserKind.RENDER_STALK -> FloydMobEsp.stalkEnabled()
             LegacyModuleBrowserKind.RENDER_HUD ->
                 settingName?.let { module.settings[it] as? HUDSetting }?.isEnabled == true
             LegacyModuleBrowserKind.RENDER_BORDERLESS ->
-                (FloydRender.settings["Borderless Window"] as? BooleanSetting)?.enabled == true
+                (FloydWindowModule.settings["Borderless Window"] as? BooleanSetting)?.enabled == true
             LegacyModuleBrowserKind.RENDER_INSTANCE_NAME ->
-                stringSetting(FloydRender, "Instance Title")?.value?.isNotBlank() == true
+                stringSetting(FloydWindowModule, "Instance Title")?.value?.isNotBlank() == true
             LegacyModuleBrowserKind.RENDER_GUI_STYLE ->
                 LegacyClickGUIModule.buttonTextColor.chroma ||
                     LegacyClickGUIModule.buttonBorderColor.chroma ||

@@ -1,23 +1,39 @@
 package gg.floyd.features.impl.render
 
-import gg.floyd.clickgui.settings.impl.BooleanSetting
-import gg.floyd.clickgui.settings.impl.StringSetting
-import gg.floyd.events.TickEvent
-import gg.floyd.events.core.on
-import gg.floyd.features.Category
-import gg.floyd.features.Module
+import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.features.impl.misc.FloydWindowModule
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFWVidMode
 import java.nio.file.Path
 
-object FloydRender : Module(
-    name = "General",
-    category = Category.RENDER,
-    description = "Floyd render settings: custom time, scoreboard, window styling, and player visuals.",
-    toggled = true,
-) {
-    var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
-    val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
+/**
+ * Unregistered backing object for Floyd's window/render runtime helpers.
+ *
+ * This used to be a single mega-[Module][gg.floyd.features.Module] (`General`/`Render`) that owned
+ * every Floyd render setting. Each setting has since been un-nested onto its own top-level module
+ * (panel cosmetics + full-chat-chroma -> [FloydPanelStyle], global font -> [FloydFont], the window
+ * styling toggles -> [FloydWindowModule]); this object is no longer registered with the
+ * [ModuleManager][gg.floyd.features.ModuleManager] and shows nothing in the GUI. It survives only as
+ * a facade so existing callsites/tests keep compiling: it holds the window borderless/title runtime
+ * state and exposes facade methods that READ the new modules.
+ *
+ * GL/GLFW is only ever touched from [tickWindowState] (driven by [FloydWindowModule]'s per-tick
+ * handler) and from [setBorderlessWindowed] — never from a class init, config load, or a setting
+ * value-setter, so it cannot fire before a GL context exists.
+ */
+object FloydRender {
+
+    /** Whether the window-styling feature is on; reads the new [FloydWindowModule] toggle. */
+    @JvmStatic
+    val enabled: Boolean get() = FloydWindowModule.enabled
+
+    /** Borderless toggle, now owned by [FloydWindowModule]. */
+    var borderlessWindowed: Boolean
+        get() = FloydWindowModule.borderlessWindowed
+        private set(value) { FloydWindowModule.borderlessWindowed = value }
+
+    /** Custom window/taskbar title, now owned by [FloydWindowModule]. */
+    val windowTitle: String get() = FloydWindowModule.windowTitle
 
     private var lastAppliedTitle: String? = null
     private var lastAppliedBorderless = false
@@ -26,11 +42,14 @@ object FloydRender : Module(
     private var savedWindowedWidth = 1280
     private var savedWindowedHeight = 720
 
-    init {
-        on<TickEvent.ClientEnd> {
-            applyWindowTitle()
-            ensureBorderlessState()
-        }
+    /**
+     * Per-tick driver invoked from [FloydWindowModule]'s client-tick handler. Safe to touch GLFW
+     * here because the client tick only fires once the window/GL context exists.
+     */
+    @JvmStatic
+    fun tickWindowState() {
+        applyWindowTitle()
+        ensureBorderlessState()
     }
 
     /**
@@ -66,6 +85,7 @@ object FloydRender : Module(
         "globalCustomFont" to FloydFont.globalCustomFont,
         "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
         "customFontFile" to FloydFont.selectedFont,
+        // Window styling moved to FloydWindowModule; these keys mirror it so existing readers keep working.
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
         "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" }

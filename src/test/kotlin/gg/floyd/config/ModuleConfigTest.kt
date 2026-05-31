@@ -157,10 +157,14 @@ class ModuleConfigTest {
 
     @Test
     fun `legacy render setting names load into Floyd GUI setting names`() {
+        // Window styling (Borderless / Instance Title) was un-nested off the dissolved Render/General
+        // module onto the Misc "Window" module, so those keys now migrate there; the time-changer keys
+        // still resolve onto the General-derived doubles via the legacy setting-name aliases.
         val render = LegacyGeneralModule()
+        val window = LegacyWindowModule()
         loadLegacyConfigEntry(
             "Render",
-            render,
+            listOf(render, window),
             """
             {
               "Custom Time": true,
@@ -173,8 +177,8 @@ class ModuleConfigTest {
 
         assertTrue(render.timeChanger)
         assertEquals(42.0f, render.time)
-        assertTrue(render.borderlessWindow)
-        assertEquals("Floyd Instance", render.instanceTitle)
+        assertTrue(window.borderlessWindow)
+        assertEquals("Floyd Instance", window.instanceTitle)
 
         val mobEsp = LegacyMobEspModule()
         loadLegacyConfigEntry(
@@ -453,6 +457,14 @@ class ModuleConfigTest {
     ) {
         val timeChanger by BooleanSetting("Time Changer", false, desc = "Test time.")
         val time by NumberSetting("Time", 50.0f, 0.0f, 100.0f, 1.0f, desc = "Test time value.")
+    }
+
+    private class LegacyWindowModule : Module(
+        name = "Window",
+        category = Category.MISC,
+        description = "Test module for migrated window styling settings.",
+        toggled = false
+    ) {
         val borderlessWindow by BooleanSetting("Borderless Window", false, desc = "Test borderless.")
         val instanceTitle by gg.floyd.clickgui.settings.impl.StringSetting("Instance Title", "", 64, desc = "Test title.")
     }
