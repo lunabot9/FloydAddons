@@ -27,6 +27,7 @@ import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomFont
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydHubMap
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.ClickGUIModule
@@ -74,7 +75,7 @@ object ModuleManager {
             ClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydRender, FloydXray, FloydAnimations, FloydHud, FloydCustomScoreboard, FloydMobEsp, FloydBlockSearch, FloydCustomFont,
+            FloydRender, FloydXray, FloydAnimations, FloydHud, FloydCustomScoreboard, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydCustomFont,
             FloydHiders,
             FloydNickHider, FloydPlayerSize,
             FloydCamera,

@@ -29,6 +29,7 @@
     "mixins.FloydWatchdogMessageMixin",
     "mixins.GameRendererMixin",
     "mixins.GuiMixin",
+    "mixins.HubMapRendererMixin",
     "mixins.HiderArrowLayerMixin",
     "mixins.HiderArmorLayerMixin",
     "mixins.HiderFallingBlockRendererMixin",
