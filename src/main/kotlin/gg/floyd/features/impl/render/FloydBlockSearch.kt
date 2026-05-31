@@ -87,32 +87,69 @@ object FloydBlockSearch : Module(
     // chunkKey (ChunkPos.asLong) -> matching block positions inside that chunk.
     private val matchedByChunk = HashMap<Long, MutableSet<BlockPos>>()
 
+    // Running total of indexed matches across every chunk in [matchedByChunk]. Used to enforce
+    // [MAX_INDEXED] without rescanning. Rare blocks never approach the cap, so their reach is unaffected.
+    private var indexedCount = 0
+    // True once [MAX_INDEXED] is hit and new positions are being dropped from the index.
+    private var capped = false
+    private var lastCapWarningMs = 0L
+
     // Pull the highlight faces a hair off the block surface so they never sit exactly coplanar
     // with the chunk geometry (which otherwise causes the highlight to half-clip / vanish).
     private const val HIGHLIGHT_INFLATE = 0.002
 
+    // Hard cap on total indexed matches. Searching a common block (e.g. stone) across the whole
+    // render distance would otherwise index millions of positions and exhaust memory. Once reached we
+    // stop adding new positions. Far above what any ore/spawner/chest search produces, so rare blocks
+    // are never affected.
+    private const val MAX_INDEXED = 100_000
+    // Hard cap on matches actually drawn per frame, nearest-first. drawStyledBox feeds a shared
+    // BufferBuilder that overflows past ~16.7M vertices (24/box); 10k boxes is well under that ceiling.
+    private const val MAX_RENDERED = 10_000
+    private const val CAP_WARNING_INTERVAL_MS = 5_000L
+
     init {
         on<RenderEvent.Extract> {
             if (!enabled) return@on
-            if (mc.level == null) { matchedByChunk.clear(); return@on }
+            if (mc.level == null) { clearIndex(); return@on }
             if (matchedByChunk.isEmpty()) return@on
             val drawStyle = when (boxStyle) {
                 1 -> 0 // Filled
                 2 -> 2 // Both
                 else -> 1 // Outline (wireframe)
             }
+            val player = mc.player ?: return@on
+            val eye = player.blockPosition()
+            // The whole index draws when it is within the per-frame cap; only when it exceeds the cap do
+            // we collect, sort by squared distance to the player, and draw the nearest MAX_RENDERED. This
+            // keeps the vertex buffer from overflowing while leaving normal/rare searches untouched.
+            val nearest: Collection<BlockPos> = if (indexedCount <= MAX_RENDERED) {
+                matchedByChunk.values.flatten()
+            } else {
+                matchedByChunk.values.asSequence().flatten()
+                    .sortedBy { it.distSqr(eye) }
+                    .take(MAX_RENDERED)
+                    .toList()
+            }
             // depth = false renders the highlight through occlusion (no depth test), like X-Ray's
             // through-walls pass; the tiny inflate keeps every face off the exact block surface so the
             // highlight never z-fights / half-clips with the chunk geometry it is sitting on.
-            for (set in matchedByChunk.values) {
-                for (pos in set) drawStyledBox(AABB(pos).inflate(HIGHLIGHT_INFLATE), color, drawStyle, depth = false)
+            for (pos in nearest) drawStyledBox(AABB(pos).inflate(HIGHLIGHT_INFLATE), color, drawStyle, depth = false)
+
+            // Warn once per interval that we are capped, so the user knows the highlight is partial.
+            if (capped) {
+                val now = System.currentTimeMillis()
+                if (now - lastCapWarningMs >= CAP_WARNING_INTERVAL_MS) {
+                    lastCapWarningMs = now
+                    modMessage("Block Search: too many matches — showing nearest ${nearest.size}")
+                }
             }
         }
 
         // Incremental index: scan a chunk once when it loads, drop it when it unloads. Block edits are
         // patched in O(1) by BlockSearchChunkMixin -> handleClientBlockChange.
         ClientChunkEvents.CHUNK_LOAD.register { _, chunk -> if (enabled && activeIds().isNotEmpty()) indexChunk(chunk) }
-        ClientChunkEvents.CHUNK_UNLOAD.register { _, chunk -> matchedByChunk.remove(ChunkPos.asLong(chunk.pos.x, chunk.pos.z)) }
+        ClientChunkEvents.CHUNK_UNLOAD.register { _, chunk -> removeChunk(ChunkPos.asLong(chunk.pos.x, chunk.pos.z)) }
     }
 
     override fun onEnable() {
@@ -124,7 +161,7 @@ object FloydBlockSearch : Module(
     }
 
     override fun onDisable() {
-        matchedByChunk.clear()
+        clearIndex()
         FloydXray.rebuildChunks()
         super.onDisable()
     }
@@ -137,14 +174,14 @@ object FloydBlockSearch : Module(
     private fun indexChunk(chunk: LevelChunk) {
         val ids = activeIds()
         val key = ChunkPos.asLong(chunk.pos.x, chunk.pos.z)
-        if (ids.isEmpty()) { matchedByChunk.remove(key); return }
+        if (ids.isEmpty()) { removeChunk(key); return }
 
         val sections = chunk.sections
         val minSectionY = chunk.minSectionY
         val baseX = chunk.pos.minBlockX
         val baseZ = chunk.pos.minBlockZ
         val found = LinkedHashSet<BlockPos>()
-        for (i in sections.indices) {
+        sections@ for (i in sections.indices) {
             val section = sections[i]
             if (section.hasOnlyAir()) continue
             val baseY = SectionPos.sectionToBlockCoord(minSectionY + i)
@@ -152,15 +189,23 @@ object FloydBlockSearch : Module(
                 val state = section.getBlockState(x, y, z)
                 if (state.isAir) continue
                 val id = BuiltInRegistries.BLOCK.getKey(state.block).toString()
-                if (id in ids) found.add(BlockPos(baseX + x, baseY + y, baseZ + z))
+                if (id in ids) {
+                    // Stop adding once the global cap is reached. Re-counting subtracts this chunk's old
+                    // size first (below), so a chunk that already had a smaller entry can still grow.
+                    if (indexedCount - (matchedByChunk[key]?.size ?: 0) + found.size >= MAX_INDEXED) {
+                        capped = true
+                        break@sections
+                    }
+                    found.add(BlockPos(baseX + x, baseY + y, baseZ + z))
+                }
             }
         }
-        if (found.isEmpty()) matchedByChunk.remove(key) else matchedByChunk[key] = found
+        if (found.isEmpty()) removeChunk(key) else putChunk(key, found)
     }
 
     /** Re-scans every currently-loaded chunk. Called when the active id set changes or on enable. */
     private fun reindexAll() {
-        matchedByChunk.clear()
+        clearIndex()
         if (!enabled || activeIds().isEmpty()) return
         val level = mc.level ?: return
         val player = mc.player ?: return
@@ -184,12 +229,30 @@ object FloydBlockSearch : Module(
         val key = ChunkPos.asLong(pos)
         val id = BuiltInRegistries.BLOCK.getKey(state.block).toString()
         if (!state.isAir && id in ids) {
-            matchedByChunk.getOrPut(key) { LinkedHashSet() }.add(pos.immutable())
+            if (indexedCount >= MAX_INDEXED) { capped = true; return }
+            if (matchedByChunk.getOrPut(key) { LinkedHashSet() }.add(pos.immutable())) indexedCount++
         } else {
             val set = matchedByChunk[key] ?: return
-            set.remove(pos)
+            if (set.remove(pos)) indexedCount--
             if (set.isEmpty()) matchedByChunk.remove(key)
         }
+    }
+
+    /** Stores a chunk's matched positions, keeping [indexedCount] in sync (replaces any old entry). */
+    private fun putChunk(key: Long, found: MutableSet<BlockPos>) {
+        indexedCount += found.size - (matchedByChunk.put(key, found)?.size ?: 0)
+    }
+
+    /** Drops a chunk's matched positions, keeping [indexedCount] in sync. */
+    private fun removeChunk(key: Long) {
+        indexedCount -= matchedByChunk.remove(key)?.size ?: 0
+    }
+
+    /** Clears the entire index and resets the cap bookkeeping. */
+    private fun clearIndex() {
+        matchedByChunk.clear()
+        indexedCount = 0
+        capped = false
     }
 
     private fun activeIds(): Set<String> = searchBlocks.filterValues { it }.keys
