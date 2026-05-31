@@ -15,6 +15,8 @@ import org.joml.Vector4f
  *   includes the view-bob transform baked into it by vanilla).
  * - [bob] is the composed view-bob / hurt-camera transform vanilla multiplied onto the
  *   projection. It is identity-equivalent when bobbing is disabled and no hurt is active.
+ *   Captured directly in [gg.floyd.mixin.mixins.GameRendererMixin] from the same
+ *   `matrix4f.mul(poseStack.last().pose())` vanilla uses to bake the bob into the projection.
  * - [modelView] is the camera-rotation modelview (no bobbing).
  * - [cameraPos] is the interpolated camera position.
  */
@@ -31,9 +33,9 @@ object WorldToScreen {
      * the perspective-divide row); the view matrix is the first remaining (affine) matrix. This makes
      * the identification independent of the renderLevel parameter order.
      *
-     * The bob transform is not captured, so [tracerOrigin] returns null and tracers fall back to the
-     * eye-based origin (the bob-stable tracer lock is a follow-up). [project] only needs projection +
-     * view and works fully.
+     * The bob transform is captured separately by [captureBob]; until the first frame composes it,
+     * [tracerOrigin] returns null and tracers fall back to the eye-based origin. [project] only needs
+     * projection + view and works without it.
      */
     @JvmStatic
     fun capture(m1: Matrix4f, m2: Matrix4f, m3: Matrix4f, cameraPos: Vec3) {
@@ -43,6 +45,17 @@ object WorldToScreen {
         this.projection = Matrix4f(proj)
         this.modelView = Matrix4f(view)
         this.cameraPos = cameraPos
+    }
+
+    /**
+     * Captures the composed view-bob / hurt-camera transform vanilla multiplies onto the projection
+     * (`matrix4f.mul(poseStack.last().pose())` in `GameRenderer.renderLevel`). This is the eye-space
+     * bob the frame's projection bakes in; [tracerOrigin] inverts it so the tracer start locks to
+     * screen center regardless of bobbing. Defensive copy so the live vanilla matrix is never aliased.
+     */
+    @JvmStatic
+    fun captureBob(bob: org.joml.Matrix4fc) {
+        this.bob = Matrix4f(bob)
     }
 
     /**
