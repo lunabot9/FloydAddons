@@ -21,6 +21,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.resources.Identifier
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
+import org.joml.Matrix4f
 import org.joml.Vector3f
 import kotlin.math.cos
 import kotlin.math.max
@@ -73,6 +74,13 @@ object RenderBatchManager {
             val matrix = context.matrices()
             val bufferSource = context.consumers() as? MultiBufferSource.BufferSource ?: return@on
             val camera = mc.gameRenderer.mainCamera.position()
+
+            // Capture the live world matrices for screen-space overlays (e.g. Player ESP overhead).
+            // matrix.last().pose() here is the camera-rotation view (the -camera translate is applied below).
+            // Projection is reconstructed from the base FOV (getFov is private); minor drift under
+            // dynamic FOV / view-bob is acceptable for the overhead overlay and refined later.
+            val projection = mc.gameRenderer.getProjectionMatrix(mc.options.fov().get().toFloat())
+            WorldToScreen.capture(projection, Matrix4f(matrix.last().pose()), camera)
 
             matrix.pushPose()
             matrix.translate(-camera.x, -camera.y, -camera.z)

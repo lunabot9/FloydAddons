@@ -24,12 +24,17 @@ object WorldToScreen {
     @Volatile private var modelView: Matrix4f? = null
     @Volatile private var cameraPos: Vec3 = Vec3.ZERO
 
-    /** Called from GameRendererMixin each frame with the live render matrices. */
+    /**
+     * Called each frame from the world render pass ([gg.floyd.utils.render.RenderBatchManager]'s
+     * RenderEvent.Last handler) with the live projection + camera-rotation modelview. The bob
+     * transform is not captured here, so [tracerOrigin] returns null and tracers fall back to the
+     * eye-based origin (the bob-stable tracer lock is a follow-up). [project] only needs
+     * projection + modelView and works fully.
+     */
     @JvmStatic
-    fun capture(projection: Matrix4f, modelView: Matrix4f, bob: Matrix4f, cameraPos: Vec3) {
+    fun capture(projection: Matrix4f, modelView: Matrix4f, cameraPos: Vec3) {
         this.projection = Matrix4f(projection)
         this.modelView = Matrix4f(modelView)
-        this.bob = Matrix4f(bob)
         this.cameraPos = cameraPos
     }
 
