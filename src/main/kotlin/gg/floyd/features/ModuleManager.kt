@@ -13,10 +13,30 @@ import gg.floyd.events.InputEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.ModuleManager.configs
 import gg.floyd.features.impl.camera.FloydCamera
+import gg.floyd.features.impl.camera.FloydFreecam
+import gg.floyd.features.impl.camera.FloydFreelook
+import gg.floyd.features.impl.camera.FloydF5Customizer
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
-import gg.floyd.features.impl.hiders.FloydHiders
-import gg.floyd.features.impl.misc.FloydCompatibility
+import gg.floyd.features.impl.hiders.FloydNoHurtCamera
+import gg.floyd.features.impl.hiders.FloydRemoveFireOverlay
+import gg.floyd.features.impl.hiders.FloydDisableHungerBar
+import gg.floyd.features.impl.hiders.FloydHidePotionEffects
+import gg.floyd.features.impl.hiders.FloydThirdPersonCrosshair
+import gg.floyd.features.impl.hiders.FloydHideEntityFire
+import gg.floyd.features.impl.hiders.FloydDisableArrows
+import gg.floyd.features.impl.hiders.FloydRemoveFallingBlocks
+import gg.floyd.features.impl.hiders.FloydRemoveExplosionParticles
+import gg.floyd.features.impl.hiders.FloydRemoveTabPing
+import gg.floyd.features.impl.hiders.FloydServerIdHider
+import gg.floyd.features.impl.hiders.FloydProfileIdHider
+import gg.floyd.features.impl.hiders.FloydHideWatchdogMessages
+import gg.floyd.features.impl.hiders.FloydModHider
+import gg.floyd.features.impl.hiders.FloydNoArmor
+import gg.floyd.features.impl.misc.FloydSpoofClientBrand
+import gg.floyd.features.impl.misc.FloydCustomMainMenu
+import gg.floyd.features.impl.misc.FloydTaskbarIconModule
+import gg.floyd.features.impl.misc.FloydUpdateCheckerModule
 import gg.floyd.features.impl.misc.FloydDiscordPresence
 import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
@@ -76,12 +96,18 @@ object ModuleManager {
 
             // FloydAddons feature groups.
             FloydRender, FloydXray, FloydAnimations, FloydHud, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch,
-            FloydHiders,
+            // Hiders (each feature is its own module).
+            FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
+            FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
+            FloydServerIdHider, FloydProfileIdHider, FloydHideWatchdogMessages, FloydModHider, FloydNoArmor,
             FloydNickHider, FloydPlayerSize,
-            FloydCamera,
+            // Camera (each feature is its own module).
+            FloydFreecam, FloydFreelook, FloydF5Customizer,
             FloydSkin, FloydCape, FloydConeHat,
             FloydAutoTotem, FloydPlayerEsp,
-            FloydDiscordPresence, FloydLocalControl, FloydCompatibility,
+            FloydDiscordPresence, FloydLocalControl,
+            // Misc compatibility (each feature is its own module).
+            FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule,
         )
 
         // hashmap, but would need to keep track when setting values change
@@ -122,6 +148,8 @@ object ModuleManager {
         }
         configs.add(config)
         config.load()
+        // Freecam/Freelook are transient: never persist as active across restarts.
+        FloydCamera.resetTransientModes()
         FloydSidecarConfig.loadExistingSidecars()
         FloydDiscordPresence.startIfEnabled()
         FloydLocalControl.startIfEnabled()
@@ -136,6 +164,7 @@ object ModuleManager {
         for (config in configs) {
             config.load()
         }
+        FloydCamera.resetTransientModes()
         FloydSidecarConfig.loadExistingSidecars()
     }
 

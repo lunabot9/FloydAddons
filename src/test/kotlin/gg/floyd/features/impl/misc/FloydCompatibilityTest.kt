@@ -1,6 +1,8 @@
 package gg.floyd.features.impl.misc
 
-import gg.floyd.clickgui.settings.impl.BooleanSetting
+import gg.floyd.features.Module
+import gg.floyd.features.impl.hiders.FloydHideWatchdogMessages
+import gg.floyd.features.impl.hiders.FloydModHider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -31,7 +33,6 @@ class FloydCompatibilityTest {
     fun `state exposes Floyd low-level hook switches`() {
         val state = FloydCompatibility.state()
 
-        assertEquals(true, state["enabled"])
         assertEquals(true, state["spoofClientBrand"])
         assertEquals(true, state["hideWatchdogMessages"])
         assertEquals(true, state["customMainMenu"])
@@ -54,49 +55,36 @@ class FloydCompatibilityTest {
     }
 
     @Test
-    fun `low level hook gates require both module and Floyd switch enabled`() {
-        withCompatibilityState {
-            val gates = listOf(
-                "Spoof Client Brand" to FloydCompatibility::shouldSpoofClientBrand,
-                "Hide Watchdog Messages" to FloydCompatibility::shouldHideWatchdogMessages,
-                "Custom Main Menu" to FloydCompatibility::shouldUseCustomMainMenu,
-                "Taskbar Icon" to FloydCompatibility::shouldApplyTaskbarIcon,
-                "Update Checker" to FloydCompatibility::shouldCheckUpdates,
-                "Hide Loader Entry" to FloydCompatibility::shouldHideLoaderEntry,
-            )
+    fun `low level hook gates follow their per-feature module`() {
+        val gates = listOf(
+            FloydSpoofClientBrand to FloydCompatibility::shouldSpoofClientBrand,
+            FloydHideWatchdogMessages to FloydCompatibility::shouldHideWatchdogMessages,
+            FloydCustomMainMenu to FloydCompatibility::shouldUseCustomMainMenu,
+            FloydTaskbarIconModule to FloydCompatibility::shouldApplyTaskbarIcon,
+            FloydUpdateCheckerModule to FloydCompatibility::shouldCheckUpdates,
+            FloydModHider to FloydCompatibility::shouldHideLoaderEntry,
+        )
 
-            for ((settingName, gate) in gates) {
-                assertTrue(gate(), "Expected $settingName gate enabled by default")
+        for ((module, gate) in gates) {
+            withModuleEnabled(module) {
+                assertTrue(gate(), "Expected ${module.name} gate enabled by default")
 
-                bool(settingName).enabled = false
-                assertFalse(gate(), "Expected $settingName gate to follow its Floyd switch")
+                module.toggle()
+                assertFalse(gate(), "Expected ${module.name} gate to follow its module")
 
-                bool(settingName).enabled = true
-                assertTrue(gate(), "Expected $settingName gate restored after switch reset")
-            }
-
-            FloydCompatibility.toggle()
-            for ((settingName, gate) in gates) {
-                assertFalse(gate(), "Expected $settingName gate disabled by outer module")
+                module.toggle()
+                assertTrue(gate(), "Expected ${module.name} gate restored after toggle back")
             }
         }
     }
 
-    private fun bool(name: String): BooleanSetting =
-        FloydCompatibility.settings[name] as? BooleanSetting ?: error("Missing BooleanSetting: $name")
-
-    private fun withCompatibilityState(block: () -> Unit) {
-        val enabled = FloydCompatibility.enabled
-        val settingValues = FloydCompatibility.settings.mapValues { (_, setting) ->
-            (setting as? BooleanSetting)?.enabled
-        }
+    private fun withModuleEnabled(module: Module, block: () -> Unit) {
+        val enabled = module.enabled
         try {
-            if (!FloydCompatibility.enabled) FloydCompatibility.toggle()
-            for ((name, value) in settingValues) if (value != null) bool(name).enabled = true
+            if (!module.enabled) module.toggle()
             block()
         } finally {
-            if (FloydCompatibility.enabled != enabled) FloydCompatibility.toggle()
-            for ((name, value) in settingValues) if (value != null) bool(name).enabled = value
+            if (module.enabled != enabled) module.toggle()
         }
     }
 }

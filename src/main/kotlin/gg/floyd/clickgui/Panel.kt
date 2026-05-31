@@ -26,6 +26,7 @@ class Panel(private val category: Category) {
 
     val panelSetting = ClickGUIModule.panelSetting[category.name] ?: throw IllegalStateException("Panel setting for category $category is not initialized")
     val moduleButtons = ModuleManager.modulesByCategory[category]
+        ?.filter { it.visibleInGui }
         ?.sortedByDescending { NVGRenderer.textWidth(it.name, 16f, NVGRenderer.defaultFont) }
         ?.map { ModuleButton(it, this@Panel) } ?: listOf()
     private val lastModuleButton by lazy { moduleButtons.lastOrNull() }

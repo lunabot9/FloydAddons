@@ -20,11 +20,25 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.camera.FloydCamera
+import gg.floyd.features.impl.camera.FloydFreecam
+import gg.floyd.features.impl.camera.FloydFreelook
+import gg.floyd.features.impl.camera.FloydF5Customizer
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
 import gg.floyd.features.impl.cosmetic.FloydSkin
-import gg.floyd.features.impl.hiders.FloydHiders
-import gg.floyd.features.impl.misc.FloydCompatibility
+import gg.floyd.features.impl.hiders.FloydNoHurtCamera
+import gg.floyd.features.impl.hiders.FloydRemoveFireOverlay
+import gg.floyd.features.impl.hiders.FloydDisableHungerBar
+import gg.floyd.features.impl.hiders.FloydHidePotionEffects
+import gg.floyd.features.impl.hiders.FloydThirdPersonCrosshair
+import gg.floyd.features.impl.hiders.FloydHideEntityFire
+import gg.floyd.features.impl.hiders.FloydDisableArrows
+import gg.floyd.features.impl.hiders.FloydRemoveFallingBlocks
+import gg.floyd.features.impl.hiders.FloydRemoveExplosionParticles
+import gg.floyd.features.impl.hiders.FloydRemoveTabPing
+import gg.floyd.features.impl.hiders.FloydServerIdHider
+import gg.floyd.features.impl.hiders.FloydProfileIdHider
+import gg.floyd.features.impl.hiders.FloydNoArmor
 import gg.floyd.features.impl.misc.FloydDiscordPresence
 import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
@@ -2814,7 +2828,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
         drawCameraHeader(context, controlLeft, cameraRowY(top, 0), "Freecam", alpha)
         val freecam = Rect(controlLeft, cameraRowY(top, 1), cameraHalfWidth, cameraRowHeight)
-        drawButton(context, freecam, "Freecam: ${onOff(runtimeBooleanSetting(FloydCamera, "Freecam")?.enabled ?: false)}", alpha)
+        drawButton(context, freecam, "Freecam: ${onOff(FloydFreecam.enabled)}", alpha)
         hits += CameraHitEntry(freecam, "Freecam", CameraHitKind.RUNTIME_TOGGLE)
         val speed = cameraSliderSpecs().first { it.settingName == "Speed" }
         val speedRect = Rect(controlLeft + cameraHalfWidth + cameraPairGap, cameraRowY(top, 1), cameraHalfWidth, cameraRowHeight)
@@ -2823,7 +2837,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
         drawCameraHeader(context, controlLeft, cameraRowY(top, 2), "Freelook", alpha)
         val freelook = Rect(controlLeft, cameraRowY(top, 3), cameraHalfWidth, cameraRowHeight)
-        drawButton(context, freelook, "Freelook: ${onOff(runtimeBooleanSetting(FloydCamera, "Freelook")?.enabled ?: false)}", alpha)
+        drawButton(context, freelook, "Freelook: ${onOff(FloydFreelook.enabled)}", alpha)
         hits += CameraHitEntry(freelook, "Freelook", CameraHitKind.RUNTIME_TOGGLE)
         val distance = cameraSliderSpecs().first { it.settingName == "Distance" }
         val distanceRect = Rect(controlLeft + cameraHalfWidth + cameraPairGap, cameraRowY(top, 3), cameraHalfWidth, cameraRowHeight)
@@ -2832,20 +2846,20 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
         drawCameraHeader(context, controlLeft, cameraRowY(top, 4), "F5 Customizer", alpha)
         val disableFront = Rect(controlLeft, cameraRowY(top, 5), cameraHalfWidth, cameraRowHeight)
-        drawButton(context, disableFront, "Disable Front: ${onOff(booleanSetting(FloydCamera, "Disable Front Cam")?.enabled ?: false)}", alpha)
+        drawButton(context, disableFront, "Disable Front: ${onOff(booleanSetting(FloydF5Customizer, "Disable Front Cam")?.enabled ?: false)}", alpha)
         hits += CameraHitEntry(disableFront, "Disable Front Cam", CameraHitKind.BOOLEAN_TOGGLE)
         val disableBack = Rect(controlLeft + cameraHalfWidth + cameraPairGap, cameraRowY(top, 5), cameraHalfWidth, cameraRowHeight)
-        drawButton(context, disableBack, "Disable Back: ${onOff(booleanSetting(FloydCamera, "Disable Back Cam")?.enabled ?: false)}", alpha)
+        drawButton(context, disableBack, "Disable Back: ${onOff(booleanSetting(FloydF5Customizer, "Disable Back Cam")?.enabled ?: false)}", alpha)
         hits += CameraHitEntry(disableBack, "Disable Back Cam", CameraHitKind.BOOLEAN_TOGGLE)
 
         val noClip = Rect(controlLeft, cameraRowY(top, 6), cameraFullWidth, cameraRowHeight)
-        drawButton(context, noClip, "Ignore Block Collisions: ${onOff(booleanSetting(FloydCamera, "No Third-Person Clipping")?.enabled ?: false)}", alpha)
+        drawButton(context, noClip, "Ignore Block Collisions: ${onOff(booleanSetting(FloydF5Customizer, "No Third-Person Clipping")?.enabled ?: false)}", alpha)
         hits += CameraHitEntry(noClip, "No Third-Person Clipping", CameraHitKind.BOOLEAN_TOGGLE)
         val scroll = Rect(controlLeft, cameraRowY(top, 7), cameraFullWidth, cameraRowHeight)
-        drawButton(context, scroll, "Scrolling Changes Distance: ${onOff(booleanSetting(FloydCamera, "Scrolling Changes Distance")?.enabled ?: false)}", alpha)
+        drawButton(context, scroll, "Scrolling Changes Distance: ${onOff(booleanSetting(FloydF5Customizer, "Scrolling Changes Distance")?.enabled ?: false)}", alpha)
         hits += CameraHitEntry(scroll, "Scrolling Changes Distance", CameraHitKind.BOOLEAN_TOGGLE)
         val reset = Rect(controlLeft, cameraRowY(top, 8), cameraFullWidth, cameraRowHeight)
-        drawButton(context, reset, "Reset F5 Scrolling: ${onOff(booleanSetting(FloydCamera, "Reset F5 Scrolling")?.enabled ?: false)}", alpha)
+        drawButton(context, reset, "Reset F5 Scrolling: ${onOff(booleanSetting(FloydF5Customizer, "Reset F5 Scrolling")?.enabled ?: false)}", alpha)
         hits += CameraHitEntry(reset, "Reset F5 Scrolling", CameraHitKind.BOOLEAN_TOGGLE)
 
         val f5 = cameraSliderSpecs().first { it.settingName == "Camera Distance" }
@@ -2876,7 +2890,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun drawCameraSlider(context: GuiGraphics, rect: Rect, spec: CameraSliderSpec, alpha: Float) {
-        val value = numberSetting(FloydCamera, spec.settingName)?.numericValue() ?: spec.min
+        val value = numberSetting(cameraModule(spec.settingName), spec.settingName)?.numericValue() ?: spec.min
         val pct = ((value - spec.min) / (spec.max - spec.min)).coerceIn(0.0, 1.0)
         val hovered = rect.contains(hoverX, hoverY)
         context.fill(rect.left, rect.top, rect.right, rect.bottom, applyAlpha(if (hovered) 0xFF666666.toInt() else 0xFF555555.toInt(), alpha))
@@ -2900,8 +2914,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val hits = mutableListOf<RenderHitEntry>()
         val controlLeft = left + (panelWidth() - renderFullWidth) / 2
 
-        renderFullButton(context, hits, controlLeft, top, 0, "Server ID Hider: ${onOff(booleanSetting(FloydHiders, "Server ID Hider")?.enabled ?: false)}", "Server ID Hider", RenderHitKind.BOOLEAN_TOGGLE, alpha)
-        renderFullButton(context, hits, controlLeft, top, 1, "Profile ID Hider: ${onOff(booleanSetting(FloydHiders, "Profile ID Hider")?.enabled ?: false)}", "Profile ID Hider", RenderHitKind.BOOLEAN_TOGGLE, alpha)
+        renderFullButton(context, hits, controlLeft, top, 0, "Server ID Hider: ${onOff(FloydServerIdHider.enabled)}", "Server ID Hider", RenderHitKind.BOOLEAN_TOGGLE, alpha)
+        renderFullButton(context, hits, controlLeft, top, 1, "Profile ID Hider: ${onOff(FloydProfileIdHider.enabled)}", "Profile ID Hider", RenderHitKind.BOOLEAN_TOGGLE, alpha)
 
         drawRenderHeader(context, controlLeft, renderRowY(top, 2), "X-Ray", alpha)
         renderFullButton(context, hits, controlLeft, top, 3, "X-Ray: ${onOff(booleanSetting(FloydXray, "Enabled")?.enabled ?: false)}", "X-Ray", RenderHitKind.XRAY_TOGGLE, alpha)
@@ -3023,7 +3037,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             val label = if (spec.settingName == "Target") {
                 "No Armor: ${noArmorDisplay()}"
             } else {
-                "${spec.label}: ${onOff(booleanSetting(FloydHiders, spec.settingName)?.enabled ?: false)}"
+                "${spec.label}: ${onOff(hiderEnabled(spec.settingName))}"
             }
             drawButton(context, rect, label, alpha)
             hits += HidersHitEntry(rect, spec.settingName, if (spec.settingName == "Target") HidersHitKind.NO_ARMOR else HidersHitKind.TOGGLE)
@@ -3059,7 +3073,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
     private fun noArmorDisplay(): String {
         val labels = listOf("OFF", "SELF", "OTHERS", "ALL")
-        return labels.getOrNull(selectorSetting(FloydHiders, "Target")?.value ?: 0) ?: "OFF"
+        return labels.getOrNull(selectorSetting(FloydNoArmor, "Target")?.value ?: 0) ?: "OFF"
     }
 
     private fun drawNickHiderPage(context: GuiGraphics, left: Int, top: Int, bottom: Int, alpha: Float) {
@@ -3964,20 +3978,20 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             LegacyModuleBrowserKind.RENDER_STALK ->
                 listOfNotNull(colorSetting(FloydMobEsp, "Tracer Color"))
             LegacyModuleBrowserKind.CAMERA_FREECAM ->
-                listOfNotNull(numberSetting(FloydCamera, "Speed"))
+                listOfNotNull(numberSetting(FloydFreecam, "Speed"))
             LegacyModuleBrowserKind.CAMERA_FREELOOK ->
-                listOfNotNull(numberSetting(FloydCamera, "Distance"))
+                listOfNotNull(numberSetting(FloydFreelook, "Distance"))
             LegacyModuleBrowserKind.CAMERA_F5 ->
                 listOfNotNull(
-                    booleanSetting(FloydCamera, "Disable Front Cam"),
-                    booleanSetting(FloydCamera, "Disable Back Cam"),
-                    booleanSetting(FloydCamera, "No Third-Person Clipping"),
-                    booleanSetting(FloydCamera, "Scrolling Changes Distance"),
-                    booleanSetting(FloydCamera, "Reset F5 Scrolling"),
-                    numberSetting(FloydCamera, "Camera Distance")
+                    booleanSetting(FloydF5Customizer, "Disable Front Cam"),
+                    booleanSetting(FloydF5Customizer, "Disable Back Cam"),
+                    booleanSetting(FloydF5Customizer, "No Third-Person Clipping"),
+                    booleanSetting(FloydF5Customizer, "Scrolling Changes Distance"),
+                    booleanSetting(FloydF5Customizer, "Reset F5 Scrolling"),
+                    numberSetting(FloydF5Customizer, "Camera Distance")
                 )
             LegacyModuleBrowserKind.HIDER_NO_ARMOR ->
-                listOfNotNull(selectorSetting(FloydHiders, "Target"))
+                listOfNotNull(selectorSetting(FloydNoArmor, "Target"))
             LegacyModuleBrowserKind.RENDER_HUD ->
                 emptyList()
             LegacyModuleBrowserKind.RENDER_BORDERLESS ->
@@ -4494,8 +4508,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 moduleEntry(FloydXray),
                 moduleEntry(FloydMobEsp),
                 moduleEntry(FloydBlockSearch),
-                LegacyModuleBrowserEntry(FloydHiders, "Profile ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Profile ID Hider"),
-                LegacyModuleBrowserEntry(FloydHiders, "Server ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Server ID Hider"),
+                LegacyModuleBrowserEntry(FloydProfileIdHider, "Profile ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Profile ID Hider"),
+                LegacyModuleBrowserEntry(FloydServerIdHider, "Server ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Server ID Hider"),
                 moduleEntry(FloydTimeChanger),
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
@@ -4516,7 +4530,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 hiderEntry("Remove Falling Blocks"),
                 hiderEntry("No Explosion Particles"),
                 hiderEntry("Remove Tab Ping"),
-                LegacyModuleBrowserEntry(FloydHiders, "No Armor", LegacyModuleBrowserKind.HIDER_NO_ARMOR, "Target")
+                LegacyModuleBrowserEntry(FloydNoArmor, "No Armor", LegacyModuleBrowserKind.HIDER_NO_ARMOR, "Target")
             )
             Category.PLAYER -> listOf(
                 LegacyModuleBrowserEntry(FloydCape, "Cape", LegacyModuleBrowserKind.PLAYER_CAPE, "Enabled"),
@@ -4526,9 +4540,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydPlayerSize, "Player Size", LegacyModuleBrowserKind.PLAYER_SIZE)
             )
             Category.CAMERA -> listOf(
-                LegacyModuleBrowserEntry(FloydCamera, "Freecam", LegacyModuleBrowserKind.CAMERA_FREECAM),
-                LegacyModuleBrowserEntry(FloydCamera, "Freelook", LegacyModuleBrowserKind.CAMERA_FREELOOK),
-                LegacyModuleBrowserEntry(FloydCamera, "F5 Customizer", LegacyModuleBrowserKind.CAMERA_F5)
+                LegacyModuleBrowserEntry(FloydFreecam, "Freecam", LegacyModuleBrowserKind.CAMERA_FREECAM),
+                LegacyModuleBrowserEntry(FloydFreelook, "Freelook", LegacyModuleBrowserKind.CAMERA_FREELOOK),
+                LegacyModuleBrowserEntry(FloydF5Customizer, "F5 Customizer", LegacyModuleBrowserKind.CAMERA_F5)
             )
             Category.PVP -> listOf(
                 moduleEntry(FloydAutoTotem),
@@ -4541,7 +4555,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         LegacyModuleBrowserEntry(module, legacyFloydModuleLabel(module), LegacyModuleBrowserKind.MODULE)
 
     private fun hiderEntry(settingName: String): LegacyModuleBrowserEntry =
-        LegacyModuleBrowserEntry(FloydHiders, settingName, LegacyModuleBrowserKind.HIDER_BOOLEAN, settingName)
+        LegacyModuleBrowserEntry(hiderModule(settingName) ?: error("Unknown hider: $settingName"), settingName, LegacyModuleBrowserKind.HIDER_BOOLEAN, settingName)
 
     private fun legacyModuleBrowserSettingsPage(entry: LegacyModuleBrowserEntry): Page? =
         when (entry.kind) {
@@ -4590,10 +4604,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         FloydAnimations -> Page.ANIMATIONS
         FloydMobEsp -> Page.MOB_ESP
         FloydHud -> null
-        FloydHiders -> Page.HIDERS
         FloydNickHider -> Page.NICK_HIDER
         FloydPlayerSize -> Page.PLAYER_SIZE
-        FloydCamera -> Page.CAMERA
         FloydSkin -> Page.SKIN
         FloydCape -> Page.CAPE
         FloydConeHat -> Page.CONE_HAT
@@ -4608,8 +4620,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.CONE_HAT -> emptyList()
         Page.XRAY -> emptyList()
         Page.RENDER -> listOf(
-            toggleSettingRow(FloydHiders, "Server ID Hider", "Server ID Hider"),
-            toggleSettingRow(FloydHiders, "Profile ID Hider", "Profile ID Hider"),
+            toggleModuleRow(FloydServerIdHider, "Server ID Hider"),
+            toggleModuleRow(FloydProfileIdHider, "Profile ID Hider"),
             headerRow("X-Ray"),
             toggleSettingRow(FloydXray, "Enabled", "X-Ray"),
             numberRow(FloydXray, "Opacity", "X-Ray Opacity") { "${(it * 100).roundToInt()}%" },
@@ -4634,32 +4646,32 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
         )
         Page.HIDERS -> listOf(
-            toggleSettingRow(FloydHiders, "No Hurt Camera", "No Hurt Camera"),
-            toggleSettingRow(FloydHiders, "Remove Fire Overlay", "Remove Fire Overlay"),
-            toggleSettingRow(FloydHiders, "Hide Entity Fire", "Hide Entity Fire"),
-            toggleSettingRow(FloydHiders, "Disable Arrows", "Disable Arrows"),
-            toggleSettingRow(FloydHiders, "No Explosion Particles", "No Explosion Particles"),
-            toggleSettingRow(FloydHiders, "Disable Hunger Bar", "Disable Hunger Bar"),
-            toggleSettingRow(FloydHiders, "Hide Potion Effects", "Hide Potion Effects"),
-            toggleSettingRow(FloydHiders, "3rd Person Crosshair", "3rd Person Crosshair"),
-            toggleSettingRow(FloydHiders, "Remove Falling Blocks", "Remove Falling Blocks"),
-            toggleSettingRow(FloydHiders, "Remove Tab Ping", "Remove Tab Ping"),
-            selectorRow(FloydHiders, "Target", "No Armor", listOf("OFF", "SELF", "OTHERS", "ALL"))
+            toggleModuleRow(FloydNoHurtCamera, "No Hurt Camera"),
+            toggleModuleRow(FloydRemoveFireOverlay, "Remove Fire Overlay"),
+            toggleModuleRow(FloydHideEntityFire, "Hide Entity Fire"),
+            toggleModuleRow(FloydDisableArrows, "Disable Arrows"),
+            toggleModuleRow(FloydRemoveExplosionParticles, "No Explosion Particles"),
+            toggleModuleRow(FloydDisableHungerBar, "Disable Hunger Bar"),
+            toggleModuleRow(FloydHidePotionEffects, "Hide Potion Effects"),
+            toggleModuleRow(FloydThirdPersonCrosshair, "3rd Person Crosshair"),
+            toggleModuleRow(FloydRemoveFallingBlocks, "Remove Falling Blocks"),
+            toggleModuleRow(FloydRemoveTabPing, "Remove Tab Ping"),
+            selectorRow(FloydNoArmor, "Target", "No Armor", listOf("OFF", "SELF", "OTHERS", "ALL"))
         )
         Page.CAMERA -> listOf(
             headerRow("Freecam"),
-            runtimeToggleRow(FloydCamera, "Freecam", "Freecam", RowLayout.LEFT) { FloydCamera.toggleFreecam() },
-            numberRow(FloydCamera, "Speed", "Speed", RowLayout.RIGHT) { oneDecimal(it) },
+            toggleModuleRow(FloydFreecam, "Freecam", RowLayout.LEFT),
+            numberRow(FloydFreecam, "Speed", "Speed", RowLayout.RIGHT) { oneDecimal(it) },
             headerRow("Freelook"),
-            runtimeToggleRow(FloydCamera, "Freelook", "Freelook", RowLayout.LEFT) { FloydCamera.toggleFreelook() },
-            numberRow(FloydCamera, "Distance", "Dist", RowLayout.RIGHT) { oneDecimal(it) },
+            toggleModuleRow(FloydFreelook, "Freelook", RowLayout.LEFT),
+            numberRow(FloydFreelook, "Distance", "Dist", RowLayout.RIGHT) { oneDecimal(it) },
             headerRow("F5 Customizer"),
-            toggleSettingRow(FloydCamera, "Disable Front Cam", "Disable Front", RowLayout.LEFT),
-            toggleSettingRow(FloydCamera, "Disable Back Cam", "Disable Back", RowLayout.RIGHT),
-            toggleSettingRow(FloydCamera, "No Third-Person Clipping", "Ignore Block Collisions"),
-            toggleSettingRow(FloydCamera, "Scrolling Changes Distance", "Scrolling Changes Distance"),
-            toggleSettingRow(FloydCamera, "Reset F5 Scrolling", "Reset F5 Scrolling"),
-            numberRow(FloydCamera, "Camera Distance", "F5 Distance") { oneDecimal(it) }
+            toggleSettingRow(FloydF5Customizer, "Disable Front Cam", "Disable Front", RowLayout.LEFT),
+            toggleSettingRow(FloydF5Customizer, "Disable Back Cam", "Disable Back", RowLayout.RIGHT),
+            toggleSettingRow(FloydF5Customizer, "No Third-Person Clipping", "Ignore Block Collisions"),
+            toggleSettingRow(FloydF5Customizer, "Scrolling Changes Distance", "Scrolling Changes Distance"),
+            toggleSettingRow(FloydF5Customizer, "Reset F5 Scrolling", "Reset F5 Scrolling"),
+            numberRow(FloydF5Customizer, "Camera Distance", "F5 Distance") { oneDecimal(it) }
         )
         Page.COSMETIC -> listOf(
             headerRow("Cosmetics"),
@@ -5456,7 +5468,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 ModuleManager.saveConfigurations()
             }
             CameraHitKind.BOOLEAN_TOGGLE -> {
-                booleanSetting(FloydCamera, hit.settingName)?.let { setting ->
+                booleanSetting(FloydF5Customizer, hit.settingName)?.let { setting ->
                     setting.enabled = !setting.enabled
                     ModuleManager.saveConfigurations()
                 }
@@ -5474,7 +5486,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun updateCameraSlider(target: CameraSliderTarget, x: Double) {
         val pct = ((x - target.bounds.left) / target.bounds.width).coerceIn(0.0, 1.0)
         val value = target.spec.min + pct * (target.spec.max - target.spec.min)
-        numberSetting(FloydCamera, target.spec.settingName)?.setNumericValue(value)
+        numberSetting(cameraModule(target.spec.settingName), target.spec.settingName)?.setNumericValue(value)
         ModuleManager.saveConfigurations()
     }
 
@@ -5486,9 +5498,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 if (hit.settingName == "Time Changer") {
                     FloydTimeChanger.toggle()
                     ModuleManager.saveConfigurations()
+                } else if (hit.settingName == "Server ID Hider" || hit.settingName == "Profile ID Hider") {
+                    toggleHider(hit.settingName)
                 } else {
-                    val module = if (hit.settingName == "Server ID Hider" || hit.settingName == "Profile ID Hider") FloydHiders else FloydRender
-                    booleanSetting(module, hit.settingName)?.let { setting ->
+                    booleanSetting(FloydRender, hit.settingName)?.let { setting ->
                         setting.enabled = !setting.enabled
                         ModuleManager.saveConfigurations()
                     }
@@ -5545,13 +5558,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val hit = hidersHitEntries.firstOrNull { it.bounds.contains(x, y) } ?: return false
         when (hit.kind) {
             HidersHitKind.TOGGLE -> {
-                booleanSetting(FloydHiders, hit.settingName)?.let { setting ->
-                    setting.enabled = !setting.enabled
-                    ModuleManager.saveConfigurations()
-                }
+                toggleHider(hit.settingName)
             }
             HidersHitKind.NO_ARMOR -> {
-                selectorSetting(FloydHiders, "Target")?.let { setting ->
+                selectorSetting(FloydNoArmor, "Target")?.let { setting ->
                     setting.value = setting.value + 1
                     ModuleManager.saveConfigurations()
                 }
@@ -5671,30 +5681,26 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 }
             }
             LegacyModuleBrowserKind.CAMERA_FREECAM -> {
-                if (!FloydCamera.enabled) FloydCamera.toggle()
                 FloydCamera.toggleFreecam()
                 ModuleManager.saveConfigurations()
             }
             LegacyModuleBrowserKind.CAMERA_FREELOOK -> {
-                if (!FloydCamera.enabled) FloydCamera.toggle()
                 FloydCamera.toggleFreelook()
                 ModuleManager.saveConfigurations()
             }
             LegacyModuleBrowserKind.CAMERA_F5 -> Unit
             LegacyModuleBrowserKind.HIDER_BOOLEAN -> {
-                val setting = entry.settingName?.let { booleanSetting(FloydHiders, it) } ?: return
-                setting.enabled = !setting.enabled
+                entry.module.toggle()
                 ModuleManager.saveConfigurations()
             }
             LegacyModuleBrowserKind.HIDER_NO_ARMOR -> {
-                selectorSetting(FloydHiders, "Target")?.let { setting ->
+                selectorSetting(FloydNoArmor, "Target")?.let { setting ->
                     setting.value = if (setting.value == 0) 1 else 0
                     ModuleManager.saveConfigurations()
                 }
             }
             LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN -> {
-                val setting = entry.settingName?.let { booleanSetting(FloydHiders, it) } ?: return
-                setting.enabled = !setting.enabled
+                entry.module.toggle()
                 ModuleManager.saveConfigurations()
             }
             LegacyModuleBrowserKind.RENDER_BOOLEAN -> {
@@ -6269,6 +6275,39 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun actionRow(label: () -> String, layout: RowLayout = RowLayout.FULL, action: () -> Unit): LegacyRow = LegacyRow(label = label, layout = layout) { action() }
     private fun headerRow(label: String): LegacyRow = LegacyRow(label = { label }, kind = RowKind.HEADER) {}
 
+    // Each hider is now its own toggle module; map the legacy setting names to the owning module.
+    private val hiderModulesByName: Map<String, Module> = linkedMapOf(
+        "No Hurt Camera" to FloydNoHurtCamera,
+        "Remove Fire Overlay" to FloydRemoveFireOverlay,
+        "Disable Hunger Bar" to FloydDisableHungerBar,
+        "Hide Potion Effects" to FloydHidePotionEffects,
+        "3rd Person Crosshair" to FloydThirdPersonCrosshair,
+        "Hide Entity Fire" to FloydHideEntityFire,
+        "Disable Arrows" to FloydDisableArrows,
+        "Remove Falling Blocks" to FloydRemoveFallingBlocks,
+        "No Explosion Particles" to FloydRemoveExplosionParticles,
+        "Remove Tab Ping" to FloydRemoveTabPing,
+        "Server ID Hider" to FloydServerIdHider,
+        "Profile ID Hider" to FloydProfileIdHider,
+    )
+
+    private fun hiderModule(name: String): Module? = hiderModulesByName[name]
+
+    // Each camera feature is now its own module; map the legacy setting names to the owning module.
+    private fun cameraModule(name: String): Module = when (name) {
+        "Speed" -> FloydFreecam
+        "Distance" -> FloydFreelook
+        else -> FloydF5Customizer
+    }
+
+    private fun hiderEnabled(name: String): Boolean = hiderModule(name)?.enabled ?: false
+    private fun toggleHider(name: String) {
+        hiderModule(name)?.let {
+            it.toggle()
+            ModuleManager.saveConfigurations()
+        }
+    }
+
     private fun booleanSetting(module: Module, name: String): BooleanSetting? = module.settings[name] as? BooleanSetting
     private fun runtimeBooleanSetting(module: Module, name: String): RuntimeBooleanSetting? = module.settings[name] as? RuntimeBooleanSetting
     private fun selectorSetting(module: Module, name: String): SelectorSetting? = module.settings[name] as? SelectorSetting
@@ -6632,18 +6671,16 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             LegacyModuleBrowserKind.CAMERA_FREECAM -> FloydCamera.freecamActive()
             LegacyModuleBrowserKind.CAMERA_FREELOOK -> FloydCamera.freelookActive()
             LegacyModuleBrowserKind.CAMERA_F5 ->
-                FloydCamera.f5DisableFront ||
-                    FloydCamera.f5DisableBack ||
-                    FloydCamera.f5NoClip ||
-                    FloydCamera.f5ScrollEnabled ||
-                    FloydCamera.f5ResetOnToggle ||
-                    FloydCamera.f5Distance != 4.0f
-            LegacyModuleBrowserKind.HIDER_BOOLEAN ->
-                settingName?.let { FloydHiders.settings[it] as? BooleanSetting }?.enabled == true
+                FloydF5Customizer.disableFront ||
+                    FloydF5Customizer.disableBack ||
+                    FloydF5Customizer.noClip ||
+                    FloydF5Customizer.scrollEnabled ||
+                    FloydF5Customizer.resetOnToggle ||
+                    FloydF5Customizer.f5Distance != 4.0f
+            LegacyModuleBrowserKind.HIDER_BOOLEAN -> module.enabled
             LegacyModuleBrowserKind.HIDER_NO_ARMOR ->
-                (FloydHiders.settings["Target"] as? SelectorSetting)?.value != 0
-            LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN ->
-                settingName?.let { FloydHiders.settings[it] as? BooleanSetting }?.enabled == true
+                (FloydNoArmor.settings["Target"] as? SelectorSetting)?.value != 0
+            LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN -> module.enabled
             LegacyModuleBrowserKind.RENDER_BOOLEAN ->
                 settingName?.let { FloydRender.settings[it] as? BooleanSetting }?.enabled == true
             LegacyModuleBrowserKind.RENDER_STALK -> FloydMobEsp.stalkEnabled()

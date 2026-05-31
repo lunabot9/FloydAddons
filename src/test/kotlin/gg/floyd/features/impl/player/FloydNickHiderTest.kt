@@ -1,7 +1,9 @@
 package gg.floyd.features.impl.player
 
 import gg.floyd.clickgui.settings.impl.BooleanSetting
-import gg.floyd.features.impl.hiders.FloydHiders
+import gg.floyd.features.Module
+import gg.floyd.features.impl.hiders.FloydProfileIdHider
+import gg.floyd.features.impl.hiders.FloydServerIdHider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -29,8 +31,8 @@ class FloydNickHiderTest {
         withNickHiderState {
             FloydNickHider.nickname = "   "
             bool("Enabled").enabled = true
-            hiderBool("Server ID Hider").enabled = false
-            hiderBool("Profile ID Hider").enabled = false
+            setHider("Server ID Hider", false)
+            setHider("Profile ID Hider", false)
 
             assertTrue(FloydNickHider.hasReplacements())
         }
@@ -69,7 +71,7 @@ class FloydNickHiderTest {
     @Test
     fun `server id debug summary preserves Floyd command header and empty-cache wording`() {
         withNickHiderState {
-            hiderBool("Server ID Hider").enabled = false
+            setHider("Server ID Hider", false)
 
             val summary = FloydNickHider.debugSummary()
 
@@ -86,14 +88,22 @@ class FloydNickHiderTest {
     private fun bool(name: String): BooleanSetting =
         FloydNickHider.settings[name] as? BooleanSetting ?: error("Missing BooleanSetting: $name")
 
-    private fun hiderBool(name: String): BooleanSetting =
-        FloydHiders.settings[name] as? BooleanSetting ?: error("Missing Hiders BooleanSetting: $name")
+    private fun hiderModule(name: String): Module = when (name) {
+        "Server ID Hider" -> FloydServerIdHider
+        "Profile ID Hider" -> FloydProfileIdHider
+        else -> error("Unknown hider module: $name")
+    }
+
+    private fun setHider(name: String, value: Boolean) {
+        val module = hiderModule(name)
+        if (module.enabled != value) module.toggle()
+    }
 
     private fun withNickHiderState(block: () -> Unit) {
         val nickname = FloydNickHider.nickname
         val enabled = bool("Enabled").enabled
-        val serverId = hiderBool("Server ID Hider").enabled
-        val profileId = hiderBool("Profile ID Hider").enabled
+        val serverId = FloydServerIdHider.enabled
+        val profileId = FloydProfileIdHider.enabled
         val mappings = FloydNickHider.nameMappings.toMap()
         try {
             FloydNickHider.clearNameMappings()
@@ -101,8 +111,8 @@ class FloydNickHiderTest {
         } finally {
             FloydNickHider.nickname = nickname
             bool("Enabled").enabled = enabled
-            hiderBool("Server ID Hider").enabled = serverId
-            hiderBool("Profile ID Hider").enabled = profileId
+            setHider("Server ID Hider", serverId)
+            setHider("Profile ID Hider", profileId)
             FloydNickHider.clearNameMappings()
             for ((realName, fakeName) in mappings) FloydNickHider.addNameMapping(realName, fakeName)
         }

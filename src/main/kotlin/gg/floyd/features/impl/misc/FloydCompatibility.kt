@@ -1,49 +1,34 @@
 package gg.floyd.features.impl.misc
 
 import gg.floyd.FloydAddonsMod
-import gg.floyd.clickgui.settings.impl.BooleanSetting
-import gg.floyd.events.TickEvent
-import gg.floyd.events.core.on
-import gg.floyd.features.Category
-import gg.floyd.features.Module
-import gg.floyd.features.impl.misc.FloydUpdateChecker
+import gg.floyd.features.impl.hiders.FloydHideWatchdogMessages
+import gg.floyd.features.impl.hiders.FloydModHider
 import java.nio.file.Path
 
-object FloydCompatibility : Module(
-    name = "Floyd Compatibility",
-    category = Category.MISC,
-    description = "Floyd's low-level compatibility hooks.",
-    toggled = true,
-) {
-    private val spoofClientBrand by BooleanSetting("Spoof Client Brand", true, desc = "Reports the vanilla client brand.")
-    private val hideWatchdogMessages by BooleanSetting("Hide Watchdog Messages", true, desc = "Suppresses Hypixel Watchdog announcement spam.")
-    private val customMainMenu by BooleanSetting("Custom Main Menu", true, desc = "Uses config/floydaddons/mainmenu.png as the title background.")
-    private val taskbarIcon by BooleanSetting("Taskbar Icon", true, desc = "Applies Floyd's window/taskbar icon.")
-    private val updateChecker by BooleanSetting("Update Checker", true, desc = "Checks FloydAddons releases for this Minecraft version.")
-    private val hideLoaderEntry by BooleanSetting("Hide Loader Entry", true, desc = "Hides floydaddons from basic Fabric loader lookups.")
+/**
+ * Facade over the per-feature compatibility modules.
+ *
+ * This used to be a single mega-[Module][gg.floyd.features.Module] that owned every compat toggle.
+ * Each feature is now its own top-level module (see [FloydCompatModules.kt], plus
+ * [FloydHideWatchdogMessages]/[FloydModHider] under the Hiders category); this object exposes facade
+ * methods that read the new modules so the mixins do not have to change.
+ */
+object FloydCompatibility {
 
-    init {
-        FloydUpdateChecker.init()
-        on<TickEvent.ClientEnd> {
-            FloydTaskbarIcon.applyOnce()
-            FloydUpdateChecker.tick()
-        }
-    }
+    @JvmStatic fun shouldSpoofClientBrand(): Boolean = FloydSpoofClientBrand.enabled
+    @JvmStatic fun shouldHideWatchdogMessages(): Boolean = FloydHideWatchdogMessages.enabled
+    @JvmStatic fun shouldUseCustomMainMenu(): Boolean = FloydCustomMainMenu.enabled
+    @JvmStatic fun shouldApplyTaskbarIcon(): Boolean = FloydTaskbarIconModule.enabled
+    @JvmStatic fun shouldCheckUpdates(): Boolean = FloydUpdateCheckerModule.enabled
+    @JvmStatic fun shouldHideLoaderEntry(): Boolean = FloydModHider.enabled
 
-    @JvmStatic fun shouldSpoofClientBrand(): Boolean = enabled && spoofClientBrand
-    @JvmStatic fun shouldHideWatchdogMessages(): Boolean = enabled && hideWatchdogMessages
-    @JvmStatic fun shouldUseCustomMainMenu(): Boolean = enabled && customMainMenu
-    @JvmStatic fun shouldApplyTaskbarIcon(): Boolean = enabled && taskbarIcon
-    @JvmStatic fun shouldCheckUpdates(): Boolean = enabled && updateChecker
-    @JvmStatic fun shouldHideLoaderEntry(): Boolean = enabled && hideLoaderEntry
     fun state(): Map<String, Any?> = mapOf(
-        "enabled" to enabled,
-        "spoofClientBrand" to spoofClientBrand,
-        "hideWatchdogMessages" to hideWatchdogMessages,
-        "customMainMenu" to customMainMenu,
-        "taskbarIcon" to taskbarIcon,
-        "updateChecker" to updateChecker,
-        "hideLoaderEntry" to hideLoaderEntry,
+        "spoofClientBrand" to FloydSpoofClientBrand.enabled,
+        "hideWatchdogMessages" to FloydHideWatchdogMessages.enabled,
+        "customMainMenu" to FloydCustomMainMenu.enabled,
+        "taskbarIcon" to FloydTaskbarIconModule.enabled,
+        "updateChecker" to FloydUpdateCheckerModule.enabled,
+        "hideLoaderEntry" to FloydModHider.enabled,
         "shouldSpoofClientBrand" to shouldSpoofClientBrand(),
         "shouldHideWatchdogMessages" to shouldHideWatchdogMessages(),
         "shouldUseCustomMainMenu" to shouldUseCustomMainMenu(),
@@ -52,5 +37,6 @@ object FloydCompatibility : Module(
         "shouldHideLoaderEntry" to shouldHideLoaderEntry(),
         "updateCheckerState" to FloydUpdateChecker.state()
     )
+
     @JvmStatic fun configPath(fileName: String): Path = FloydAddonsMod.configFile.toPath().resolve(fileName)
 }

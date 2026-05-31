@@ -38,6 +38,15 @@ abstract class Module(
     val category: Category = category ?: getCategoryFromPackage(this::class.java)
 
     /**
+     * Whether this module is shown in the click GUI module list.
+     *
+     * Hidden modules are still registered, configured and run normally; they just
+     * don't appear as a clickable entry under their category.
+     */
+    @Transient
+    open val visibleInGui: Boolean = true
+
+    /**
      * Flag for if the module is enabled/disabled.
      *
      * When true, it is registered to the [EventBus].

@@ -1,54 +1,28 @@
 package gg.floyd.features.impl.camera
 
 import gg.floyd.FloydAddonsMod.mc
-import gg.floyd.clickgui.settings.impl.BooleanSetting
-import gg.floyd.clickgui.settings.impl.KeybindSetting
-import gg.floyd.clickgui.settings.impl.NumberSetting
-import gg.floyd.clickgui.settings.impl.RuntimeBooleanSetting
-import gg.floyd.features.Category
-import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
-import gg.floyd.utils.modMessage
 import net.minecraft.client.CameraType
-import org.lwjgl.glfw.GLFW
 import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sign
 import kotlin.math.sin
 
-object FloydCamera : Module(
-    name = "Camera",
-    category = Category.CAMERA,
-    description = "Floyd freecam, freelook, F5 distance, scroll, and no-clip controls.",
-    toggled = true,
-) {
+/**
+ * Facade over the per-feature camera modules ([FloydFreecam], [FloydFreelook], [FloydF5Customizer]).
+ *
+ * This used to be a single mega-[Module][gg.floyd.features.Module] that owned every camera setting.
+ * Each feature is now its own top-level module; this object keeps all the runtime camera state and
+ * math and exposes facade methods that read the new modules so the mixins do not have to change.
+ */
+object FloydCamera {
     private const val ACCELERATION = 20.0
     private const val MAX_SPEED = 15.0
     private const val SLOWDOWN = 0.05
     private const val DEFAULT_F5_DISTANCE = 4.0f
 
-    var freecam by RuntimeBooleanSetting("Freecam", false, desc = "Detached spectator-style camera.")
-    var freelook by RuntimeBooleanSetting("Freelook", false, desc = "Orbit camera around the player.")
-    private val freecamKey by KeybindSetting("Toggle Freecam", GLFW.GLFW_KEY_UNKNOWN, desc = "Floyd freecam toggle key.").onPress {
-        if (!enabled) toggle()
-        toggleFreecam()
-        modMessage(if (freecamActive()) "Freecam enabled." else "Freecam disabled.")
-    }
-    private val freelookKey by KeybindSetting("Toggle Freelook", GLFW.GLFW_KEY_V, desc = "Floyd freelook toggle key.").onPress {
-        if (!enabled) toggle()
-        toggleFreelook()
-        modMessage(if (freelookActive()) "Freelook enabled." else "Freelook disabled.")
-    }
-    val freecamSpeed by NumberSetting("Speed", 1.0f, 0.1f, 10.0f, 0.1f, desc = "Movement speed for freecam.")
-    var freelookDistance by NumberSetting("Distance", 4.0f, 1.0f, 20.0f, 0.5f, desc = "Third-person freelook distance.")
-    var f5DisableFront by BooleanSetting("Disable Front Cam", false, desc = "Skips front-facing third person when cycling camera.")
-    var f5DisableBack by BooleanSetting("Disable Back Cam", false, desc = "Skips back-facing third person when cycling camera.")
-    var f5NoClip by BooleanSetting("No Third-Person Clipping", false, desc = "Stops third-person camera distance from being clipped by blocks.")
-    var f5ScrollEnabled by BooleanSetting("Scrolling Changes Distance", false, desc = "Mouse wheel changes third-person camera distance.")
-    var f5ResetOnToggle by BooleanSetting("Reset F5 Scrolling", false, desc = "Resets third-person camera distance when cycling camera.")
-    var f5Distance by NumberSetting("Camera Distance", DEFAULT_F5_DISTANCE, 1.0f, 20.0f, 0.5f, desc = "Third-person camera distance.")
+    private var freecam = false
+    private var freelook = false
 
     private var freecamX = 0.0
     private var freecamY = 0.0
@@ -62,22 +36,87 @@ object FloydCamera : Module(
     private var velUp = 0.0
     private var lastMoveTime = 0L
 
-    override fun onDisable() {
+    private val freecamSpeed: Float get() = FloydFreecam.speed
+    private var freelookDistance: Float
+        get() = FloydFreelook.distance
+        set(value) { FloydFreelook.distance = value }
+    private val f5DisableFront: Boolean get() = FloydF5Customizer.disableFront
+    private val f5DisableBack: Boolean get() = FloydF5Customizer.disableBack
+    private val f5NoClip: Boolean get() = FloydF5Customizer.noClip
+    private val f5ScrollEnabled: Boolean get() = FloydF5Customizer.scrollEnabled
+    private val f5ResetOnToggle: Boolean get() = FloydF5Customizer.resetOnToggle
+    private var f5Distance: Float
+        get() = FloydF5Customizer.f5Distance
+        set(value) { FloydF5Customizer.f5Distance = value }
+
+    @JvmStatic
+    fun freecamActive(): Boolean = FloydFreecam.enabled && freecam
+
+    @JvmStatic
+    fun freelookActive(): Boolean = FloydFreelook.enabled && freelook
+
+    /**
+     * Forces freecam/freelook off after configuration load so the player never spawns into a
+     * transient camera mode across restarts.
+     */
+    @JvmStatic
+    fun resetTransientModes() {
+        if (FloydFreecam.enabled) FloydFreecam.toggle()
+        if (FloydFreelook.enabled) FloydFreelook.toggle()
         freecam = false
         freelook = false
         resetFreecamVelocity()
-        super.onDisable()
+    }
+
+    /** Invoked by [FloydFreecam.onEnable]: capture player position and reset velocity. */
+    @JvmStatic
+    fun beginFreecam() {
+        val player = mc.player ?: return
+        freecamX = player.x
+        freecamY = player.eyeY
+        freecamZ = player.z
+        freecamYaw = player.yRot
+        freecamPitch = player.xRot
+        resetFreecamVelocity()
+        lastMoveTime = System.nanoTime()
+        freecam = true
+        if (FloydFreelook.enabled) FloydFreelook.toggle()
+    }
+
+    /** Invoked by [FloydFreecam.onDisable]. */
+    @JvmStatic
+    fun endFreecam() {
+        freecam = false
+        resetFreecamVelocity()
+    }
+
+    /** Invoked by [FloydFreelook.onEnable]: set third-person-back view. */
+    @JvmStatic
+    fun beginFreelook() {
+        val player = mc.player ?: return
+        freelookYaw = player.yRot
+        freelookPitch = player.xRot
+        resetFreecamVelocity()
+        mc.options.setCameraType(CameraType.THIRD_PERSON_BACK)
+        freelook = true
+        if (FloydFreecam.enabled) FloydFreecam.toggle()
+    }
+
+    /** Invoked by [FloydFreelook.onDisable]. */
+    @JvmStatic
+    fun endFreelook() {
+        freelook = false
     }
 
     @JvmStatic
-    fun freecamActive(): Boolean = enabled && freecam
+    fun toggleFreecam() = FloydFreecam.toggle()
 
     @JvmStatic
-    fun freelookActive(): Boolean = enabled && freelook
+    fun toggleFreelook() = FloydFreelook.toggle()
 
     @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
-        "enabled" to enabled,
+        "enabled" to true,
         "freecam" to freecam,
         "freelook" to freelook,
         "freecamActive" to freecamActive(),
@@ -104,40 +143,6 @@ object FloydCamera : Module(
             "distance" to f5Distance
         )
     )
-
-    @JvmStatic
-    fun toggleFreecam() {
-        val player = mc.player ?: return
-        if (!freecamActive()) {
-            freecamX = player.x
-            freecamY = player.eyeY
-            freecamZ = player.z
-            freecamYaw = player.yRot
-            freecamPitch = player.xRot
-            freelook = false
-            resetFreecamVelocity()
-            lastMoveTime = System.nanoTime()
-            freecam = true
-        } else {
-            freecam = false
-            resetFreecamVelocity()
-        }
-    }
-
-    @JvmStatic
-    fun toggleFreelook() {
-        val player = mc.player ?: return
-        if (!freelookActive()) {
-            freelookYaw = player.yRot
-            freelookPitch = player.xRot
-            freecam = false
-            resetFreecamVelocity()
-            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK)
-            freelook = true
-        } else {
-            freelook = false
-        }
-    }
 
     @JvmStatic
     fun updateFreecamMovement() {
@@ -202,11 +207,11 @@ object FloydCamera : Module(
     @JvmStatic fun freelookPitch(): Float = freelookPitch
     @JvmStatic fun currentFreelookDistance(): Float = freelookDistance
     @JvmStatic fun currentF5Distance(): Float = f5Distance
-    @JvmStatic fun shouldNoClipF5(): Boolean = enabled && f5NoClip
-    @JvmStatic fun shouldScrollF5(): Boolean = enabled && f5ScrollEnabled
-    @JvmStatic fun shouldResetF5OnToggle(): Boolean = enabled && f5ResetOnToggle
-    @JvmStatic fun shouldDisableFrontCamera(): Boolean = enabled && f5DisableFront
-    @JvmStatic fun shouldDisableBackCamera(): Boolean = enabled && f5DisableBack
+    @JvmStatic fun shouldNoClipF5(): Boolean = FloydF5Customizer.enabled && f5NoClip
+    @JvmStatic fun shouldScrollF5(): Boolean = FloydF5Customizer.enabled && f5ScrollEnabled
+    @JvmStatic fun shouldResetF5OnToggle(): Boolean = FloydF5Customizer.enabled && f5ResetOnToggle
+    @JvmStatic fun shouldDisableFrontCamera(): Boolean = FloydF5Customizer.enabled && f5DisableFront
+    @JvmStatic fun shouldDisableBackCamera(): Boolean = FloydF5Customizer.enabled && f5DisableBack
 
     @JvmStatic
     fun nextCameraTypeAfter(current: CameraType, disableFront: Boolean, disableBack: Boolean): CameraType {
@@ -263,11 +268,8 @@ object FloydCamera : Module(
 
     @JvmStatic
     fun disableCameraModes() {
-        if (freecam) {
-            freecam = false
-            resetFreecamVelocity()
-        }
-        freelook = false
+        if (FloydFreecam.enabled) FloydFreecam.toggle()
+        if (FloydFreelook.enabled) FloydFreelook.toggle()
     }
 
     private fun calcVelocity(velocity: Double, impulse: Double, dt: Double, accel: Double): Double {
