@@ -87,7 +87,7 @@ class Panel(private val category: Category) {
                 panelSetting.y + startY,
                 WIDTH,
                 10f,
-                if (lastModuleButton?.module?.enabled == true) ClickGUIModule.clickGUIColor.rgba else gray26.rgba,
+                if (lastModuleButton?.module?.enabled == true) ClickGUIModule.guiAccentColor() else gray26.rgba,
                 5f,
                 false
             )
