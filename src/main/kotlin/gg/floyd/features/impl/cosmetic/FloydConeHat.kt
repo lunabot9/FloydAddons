@@ -25,7 +25,7 @@ object FloydConeHat : Module(
     toggled = true,
 ) {
     val coneHatEnabled by BooleanSetting("Enabled", false, desc = "Enables Floyd cone hat rendering.")
-    var selectedImage by StringSetting("Image", "", 96, desc = "Cone hat PNG file in config/floydaddons/cone-hats.")
+    var selectedImage by StringSetting("Image", "", 96, desc = "Cone hat PNG file in config/floydaddons/images.")
     private val listImages by ActionSetting("List Cone Images", desc = "Prints available cone hat PNG files in chat.") {
         val images = availableImages()
         modMessage(if (images.isEmpty()) "No cone hat PNG files found." else "Available cone hat images:\n${images.joinToString("\n")}")
@@ -36,7 +36,7 @@ object FloydConeHat : Module(
     private val nextImage by ActionSetting("Next Cone Image", desc = "Selects the next available cone hat PNG file.") {
         cycleImage(1)
     }
-    private val openImageFolder by ActionSetting("Open Cone Folder", desc = "Opens config/floydaddons/cone-hats.") {
+    private val openImageFolder by ActionSetting("Open Cone Folder", desc = "Opens config/floydaddons/images.") {
         modMessage(if (openDirectory(imageDir)) "Opened cone hat folder." else "Could not open cone hat folder: $imageDir")
     }
     private val reloadImage by ActionSetting("Reload Cone Image", desc = "Reloads the selected cone hat texture.") {
@@ -50,7 +50,7 @@ object FloydConeHat : Module(
     val rotation by NumberSetting("Rotation", 0.0f, 0.0f, 360.0f, 1.0f, desc = "Cone hat base rotation.")
     val rotationSpeed by NumberSetting("Spin Speed", 0.0f, 0.0f, 360.0f, 1.0f, desc = "Cone hat rotation speed.")
 
-    private val imageDir: Path = FloydAddonsMod.configFile.toPath().resolve("cone-hats")
+    private val imageDir: Path get() = CosmeticImages.dir
     private val builtinTexture = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "textures/entity/cone.png")
     private val dynamicTexture = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "cone/custom")
     private var cachedTexture: Identifier? = null
@@ -166,18 +166,13 @@ object FloydConeHat : Module(
     }
 
     private fun ensureExternalDir() {
-        Files.createDirectories(imageDir)
+        CosmeticImages.ensureSeeded()
     }
 
     private fun extractDefault() {
         if (defaultExtracted) return
         defaultExtracted = true
         ensureExternalDir()
-        val target = imageDir.resolve("Floyd.png")
-        if (Files.exists(target)) return
-        FloydAddonsMod.mc.resourceManager.getResource(builtinTexture).ifPresent { resource ->
-            resource.open().use { input -> Files.copy(input, target) }
-        }
     }
 
     private fun readSelectedImage(): NativeImage? {

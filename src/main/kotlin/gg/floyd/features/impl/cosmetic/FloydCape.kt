@@ -31,7 +31,7 @@ object FloydCape : Module(
     toggled = true,
 ) {
     val capeEnabled by BooleanSetting("Enabled", false, desc = "Enables Floyd cape rendering.")
-    var selectedCape by StringSetting("Image", "", 96, desc = "Cape PNG or GIF file in config/floydaddons/capes.")
+    var selectedCape by StringSetting("Image", "", 96, desc = "Cape PNG or GIF file in config/floydaddons/images.")
     private val listCapes by ActionSetting("List Capes", desc = "Prints available cape PNG/GIF files in chat.") {
         val capes = availableCapes()
         modMessage(if (capes.isEmpty()) "No cape PNG/GIF files found." else "Available capes:\n${capes.joinToString("\n")}")
@@ -42,7 +42,7 @@ object FloydCape : Module(
     private val nextCape by ActionSetting("Next Cape", desc = "Selects the next available cape image.") {
         cycleCape(1)
     }
-    private val openCapeFolder by ActionSetting("Open Cape Folder", desc = "Opens config/floydaddons/capes.") {
+    private val openCapeFolder by ActionSetting("Open Cape Folder", desc = "Opens config/floydaddons/images.") {
         modMessage(if (openDirectory(capeDir)) "Opened cape folder." else "Could not open cape folder: $capeDir")
     }
     private val reloadCape by ActionSetting("Reload Cape", desc = "Reloads the selected cape texture.") {
@@ -51,7 +51,7 @@ object FloydCape : Module(
         modMessage("Reloaded selected cape: $selectedCape")
     }
 
-    private val capeDir: Path = FloydAddonsMod.configFile.toPath().resolve("capes")
+    private val capeDir: Path get() = CosmeticImages.dir
     private val builtinCape = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "textures/cape/default_cape.png")
     private val dynamicCape = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "cape/custom")
     private var cachedTexture: Identifier? = null
@@ -170,12 +170,7 @@ object FloydCape : Module(
     }
 
     private fun ensureExternalDir() {
-        Files.createDirectories(capeDir)
-        val target = capeDir.resolve("default_cape.png")
-        if (Files.exists(target)) return
-        FloydAddonsMod.mc.resourceManager.getResource(builtinCape).ifPresent { resource ->
-            resource.open().use { input -> Files.copy(input, target) }
-        }
+        CosmeticImages.ensureSeeded()
     }
 
     private fun readSelectedImage(): NativeImage? {
