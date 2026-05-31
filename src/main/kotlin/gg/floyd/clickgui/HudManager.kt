@@ -11,11 +11,10 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
+import gg.floyd.utils.ui.activeMouseOverride
 import org.lwjgl.glfw.GLFW
 import kotlin.math.roundToInt
 import kotlin.math.sign
-import gg.floyd.utils.ui.mouseX as floydMouseX
-import gg.floyd.utils.ui.mouseY as floydMouseY
 
 object HudManager : Screen(Component.literal("HUD Manager")) {
 
@@ -23,6 +22,41 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
 
     private var deltaX = 0f
     private var deltaY = 0f
+
+    /**
+     * Mouse position in the same coordinate space HUD elements are positioned and rendered in.
+     *
+     * Both the editor (here) and the in-game HUD (ModuleManager.render) draw elements under
+     * pose().scale(1 / guiScale) starting from the default gui-scaled pose, which maps one HUD
+     * unit onto one framebuffer pixel. mc.mouseHandler.xpos()/ypos() are reported in logical
+     * window points (range 0..screenWidth, see MouseHandler.getScaledXPos which divides by
+     * getScreenWidth()), so we scale by the device-pixel ratio (width / screenWidth) to land in
+     * framebuffer-pixel space. This is divergence-proof: both render and hit-test are anchored to
+     * the framebuffer, independent of guiScale (auto or fixed) and devicePixelRatio.
+     *
+     * When the local-control test harness supplies a synthetic mouse override, that point is in
+     * standard gui-scaled space (see FloydLocalControl.controlMousePoint), so it is converted with
+     * the gui-scaled -> framebuffer ratio (width / guiScaledWidth) instead.
+     */
+    fun renderSpaceMouseX(): Float {
+        activeMouseOverride()?.let { (overrideX, _) ->
+            val guiScaledWidth = mc.window.guiScaledWidth
+            return if (guiScaledWidth == 0) overrideX else overrideX * mc.window.width / guiScaledWidth
+        }
+        val screenWidth = mc.window.screenWidth
+        if (screenWidth == 0) return mc.mouseHandler.xpos().toFloat()
+        return (mc.mouseHandler.xpos() * mc.window.width / screenWidth).toFloat()
+    }
+
+    fun renderSpaceMouseY(): Float {
+        activeMouseOverride()?.let { (_, overrideY) ->
+            val guiScaledHeight = mc.window.guiScaledHeight
+            return if (guiScaledHeight == 0) overrideY else overrideY * mc.window.height / guiScaledHeight
+        }
+        val screenHeight = mc.window.screenHeight
+        if (screenHeight == 0) return mc.mouseHandler.ypos().toFloat()
+        return (mc.mouseHandler.ypos() * mc.window.height / screenHeight).toFloat()
+    }
 
     override fun init() {
         for (hud in hudSettingsCache) {
@@ -35,8 +69,8 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         super.render(guiGraphics, mouseX, mouseY, deltaTicks)
 
         dragging?.let {
-            it.x = (floydMouseX + deltaX).coerceIn(0f, (mc.window.screenWidth - (it.width * it.scale))).toInt()
-            it.y = (floydMouseY + deltaY).coerceIn(0f, (mc.window.screenHeight - (it.height * it.scale))).toInt()
+            it.x = (renderSpaceMouseX() + deltaX).coerceIn(0f, (mc.window.width - (it.width * it.scale)).coerceAtLeast(0f)).toInt()
+            it.y = (renderSpaceMouseY() + deltaY).coerceIn(0f, (mc.window.height - (it.height * it.scale)).coerceAtLeast(0f)).toInt()
         }
 
         guiGraphics.pose().pushMatrix()
@@ -78,8 +112,8 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         hudSettingsCache.firstOrNull { it.module.enabled && it.value.isHovered() }?.let { hovered ->
             dragging = hovered.value
 
-            deltaX = (hovered.value.x - floydMouseX)
-            deltaY = (hovered.value.y - floydMouseY)
+            deltaX = (hovered.value.x - renderSpaceMouseX())
+            deltaY = (hovered.value.y - renderSpaceMouseY())
             return true
         }
 
@@ -128,8 +162,10 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         val (estimatedWidth, estimatedHeight) = estimatedHudSize(hud)
         val width = (hud.value.width.takeIf { it > 0 } ?: estimatedWidth) * hud.value.scale
         val height = (hud.value.height.takeIf { it > 0 } ?: estimatedHeight) * hud.value.scale
-        hud.value.x = hud.value.x.coerceIn(0, (mc.window.screenWidth - width).toInt().coerceAtLeast(0))
-        hud.value.y = hud.value.y.coerceIn(0, (mc.window.screenHeight - height).toInt().coerceAtLeast(0))
+        // HUD coordinates live in framebuffer-pixel space (render uses scale(1/guiScale) from the
+        // gui-scaled pose), so clamp against the framebuffer dimensions, not the logical window.
+        hud.value.x = hud.value.x.coerceIn(0, (mc.window.width - width).toInt().coerceAtLeast(0))
+        hud.value.y = hud.value.y.coerceIn(0, (mc.window.height - height).toInt().coerceAtLeast(0))
     }
 
     private fun estimatedHudSize(hud: gg.floyd.clickgui.settings.impl.HUDSetting): Pair<Int, Int> = when (hud.name) {

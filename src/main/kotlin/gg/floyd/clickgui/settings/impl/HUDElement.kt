@@ -1,8 +1,8 @@
 package gg.floyd.clickgui.settings.impl
 
+import gg.floyd.clickgui.HudManager
 import gg.floyd.utils.Colors
 import gg.floyd.utils.render.hollowFill
-import gg.floyd.utils.ui.isAreaHovered
 import net.minecraft.client.gui.GuiGraphics
 
 open class HudElement(
@@ -31,5 +31,14 @@ open class HudElement(
         this.height = height
     }
 
-    fun isHovered(): Boolean = isAreaHovered(x.toFloat(), y.toFloat(), width * scale, height * scale)
+    fun isHovered(): Boolean {
+        // HUD elements are positioned/rendered in framebuffer-pixel space (the in-game and
+        // editor render both draw under pose().scale(1/guiScale) from the default gui-scaled
+        // pose, which collapses one HUD unit onto one framebuffer pixel). Hit-test the mouse
+        // in that exact same space so render and hit-test can never diverge across guiScale or
+        // devicePixelRatio. See HudManager.mouseX/mouseY.
+        val mx = HudManager.renderSpaceMouseX()
+        val my = HudManager.renderSpaceMouseY()
+        return mx in x.toFloat()..(x + width * scale) && my in y.toFloat()..(y + height * scale)
+    }
 }
