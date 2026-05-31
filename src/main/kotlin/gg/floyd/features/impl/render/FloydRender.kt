@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
@@ -9,6 +10,8 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFWVidMode
+import java.nio.file.Files
+import java.nio.file.Path
 
 object FloydRender : Module(
     name = "Render",
@@ -19,6 +22,8 @@ object FloydRender : Module(
     var borderlessWindowed by BooleanSetting("Borderless Window", false, desc = "Matches Floyd's borderless window toggle.")
     val windowTitle by StringSetting("Instance Title", "", 64, desc = "Custom taskbar/window title.")
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
+    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Overrides the vanilla game font with Floyd's bundled font. Reload resources (F3+T) to apply.")
+    val customFontFile by StringSetting("Custom Font File", "", 128, desc = "Optional .ttf in the Floyd config dir to use instead of the bundled font. Reload resources (F3+T) to apply.")
     val hudCornerRadius by NumberSetting("HUD Corner Radius", 0, 0, 12, 1, desc = "Rounded corner radius for Floyd HUD panels.")
 
     // Global appearance for every Floyd border+bg panel routed through HudPanel.fillPanel.
@@ -44,11 +49,34 @@ object FloydRender : Module(
     @JvmStatic
     fun shouldUseFullChatChroma(): Boolean = enabled && fullChatChroma
 
+    /** Whether the bundled font should override the vanilla game font. OFF renders with the vanilla font. */
+    @JvmStatic
+    fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont
+
+    /**
+     * Resolved path to a user-supplied .ttf inside the Floyd config dir, or null when unset/invalid.
+     * Crash-safe: any resolution failure returns null so the caller falls back to the bundled font.
+     */
+    @JvmStatic
+    fun customFontPath(): Path? {
+        val name = customFontFile.trim()
+        if (name.isEmpty()) return null
+        return try {
+            val path = FloydAddonsMod.configFile.toPath().resolve(name).normalize()
+            if (Files.isRegularFile(path) && Files.isReadable(path)) path else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "fullChatChroma" to fullChatChroma,
         "shouldUseFullChatChroma" to shouldUseFullChatChroma(),
+        "globalCustomFont" to globalCustomFont,
+        "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
+        "customFontFile" to customFontFile,
         "borderlessWindowed" to borderlessWindowed,
         "windowTitle" to windowTitle,
         "effectiveWindowTitle" to windowTitle.trim().ifEmpty { "Minecraft" },

@@ -23,6 +23,7 @@
     "mixins.ClientPacketListenerMixin",
     "mixins.FontMixin",
     "mixins.FloydBrandSpoofMixin",
+    "mixins.FloydDefaultFontMixin",
     "mixins.FloydFabricLoaderMixin",
     "mixins.FloydTitleScreenBackgroundMixin",
     "mixins.FloydTimeUpdateMixin",
