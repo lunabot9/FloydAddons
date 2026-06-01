@@ -218,7 +218,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private const val nickPanelHeight = 150
     private const val nickFullWidth = 220
     private const val githubUrl = "https://github.com/lunabot9/FloydAddons"
-    private const val githubHeader = "Check out FloydAddons on GitHub!"
+    private const val discordUrl = "https://discord.gg/FLOYD"
+    private const val communityHeader = "Join the Floyd Addons Community"
+    private const val githubLinkText = "github"
+    private const val discordLinkText = ".gg/FLOYD"
     private val legacyClickGuiPanelConfigPath: Path = FloydAddonsMod.configFile.toPath().resolve("clickgui-panels.json")
     private val legacyClickGuiPanelGson = GsonBuilder().setPrettyPrinting().create()
     private val legacyClickGuiPanelType = object : TypeToken<Map<String, List<Int>>>() {}.type
@@ -242,6 +245,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private var hudButton = Rect.ZERO
     private var v2Button = Rect.ZERO
     private var linkBounds = Rect.ZERO
+    private var discordLinkBounds = Rect.ZERO
     private var labelBounds = emptyList<Rect>()
     private var pageBackButton = Rect.ZERO
     private var pageDoneButton = Rect.ZERO
@@ -810,6 +814,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         } else {
             labelBounds = emptyList()
             linkBounds = Rect.ZERO
+            discordLinkBounds = Rect.ZERO
             drawPage(context, left, top, bottom, alpha)
         }
 
@@ -946,6 +951,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
             button == 0 && points.any { linkBounds.contains(it.first, it.second) } -> {
                 runCatching { Desktop.getDesktop().browse(URI(githubUrl)) }
+                return true
+            }
+            button == 0 && points.any { discordLinkBounds.contains(it.first, it.second) } -> {
+                runCatching { Desktop.getDesktop().browse(URI(discordUrl)) }
                 return true
             }
             button == 0 && points.any { pageBackButton.contains(it.first, it.second) } -> {
@@ -1300,6 +1309,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         add(hudButton)
         add(v2Button)
         add(linkBounds)
+        add(discordLinkBounds)
         add(pageBackButton)
         add(pageDoneButton)
         add(editorSaveButton)
@@ -6361,11 +6371,21 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val centerX = left + panelWidth() / 2
         val headerY = bottom - scaleY(34) - 15
         val linkY = headerY + mc.font.lineHeight + 5
-        val headerX = centerX - mc.font.width(githubHeader) / 2
-        val linkX = centerX - mc.font.width(githubUrl) / 2
-        context.drawString(mc.font, githubHeader, headerX, headerY, applyAlpha(0xFFFFFFFF.toInt(), alpha), true)
-        context.drawString(mc.font, githubUrl, linkX, linkY, applyAlpha(chromaColor(0f), alpha), true)
-        linkBounds = Rect(linkX, linkY, mc.font.width(githubUrl), mc.font.lineHeight)
+        val headerX = centerX - mc.font.width(communityHeader) / 2
+        context.drawString(mc.font, communityHeader, headerX, headerY, applyAlpha(0xFFFFFFFF.toInt(), alpha), true)
+
+        // Two markdown-style text links centered as one row: "github" and ".gg/FLOYD".
+        val gap = mc.font.width("    ")
+        val githubW = mc.font.width(githubLinkText)
+        val discordW = mc.font.width(discordLinkText)
+        val rowX = centerX - (githubW + gap + discordW) / 2
+        val discordX = rowX + githubW + gap
+        val githubHovered = linkBounds.contains(hoverX, hoverY)
+        val discordHovered = discordLinkBounds.contains(hoverX, hoverY)
+        context.drawString(mc.font, githubLinkText, rowX, linkY, applyAlpha(if (githubHovered) 0xFFFFFFFF.toInt() else chromaColor(0f), alpha), true)
+        context.drawString(mc.font, discordLinkText, discordX, linkY, applyAlpha(if (discordHovered) 0xFFFFFFFF.toInt() else chromaColor(0.5f), alpha), true)
+        linkBounds = Rect(rowX, linkY, githubW, mc.font.lineHeight)
+        discordLinkBounds = Rect(discordX, linkY, discordW, mc.font.lineHeight)
     }
 
     private fun drawButton(context: GuiGraphics, rect: Rect, label: String, alpha: Float) {

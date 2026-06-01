@@ -17,6 +17,8 @@ import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
+import java.awt.Desktop
+import java.net.URI
 import kotlin.math.sign
 import gg.floyd.utils.ui.mouseX as floydMouseX
 import gg.floyd.utils.ui.mouseY as floydMouseY
@@ -35,6 +37,12 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     val gray38 = Color(38, 38, 38)
     val gray26 = Color(26, 26, 26)
 
+    private const val githubUrl = "https://github.com/lunabot9/FloydAddons"
+    private const val discordUrl = "https://discord.gg/FLOYD"
+    // Clickable-link bounds (x, y, w, h) in the scaled GUI space, refreshed every frame by drawCommunity.
+    private var communityGithubBounds = floatArrayOf(0f, 0f, 0f, 0f)
+    private var communityDiscordBounds = floatArrayOf(0f, 0f, 0f, 0f)
+
     override fun render(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
             val scaledMouseX = floydMouseX / ClickGUIModule.getStandardGuiScale()
@@ -46,6 +54,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
             drawTitle(searchBarX, searchBarY, 22f)
             SearchBar.draw(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
+            drawCommunity(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
 
             if (openAnim.isAnimating()) {
                 val scale = openAnim.get(0f, 1f)
@@ -88,6 +97,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     ): Boolean {
         val scaledMouseX = floydMouseX / ClickGUIModule.getStandardGuiScale()
         val scaledMouseY = floydMouseY / ClickGUIModule.getStandardGuiScale()
+        if (mouseButtonEvent.button() == 0 && hitCommunityLink(scaledMouseX, scaledMouseY)) return true
         SearchBar.mouseClicked(scaledMouseX, scaledMouseY, mouseButtonEvent)
         for (i in panels.size - 1 downTo 0) {
             if (panels[i].mouseClicked(scaledMouseX, scaledMouseY, mouseButtonEvent)) return true
@@ -176,6 +186,49 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
             )
             NVGRenderer.drawWrappedString(text, x + 8f, y + 8f, 300f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         }
+    }
+
+    /**
+     * Renders "Join the Floyd Addons Community" below the search bar with two markdown-style text
+     * links — "github" and ".gg/FLOYD" — that open the repo / Discord. Link bounds are refreshed each
+     * frame for [hitCommunityLink] to hit-test in [mouseClicked].
+     */
+    private fun drawCommunity(searchBarX: Float, searchBarY: Float, mouseX: Float, mouseY: Float) {
+        val centerX = searchBarX + 175f
+        val size = 15f
+        val header = "Join the Floyd Addons Community"
+        val headerWidth = NVGRenderer.textWidth(header, size, NVGRenderer.defaultFont)
+        val headerY = searchBarY + 40f + 8f
+        NVGRenderer.text(header, centerX - headerWidth / 2f, headerY, size, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+
+        val gap = NVGRenderer.textWidth("    ", size, NVGRenderer.defaultFont)
+        val githubWidth = NVGRenderer.textWidth("github", size, NVGRenderer.defaultFont)
+        val discordWidth = NVGRenderer.textWidth(".gg/FLOYD", size, NVGRenderer.defaultFont)
+        val rowY = headerY + size + 3f
+        val githubX = centerX - (githubWidth + gap + discordWidth) / 2f
+        val discordX = githubX + githubWidth + gap
+
+        communityGithubBounds = floatArrayOf(githubX, rowY, githubWidth, size)
+        communityDiscordBounds = floatArrayOf(discordX, rowY, discordWidth, size)
+
+        val githubColor = if (inBounds(communityGithubBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor(0f)
+        val discordColor = if (inBounds(communityDiscordBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor(0.5f)
+        NVGRenderer.text("github", githubX, rowY, size, githubColor, NVGRenderer.defaultFont)
+        NVGRenderer.text(".gg/FLOYD", discordX, rowY, size, discordColor, NVGRenderer.defaultFont)
+    }
+
+    private fun inBounds(b: FloatArray, x: Float, y: Float): Boolean =
+        x >= b[0] && x <= b[0] + b[2] && y >= b[1] && y <= b[1] + b[3]
+
+    /** Opens the community link under the cursor, if any. Returns true if a link was hit. */
+    private fun hitCommunityLink(x: Float, y: Float): Boolean {
+        val url = when {
+            inBounds(communityGithubBounds, x, y) -> githubUrl
+            inBounds(communityDiscordBounds, x, y) -> discordUrl
+            else -> return false
+        }
+        runCatching { Desktop.getDesktop().browse(URI(url)) }
+        return true
     }
 
     /** Renders the "FloydAddons" title above the search bar, tinted with the GUI accent (chroma-cycling per character). */
