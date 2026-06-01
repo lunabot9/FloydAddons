@@ -56,9 +56,30 @@ object BlockIconCache {
         return image
     }
 
-    /** Loads `block/{textureName}.png` into NanoVG, or null if it is missing/unreadable. */
+    /**
+     * Debug-only: the texture resource path [get] would load for [id], or null if no texture
+     * resolves. Pure resource reading (no GL) so it is safe to batch over the whole block registry;
+     * used by the control bridge's icon-coverage check to find blocks that render without an icon.
+     */
+    fun debugResolvedPath(id: String): String? {
+        val resolved = try { resolveTextureName(id) } catch (_: Throwable) { null }
+        for (candidate in listOfNotNull(resolved, defaultTextureName(id))) {
+            val rel = if (candidate.contains('/')) candidate else "block/$candidate"
+            val path = "/assets/minecraft/textures/$rel.png"
+            if (this::class.java.getResource(path) != null) return path
+        }
+        return null
+    }
+
+    /**
+     * Loads a block texture png into NanoVG, or null if it is missing/unreadable. A bare name is
+     * treated as `block/{name}` (the common case); a category-qualified name (e.g. `item/bamboo_door`
+     * for doors/signs/hanging-signs, whose 2D icon lives under `textures/item/`) is loaded as-is,
+     * relative to `textures/`.
+     */
     private fun loadTexture(textureName: String): Image? = try {
-        NVGRenderer.createImage("/assets/minecraft/textures/block/$textureName.png")
+        val rel = if (textureName.contains('/')) textureName else "block/$textureName"
+        NVGRenderer.createImage("/assets/minecraft/textures/$rel.png")
     } catch (_: Throwable) {
         null
     }

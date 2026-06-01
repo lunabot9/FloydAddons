@@ -32,6 +32,7 @@ import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydXray
+import gg.floyd.utils.render.BlockIconCache
 import gg.floyd.utils.render.RenderBatchManager
 import gg.floyd.utils.ui.clearMouseOverride
 import gg.floyd.utils.ui.setMouseOverride
@@ -117,7 +118,7 @@ object FloydLocalControl : Module(
     private val gson = GsonBuilder().serializeNulls().setPrettyPrinting().create()
     private val settingsPath: Path = FloydAddonsMod.configFile.toPath().resolve("control-bridge.json")
     private const val maxBodyBytes = 8192
-    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot")
+    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck")
 
     val bridgeEnabled by BooleanSetting("Enabled", true, desc = "Starts the loopback-only local control bridge.")
     private val port by NumberSetting("Port", FloydLocalControlSettings.DEFAULT_PORT, 1024, 65535, 1, desc = "Local control bridge port.")
@@ -241,6 +242,7 @@ object FloydLocalControl : Module(
                 "/type" -> requireMethod(exchange, "POST") { handleType(exchange) }
                 "/replace-text" -> requireMethod(exchange, "POST") { handleReplaceText(exchange) }
                 "/screenshot" -> requireMethod(exchange, "POST") { handleScreenshot(exchange) }
+                "/iconcheck" -> requireMethod(exchange, "GET") { send(exchange, 200, iconCheckPayload()) }
                 else -> send(exchange, 404, mapOf("ok" to false, "error" to "not_found"))
             }
         } catch (e: IllegalArgumentException) {
@@ -261,6 +263,22 @@ object FloydLocalControl : Module(
         "settings" to settingsPath.toString(),
         "endpoints" to advertisedEndpoints
     )
+
+    /**
+     * Icon-coverage debug check: resolves an icon texture path for every block in the registry and
+     * reports the ones that render without an icon (pure resource reading, no GL/client thread).
+     * Used to decide which blocks the search list should drop or whose textures need a resolver fix.
+     */
+    private fun iconCheckPayload(): Map<String, Any?> {
+        val ids = BuiltInRegistries.BLOCK.keySet().map { it.toString() }.sorted()
+        val missing = ids.filter { BlockIconCache.debugResolvedPath(it) == null }
+        return mapOf(
+            "ok" to true,
+            "totalBlocks" to ids.size,
+            "missingCount" to missing.size,
+            "missing" to missing
+        )
+    }
 
     private fun statePayload(): Map<String, Any?> = callClient {
         val root = linkedMapOf<String, Any?>()
