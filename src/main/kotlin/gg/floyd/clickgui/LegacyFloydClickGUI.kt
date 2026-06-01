@@ -6369,8 +6369,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
 
     private fun drawGithub(context: GuiGraphics, left: Int, bottom: Int, alpha: Float) {
         val centerX = left + panelWidth() / 2
-        val headerY = bottom - scaleY(34) - 15
-        val linkY = headerY + mc.font.lineHeight + 5
+        // Anchor the lower (clickable) links row first with comfortable bottom clearance, then place
+        // the header above it, so the 2-line community block never clips off the bottom of the panel.
+        val linkY = bottom - scaleY(34) - 18
+        val headerY = linkY - mc.font.lineHeight - 4
         val headerX = centerX - mc.font.width(communityHeader) / 2
         context.drawString(mc.font, communityHeader, headerX, headerY, applyAlpha(0xFFFFFFFF.toInt(), alpha), true)
 

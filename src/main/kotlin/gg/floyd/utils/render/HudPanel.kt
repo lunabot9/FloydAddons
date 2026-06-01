@@ -50,14 +50,14 @@ object HudPanel {
         val width = outlineWidth.coerceAtLeast(0f)
 
         if (FloydPanelStyle.panelBlur) {
-            val frost = frostedBackdrop()
-            if (frost != 0) {
-                RoundRectPIPRenderer.submit(
+            // Strength 0..20 -> blur radius 0..8 px (sampled with a step of 2, so ~0..16 px reach).
+            val blurRadius = FloydPanelStyle.panelBlurStrength.coerceIn(0, 20) * 0.4f
+            if (blurRadius > 0f) {
+                PanelBlurPIPRenderer.submit(
                     graphics,
                     x0, y0, x1, y1,
-                    frost, frost, frost, frost,
                     radius, radius, radius, radius,
-                    0, 0, 0, 0, 0f
+                    blurRadius, FloydPanelStyle.panelBlurIsBox()
                 )
             }
         }
@@ -69,24 +69,6 @@ object HudPanel {
             radius, radius, radius, radius,
             border.topLeft, border.topRight, border.bottomRight, border.bottomLeft, width
         )
-    }
-
-    /**
-     * Frosted-backdrop tint composited behind a panel when Panel Blur is enabled. The alpha scales
-     * with the Panel Blur Strength setting so a higher strength reads as a more opaque "frost".
-     *
-     * NOTE: This is NOT a true gaussian blur. The only clean vanilla blur API in this MC version is
-     * [net.minecraft.client.gui.GuiGraphics.blurBeforeThisStratum], which blurs the ENTIRE screen
-     * content of the current GUI stratum (the menu-background blur), not a per-panel sub-region, and
-     * cannot be routed through the per-panel PIP/RoundRect texture path. Compositing a per-panel
-     * frost is the crash-safe approximation; true per-region blur is a precise followup.
-     */
-    private fun frostedBackdrop(): Int {
-        val strength = FloydPanelStyle.panelBlurStrength.coerceAtLeast(0)
-        if (strength <= 0) return 0
-        // Map 0..20 strength onto ~0..192 alpha of black so the backdrop frosts without going opaque.
-        val alpha = ((strength / 20f) * 192f).roundToInt().coerceIn(0, 192)
-        return alpha shl 24
     }
 
     fun chromaColor(offset: Float): Int = 0xFF000000.toInt() or ChromaCache.rgbFor(offset)

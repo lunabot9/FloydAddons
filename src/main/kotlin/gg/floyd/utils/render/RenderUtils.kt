@@ -90,6 +90,7 @@ object RenderBatchManager {
             renderConsumer.clear()
 
             RoundRectPIPRenderer.clear()
+            PanelBlurPIPRenderer.clear()
         }
     }
 }

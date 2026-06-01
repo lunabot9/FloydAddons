@@ -42,9 +42,16 @@ object FloydPanelStyle : Module(
     val borderFade by BooleanSetting("Border Fade", false, desc = "Fades the panel border between the border color and the fade color.")
     val borderFadeColor by ColorSetting("Border Fade Color", Color(0xFF55FFFF.toInt()), desc = "Secondary color for the panel border fade.")
 
-    val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a frosted backdrop behind every Floyd panel.")
-    val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Strength of the frosted backdrop behind Floyd panels.")
-    val panelBlurType by SelectorSetting("Panel Blur Type", "Gaussian", listOf("Gaussian", "Box"), desc = "Blur kernel used for the panel backdrop (wired into the blur shader separately).")
+    val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a real blurred backdrop of the world behind every Floyd panel.")
+    val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Blur radius of the backdrop behind Floyd panels.")
+    private val blurTypes = listOf("Gaussian", "Box")
+    val panelBlurType by SelectorSetting("Panel Blur Type", "Gaussian", blurTypes, desc = "Blur kernel used for the panel backdrop.")
+
+    /** Selected blur-kernel name ([panelBlurType] holds the option index). */
+    fun panelBlurTypeName(): String = blurTypes.getOrElse(panelBlurType) { "Gaussian" }
+
+    /** Whether the box kernel is selected (vs the gaussian kernel). */
+    fun panelBlurIsBox(): Boolean = panelBlurTypeName() == "Box"
 
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
 
@@ -71,7 +78,7 @@ object FloydPanelStyle : Module(
         "borderFade" to borderFade,
         "panelBlur" to panelBlur,
         "panelBlurStrength" to panelBlurStrength,
-        "panelBlurType" to panelBlurType,
+        "panelBlurType" to panelBlurTypeName(),
         "fullChatChroma" to fullChatChroma,
         "shouldUseFullChatChroma" to shouldUseFullChatChroma()
     )

@@ -10,6 +10,7 @@ import gg.floyd.utils.IrisCompatability
 import gg.floyd.utils.handlers.TickTasks
 import gg.floyd.utils.render.ItemStateRenderer
 import gg.floyd.utils.render.RenderBatchManager
+import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import kotlinx.coroutines.CoroutineScope
@@ -72,6 +73,10 @@ object FloydAddonsMod : ClientModInitializer {
 
         SpecialGuiElementRegistry.register { context ->
             RoundRectPIPRenderer(context.vertexConsumers())
+        }
+
+        SpecialGuiElementRegistry.register { context ->
+            PanelBlurPIPRenderer(context.vertexConsumers())
         }
 
         SpecialGuiElementRegistry.register { context ->

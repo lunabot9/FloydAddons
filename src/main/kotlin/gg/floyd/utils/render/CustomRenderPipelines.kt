@@ -43,4 +43,20 @@ object CustomRenderPipelines {
             .withBlend(BlendFunction.TRANSLUCENT)
             .build()
     )
+
+    /**
+     * Per-panel frosted blur pipeline: a GUI round-rect that samples the main framebuffer ("In") and
+     * blurs it inside the rounded mask. Mirrors [PIPELINE_ROUND_RECT] but adds the texture sampler.
+     */
+    val PIPELINE_PANEL_BLUR: RenderPipeline = RenderPipelines.register(
+        RenderPipeline.builder(RenderPipelines.GUI_SNIPPET)
+            .withLocation(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "pipeline/panel_blur"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/panel_blur"))
+            .withVertexShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/panel_blur"))
+            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
+            .withUniform("u", UniformType.UNIFORM_BUFFER)
+            .withSampler("In")
+            .withBlend(BlendFunction.TRANSLUCENT)
+            .build()
+    )
 }
