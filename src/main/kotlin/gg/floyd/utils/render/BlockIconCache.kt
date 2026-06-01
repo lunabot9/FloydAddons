@@ -32,6 +32,13 @@ object BlockIconCache {
     // null value = attempted and unavailable; absent key = not yet attempted.
     private val cache = HashMap<String, Image?>()
 
+    /**
+     * Blocks with no visual representation at all (the air variants) — they can't be seen in-world
+     * and have no icon, so the block-search / Xray lists exclude them. Visible BlockEntity-rendered
+     * blocks (chests, beds, banners, skulls) are NOT here: they get a representative icon instead.
+     */
+    val invisibleBlockIds = setOf("minecraft:air", "minecraft:cave_air", "minecraft:void_air")
+
     // Bounds the model parent walk so a malformed/cyclic parent chain can never spin.
     private const val MAX_PARENT_DEPTH = 16
 
@@ -97,6 +104,33 @@ object BlockIconCache {
         return resolveFromItemModel(name)
             ?: resolveFromBlockModel(name)
             ?: resolveFromBlockState(name)
+            ?: resolveSpecialTexture(name)
+    }
+
+    /** Mob skulls/heads -> the mob's entity texture (no flat model texture of their own). */
+    private val skullTextures = mapOf(
+        "skeleton_skull" to "entity/skeleton/skeleton",
+        "wither_skeleton_skull" to "entity/skeleton/wither_skeleton",
+        "zombie_head" to "entity/zombie/zombie",
+        "creeper_head" to "entity/creeper/creeper",
+        "piglin_head" to "entity/piglin/piglin",
+        "dragon_head" to "entity/enderdragon/dragon",
+        "player_head" to "entity/player/wide/steve",
+    )
+
+    /**
+     * Representative texture for blocks drawn by a BlockEntity special renderer (`builtin/entity`),
+     * which expose no flat model texture so all three steps above miss: beds/banners borrow their
+     * dye color's wool; chests, decorated pots and skulls borrow their entity texture. Returns a
+     * `textures/`-relative (category-qualified) name so the list icon is recognizable, not blank.
+     */
+    private fun resolveSpecialTexture(name: String): String? = when {
+        name.endsWith("_bed") -> "block/${name.removeSuffix("_bed")}_wool"
+        name.endsWith("_banner") -> "block/${name.removeSuffix("_banner")}_wool"
+        name == "ender_chest" -> "entity/chest/ender"
+        name.endsWith("chest") -> "entity/chest/normal"
+        name == "decorated_pot" -> "entity/decorated_pot/decorated_pot_base"
+        else -> skullTextures[name]
     }
 
     /**

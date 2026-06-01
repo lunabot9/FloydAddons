@@ -91,7 +91,7 @@ object FloydXray : Module(
     // Backing storage for persistence; kept hidden. Name unchanged so saved configs load as-is.
     private val opaqueBlocks by MapSetting("Opaque Blocks", defaultOpaqueBlocks().associateWith { true }.toMutableMap()).hide()
 
-    private val allBlockIds by lazy { BuiltInRegistries.BLOCK.keySet().map { it.toString() }.sorted() }
+    private val allBlockIds by lazy { BuiltInRegistries.BLOCK.keySet().map { it.toString() }.filterNot { it in BlockIconCache.invisibleBlockIds }.sorted() }
 
     private var lastActive = false
 

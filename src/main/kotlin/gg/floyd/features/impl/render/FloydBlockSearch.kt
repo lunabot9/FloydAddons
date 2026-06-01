@@ -66,7 +66,7 @@ object FloydBlockSearch : Module(
 
     private val searchBlocks by MapSetting("Search Blocks", mutableMapOf<String, Boolean>()).hide()
 
-    private val allBlockIds by lazy { BuiltInRegistries.BLOCK.keySet().map { it.toString() }.sorted() }
+    private val allBlockIds by lazy { BuiltInRegistries.BLOCK.keySet().map { it.toString() }.filterNot { it in BlockIconCache.invisibleBlockIds }.sorted() }
 
     // chunkKey (ChunkPos.asLong) -> matching block positions inside that chunk.
     private val matchedByChunk = HashMap<Long, MutableSet<BlockPos>>()

@@ -270,7 +270,8 @@ object FloydLocalControl : Module(
      * Used to decide which blocks the search list should drop or whose textures need a resolver fix.
      */
     private fun iconCheckPayload(): Map<String, Any?> {
-        val ids = BuiltInRegistries.BLOCK.keySet().map { it.toString() }.sorted()
+        val ids = BuiltInRegistries.BLOCK.keySet().map { it.toString() }
+            .filterNot { it in BlockIconCache.invisibleBlockIds }.sorted()
         val missing = ids.filter { BlockIconCache.debugResolvedPath(it) == null }
         return mapOf(
             "ok" to true,
