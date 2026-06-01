@@ -71,9 +71,10 @@ object BlockIconCache {
     fun debugResolvedPath(id: String): String? {
         val resolved = try { resolveTextureName(id) } catch (_: Throwable) { null }
         for (candidate in listOfNotNull(resolved, defaultTextureName(id))) {
-            val rel = if (candidate.contains('/')) candidate else "block/$candidate"
-            val path = "/assets/minecraft/textures/$rel.png"
-            if (this::class.java.getResource(path) != null) return path
+            if (textureExists(candidate)) {
+                val rel = if (candidate.contains('/')) candidate else "block/$candidate"
+                return "/assets/minecraft/textures/$rel.png"
+            }
         }
         return null
     }
@@ -101,10 +102,29 @@ object BlockIconCache {
      */
     private fun resolveTextureName(id: String): String? {
         val name = defaultTextureName(id)
-        return resolveFromItemModel(name)
-            ?: resolveFromBlockModel(name)
-            ?: resolveFromBlockState(name)
-            ?: resolveSpecialTexture(name)
+        // Take the first candidate whose texture png actually exists. A resolver can legitimately
+        // return a name that has no png (e.g. a builtin/entity bed model with a stale texture ref);
+        // skipping it lets the chain fall through to the entity/wool fallback instead of dead-ending.
+        return sequence {
+            yield(tryResolve { resolveFromItemModel(name) })
+            yield(tryResolve { resolveFromBlockModel(name) })
+            yield(tryResolve { resolveFromBlockState(name) })
+            yield(tryResolve { resolveSpecialTexture(name) })
+        }.filterNotNull().firstOrNull(::textureExists)
+    }
+
+    /**
+     * Runs one resolver step, swallowing any failure to null. Each step must be independently safe:
+     * builtin/entity item JSON (beds, banners, chests, skulls) nests an object under "model", so a
+     * primitive accessor throws ClassCastException — without this guard that abort would skip the
+     * entity/wool fallback entirely and the block would render iconless.
+     */
+    private inline fun tryResolve(block: () -> String?): String? = try { block() } catch (_: Throwable) { null }
+
+    /** Whether the texture png for a (bare or category-qualified) name exists on the classpath. */
+    private fun textureExists(textureName: String): Boolean {
+        val rel = if (textureName.contains('/')) textureName else "block/$textureName"
+        return this::class.java.getResource("/assets/minecraft/textures/$rel.png") != null
     }
 
     /** Mob skulls/heads -> the mob's entity texture (no flat model texture of their own). */
