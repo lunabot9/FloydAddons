@@ -3,6 +3,7 @@ package gg.floyd.features.impl.misc
 import club.minnced.discord.rpc.DiscordEventHandlers
 import club.minnced.discord.rpc.DiscordRPC
 import club.minnced.discord.rpc.DiscordRichPresence
+import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.events.TickEvent
@@ -31,6 +32,12 @@ object FloydDiscordPresence : Module(
     private var failed = false
     private var lastState = ""
     private var lastShouldRun = false
+
+    // Pure-Java IPC fallback (used when the native discord-rpc lib is unavailable, e.g. macOS arm64).
+    private var usingIpc = false
+    private var ipcThread: Thread? = null
+    @Volatile private var desiredState = ""
+    private val pid by lazy { ProcessHandle.current().pid() }
 
     init {
         on<TickEvent.ClientEnd> {
@@ -65,39 +72,95 @@ object FloydDiscordPresence : Module(
         "lastShouldRun" to lastShouldRun,
         "appIdConfigured" to appId.isNotEmpty(),
         "largeImageKey" to largeImageKey,
-        "callbackThreadAlive" to (callbackThread?.isAlive == true)
+        "usingIpc" to usingIpc,
+        "callbackThreadAlive" to (callbackThread?.isAlive == true),
+        "ipcThreadAlive" to (ipcThread?.isAlive == true)
     )
 
     @Synchronized
     private fun start() {
         if (initialized || failed || appId.isEmpty()) return
-        try {
-            val currentRpc = DiscordRPC.INSTANCE
-            rpc = currentRpc
-            currentRpc.Discord_Initialize(appId, DiscordEventHandlers(), true, null)
-            updatePresence("In menus")
-            callbackThread = Thread({
-                while (!Thread.currentThread().isInterrupted) {
-                    try {
-                        currentRpc.Discord_RunCallbacks()
-                        Thread.sleep(2000L)
-                    } catch (_: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                    } catch (_: Throwable) {
-                        failed = true
-                        Thread.currentThread().interrupt()
-                    }
+        // Native RPC first; on any failure (notably UnsatisfiedLinkError on macOS arm64) fall back
+        // to the pure-Java IPC socket client so presence works on every platform Discord runs on.
+        if (startNative() || startIpc()) {
+            initialized = true
+        } else {
+            failed = true
+        }
+    }
+
+    private fun startNative(): Boolean = try {
+        val currentRpc = DiscordRPC.INSTANCE
+        currentRpc.Discord_Initialize(appId, DiscordEventHandlers(), true, null)
+        rpc = currentRpc
+        updatePresenceNative("In menus")
+        callbackThread = Thread({
+            while (!Thread.currentThread().isInterrupted) {
+                try {
+                    currentRpc.Discord_RunCallbacks()
+                    Thread.sleep(2000L)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                } catch (_: Throwable) {
+                    failed = true
+                    Thread.currentThread().interrupt()
                 }
-            }, "FloydAddons-DiscordRPC").apply {
+            }
+        }, "FloydAddons-DiscordRPC").apply {
+            isDaemon = true
+            start()
+        }
+        true
+    } catch (_: Throwable) {
+        rpc = null
+        false
+    }
+
+    private fun startIpc(): Boolean = try {
+        if (DiscordIpcClient.connect(appId)) {
+            usingIpc = true
+            desiredState = "In menus"
+            ipcThread = Thread(::runIpcLoop, "FloydAddons-DiscordIPC").apply {
                 isDaemon = true
                 start()
             }
-            initialized = true
-        } catch (_: Throwable) {
-            failed = true
-            rpc = null
+            FloydAddonsMod.logger.info("Discord presence using pure-Java IPC fallback (native lib unavailable)")
+            true
+        } else {
+            false
+        }
+    } catch (_: Throwable) {
+        usingIpc = false
+        false
+    }
+
+    /** IPC fallback loop on its own daemon thread: pushes [desiredState] to Discord, never the client thread. */
+    private fun runIpcLoop() {
+        var lastSent: String? = null
+        while (!Thread.currentThread().isInterrupted) {
+            val target = desiredState
+            if (target != lastSent) {
+                if (DiscordIpcClient.setActivity(pid, buildActivity(target))) {
+                    lastSent = target
+                } else {
+                    failed = true
+                    break
+                }
+            }
+            try {
+                Thread.sleep(2000L)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
         }
     }
+
+    private fun buildActivity(state: String): Map<String, Any?> = mapOf(
+        "details" to "Playing Floyd Addons",
+        "state" to state,
+        "assets" to mapOf("large_image" to largeImageKey, "large_text" to "Floyd Addons"),
+        "timestamps" to mapOf("start" to sessionStart)
+    )
 
     private fun tickPresence() {
         if (!initialized || failed) return
@@ -118,6 +181,10 @@ object FloydDiscordPresence : Module(
     }
 
     private fun updatePresence(state: String) {
+        if (usingIpc) desiredState = state else updatePresenceNative(state)
+    }
+
+    private fun updatePresenceNative(state: String) {
         val presence = DiscordRichPresence().apply {
             details = "Playing Floyd Addons"
             this.state = state
@@ -131,12 +198,19 @@ object FloydDiscordPresence : Module(
     @Synchronized
     fun shutdown() {
         if (!initialized) return
-        callbackThread?.interrupt()
-        callbackThread = null
-        try {
-            rpc?.Discord_ClearPresence()
-            rpc?.Discord_Shutdown()
-        } catch (_: Throwable) {
+        if (usingIpc) {
+            ipcThread?.interrupt()
+            ipcThread = null
+            DiscordIpcClient.close()
+            usingIpc = false
+        } else {
+            callbackThread?.interrupt()
+            callbackThread = null
+            try {
+                rpc?.Discord_ClearPresence()
+                rpc?.Discord_Shutdown()
+            } catch (_: Throwable) {
+            }
         }
         initialized = false
     }

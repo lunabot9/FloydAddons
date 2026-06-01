@@ -20,16 +20,55 @@ object FloydTaskbarIcon {
 
     fun applyOnce() {
         if (applied || !FloydCompatibility.shouldApplyTaskbarIcon()) return
+        applied = true
+        // macOS: GLFW window icons are a documented no-op (the dock icon is used instead), so the
+        // FloydAddons icon has to go through java.awt.Taskbar. Everything else uses the GLFW path.
         if (System.getProperty("os.name").contains("mac", ignoreCase = true)) {
-            applied = true
-            return
+            applyDockIconViaAwt()
+        } else {
+            applyWindowIconViaGlfw()
         }
+    }
 
+    /**
+     * Sets the dock icon on macOS via [java.awt.Taskbar]. Runs on its own daemon thread (never the
+     * render/main thread, which GLFW owns under -XstartOnFirstThread) and swallows every Throwable so
+     * an AWT/headless quirk can never destabilise the client. The image is read with headless-safe
+     * ImageIO so loading it touches no display subsystem.
+     */
+    private fun applyDockIconViaAwt() {
+        val image = loadAwtImage() ?: return
+        Thread({
+            try {
+                if (!java.awt.Taskbar.isTaskbarSupported()) return@Thread
+                val taskbar = java.awt.Taskbar.getTaskbar()
+                if (!taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) return@Thread
+                taskbar.iconImage = image
+                FloydAddonsMod.logger.info("Applied dock icon via java.awt.Taskbar")
+            } catch (t: Throwable) {
+                FloydAddonsMod.logger.debug("Dock icon via java.awt.Taskbar unavailable: {}", t.message)
+            }
+        }, "FloydAddons-DockIcon").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    /** Reads the largest icon (128x128) as a headless-safe AWT image, or null if unreadable. */
+    private fun loadAwtImage(): java.awt.image.BufferedImage? {
+        val resource = FloydAddonsMod.mc.resourceManager.getResource(iconIds.last()).orElse(null) ?: return null
+        return try {
+            resource.open().use { javax.imageio.ImageIO.read(it) }
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun applyWindowIconViaGlfw() {
         val window = FloydAddonsMod.mc.window
         val loaded = iconIds.mapNotNull(::loadIcon)
         if (loaded.isEmpty()) return
 
-        applied = true
         FloydAddonsMod.mc.execute {
             val images = GLFWImage.malloc(loaded.size)
             try {
