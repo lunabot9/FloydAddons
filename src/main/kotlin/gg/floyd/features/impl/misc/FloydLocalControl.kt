@@ -118,7 +118,7 @@ object FloydLocalControl : Module(
     private val gson = GsonBuilder().serializeNulls().setPrettyPrinting().create()
     private val settingsPath: Path = FloydAddonsMod.configFile.toPath().resolve("control-bridge.json")
     private const val maxBodyBytes = 8192
-    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck")
+    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck", "/entities")
 
     val bridgeEnabled by BooleanSetting("Enabled", true, desc = "Starts the loopback-only local control bridge.")
     private val port by NumberSetting("Port", FloydLocalControlSettings.DEFAULT_PORT, 1024, 65535, 1, desc = "Local control bridge port.")
@@ -243,6 +243,7 @@ object FloydLocalControl : Module(
                 "/replace-text" -> requireMethod(exchange, "POST") { handleReplaceText(exchange) }
                 "/screenshot" -> requireMethod(exchange, "POST") { handleScreenshot(exchange) }
                 "/iconcheck" -> requireMethod(exchange, "GET") { send(exchange, 200, iconCheckPayload()) }
+                "/entities" -> requireMethod(exchange, "GET") { send(exchange, 200, entitiesPayload()) }
                 else -> send(exchange, 404, mapOf("ok" to false, "error" to "not_found"))
             }
         } catch (e: IllegalArgumentException) {
@@ -279,6 +280,44 @@ object FloydLocalControl : Module(
             "missingCount" to missing.size,
             "missing" to missing
         )
+    }
+
+    /**
+     * Entity-debug dump used to validate the real-vs-fake-player heuristic against live servers: for
+     * each nearby entity it reports the tab-list signals (uuid present, name present, valid-pattern)
+     * so server NPC "players" can be distinguished from real ones empirically.
+     */
+    private fun entitiesPayload(): Map<String, Any?> = callClient {
+        val player = mc.player ?: return@callClient mapOf("ok" to true, "connected" to false, "entities" to emptyList<Any?>())
+        val level = mc.level ?: return@callClient mapOf("ok" to true, "connected" to false, "entities" to emptyList<Any?>())
+        val connection = mc.connection
+        val tabUuids = connection?.listedOnlinePlayers?.map { it.profile.id }?.toHashSet() ?: hashSetOf()
+        val tabNames = connection?.listedOnlinePlayers?.asSequence()?.map { it.profile.name.lowercase() }?.toHashSet() ?: hashSetOf()
+        val namePattern = Regex("[a-zA-Z0-9_]{3,16}")
+        val formatting = Regex("§.")
+        val entities = level.entitiesForRendering()
+            .asSequence()
+            .filter { it !== player }
+            .sortedBy { it.distanceToSqr(player) }
+            .take(60)
+            .map { entity ->
+                val isPlayer = entity is net.minecraft.world.entity.player.Player
+                val stripped = entity.name.string.replace(formatting, "")
+                mapOf(
+                    "id" to entity.id,
+                    "type" to BuiltInRegistries.ENTITY_TYPE.getKey(entity.type).toString(),
+                    "isPlayer" to isPlayer,
+                    "name" to entity.name.string,
+                    "uuid" to entity.uuid.toString(),
+                    "inTabByUuid" to tabUuids.contains(entity.uuid),
+                    "inTabByName" to tabNames.contains(stripped.lowercase()),
+                    "validNamePattern" to namePattern.matches(stripped),
+                    "distance" to Math.sqrt(entity.distanceToSqr(player)),
+                    "x" to entity.x, "y" to entity.y, "z" to entity.z
+                )
+            }
+            .toList()
+        mapOf("ok" to true, "connected" to true, "tabCount" to tabUuids.size, "count" to entities.size, "entities" to entities)
     }
 
     private fun statePayload(): Map<String, Any?> = callClient {

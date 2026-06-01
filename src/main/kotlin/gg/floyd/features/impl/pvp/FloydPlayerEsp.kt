@@ -11,6 +11,7 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.utils.Colors
+import gg.floyd.utils.RealPlayerFilter
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemStack
@@ -42,6 +43,7 @@ object FloydPlayerEsp : Module(
     private val tracers by BooleanSetting("Tracers", false, desc = "Draws a tracer line to each player.")
     private val showHealth by BooleanSetting("Show Health", true, desc = "Shows each player's health.")
     private val showEquipment by BooleanSetting("Show Equipment", true, desc = "Shows each player's equipped item icons.")
+    private val realPlayersOnly by BooleanSetting("Real Players Only", true, desc = "Hides server-faked NPC \"players\" (command holograms, decorated names) that aren't in the tab player list.")
 
     // Overhead nameplate: a panel pinned a fixed distance above the head that scales with distance
     // exactly like the ESP box (it is a physical, constant-world-size object — like a real nametag).
@@ -107,7 +109,9 @@ object FloydPlayerEsp : Module(
 
     private fun otherPlayers(): List<AbstractClientPlayer> {
         val self = mc.player ?: return emptyList()
-        return mc.level?.players()?.filter { it !== self && !it.isSpectator } ?: emptyList()
+        return mc.level?.players()?.filter {
+            it !== self && !it.isSpectator && (!realPlayersOnly || RealPlayerFilter.isRealPlayer(it))
+        } ?: emptyList()
     }
 
     private fun equipmentOf(player: AbstractClientPlayer): List<ItemStack> =
