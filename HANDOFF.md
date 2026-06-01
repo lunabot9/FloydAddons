@@ -30,7 +30,15 @@ Worktree **`/Users/twaldin/floyd-pvp-modules`** (branch `feature/v2.1`, pkg `gg.
 - **Player ESP fake-NPC filter (build green; empirical donutsmp validation pending).** Shared `RealPlayerFilter` (entity name must be a valid username in the tab list — mirrors MobEsp's proven heuristic), behind "Real Players Only" toggle (default on). `/entities` debug endpoint dumps tab-list signals. Commit 66d21f2.
 - **Font module + shared cosmetics dir:** already complete (verified) — FloydFont mirrors the cosmetic picker; `CosmeticImages` shares one `images/` dir seeded with default cape + cone, migrates legacy dirs.
 
-## CAPSTONE perf audit — DONE (run `wf_28c399aa-e19`, full output saved). Applied the high-value SAFE fixes (commit 649f0af):
+## CAPSTONE — DONE (perf audit + REAL in-game perf tests + adversarial verification, all executed)
+**In-game isolated perf tests** (via bridge `/state` fps + runtime `setSetting`/`setModuleEnabled` actions, in a singleplayer world with a large Inventory HUD panel on-screen):
+- Blur ON (max strength 20) vs OFF: **0 fps delta** (steady ~29 both) — the per-panel blur fits the frame budget; NOT a bottleneck.
+- Heavy load (blur max + Player ESP + Mob ESP + Day Tracker + Block Search + Custom Scoreboard, all on): **28–29 fps, no drop, no GL errors** — whole feature set within budget.
+- Conclusion: no perf optimization warranted (the separable-blur rewrite would be premature optimization). Bridge gained `fps` in `/state` + `/iconcheck`, `/entities`, `setSetting`, `setModuleEnabled` actions.
+
+**Final verification workflow** (run `wf_6343998a-41f`, adversarial review of every session change): blur = PASS, bridge/filter/perf = PASS; 2 real defects caught + FIXED (commit d3b6b42): legacy community-link hover used stale (prior-frame) bounds; Discord IPC connect/handshake blocked the client thread (moved to daemon thread). Final build green, smoke test clean (46 modules, 0 icon misses, no crash).
+
+**Applied audit fixes (commit 649f0af):**
 - **Config-migration retargets** (fixes the silently-failing original-Java config.json import): General→Window, Camera→Freecam/Freelook/F5 Customizer, HUD→Inventory HUD/Custom Scoreboard. ("Hiders" still exists — those routes were already correct.)
 - **FloydMobEsp.chromaColor → ChromaCache** (same 4000ms cycle; per-entity loop now memoized).
 - **Panel blur early-exit** (skip <0.5px blur / <~45x45px panels).
