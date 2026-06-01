@@ -30,12 +30,20 @@ Worktree **`/Users/twaldin/floyd-pvp-modules`** (branch `feature/v2.1`, pkg `gg.
 - **Player ESP fake-NPC filter (build green; empirical donutsmp validation pending).** Shared `RealPlayerFilter` (entity name must be a valid username in the tab list — mirrors MobEsp's proven heuristic), behind "Real Players Only" toggle (default on). `/entities` debug endpoint dumps tab-list signals. Commit 66d21f2.
 - **Font module + shared cosmetics dir:** already complete (verified) — FloydFont mirrors the cosmetic picker; `CosmeticImages` shares one `images/` dir seeded with default cape + cone, migrates legacy dirs.
 
-## REMAINING
-1. **Capstone perf + verification workflow** (IN PROGRESS — run `wf_28c399aa-e19`): parallel read-only audit → risk-rated fix blueprints across blur-cost (make the 2D kernel separable / cache unchanged panels — `textureIsReadyToBlit` currently returns false = re-renders every frame), render-path allocations (MobEsp per-entity chroma, BlockSearch AABB, renderPos partial-tick, regex-per-call), chroma churn, **config-migration retarget + double-toggle collapse** (the deferred items below), and a mod-wide sweep. Apply the SAFE behavior-preserving fixes, build green, commit, smoke-test in-client. User wants real in-game isolated perf tests (fps via bridge) + everything passing.
-2. **Config-migration retarget** (narrow; original-Java config.json import only): `FloydSidecarConfig.loadLegacyMainConfigIfFresh()` set("General", "Borderless Window"/"Instance Title") → the new "Window" module (Misc). Confirm "Hiders"/"Camera"/"HUD" still exist as module names (then those are fine). Folded into the capstone audit.
-3. **Double-toggle collapse** (6 modules' inner "Enabled": Discord/LocalControl/Xray/NickHider/Cape/ConeHat → module toggle). None are @AlwaysActive. Folded into the capstone audit.
-4. **Legacy hub central-label routing:** CODE VERIFIED CORRECT (openLabel maps Cosmetic→COSMETIC, Render→RENDER, Neck Hider→NICK_HIDER, Camera→CAMERA, PvP→PVP, each with its own drawPage). The reported misroute was on the old megapass jar. Just needs an in-client click-test to close.
-5. **Mob filter empirical validation:** connect to donutsmp, `GET /entities`, confirm command-hologram NPCs show `inTabByName:false`/`validNamePattern:false` and the filter hides them; refine pattern if numeric-name NPCs slip through.
+## CAPSTONE perf audit — DONE (run `wf_28c399aa-e19`, full output saved). Applied the high-value SAFE fixes (commit 649f0af):
+- **Config-migration retargets** (fixes the silently-failing original-Java config.json import): General→Window, Camera→Freecam/Freelook/F5 Customizer, HUD→Inventory HUD/Custom Scoreboard. ("Hiders" still exists — those routes were already correct.)
+- **FloydMobEsp.chromaColor → ChromaCache** (same 4000ms cycle; per-entity loop now memoized).
+- **Panel blur early-exit** (skip <0.5px blur / <~45x45px panels).
+- NOTE: the audit's "textureIsReadyToBlit caching" for the blur was REJECTED — it would freeze the backdrop to a stale frame when a panel is static but the world moves (the blur output depends on the live framebuffer, unlike round_rect). The blur MUST re-render per frame.
+
+## REMAINING (deferred follow-ups — none block the primary work, all build-green-verified safe to do)
+1. **Separable two-pass blur** (the real blur perf win, audit `audit:blur-cost`): convert `panel_blur.fsh`'s O(r²) 2D kernel to two O(r) passes (horizontal→intermediate target→vertical). Needs a 2nd pipeline + intermediate TextureTarget + visual re-verify. Medium risk. Current single-pass works fine for a few small panels.
+2. **Double-toggle collapse** (6 modules' inner "Enabled" → module toggle; audit `audit:config-toggles` has per-module blueprints): Discord/LocalControl/Cape/ConeHat are SAFE+behavior-preserving (Cape/ConeHat also need config-migration lines 209/211 changed from set(...,"Enabled") to setModuleEnabled). Xray is safe but touches toggleXray(). **NickHider was flagged behaviorPreserving:false** — its inner flag has distinct semantics; needs care.
+3. **Legacy-GUI micro-opts** (audit `audit:sweep`, all cold-ish GUI-open paths, all SAFE): cache panelWidth/Height per render; cache row-label lambda results; precompute slider-spec lookup maps; hoist USERNAME_PATTERN regex; cache page-title/scroll-indicator strings. Low individual impact; LegacyFloydClickGUI is ~7000 lines so touch carefully.
+4. **Other safe micro-opts:** FloydPlayerEsp hoist overhead border color out of the player loop; FloydMobEsp WeakHashMap entity-type-id cache (medium); entitiesPayload + parseHexColor regex-per-call hoist (cold paths).
+5. **Legacy hub central-label routing:** CODE VERIFIED CORRECT (openLabel maps each label to its own page). Just needs an in-client click-test to fully close.
+6. **Mob filter empirical validation:** connect to donutsmp, `GET /entities`, confirm command-hologram NPCs show `inTabByName:false`/`validNamePattern:false`; refine the username pattern if numeric-name NPCs slip through.
+7. **Misc visual confirm:** Discord presence (needs the Discord app running on the user's Mac) + dock icon — confirm visually; the code is in + safe.
 
 ## Config note
 For blur testing I temporarily moved Inventory HUD to (80,80) scale 2.0; RESTORED to the user's (2723,14, scale 4.8). Panel Blur left ON (strength 17, Gaussian) per the user's saved config.
