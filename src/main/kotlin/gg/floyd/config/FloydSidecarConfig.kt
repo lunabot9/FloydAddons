@@ -168,8 +168,8 @@ object FloydSidecarConfig {
         setModuleEnabled("Time Changer", data.bool("customTimeEnabled"))
         set("Time Changer", "Time", data.primitive("customTimeValue"))
         setModuleEnabled("Custom Scoreboard", data.bool("customScoreboardEnabled"))
-        set("General", "Borderless Window", data.primitive("borderlessWindowed"))
-        set("General", "Instance Title", data.trimmedStringPrimitive("windowTitle"))
+        set("Window", "Borderless Window", data.primitive("borderlessWindowed"))
+        set("Window", "Instance Title", data.trimmedStringPrimitive("windowTitle"))
 
         set("X-Ray", "Opacity", data.positivePrimitive("xrayOpacity"))
 
@@ -185,14 +185,14 @@ object FloydSidecarConfig {
         set("Hiders", "Remove Tab Ping", data.primitive("hiderRemoveTabPing"))
         set("Hiders", "Target", data.string("hiderNoArmorMode")?.let(::noArmorMode)?.let(::JsonPrimitive))
 
-        set("Camera", "Speed", data.positivePrimitive("freecamSpeed"))
-        set("Camera", "Distance", data.positivePrimitive("freelookDistance"))
-        set("Camera", "Disable Front Cam", data.primitive("f5DisableFront"))
-        set("Camera", "Disable Back Cam", data.primitive("f5DisableBack"))
-        set("Camera", "No Third-Person Clipping", data.primitive("f5NoClip"))
-        set("Camera", "Scrolling Changes Distance", data.primitive("f5ScrollEnabled"))
-        set("Camera", "Reset F5 Scrolling", data.primitive("f5ResetOnToggle"))
-        set("Camera", "Camera Distance", data.positivePrimitive("f5CameraDistance"))
+        set("Freecam", "Speed", data.positivePrimitive("freecamSpeed"))
+        set("Freelook", "Distance", data.positivePrimitive("freelookDistance"))
+        set("F5 Customizer", "Disable Front Cam", data.primitive("f5DisableFront"))
+        set("F5 Customizer", "Disable Back Cam", data.primitive("f5DisableBack"))
+        set("F5 Customizer", "No Third-Person Clipping", data.primitive("f5NoClip"))
+        set("F5 Customizer", "Scrolling Changes Distance", data.primitive("f5ScrollEnabled"))
+        set("F5 Customizer", "Reset F5 Scrolling", data.primitive("f5ResetOnToggle"))
+        set("F5 Customizer", "Camera Distance", data.positivePrimitive("f5CameraDistance"))
 
         set("Animations", "Pos X", data.primitive("animPosX"))
         set("Animations", "Pos Y", data.primitive("animPosY"))
@@ -216,10 +216,10 @@ object FloydSidecarConfig {
         set("Cone Hat", "Rotation", data.floatValue("coneHatRotation")?.let(::coneHatRotation)?.let(::JsonPrimitive))
         set("Cone Hat", "Spin Speed", data.primitive("coneHatRotationSpeed"))
 
-        set("HUD", "Inventory HUD Scale", data.numberOrDefault("inventoryHudScale", 0.0f))
+        set("Inventory HUD", "Inventory HUD Scale", data.numberOrDefault("inventoryHudScale", 0.0f))
         set("Panel Style", "Panel Corner Radius", data.primitive("hudCornerRadius"))
-        set("HUD", "Inventory HUD", hudSetting(data, "inventoryHudX", "inventoryHudY", "inventoryHudScale", "inventoryHudEnabled", 0, 0, 0.5f))
-        set("HUD", "Scoreboard HUD", hudSetting(data, "customScoreboardX", "customScoreboardY", null, "customScoreboardEnabled", 0, 0, 1f))
+        set("Inventory HUD", "Inventory HUD", hudSetting(data, "inventoryHudX", "inventoryHudY", "inventoryHudScale", "inventoryHudEnabled", 0, 0, 0.5f))
+        set("Custom Scoreboard", "Scoreboard HUD", hudSetting(data, "customScoreboardX", "customScoreboardY", null, "customScoreboardEnabled", 0, 0, 1f))
 
         set("Mob ESP", "Tracers", data.boolOrDefault("mobEspTracers", true))
         set("Mob ESP", "Hitboxes", data.boolOrDefault("mobEspHitboxes", true))

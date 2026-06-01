@@ -51,8 +51,11 @@ object HudPanel {
 
         if (FloydPanelStyle.panelBlur) {
             // Strength 0..20 -> blur radius 0..8 px (sampled with a step of 2, so ~0..16 px reach).
+            // Skip imperceptible blur (< 0.5px) and tiny panels (< ~45x45px) — the per-fragment kernel
+            // isn't worth running there.
             val blurRadius = FloydPanelStyle.panelBlurStrength.coerceIn(0, 20) * 0.4f
-            if (blurRadius > 0f) {
+            val area = (x1 - x0) * (y1 - y0)
+            if (blurRadius >= 0.5f && area >= 2000) {
                 PanelBlurPIPRenderer.submit(
                     graphics,
                     x0, y0, x1, y1,

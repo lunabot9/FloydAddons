@@ -12,6 +12,7 @@ import gg.floyd.clickgui.settings.AlwaysActive
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
+import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
 import gg.floyd.utils.Colors
 import gg.floyd.utils.Identifiers
@@ -759,10 +760,9 @@ object FloydMobEsp : Module(
 
     private fun strippedName(entity: Entity): String = stripFormatting(entity.displayName.string)
 
-    private fun chromaColor(): Color {
-        val hue = (System.currentTimeMillis() % 4000L) / 4000.0f
-        return Color(java.awt.Color.HSBtoRGB(hue, 1.0f, 1.0f))
-    }
+    // Memoized via ChromaCache (same 4000ms cycle) so the per-entity render loop computes HSBtoRGB
+    // at most once per frame instead of once per matched entity.
+    private fun chromaColor(): Color = Color(0xFF000000.toInt() or ChromaCache.rgbFor(0f))
 
     private fun encodeColor(hexColor: String, chroma: Boolean): String {
         val normalized = parseHexColor(hexColor) ?: throw IllegalArgumentException("Expected hex color like #55FF55 or 55FF55.")
