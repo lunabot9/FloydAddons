@@ -1,6 +1,6 @@
 #version 150
 
-// Per-panel frosted blur: samples the main framebuffer (InSampler) behind the panel and box/gaussian
+// Per-panel frosted blur: samples the main framebuffer (Sampler0) behind the panel and box/gaussian
 // blurs it, clipped to the same rounded-rect SDF the round_rect shader uses. Output alpha is the
 // rounded mask, so the existing translucent panel fill + border composite cleanly on top.
 layout(std140) uniform u {
@@ -10,7 +10,7 @@ layout(std140) uniform u {
     vec4 u_Blur;     // radius(px), kernelType(0=gaussian,1=box), unused, unused
 };
 
-uniform sampler2D InSampler;
+uniform sampler2D Sampler0;
 
 in vec2 f_Position;
 in vec4 f_Color;
@@ -60,11 +60,11 @@ void main() {
     for (float dx = -radius; dx <= radius; dx += 2.0) {
         for (float dy = -radius; dy <= radius; dy += 2.0) {
             float wgt = box ? 1.0 : exp(-(dx * dx + dy * dy) / (2.0 * sigma * sigma));
-            acc += texture(InSampler, uv + vec2(dx, dy) * texel).rgb * wgt;
+            acc += texture(Sampler0, uv + vec2(dx, dy) * texel).rgb * wgt;
             wsum += wgt;
         }
     }
 
-    vec3 col = wsum > 0.0 ? acc / wsum : texture(InSampler, uv).rgb;
+    vec3 col = wsum > 0.0 ? acc / wsum : texture(Sampler0, uv).rgb;
     fragColor = vec4(col, mask);
 }

@@ -55,7 +55,7 @@ object CustomRenderPipelines {
             .withVertexShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/panel_blur"))
             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
             .withUniform("u", UniformType.UNIFORM_BUFFER)
-            .withSampler("In")
+            .withSampler("Sampler0")
             .withBlend(BlendFunction.TRANSLUCENT)
             .build()
     )
