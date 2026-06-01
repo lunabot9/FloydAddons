@@ -211,6 +211,7 @@ class MixinParitySourceTest {
         val floyd = source("vendor/floydaddons-fabric/app/src/main/java/floydaddons/not/dogshit/mixin/TitleScreenBackgroundMixin.java")
         val active = activeMixin("FloydTitleScreenBackgroundMixin.java")
 
+        // Floyd source patterns (static single image)
         for (expected in listOf(
             "renderBackground",
             "cancellable = true",
@@ -225,6 +226,22 @@ class MixinParitySourceTest {
             "ci.cancel()",
         )) {
             assertContains(floyd, expected)
+        }
+
+        // Active (Odin) mixin patterns - supports animated frames (floydaddons$frames) + static fallback
+        // Note: uses "floydaddons_" prefix + dynamic texture name instead of hardcoded string
+        for (expected in listOf(
+            "renderBackground",
+            "cancellable = true",
+            "floydaddons\$frames",
+            "floydaddons\$triedLoad",
+            "if (floydaddons\$triedLoad) return null;",
+            "floydaddons\$triedLoad = true;",
+            "mainmenu.png",
+            "floydaddons_",
+            "custom_mainmenu",
+            "ci.cancel()",
+        )) {
             assertContains(active, expected)
         }
 
@@ -233,7 +250,7 @@ class MixinParitySourceTest {
         assertContains(floyd, "NativeImage.read(Files.newInputStream(path))")
         assertContains(active, "NativeImage.read(Files.newInputStream(path))")
         assertContains(floyd, "MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex)")
-        assertContains(active, "Minecraft.getInstance().getTextureManager().register(id, texture)")
+        assertContains(active, "Minecraft.getInstance().getTextureManager().register(id, tex)")
         assertContains(active, "FloydCompatibility.shouldUseCustomMainMenu()")
     }
 
