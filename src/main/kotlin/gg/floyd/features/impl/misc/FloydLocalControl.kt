@@ -267,7 +267,9 @@ object FloydLocalControl : Module(
 
     /**
      * Icon-coverage debug check: resolves an icon texture path for every block in the registry and
-     * reports the ones that render without an icon (pure resource reading, no GL/client thread).
+     * reports the ones that render without an icon. Intentionally runs OFF the client thread — it
+     * only reads the post-bootstrap-frozen BuiltInRegistries and classpath resources (both
+     * thread-safe), so it avoids a multi-ms client-thread hitch enumerating ~1100 blocks per call.
      * Used to decide which blocks the search list should drop or whose textures need a resolver fix.
      */
     private fun iconCheckPayload(): Map<String, Any?> {
@@ -326,6 +328,7 @@ object FloydLocalControl : Module(
         root["connected"] = mc.player != null && mc.level != null
         root["screen"] = mc.screen?.javaClass?.name
         root["screenTitle"] = mc.screen?.title?.string
+        root["fps"] = mc.fps
         root["scaffold"] = scaffoldPayload()
         root["modules"] = ModuleManager.state()
         root["configs"] = mapOf(
@@ -553,6 +556,23 @@ object FloydLocalControl : Module(
                     val enabled = body["enabled"]?.takeIf { !it.isJsonNull }?.asBoolean ?: true
                     if (enabled && mc.window.isFullscreen) mc.window.toggleFullScreen()
                     FloydRender.setBorderlessWindowed(enabled, force = true)
+                }
+                "setSetting" -> {
+                    val moduleName = requiredString(body, "module")
+                    val settingName = requiredString(body, "setting")
+                    val module = ModuleManager.modules[moduleName] ?: throw IllegalArgumentException("module_not_found")
+                    val setting = module.settings[settingName] ?: throw IllegalArgumentException("setting_not_found")
+                    when (setting) {
+                        is BooleanSetting -> setting.value = body["value"]?.takeIf { !it.isJsonNull }?.asBoolean ?: throw IllegalArgumentException("missing_value")
+                        is NumberSetting<*> -> setting.setNumericValue(body["value"]?.takeIf { !it.isJsonNull }?.asDouble ?: throw IllegalArgumentException("missing_value"))
+                        else -> throw IllegalArgumentException("unsupported_setting_type")
+                    }
+                }
+                "setModuleEnabled" -> {
+                    val moduleName = requiredString(body, "module")
+                    val module = ModuleManager.modules[moduleName] ?: throw IllegalArgumentException("module_not_found")
+                    val want = body["enabled"]?.takeIf { !it.isJsonNull }?.asBoolean ?: true
+                    if (module.enabled != want) module.toggle()
                 }
                 "reloadConfig" -> ModuleManager.loadConfigurations()
                 "reloadMod", "reloadResources" -> {

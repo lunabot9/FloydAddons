@@ -117,25 +117,29 @@ object FloydDiscordPresence : Module(
     }
 
     private fun startIpc(): Boolean = try {
-        if (DiscordIpcClient.connect(appId)) {
-            usingIpc = true
-            desiredState = "In menus"
-            ipcThread = Thread(::runIpcLoop, "FloydAddons-DiscordIPC").apply {
-                isDaemon = true
-                start()
-            }
-            FloydAddonsMod.logger.info("Discord presence using pure-Java IPC fallback (native lib unavailable)")
-            true
-        } else {
-            false
+        // Spawn the IPC thread and let the BLOCKING connect/handshake happen there, never on the
+        // client thread (this runs from TickEvent.ClientEnd) — an unresponsive Discord socket must
+        // not be able to stall the game.
+        usingIpc = true
+        desiredState = "In menus"
+        ipcThread = Thread(::runIpcLoop, "FloydAddons-DiscordIPC").apply {
+            isDaemon = true
+            start()
         }
+        true
     } catch (_: Throwable) {
         usingIpc = false
         false
     }
 
-    /** IPC fallback loop on its own daemon thread: pushes [desiredState] to Discord, never the client thread. */
+    /** IPC fallback on its own daemon thread: connects, then pushes [desiredState]. Never the client thread. */
     private fun runIpcLoop() {
+        if (!DiscordIpcClient.connect(appId)) {
+            failed = true
+            usingIpc = false
+            return
+        }
+        FloydAddonsMod.logger.info("Discord presence using pure-Java IPC fallback (native lib unavailable)")
         var lastSent: String? = null
         while (!Thread.currentThread().isInterrupted) {
             val target = desiredState

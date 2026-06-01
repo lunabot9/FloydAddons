@@ -6382,12 +6382,13 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val discordW = mc.font.width(discordLinkText)
         val rowX = centerX - (githubW + gap + discordW) / 2
         val discordX = rowX + githubW + gap
+        // Set bounds before the hover check so hover highlighting isn't a frame behind the cursor.
+        linkBounds = Rect(rowX, linkY, githubW, mc.font.lineHeight)
+        discordLinkBounds = Rect(discordX, linkY, discordW, mc.font.lineHeight)
         val githubHovered = linkBounds.contains(hoverX, hoverY)
         val discordHovered = discordLinkBounds.contains(hoverX, hoverY)
         context.drawString(mc.font, githubLinkText, rowX, linkY, applyAlpha(if (githubHovered) 0xFFFFFFFF.toInt() else chromaColor(0f), alpha), true)
         context.drawString(mc.font, discordLinkText, discordX, linkY, applyAlpha(if (discordHovered) 0xFFFFFFFF.toInt() else chromaColor(0.5f), alpha), true)
-        linkBounds = Rect(rowX, linkY, githubW, mc.font.lineHeight)
-        discordLinkBounds = Rect(discordX, linkY, discordW, mc.font.lineHeight)
     }
 
     private fun drawButton(context: GuiGraphics, rect: Rect, label: String, alpha: Float) {
