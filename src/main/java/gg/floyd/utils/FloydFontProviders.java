@@ -78,15 +78,16 @@ public final class FloydFontProviders {
                 continue;
             }
 
+            TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
             if (byoPath != null) {
-                GlyphProviderDefinition.Conditional replacement = byoConditional(entry.getSecond(), bundled, byoPath);
+                GlyphProviderDefinition.Conditional replacement = byoConditional(entry.getSecond(), runtimeMetrics, byoPath);
                 if (replacement != null) {
                     result.add(entry.mapSecond(ignored -> replacement));
                     continue;
                 }
                 // Replacement could not be built; fall through and keep the bundled provider.
             }
-            result.add(entry);
+            result.add(entry.mapSecond(ignored -> new GlyphProviderDefinition.Conditional(runtimeMetrics, entry.getSecond().filter())));
         }
         return result;
     }
@@ -96,6 +97,15 @@ public final class FloydFontProviders {
         if (!(conditional.definition() instanceof TrueTypeGlyphProviderDefinition ttf)) return null;
         if (ttf.type() != GlyphProviderType.TTF) return null;
         return BUNDLED_FONT.equals(ttf.location()) ? ttf : null;
+    }
+
+    private static TrueTypeGlyphProviderDefinition withRuntimeMetrics(TrueTypeGlyphProviderDefinition bundled) {
+        return new TrueTypeGlyphProviderDefinition(
+                bundled.location(),
+                FloydFont.runtimeFontSize(),
+                FloydFont.runtimeFontOversample(),
+                bundled.shift(),
+                bundled.skip());
     }
 
     private static GlyphProviderDefinition.Conditional byoConditional(

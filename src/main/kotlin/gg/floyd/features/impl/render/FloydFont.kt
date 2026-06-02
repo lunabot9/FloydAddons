@@ -3,6 +3,7 @@ package gg.floyd.features.impl.render
 import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
+import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
@@ -32,6 +33,7 @@ object FloydFont : Module(
     toggled = true,
 ) {
     val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Overrides the vanilla game font with Floyd's bundled font. Reload resources (F3+T) to apply.")
+    private val fontDisplaySize by NumberSetting("Font Size", 25.0, 6.0, 50.0, 0.5, desc = "Display size for the global TTF provider. 25 matches the Font mod default. Reload resources (F3+T) to apply.")
     var selectedFont by StringSetting("Font", "", 96, desc = "Optional .ttf in config/floydaddons/fonts to use instead of the bundled font. Reload resources (F3+T) to apply.")
     private val listFonts by ActionSetting("List Fonts", desc = "Prints available .ttf files in chat.") {
         val fonts = availableFonts()
@@ -61,6 +63,23 @@ object FloydFont : Module(
     /** Whether the bundled font should override the vanilla game font. OFF renders with the vanilla font. */
     @JvmStatic
     fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont
+
+    /** Minecraft TTF provider size computed like MichiJP's Font mod: display size / 12.5, supersampled and clamped to 20. */
+    @JvmStatic
+    fun runtimeFontSize(): Float {
+        val displaySize = fontDisplaySize.coerceAtLeast(0.5)
+        val runtimeSize = (displaySize / 12.5).coerceAtLeast(0.5)
+        val baseSize = kotlin.math.ceil(runtimeSize).toInt().coerceAtLeast(1)
+        val supersampledSize = kotlin.math.ceil(runtimeSize * 4.0).toInt().coerceAtLeast(baseSize)
+        return baseSize.coerceAtLeast(supersampledSize.coerceAtMost(20)).toFloat()
+    }
+
+    @JvmStatic
+    fun runtimeFontOversample(): Float {
+        val displaySize = fontDisplaySize.coerceAtLeast(0.5)
+        val runtimeSize = (displaySize / 12.5).coerceAtLeast(0.5)
+        return (runtimeFontSize() / runtimeSize.toFloat()).coerceAtLeast(1f)
+    }
 
     /**
      * Resolved path to the selected .ttf inside `config/floydaddons/fonts`, or null when unset or
@@ -100,6 +119,9 @@ object FloydFont : Module(
         "enabled" to enabled,
         "globalCustomFont" to globalCustomFont,
         "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
+        "fontDisplaySize" to fontDisplaySize,
+        "runtimeFontSize" to runtimeFontSize(),
+        "runtimeFontOversample" to runtimeFontOversample(),
         "selectedFont" to selectedFont,
         "availableFonts" to availableFonts(),
         "fontDir" to fontDir.toString(),
