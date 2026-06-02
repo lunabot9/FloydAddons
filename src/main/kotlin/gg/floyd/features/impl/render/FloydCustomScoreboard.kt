@@ -40,7 +40,7 @@ object FloydCustomScoreboard : Module(
     description = "Replaces the vanilla scoreboard with Floyd's rounded, gradient-bordered HUD scoreboard.",
     toggled = false,
 ) {
-    private const val SCOREBOARD_FONT_SIZE = 12f
+    private const val SCOREBOARD_FONT_SIZE = 9f
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
 
     private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard Minecraft Font", false, desc = "Uses Minecraft's default font instead of Floyd's smooth NanoVG font for scoreboard text.")
