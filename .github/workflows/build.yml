@@ -25,13 +25,15 @@ jobs:
       - name: setup gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: make gradle wrapper executable
-        run: chmod +x ./gradlew ./scripts/verify-floyd-in-odin.sh ./scripts/verify-live-hypixel-acquisition.py ./scripts/verify-runtime-scaffold.py ./scripts/verify-legacy-clickgui-runtime.py ./scripts/run-runtime-scaffold-smoke.sh ./scripts/install-built-jar.sh ./scripts/live-hypixel-status.sh
+      # Compiles the mod, runs the test suite (src/test), and produces the runtime jar.
+      # This is the step the old workflow was missing entirely — without it no jar was ever
+      # built and the tests never ran, so CI "passed" without actually verifying or producing
+      # anything. (The old per-push scripts/ chmod + skipped verify step are gone.)
+      - name: build and test
+        run: ./gradlew build --stacktrace
 
-      - name: verify floyd-in-odin
-        run: echo "Skipping verification" # ./scripts/verify-floyd-in-odin.sh
-
-      - name: upload release jar
+      # Per-build artifact, handy for PRs / non-main pushes.
+      - name: upload build jar artifact
         uses: actions/upload-artifact@v4
         with:
           name: FloydAddons-${{ github.sha }}
@@ -39,37 +41,39 @@ jobs:
             build/libs/FloydAddons-*.jar
             !build/libs/FloydAddons-*-sources.jar
 
-      - name: publish v2.0.0 release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/V2'
+      # Publish (or refresh) the GitHub Release with the runtime jar on every push to main.
+      # The tag is derived from mod_version in gradle.properties (e.g. v2.1.0): bumping the
+      # version cuts a new release, re-pushing the same version refreshes that release's jar.
+      - name: publish release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          tag="v2.0.0"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag already exists."
-            exit 0
-          fi
+          version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
+          tag="v${version}"
 
           runtime_jars=()
           for jar in build/libs/FloydAddons-*.jar; do
             [[ "$jar" == *-sources.jar ]] && continue
             runtime_jars+=("$jar")
           done
-
           if [[ "${#runtime_jars[@]}" -ne 1 ]]; then
-            printf '%s\n' "${runtime_jars[@]}"
-            echo "expected exactly one FloydAddons runtime jar" >&2
+            printf 'found: %s\n' "${runtime_jars[@]:-<none>}"
+            echo "expected exactly one FloydAddons runtime jar in build/libs" >&2
             exit 1
           fi
+          jar="${runtime_jars[0]}"
+          echo "Releasing ${jar} as ${tag}"
 
-          if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-            git tag "$tag" "$GITHUB_SHA"
-            git push origin "$tag"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release ${tag} exists — updating its jar."
+            gh release upload "$tag" "$jar" --clobber
+          else
+            echo "Creating release ${tag}."
+            gh release create "$tag" "$jar" \
+              --target "$GITHUB_SHA" \
+              --title "FloydAddons ${version} (MC 1.21.11)" \
+              --notes "Odin-based FloydAddons for Minecraft 1.21.11. Built from ${GITHUB_SHA}."
           fi
-
-          gh release create "$tag" "${runtime_jars[0]}" \
-            --target "$GITHUB_SHA" \
-            --title "FloydAddons v2.0.0 (MC 1.21.11)" \
-            --notes "Odin-based FloydAddons v2 for Minecraft 1.21.11."
