@@ -39,12 +39,14 @@ class FloydCompatibilityTest {
         assertEquals(true, state["taskbarIcon"])
         assertEquals(true, state["updateChecker"])
         assertEquals(true, state["hideLoaderEntry"])
+        assertEquals(true, state["hideModChannels"])
         assertEquals(true, state["shouldSpoofClientBrand"])
         assertEquals(true, state["shouldHideWatchdogMessages"])
         assertEquals(true, state["shouldUseCustomMainMenu"])
         assertEquals(true, state["shouldApplyTaskbarIcon"])
         assertEquals(true, state["shouldCheckUpdates"])
         assertEquals(true, state["shouldHideLoaderEntry"])
+        assertEquals(true, state["shouldHideModChannels"])
 
         val updateCheckerState = state["updateCheckerState"]
         assertTrue(updateCheckerState is Map<*, *>)
@@ -63,6 +65,7 @@ class FloydCompatibilityTest {
             FloydTaskbarIconModule to FloydCompatibility::shouldApplyTaskbarIcon,
             FloydUpdateCheckerModule to FloydCompatibility::shouldCheckUpdates,
             FloydModHider to FloydCompatibility::shouldHideLoaderEntry,
+            FloydModHider to FloydCompatibility::shouldHideModChannels,
         )
 
         for ((module, gate) in gates) {

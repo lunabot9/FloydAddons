@@ -21,6 +21,7 @@ object FloydCompatibility {
     @JvmStatic fun shouldApplyTaskbarIcon(): Boolean = FloydTaskbarIconModule.enabled
     @JvmStatic fun shouldCheckUpdates(): Boolean = FloydUpdateCheckerModule.enabled
     @JvmStatic fun shouldHideLoaderEntry(): Boolean = FloydModHider.enabled
+    @JvmStatic fun shouldHideModChannels(): Boolean = FloydModHider.enabled
 
     fun state(): Map<String, Any?> = mapOf(
         "spoofClientBrand" to FloydSpoofClientBrand.enabled,
@@ -29,12 +30,14 @@ object FloydCompatibility {
         "taskbarIcon" to FloydTaskbarIconModule.enabled,
         "updateChecker" to FloydUpdateCheckerModule.enabled,
         "hideLoaderEntry" to FloydModHider.enabled,
+        "hideModChannels" to FloydModHider.enabled,
         "shouldSpoofClientBrand" to shouldSpoofClientBrand(),
         "shouldHideWatchdogMessages" to shouldHideWatchdogMessages(),
         "shouldUseCustomMainMenu" to shouldUseCustomMainMenu(),
         "shouldApplyTaskbarIcon" to shouldApplyTaskbarIcon(),
         "shouldCheckUpdates" to shouldCheckUpdates(),
         "shouldHideLoaderEntry" to shouldHideLoaderEntry(),
+        "shouldHideModChannels" to shouldHideModChannels(),
         "updateCheckerState" to FloydUpdateChecker.state()
     )
 
