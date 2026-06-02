@@ -120,7 +120,6 @@ object FloydLocalControl : Module(
     private const val maxBodyBytes = 8192
     private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck", "/entities")
 
-    val bridgeEnabled by BooleanSetting("Enabled", true, desc = "Starts the loopback-only local control bridge.")
     private val port by NumberSetting("Port", FloydLocalControlSettings.DEFAULT_PORT, 1024, 65535, 1, desc = "Local control bridge port.")
 
     private var server: HttpServer? = null
@@ -130,7 +129,7 @@ object FloydLocalControl : Module(
 
     init {
         on<TickEvent.ClientEnd> {
-            val shouldRun = enabled && bridgeEnabled
+            val shouldRun = enabled
             if (shouldRun != lastShouldRun) {
                 if (shouldRun) start() else stop()
                 lastShouldRun = shouldRun
@@ -151,8 +150,7 @@ object FloydLocalControl : Module(
         val loaded = bridgeSettings
         return mapOf(
             "enabled" to enabled,
-            "bridgeEnabled" to bridgeEnabled,
-            "shouldRun" to (enabled && bridgeEnabled),
+            "shouldRun" to enabled,
             "running" to isRunning(),
             "lastShouldRun" to lastShouldRun,
             "configuredPort" to port,
@@ -165,7 +163,7 @@ object FloydLocalControl : Module(
     }
 
     fun startIfEnabled() {
-        val shouldRun = enabled && bridgeEnabled
+        val shouldRun = enabled
         if (shouldRun) start()
         lastShouldRun = shouldRun
     }

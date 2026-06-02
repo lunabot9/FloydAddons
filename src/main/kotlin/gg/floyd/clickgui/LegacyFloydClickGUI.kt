@@ -5581,10 +5581,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 val module = entry.module
                 when (module) {
                     FloydXray -> {
-                        val next = !FloydXray.isActive()
-                        if (!FloydXray.enabled) FloydXray.toggle()
-                        FloydXray.xrayEnabled = next
-                        FloydXray.rebuildChunks()
+                        FloydXray.toggleXray()
                         ModuleManager.saveConfigurations()
                     }
                     FloydMobEsp -> {

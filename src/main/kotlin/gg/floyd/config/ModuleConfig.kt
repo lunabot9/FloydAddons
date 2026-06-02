@@ -45,7 +45,9 @@ class ModuleConfig internal constructor(file: File) {
                 val jsonArray = JsonParser.parseString(this).asJsonArray ?: return
                 // Remap keys that moved between modules in the HUD/GUI reorg before reading them.
                 // Persisted immediately so the on-disk config uses the new keys on subsequent loads.
-                if (migrateMovedKeys(jsonArray)) {
+                var migrated = migrateMovedKeys(jsonArray)
+                migrated = migrateCollapsedEnabledToggles(jsonArray) || migrated
+                if (migrated) {
                     file.bufferedWriter().use { it.write(gson.toJson(jsonArray)) }
                 }
                 for (modules in jsonArray) {
@@ -327,6 +329,37 @@ class ModuleConfig internal constructor(file: File) {
                             settingKey, sourceModule, target.toModule, target.toKey
                         )
                     }
+                }
+            }
+            return changed
+        }
+
+        // Modules whose redundant inner "Enabled" BooleanSetting was collapsed into the module's own
+        // on/off switch (canonical lowercase names). Neck Hider is intentionally NOT here: its inner
+        // toggle gates only nick replacement while the module also powers the Hiders server-ID tracker.
+        private val collapsedEnabledModules =
+            setOf("custom cape", "cone hat", "x-ray", "discord presence", "local control")
+
+        /**
+         * Collapses the removed inner "Enabled" toggle into the module's own on/off, preserving each
+         * existing user's effective state: new module enabled = (saved module enabled) AND (saved
+         * "Enabled"). Runs once on load and is persisted, so the orphaned key disappears afterward.
+         */
+        private fun migrateCollapsedEnabledToggles(jsonArray: JsonArray): Boolean {
+            var changed = false
+            for (element in jsonArray) {
+                val moduleObj = element as? JsonObject ?: continue
+                val name = moduleObj.get("name")?.asString ?: continue
+                if (canonicalModuleName(name) !in collapsedEnabledModules) continue
+                val settings = moduleObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject ?: continue
+                if (!settings.has("Enabled")) continue
+                val innerEnabled = runCatching { settings.get("Enabled").asBoolean }.getOrDefault(false)
+                val moduleEnabled = runCatching { moduleObj.get("enabled").asBoolean }.getOrDefault(false)
+                settings.remove("Enabled")
+                moduleObj.add("enabled", JsonPrimitive(moduleEnabled && innerEnabled))
+                changed = true
+                if (loggedMovedKeys.add("$name:Enabled")) {
+                    migrationLogger.info("Collapsed inner 'Enabled' toggle into the module on/off for '{}'.", name)
                 }
             }
             return changed

@@ -206,9 +206,9 @@ object FloydSidecarConfig {
         set("Animations", "Hide Hand", data.primitive("animHidePlayerHand"))
         set("Animations", "Classic Click", data.primitive("animClassicClick"))
 
-        set("Custom Cape", "Enabled", data.primitive("capeEnabled"))
+        setModuleEnabled("Custom Cape", data.bool("capeEnabled"))
         set("Custom Cape", "Image", data.primitive("selectedCapeImage"))
-        set("Cone Hat", "Enabled", data.primitive("floydHatEnabled"))
+        setModuleEnabled("Cone Hat", data.bool("floydHatEnabled"))
         set("Cone Hat", "Image", data.primitive("selectedConeImage"))
         set("Cone Hat", "Height", data.positivePrimitive("coneHatHeight"))
         set("Cone Hat", "Radius", data.positivePrimitive("coneHatRadius"))

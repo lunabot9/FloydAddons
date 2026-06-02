@@ -96,8 +96,10 @@ class ModuleConfigTest {
             """.trimIndent()
         )
 
+        // Custom Cape's inner "Enabled" was collapsed into the module toggle: the legacy "Enabled"
+        // now folds into module.enabled (migrateCollapsedEnabledToggles), so the module is enabled
+        // rather than a separate featureEnabled setting.
         assertTrue(cape.enabled)
-        assertTrue(cape.featureEnabled)
         assertEquals("legacy-cape.png", cape.image)
         assertEquals("Custom Cape", cape.name)
     }

@@ -24,8 +24,6 @@ object FloydDiscordPresence : Module(
     private val largeImageKey = (System.getenv("FLOYDADDONS_DISCORD_LARGE_IMAGE") ?: DEFAULT_LARGE_IMAGE_KEY).trim()
     private val sessionStart = Instant.now().epochSecond
 
-    val presenceEnabled by BooleanSetting("Enabled", true, desc = "Enables Floyd Discord rich presence.")
-
     private var rpc: DiscordRPC? = null
     private var callbackThread: Thread? = null
     private var initialized = false
@@ -41,7 +39,7 @@ object FloydDiscordPresence : Module(
 
     init {
         on<TickEvent.ClientEnd> {
-            val shouldRun = enabled && presenceEnabled
+            val shouldRun = enabled
             if (shouldRun != lastShouldRun) {
                 if (shouldRun) start() else shutdown()
                 lastShouldRun = shouldRun
@@ -57,15 +55,14 @@ object FloydDiscordPresence : Module(
     }
 
     fun startIfEnabled() {
-        val shouldRun = enabled && presenceEnabled
+        val shouldRun = enabled
         if (shouldRun) start()
         lastShouldRun = shouldRun
     }
 
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
-        "presenceEnabled" to presenceEnabled,
-        "shouldRun" to (enabled && presenceEnabled),
+        "shouldRun" to enabled,
         "initialized" to initialized,
         "failed" to failed,
         "lastState" to lastState,

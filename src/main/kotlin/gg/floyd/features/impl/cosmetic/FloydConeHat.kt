@@ -22,9 +22,8 @@ object FloydConeHat : Module(
     name = "Cone Hat",
     category = Category.COSMETIC,
     description = "Floyd cone hat model rendering.",
-    toggled = true,
+    toggled = false,
 ) {
-    val coneHatEnabled by BooleanSetting("Enabled", false, desc = "Enables Floyd cone hat rendering.")
     var selectedImage by StringSetting("Image", "", 96, desc = "Cone hat PNG file in config/floydaddons/images.")
     private val listImages by ActionSetting("List Cone Images", desc = "Prints available cone hat PNG files in chat.") {
         val images = availableImages()
@@ -61,7 +60,7 @@ object FloydConeHat : Module(
     private var lastSpinSpeed = 0.0f
 
     @JvmStatic
-    fun isActive(): Boolean = enabled && coneHatEnabled
+    fun isActive(): Boolean = enabled
 
     @JvmStatic
     fun isActiveFor(id: Int): Boolean = isActive() && FloydAddonsMod.mc.player?.id == id
@@ -138,7 +137,6 @@ object FloydConeHat : Module(
         texture()
         return mapOf(
             "enabled" to enabled,
-            "coneHatEnabled" to coneHatEnabled,
             "active" to isActive(),
             "selectedImage" to selectedImage,
             "availableImages" to availableImages(),

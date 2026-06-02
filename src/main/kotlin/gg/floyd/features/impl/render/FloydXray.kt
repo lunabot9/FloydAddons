@@ -63,9 +63,8 @@ object FloydXray : Module(
     name = "X-Ray",
     category = Category.RENDER,
     description = "Floyd x-ray opacity and opaque block filtering.",
-    toggled = true,
+    toggled = false,
 ) {
-    var xrayEnabled by BooleanSetting("Enabled", false, desc = "Enables Floyd x-ray rendering.")
     val opacity by NumberSetting("Opacity", 0.3f, 0.05f, 1f, 0.05f, desc = "Opacity for non-opaque x-ray blocks.")
     private val toggleKey by KeybindSetting("Toggle X-Ray", GLFW.GLFW_KEY_UNKNOWN, desc = "Floyd X-Ray toggle key.").onPress {
         val active = toggleXray()
@@ -114,7 +113,7 @@ object FloydXray : Module(
     }
 
     @JvmStatic
-    fun isActive(): Boolean = enabled && xrayEnabled
+    fun isActive(): Boolean = enabled
 
     @JvmStatic
     fun alpha(): Int = FloydXrayAlpha.alpha(opacity)
@@ -142,7 +141,6 @@ object FloydXray : Module(
 
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
-        "xrayEnabled" to xrayEnabled,
         "active" to isActive(),
         "opacity" to opacity,
         "alpha" to alpha(),
@@ -186,9 +184,8 @@ object FloydXray : Module(
     }
 
     fun toggleXray(): Boolean {
-        if (!enabled) toggle()
-        xrayEnabled = !xrayEnabled
-        rebuildChunks()
+        // The module's own on/off is now the single x-ray switch; onEnable/onDisable rebuild chunks.
+        toggle()
         return isActive()
     }
 

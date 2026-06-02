@@ -10,7 +10,7 @@ class FloydDiscordPresenceTest {
         val state = FloydDiscordPresence.state()
 
         assertEquals(true, state["enabled"])
-        assertEquals(true, state["presenceEnabled"])
+        // presenceEnabled was collapsed into the module toggle; shouldRun now tracks enabled directly.
         assertEquals(true, state["shouldRun"])
         assertEquals(false, state["initialized"])
         assertEquals(false, state["failed"])

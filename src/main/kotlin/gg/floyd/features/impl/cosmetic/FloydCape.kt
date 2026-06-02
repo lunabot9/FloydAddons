@@ -28,9 +28,8 @@ object FloydCape : Module(
     name = "Custom Cape",
     category = Category.COSMETIC,
     description = "Floyd cape rendering and selected cape asset.",
-    toggled = true,
+    toggled = false,
 ) {
-    val capeEnabled by BooleanSetting("Enabled", false, desc = "Enables Floyd cape rendering.")
     var selectedCape by StringSetting("Image", "", 96, desc = "Cape PNG or GIF file in config/floydaddons/images.")
     private val listCapes by ActionSetting("List Capes", desc = "Prints available cape PNG/GIF files in chat.") {
         val capes = availableCapes()
@@ -60,7 +59,7 @@ object FloydCape : Module(
     private var aspect = 2.0f
 
     @JvmStatic
-    fun isActive(): Boolean = enabled && capeEnabled
+    fun isActive(): Boolean = enabled
 
     @JvmStatic
     fun isActiveFor(id: Int): Boolean = isActive() && FloydAddonsMod.mc.player?.id == id
@@ -82,7 +81,6 @@ object FloydCape : Module(
         val gif = gifTexture
         return mapOf(
             "enabled" to enabled,
-            "capeEnabled" to capeEnabled,
             "active" to isActive(),
             "selectedCape" to selectedCape,
             "availableCapes" to availableCapes(),
