@@ -3,12 +3,8 @@ package gg.floyd.features.impl.render
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.features.Category
 import gg.floyd.features.Module
-import gg.floyd.utils.Colors
 import gg.floyd.utils.render.HudPanel
-import gg.floyd.utils.ui.rendering.NVGPIPRenderer
-import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.gui.GuiGraphics
-import kotlin.math.roundToInt
 
 /**
  * Standalone toggle for the Floyd day tracker HUD.
@@ -51,17 +47,13 @@ object FloydDayTrackerModule : Module(
     private fun GuiGraphics.drawDayTrackerHud(example: Boolean): Pair<Int, Int> {
         val label = currentServerDayLabel() ?: if (example) "Day 1" else return 0 to 0
 
-        val paddingX = 6f
-        val paddingY = 6f
-        val fontSize = 12f
-        val width = (NVGRenderer.textWidth(label, fontSize, NVGRenderer.defaultFont) + paddingX * 2f).roundToInt()
-        val height = (fontSize + paddingY * 2f).roundToInt()
+        val paddingX = 6
+        val paddingY = 6
+        val width = mc.font.width(label) + paddingX * 2
+        val height = mc.font.lineHeight + paddingY * 2
 
         HudPanel.fillPanel(this, 0, 0, width, height)
-
-        NVGPIPRenderer.draw(this, 0, 0, width, height) {
-            NVGRenderer.text(label, paddingX, paddingY, fontSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        }
+        drawString(mc.font, label, paddingX, paddingY, 0xFFFFFFFF.toInt(), false)
         return width to height
     }
 }

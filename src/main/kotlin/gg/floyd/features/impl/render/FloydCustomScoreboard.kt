@@ -43,7 +43,7 @@ object FloydCustomScoreboard : Module(
     private const val SCOREBOARD_FONT_SIZE = 9f
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
 
-    private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard Minecraft Font", false, desc = "Uses Minecraft's default font instead of Floyd's smooth NanoVG font for scoreboard text.")
+    private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard Minecraft Font", true, desc = "Uses Minecraft's default font instead of Floyd's smooth NanoVG font for scoreboard text.")
 
     private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", true, 10, 80, 1f) { example ->
         drawScoreboardHud(example)
@@ -74,7 +74,7 @@ object FloydCustomScoreboard : Module(
                 "x" to scoreboardHud.x,
                 "y" to scoreboardHud.y,
                 "hudScale" to scoreboardHud.scale,
-                "minecraftFont" to scoreboardHudMinecraftFont
+                "minecraftFont" to useMinecraftScoreboardFont()
             ),
             "cornerRadius" to FloydPanelStyle.panelCornerRadius
         )
@@ -186,13 +186,13 @@ object FloydCustomScoreboard : Module(
     }
 
     private fun textWidth(text: String): Float =
-        if (scoreboardHudMinecraftFont) mc.font.width(text).toFloat()
+        if (useMinecraftScoreboardFont()) mc.font.width(text).toFloat()
         else NVGRenderer.textWidth(text, scoreboardFontSize(), NVGRenderer.activeFont())
 
     private fun textWidth(text: StyledScoreboardText): Float {
         var width = 0f
         for (segment in text.segments) {
-            width += if (scoreboardHudMinecraftFont || segment.minecraftFont) {
+            width += if (useMinecraftScoreboardFont() || segment.minecraftFont) {
                 mc.font.width(segment.text).toFloat()
             } else {
                 NVGRenderer.textWidth(segment.text, scoreboardFontSize(), NVGRenderer.activeFont())
@@ -204,11 +204,11 @@ object FloydCustomScoreboard : Module(
     private fun scoreboardFontSize(): Float = SCOREBOARD_FONT_SIZE
 
     private fun scoreboardTextHeight(): Float =
-        if (scoreboardHudMinecraftFont) mc.font.lineHeight.toFloat() else scoreboardFontSize()
+        if (useMinecraftScoreboardFont()) mc.font.lineHeight.toFloat() else scoreboardFontSize()
 
     private fun GuiGraphics.drawScoreboardPanelAndText(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
         HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, HudPanel.panelBorderColors(scoreboardHud.x, scoreboardHud.y))
-        if (scoreboardHudMinecraftFont) {
+        if (useMinecraftScoreboardFont()) {
             for (text in texts) drawMinecraftScoreboardText(text)
         } else {
             NVGPIPRenderer.draw(this, 0, 0, boxWidth, boxHeight, renderScaleMultiplier = mc.window.guiScale.toFloat()) {
@@ -283,6 +283,8 @@ object FloydCustomScoreboard : Module(
     }
 
     private fun shouldUseMinecraftFontCodePoint(codePoint: Int): Boolean = codePoint !in 0x20..0x7E
+
+    private fun useMinecraftScoreboardFont(): Boolean = true
 
     private fun sidebarObjective(): Objective? {
         val player = mc.player ?: return null
