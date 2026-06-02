@@ -297,7 +297,7 @@ object FloydCustomScoreboard : Module(
 
     /** Title/footer accent: the global panel border color (chroma/fade per [FloydPanelStyle]). */
     private fun scoreboardAccentColor(offset: Float): Int =
-        HudPanel.accentColor(FloydPanelStyle.effectiveBorderColor(), FloydPanelStyle.borderFade, FloydPanelStyle.borderFadeColor,
+        HudPanel.accentColor(FloydPanelStyle.panelBorderColor,
             HudPanel.offsetPhase(HudPanel.hudRotationOffset(scoreboardHud.x, scoreboardHud.y, 0.38f), offset))
 
     private data class ScoreLine(val name: StyledScoreboardText, val score: StyledScoreboardText, val nameWidth: Float, val scoreWidth: Float)

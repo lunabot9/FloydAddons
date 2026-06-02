@@ -11,6 +11,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ModuleConfigTest {
@@ -299,9 +300,9 @@ class ModuleConfigTest {
 
         config.load()
 
-        // Legacy scoreboard cosmetics fold into the unified Panel Style.
-        assertEquals(Color("112233FF"), panelStyle.borderColor)
-        assertTrue(panelStyle.borderFade)
+        // Legacy scoreboard cosmetics fold into the unified Panel Style; fade now lives on the border color.
+        assertEquals(Color("112233FF").baseRgba, panelStyle.borderColor.baseRgba)
+        assertTrue(panelStyle.borderColor.fade)
         assertEquals(11, panelStyle.padding)
         assertEquals(9, panelStyle.cornerRadius)
         // Inventory scale is not a panel cosmetic and stays on the Inventory HUD module.
@@ -352,8 +353,73 @@ class ModuleConfigTest {
 
         assertEquals(5, panelStyle.padding)
         assertEquals(7, panelStyle.cornerRadius)
-        assertTrue(panelStyle.borderFade)
+        assertTrue(panelStyle.borderColor.fade)
         assertEquals(3.0f, inventory.scale)
+    }
+
+    @Test
+    fun `panel border chroma fade and fade color fold into the Panel Border Color picker`() {
+        val panelStyle = MovedPanelStyleModule()
+        val configPath = tempDir.resolve("floydaddons-config.json")
+        java.nio.file.Files.writeString(
+            configPath,
+            """
+            [
+              {
+                "name": "Panel Style",
+                "enabled": true,
+                "settings": {
+                  "Panel Border Color": { "hex": "#FF0000FF", "chroma": false },
+                  "Border Fade": true,
+                  "Border Fade Color": { "hex": "#00FF00FF", "chroma": false }
+                }
+              }
+            ]
+            """.trimIndent()
+        )
+        val config = ModuleConfig(configPath.toFile())
+        config.modules[panelStyle.name.lowercase()] = panelStyle
+
+        config.load()
+
+        assertEquals(Color("FF0000FF").baseRgba, panelStyle.borderColor.baseRgba)
+        assertTrue(panelStyle.borderColor.fade)
+        assertFalse(panelStyle.borderColor.chroma)
+        assertEquals(Color("00FF00FF").baseRgba, panelStyle.borderColor.fadeColor.baseRgba)
+
+        // The sibling keys are gone from the rewritten config.
+        val rewritten = java.nio.file.Files.readString(configPath)
+        assertTrue("Border Fade" !in jsonForModule(rewritten, "Panel Style"))
+        assertTrue("Border Fade Color" !in jsonForModule(rewritten, "Panel Style"))
+    }
+
+    @Test
+    fun `panel border chroma wins over fade when both were set`() {
+        val panelStyle = MovedPanelStyleModule()
+        val configPath = tempDir.resolve("floydaddons-config.json")
+        java.nio.file.Files.writeString(
+            configPath,
+            """
+            [
+              {
+                "name": "Panel Style",
+                "enabled": true,
+                "settings": {
+                  "Panel Border Color": { "hex": "#FFFFFFFF", "chroma": false },
+                  "Border Chroma": true,
+                  "Border Fade": true
+                }
+              }
+            ]
+            """.trimIndent()
+        )
+        val config = ModuleConfig(configPath.toFile())
+        config.modules[panelStyle.name.lowercase()] = panelStyle
+
+        config.load()
+
+        assertTrue(panelStyle.borderColor.chroma)
+        assertFalse(panelStyle.borderColor.fade)
     }
 
     private fun jsonForModule(configJson: String, moduleName: String): String {
@@ -543,7 +609,6 @@ class ModuleConfigTest {
     ) {
         val cornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Test corner radius.")
         val borderColor by ColorSetting("Panel Border Color", Color(0xFFFFFFFF.toInt()), desc = "Test border color.")
-        val borderFade by BooleanSetting("Border Fade", false, desc = "Test fade.")
         val padding by NumberSetting("Panel Padding", 6, 0, 16, 1, desc = "Test padding.")
     }
 }

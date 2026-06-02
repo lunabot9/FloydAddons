@@ -37,10 +37,7 @@ object FloydPanelStyle : Module(
     // Background fill keeps the historic translucent feel (~25% black) as the default; alpha is
     // editable in the picker so the tint can be lightened/darkened or made opaque.
     val panelBackgroundColor by ColorSetting("Panel Background Color", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color (with opacity) behind every Floyd panel.")
-    val panelBorderColor by ColorSetting("Panel Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for every Floyd panel (toggle chroma inside the picker).")
-    val borderChroma by BooleanSetting("Border Chroma", false, desc = "Forces the panel border to cycle through chroma (independent of the color picker's chroma toggle).")
-    val borderFade by BooleanSetting("Border Fade", false, desc = "Fades the panel border between the border color and the fade color.")
-    val borderFadeColor by ColorSetting("Border Fade Color", Color(0xFF55FFFF.toInt()), desc = "Secondary color for the panel border fade.")
+    val panelBorderColor by ColorSetting("Panel Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for every Floyd panel — chroma and fade are configured inside the picker.")
 
     val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a real blurred backdrop of the world behind every Floyd panel.")
     val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Blur radius of the backdrop behind Floyd panels.")
@@ -59,14 +56,6 @@ object FloydPanelStyle : Module(
     @JvmStatic
     fun shouldUseFullChatChroma(): Boolean = fullChatChroma
 
-    /**
-     * Effective border color (a [Color]) for panels, with the global [borderChroma] toggle applied
-     * on top of the color's own chroma flag. Returns a fresh color so the global setting's color is
-     * never mutated.
-     */
-    fun effectiveBorderColor(): Color =
-        if (borderChroma) panelBorderColor.copy().also { it.chroma = true } else panelBorderColor
-
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "panelCornerRadius" to panelCornerRadius,
@@ -74,8 +63,8 @@ object FloydPanelStyle : Module(
         "panelPadding" to panelPadding,
         "panelBackgroundColor" to panelBackgroundColor.rgba,
         "panelBorderColor" to panelBorderColor.rgba,
-        "borderChroma" to borderChroma,
-        "borderFade" to borderFade,
+        "panelBorderChroma" to panelBorderColor.chroma,
+        "panelBorderFade" to panelBorderColor.fade,
         "panelBlur" to panelBlur,
         "panelBlurStrength" to panelBlurStrength,
         "panelBlurType" to panelBlurTypeName(),

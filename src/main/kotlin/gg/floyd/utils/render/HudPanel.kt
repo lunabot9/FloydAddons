@@ -85,26 +85,21 @@ object HudPanel {
      * nameplate) pass their own [BorderColors] instead.
      */
     fun panelBorderColors(x: Int = 0, y: Int = 0, seed: Float = 0.38f): BorderColors =
-        circularBorderColors(
-            FloydPanelStyle.effectiveBorderColor(),
-            FloydPanelStyle.borderFade,
-            FloydPanelStyle.borderFadeColor,
-            hudRotationOffset(x, y, seed)
-        )
+        circularBorderColors(FloydPanelStyle.panelBorderColor, hudRotationOffset(x, y, seed))
 
-    /** Rotating gradient around the four corners (chroma/fade/solid per the [base] color settings). */
-    fun circularBorderColors(base: Color, fade: Boolean, fadeColor: Color, offset: Float): BorderColors =
+    /** Rotating gradient around the four corners (chroma/fade/solid per the [base] color's own settings). */
+    fun circularBorderColors(base: Color, offset: Float): BorderColors =
         BorderColors(
-            accentColor(base, fade, fadeColor, offset),
-            accentColor(base, fade, fadeColor, offsetPhase(offset, 0.25f)),
-            accentColor(base, fade, fadeColor, offsetPhase(offset, 0.5f)),
-            accentColor(base, fade, fadeColor, offsetPhase(offset, 0.75f))
+            accentColor(base, offset),
+            accentColor(base, offsetPhase(offset, 0.25f)),
+            accentColor(base, offsetPhase(offset, 0.5f)),
+            accentColor(base, offsetPhase(offset, 0.75f))
         )
 
-    /** chroma flag lives on the Color (our model); fade blends base<->fadeColor; otherwise the static color. */
-    fun accentColor(base: Color, fade: Boolean, fadeColor: Color, offset: Float): Int {
+    /** Both chroma and fade live on the [base] Color: chroma cycles, fade blends base<->fadeColor, else static. */
+    fun accentColor(base: Color, offset: Float): Int {
         if (base.chroma) return chromaColor(offset)
-        if (fade) return blendColors(base.baseRgba, fadeColor.baseRgba, fadeProgress(offset))
+        if (base.fade) return blendColors(base.baseRgba, base.fadeColor.baseRgba, fadeProgress(offset))
         return base.baseRgba
     }
 

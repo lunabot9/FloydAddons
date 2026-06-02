@@ -46,6 +46,7 @@ class ModuleConfig internal constructor(file: File) {
                 // Remap keys that moved between modules in the HUD/GUI reorg before reading them.
                 // Persisted immediately so the on-disk config uses the new keys on subsequent loads.
                 var migrated = migrateMovedKeys(jsonArray)
+                migrated = migratePanelBorderFadeChroma(jsonArray) || migrated
                 migrated = migrateCollapsedEnabledToggles(jsonArray) || migrated
                 if (migrated) {
                     file.bufferedWriter().use { it.write(gson.toJson(jsonArray)) }
@@ -363,6 +364,66 @@ class ModuleConfig internal constructor(file: File) {
                 }
             }
             return changed
+        }
+
+        /**
+         * Folds Panel Style's former sibling border toggles — "Border Chroma", "Border Fade" and the
+         * "Border Fade Color" picker — into the unified "Panel Border Color"'s own chroma/fade/fadeColor
+         * fields (the [gg.floyd.utils.Color] now carries them, configured inside the picker). Runs AFTER
+         * [migrateMovedKeys] so legacy scoreboard/overhead fade keys have already landed on "Border Fade" /
+         * "Border Fade Color". Chroma wins over fade, matching the old effectiveBorderColor precedence.
+         * Persisted once on load, so the orphaned sibling keys disappear afterward.
+         */
+        private fun migratePanelBorderFadeChroma(jsonArray: JsonArray): Boolean {
+            val panel = jsonArray.asSequence()
+                .mapNotNull { it as? JsonObject }
+                .firstOrNull { it.get("name")?.asString?.lowercase() == "panel style" } ?: return false
+            val settings = panel.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject ?: return false
+
+            val hasChroma = settings.has("Border Chroma")
+            val hasFade = settings.has("Border Fade")
+            val hasFadeColor = settings.has("Border Fade Color")
+            if (!hasChroma && !hasFade && !hasFadeColor) return false
+
+            // Locate or build the Panel Border Color object (legacy string form -> object). When absent
+            // we leave chroma unset (defaults false) so an explicitly-set fade is honored.
+            val borderEl = settings.get("Panel Border Color")
+            val border: JsonObject = when {
+                borderEl != null && borderEl.isJsonObject -> borderEl.asJsonObject
+                borderEl != null && borderEl.isJsonPrimitive ->
+                    JsonObject().apply { addProperty("hex", borderEl.asString) }
+                        .also { settings.add("Panel Border Color", it) }
+                else ->
+                    JsonObject().apply { addProperty("hex", "#FFFFFFFF") }
+                        .also { settings.add("Panel Border Color", it) }
+            }
+
+            val existingChroma = runCatching { border.get("chroma")?.asBoolean }.getOrNull() ?: false
+            val borderChroma = hasChroma && runCatching { settings.get("Border Chroma").asBoolean }.getOrDefault(false)
+            val borderFade = hasFade && runCatching { settings.get("Border Fade").asBoolean }.getOrDefault(false)
+
+            val chroma = existingChroma || borderChroma
+            border.addProperty("chroma", chroma)
+            border.addProperty("fade", borderFade && !chroma)
+
+            if (hasFadeColor) {
+                val fadeEl = settings.get("Border Fade Color")
+                val hex = when {
+                    fadeEl.isJsonObject -> fadeEl.asJsonObject.get("hex")?.asString
+                    fadeEl.isJsonPrimitive -> fadeEl.asString
+                    else -> null
+                }
+                if (!hex.isNullOrBlank()) border.addProperty("fadeColor", if (hex.startsWith("#")) hex else "#$hex")
+            }
+
+            settings.remove("Border Chroma")
+            settings.remove("Border Fade")
+            settings.remove("Border Fade Color")
+
+            if (loggedMovedKeys.add("panel style:border-fade-chroma")) {
+                migrationLogger.info("Folded Panel Style border chroma/fade toggles into the Panel Border Color picker.")
+            }
+            return true
         }
 
         /**

@@ -51,6 +51,27 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
     var chroma: Boolean = false
 
     /**
+     * When enabled, [rgba] fades over time between [baseRgba] and [fadeColor]. Mutually exclusive
+     * with [chroma] in the picker UI. Lives on the color so fade is configured inside the color
+     * picker rather than as a separate sibling toggle.
+     */
+    var fade: Boolean = false
+
+    /**
+     * Secondary color blended toward when [fade] is on. Lazily created (defaulting to cyan) so a
+     * plain color never recursively allocates a fade color at construction; the nested color's own
+     * [chroma]/[fade] are never used.
+     */
+    @Transient
+    private var fadeColorBacking: Color? = null
+    var fadeColor: Color
+        get() = fadeColorBacking ?: Color(DEFAULT_FADE_RGBA).also { fadeColorBacking = it }
+        set(value) { fadeColorBacking = value }
+
+    /** The backing fade color without lazily creating one (for serialization). */
+    internal fun fadeColorOrNull(): Color? = fadeColorBacking
+
+    /**
      * Used to tell the [baseRgba] value to update when the HSBA values are changed.
      *
      * @see baseRgba
@@ -78,9 +99,11 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
      * Display RGBA. Cycles through chroma when [chroma] is enabled, otherwise [baseRgba].
      */
     val rgba: Int
-        get() = if (chroma) {
-            (ChromaCache.rgbFor(0f)) or ((this.alphaFloat * 255).toInt() shl 24)
-        } else baseRgba
+        get() = when {
+            chroma -> (ChromaCache.rgbFor(0f)) or ((this.alphaFloat * 255).toInt() shl 24)
+            fade -> blendArgb(baseRgba, fadeColor.baseRgba, fadeProgress(0f))
+            else -> baseRgba
+        }
 
     inline val red get() = rgba.red
     inline val green get() = rgba.green
@@ -110,27 +133,45 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
     override fun hashCode(): Int {
         var result = baseRgba
         result = 31 * result + chroma.hashCode()
+        result = 31 * result + fade.hashCode()
+        if (fade) result = 31 * result + fadeColor.baseRgba
         return result
     }
 
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
         if (other is Color) {
-            return baseRgba == other.baseRgba && chroma == other.chroma
+            return baseRgba == other.baseRgba && chroma == other.chroma && fade == other.fade &&
+                (!fade || fadeColor.baseRgba == other.fadeColor.baseRgba)
         }
         return false
     }
 
-    fun copy(): Color = Color(this.baseRgba).also { it.chroma = this.chroma }
+    /** Sets this color's HSBA in place from an ARGB int, preserving the [chroma]/[fade] flags. */
+    fun applyRgba(argb: Int) {
+        val hsb = RGBtoHSB((argb shr 16) and 0xFF, (argb shr 8) and 0xFF, argb and 0xFF, FloatArray(3))
+        hue = hsb[0]
+        saturation = hsb[1]
+        brightness = hsb[2]
+        alphaFloat = ((argb shr 24) and 0xFF) / 255f
+    }
+
+    fun copy(): Color = Color(this.baseRgba).also {
+        it.chroma = this.chroma
+        it.fade = this.fade
+        this.fadeColorBacking?.let { fc -> it.fadeColor = Color(fc.baseRgba) }
+    }
 
     private class ColorSerializer : JsonDeserializer<Color>, JsonSerializer<Color> {
         override fun deserialize(json: JsonElement, type: Type, context: JsonDeserializationContext?): Color {
-            // Object form { "hex": "#RRGGBBAA", "chroma": bool }; legacy string form "#RRGGBBAA".
+            // Object form { "hex": "#RRGGBBAA", "chroma", "fade", "fadeColor" }; legacy string "#RRGGBBAA".
             if (json.isJsonObject) {
                 val obj = json.asJsonObject
                 val hex = obj.get("hex")?.asString ?: "#FFFFFFFF"
                 return Color(hex.removePrefix("#")).also {
                     it.chroma = obj.get("chroma")?.asBoolean ?: false
+                    it.fade = obj.get("fade")?.asBoolean ?: false
+                    obj.get("fadeColor")?.asString?.let { fc -> it.fadeColor = Color(fc.removePrefix("#")) }
                 }
             }
             return Color(json.asString.drop(1))
@@ -140,11 +181,35 @@ class Color(hue: Float, saturation: Float, brightness: Float, alpha: Float = 1f)
             val obj = JsonObject()
             obj.addProperty("hex", "#${color.hex()}")
             obj.addProperty("chroma", color.chroma)
+            // Keep plain colors as { hex, chroma } (unchanged on disk); only carry fade fields when used.
+            if (color.fade) obj.addProperty("fade", true)
+            color.fadeColorOrNull()?.let { obj.addProperty("fadeColor", "#${it.hex()}") }
             return obj
         }
     }
 
     companion object {
+        /** Default secondary color for [fade] (cyan), matching the old Border Fade Color default. */
+        const val DEFAULT_FADE_RGBA: Int = 0xFF55FFFF.toInt()
+
+        /** Time-driven fade progress (0..1), phased by [offset]; matches HudPanel's fade curve. */
+        private fun fadeProgress(offset: Float): Float {
+            val angle = (((System.currentTimeMillis() % 2500L) / 2500f) + offset) * (2f * Math.PI.toFloat())
+            return ((kotlin.math.sin(angle) + 1f) * 0.5f).coerceIn(0f, 1f)
+        }
+
+        /** Per-channel ARGB lerp from [start] to [end] by [progress] (0..1). */
+        private fun blendArgb(start: Int, end: Int, progress: Float): Int {
+            val t = progress.coerceIn(0f, 1f)
+            val sa = start ushr 24 and 0xFF; val sr = start ushr 16 and 0xFF
+            val sg = start ushr 8 and 0xFF; val sb = start and 0xFF
+            val ea = end ushr 24 and 0xFF; val er = end ushr 16 and 0xFF
+            val eg = end ushr 8 and 0xFF; val eb = end and 0xFF
+            val a = (sa + (ea - sa) * t).toInt(); val r = (sr + (er - sr) * t).toInt()
+            val g = (sg + (eg - sg) * t).toInt(); val b = (sb + (eb - sb) * t).toInt()
+            return (a shl 24) or (r shl 16) or (g shl 8) or b
+        }
+
         inline val Int.red get() = this shr 16 and 0xFF
         inline val Int.green get() = this shr 8 and 0xFF
         inline val Int.blue get() = this and 0xFF

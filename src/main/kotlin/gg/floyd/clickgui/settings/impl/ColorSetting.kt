@@ -48,6 +48,12 @@ class ColorSetting(
 
     var section: Int? = null
 
+    /** When [value] has [Color.fade] on, whether the sliders edit the fade color instead of the base. */
+    private var editingFade = false
+
+    /** The color the sliders / hex input currently edit: the fade color while in fade-edit mode, else base. */
+    private fun editTarget(): Color = if (editingFade && value.fade) value.fadeColor else value
+
     private var hexString = value.hex(allowAlpha)
         set(value) {
             if (value == field) return
@@ -70,7 +76,7 @@ class ColorSetting(
             hexString = textValue.filter { it in '0'..'9' || it in 'A'..'F' || it in 'a'..'f' }
 
             if (hexString.length == 8 && allowAlpha || hexString.length == 6 && !allowAlpha)
-                value = Color(if (allowAlpha) hexString else hexString.padEnd(8, 'F'))
+                editTarget().applyRgba(Color(if (allowAlpha) hexString else hexString.padEnd(8, 'F')).baseRgba)
         }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
@@ -87,31 +93,33 @@ class ColorSetting(
         if (!extended && !expandAnim.isAnimating()) return defaultHeight
 
         if (expandAnim.isAnimating()) NVGRenderer.pushScissor(x, y + defaultHeight, width, getHeight() - defaultHeight)
+        // The sliders edit the base color, or the fade color while in fade-edit mode.
+        val target = editTarget()
         // SATURATION AND BRIGHTNESS
-        NVGRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 169f, Colors.WHITE.rgba, value.hsbMax().rgba, Gradient.LeftToRight, 5f)
+        NVGRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 169f, Colors.WHITE.rgba, target.hsbMax().rgba, Gradient.LeftToRight, 5f)
         NVGRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 170f, Colors.TRANSPARENT.rgba, Colors.BLACK.rgba, Gradient.TopToBottom, 5f)
 
-        val animatedSat = mainSliderAnim.get(mainSliderPrevSat, value.saturation, false)
-        val animatedBright = mainSliderAnim.get(mainSliderPrevBright, value.brightness, false)
+        val animatedSat = mainSliderAnim.get(mainSliderPrevSat, target.saturation, false)
+        val animatedBright = mainSliderAnim.get(mainSliderPrevBright, target.brightness, false)
         val sbPointer = Pair((x + 6f + animatedSat * 220), (y + 38f + (1 - animatedBright) * 170))
         NVGRenderer.dropShadow(sbPointer.first - 8.5f, sbPointer.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
         NVGRenderer.circle(sbPointer.first, sbPointer.second, 8f, Colors.WHITE.rgba)
-        NVGRenderer.circle(sbPointer.first, sbPointer.second, 7f, value.withAlpha(1f).rgba)
+        NVGRenderer.circle(sbPointer.first, sbPointer.second, 7f, target.withAlpha(1f).rgba)
 
         // HUE
         NVGRenderer.image(ClickGUI.hueImage, x + 6f, y + 212f, width - 12f, 15f, 5f)
         NVGRenderer.hollowRect(x + 6f, y + 212f, width - 12f, 15f, 1f, gray38.rgba, 5f)
 
-        val huePos = x + 6f + hueSliderAnim.get(hueSliderPrev, value.hue, false) * 219f to y + 219f
+        val huePos = x + 6f + hueSliderAnim.get(hueSliderPrev, target.hue, false) * 219f to y + 219f
         NVGRenderer.dropShadow(huePos.first - 8.5f, huePos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
         NVGRenderer.circle(huePos.first, huePos.second, 8f, Colors.WHITE.rgba)
-        NVGRenderer.circle(huePos.first, huePos.second, 7f, value.hsbMax().withAlpha(1f).rgba)
+        NVGRenderer.circle(huePos.first, huePos.second, 7f, target.hsbMax().withAlpha(1f).rgba)
 
         // ALPHA
         if (allowAlpha) {
-            NVGRenderer.gradientRect(x + 6f, y + 232f, width - 12f, 15f, Colors.TRANSPARENT.rgba, value.withAlpha(1f).rgba, Gradient.LeftToRight, 5f)
+            NVGRenderer.gradientRect(x + 6f, y + 232f, width - 12f, 15f, Colors.TRANSPARENT.rgba, target.withAlpha(1f).rgba, Gradient.LeftToRight, 5f)
 
-            val alphaPos = Pair((x + 6f + alphaSliderAnim.get(alphaSliderPrev, value.alphaFloat, false) * 217f), y + 240f)
+            val alphaPos = Pair((x + 6f + alphaSliderAnim.get(alphaSliderPrev, target.alphaFloat, false) * 217f), y + 240f)
             NVGRenderer.dropShadow(alphaPos.first - 8.5f, alphaPos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
             NVGRenderer.circle(alphaPos.first, alphaPos.second, 8f, Colors.WHITE.darker(.5f).rgba)
             NVGRenderer.circle(alphaPos.first, alphaPos.second, 7f, Colors.WHITE.rgba)
@@ -119,7 +127,7 @@ class ColorSetting(
 
         handleColorDrag(mouseX, mouseY, x, y, width)
 
-        if (section != null) hexString = value.hex(allowAlpha)
+        if (section != null) hexString = target.hex(allowAlpha)
 
         // main width - text input
         val sidePadding = (width - width / 2) / 2f
@@ -135,14 +143,19 @@ class ColorSetting(
         textInputHandler.width = width / 2
         textInputHandler.draw(mouseX, mouseY)
 
-        // CHROMA toggle (lives inside the color picker, not as a sibling setting)
-        val chromaY = y + actualHeight + 2f
-        val chromaOn = value.chroma
-        NVGRenderer.rect(rectX, chromaY, width / 2, 20f, gray38.rgba, 4f)
-        NVGRenderer.hollowRect(rectX, chromaY, width / 2, 20f, 2f, (if (chromaOn) ClickGUIModule.clickGUIColor else Colors.gray38).rgba, 4f)
-        val chromaLabel = if (chromaOn) "Chroma: On" else "Chroma: Off"
-        val chromaLabelWidth = NVGRenderer.textWidth(chromaLabel, 14f, NVGRenderer.defaultFont)
-        NVGRenderer.text(chromaLabel, rectX + (width / 4) - (chromaLabelWidth / 2), chromaY + 5f, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        // Chroma + Fade toggles (both live inside the picker, not as sibling settings). Mutually exclusive.
+        val band = width / 2
+        val gap = 4f
+        val halfBtn = (band - gap) / 2f
+        val toggleY = y + actualHeight + 2f
+        renderToggle(rectX, toggleY, halfBtn, "Chroma", value.chroma)
+        renderToggle(rectX + halfBtn + gap, toggleY, halfBtn, "Fade", value.fade)
+
+        // When fade is on, choose whether the sliders edit the base or the (chroma-less) fade color.
+        if (value.fade) {
+            val editLabel = if (editingFade) "Edit: Fade" else "Edit: Base"
+            renderToggle(rectX, toggleY + 24f, band, editLabel, editingFade)
+        }
 
         if (expandAnim.isAnimating()) NVGRenderer.popScissor()
         return getHeight()
@@ -159,8 +172,29 @@ class ColorSetting(
         textInputHandler.mouseClicked(mouseX, mouseY, click)
 
         val actualHeight = defaultHeight + if (allowAlpha) 250f else 230f
-        if (isAreaHovered(lastX + (width - width / 2) / 2f, lastY + actualHeight + 2f, width / 2, 20f, true)) {
+        val rectX = lastX + (width - width / 2) / 2f
+        val band = width / 2
+        val gap = 4f
+        val halfBtn = (band - gap) / 2f
+        val toggleY = lastY + actualHeight + 2f
+        // Chroma toggle (left) — mutually exclusive with fade.
+        if (isAreaHovered(rectX, toggleY, halfBtn, 20f, true)) {
             value.chroma = !value.chroma
+            if (value.chroma) value.fade = false
+            syncEditTargetState()
+            return true
+        }
+        // Fade toggle (right) — mutually exclusive with chroma.
+        if (isAreaHovered(rectX + halfBtn + gap, toggleY, halfBtn, 20f, true)) {
+            value.fade = !value.fade
+            if (value.fade) value.chroma = false else editingFade = false
+            syncEditTargetState()
+            return true
+        }
+        // Edit-target row (only when fade is on): switch the sliders between the base and fade color.
+        if (value.fade && isAreaHovered(rectX, toggleY + 24f, band, 20f, true)) {
+            editingFade = !editingFade
+            syncEditTargetState()
             return true
         }
 
@@ -189,8 +223,29 @@ class ColorSetting(
         else false
     }
 
+    /** Extra height below the hex input: the toggle row, plus the fade-edit row when fade is on. */
+    private fun extrasHeight(): Float = 26f + if (value.fade) 24f else 0f
+
     override fun getHeight(): Float =
-        expandAnim.get(defaultHeight, defaultHeight + (if (allowAlpha) 250f else 230f) + 26f, !extended)
+        expandAnim.get(defaultHeight, defaultHeight + (if (allowAlpha) 250f else 230f) + extrasHeight(), !extended)
+
+    /** A small labelled toggle button, highlighted when [on]. */
+    private fun renderToggle(bx: Float, by: Float, bw: Float, label: String, on: Boolean) {
+        NVGRenderer.rect(bx, by, bw, 20f, gray38.rgba, 4f)
+        NVGRenderer.hollowRect(bx, by, bw, 20f, 2f, (if (on) ClickGUIModule.clickGUIColor else Colors.gray38).rgba, 4f)
+        val lw = NVGRenderer.textWidth(label, 14f, NVGRenderer.defaultFont)
+        NVGRenderer.text(label, bx + bw / 2f - lw / 2f, by + 5f, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+    }
+
+    /** Re-seed the slider animations + hex box to the active edit target so switching never jumps. */
+    private fun syncEditTargetState() {
+        val t = editTarget()
+        mainSliderPrevSat = t.saturation
+        mainSliderPrevBright = t.brightness
+        hueSliderPrev = t.hue
+        alphaSliderPrev = t.alphaFloat
+        hexString = t.hex(allowAlpha)
+    }
 
     override val isHovered: Boolean
         get() = isAreaHovered(
@@ -208,36 +263,37 @@ class ColorSetting(
     }
 
     private fun handleColorDrag(mouseX: Float, mouseY: Float, x: Float, y: Float, width: Float) {
+        val target = editTarget()
         when (section) {
             0 -> { // Saturation & Brightness
                 val newSaturation = ((mouseX - (x + 6f)) / (width - 12f)).coerceIn(0f, 1f)
                 val newBrightness = (1f - ((mouseY - (y + 38f)) / 170f)).coerceIn(0f, 1f)
 
-                if (newSaturation != value.saturation || newBrightness != value.brightness) {
-                    mainSliderPrevSat = mainSliderAnim.get(mainSliderPrevSat, value.saturation, false)
-                    mainSliderPrevBright = mainSliderAnim.get(mainSliderPrevBright, value.brightness, false)
+                if (newSaturation != target.saturation || newBrightness != target.brightness) {
+                    mainSliderPrevSat = mainSliderAnim.get(mainSliderPrevSat, target.saturation, false)
+                    mainSliderPrevBright = mainSliderAnim.get(mainSliderPrevBright, target.brightness, false)
                     mainSliderAnim.start()
 
-                    value.saturation = newSaturation
-                    value.brightness = newBrightness
+                    target.saturation = newSaturation
+                    target.brightness = newBrightness
                 }
             }
 
             1 -> { // Hue
                 val newHue = ((mouseX - (x + 6f)) / (width - 12f)).coerceIn(0f, 1f)
-                if (newHue != value.hue) {
-                    hueSliderPrev = hueSliderAnim.get(hueSliderPrev, value.hue, false)
+                if (newHue != target.hue) {
+                    hueSliderPrev = hueSliderAnim.get(hueSliderPrev, target.hue, false)
                     hueSliderAnim.start()
-                    value.hue = newHue
+                    target.hue = newHue
                 }
             }
 
             2 -> { // Alpha
                 val newAlpha = ((mouseX - (x + 6f)) / (width - 12f)).coerceIn(0f, 1f)
-                if (newAlpha != value.alphaFloat) {
-                    alphaSliderPrev = alphaSliderAnim.get(alphaSliderPrev, value.alphaFloat, false)
+                if (newAlpha != target.alphaFloat) {
+                    alphaSliderPrev = alphaSliderAnim.get(alphaSliderPrev, target.alphaFloat, false)
                     alphaSliderAnim.start()
-                    value.alphaFloat = newAlpha
+                    target.alphaFloat = newAlpha
                 }
             }
         }
