@@ -25,7 +25,8 @@ object FloydInventoryHud : Module(
 ) {
     val inventoryHudScale by NumberSetting("Inventory HUD Scale", 1.1f, 0.5f, 5.0f, 0.05f, desc = "Inventory HUD scale.")
 
-    private val inventoryHud by HUD("Inventory HUD", "Displays the main inventory in a movable Floyd HUD.", true, 12, 12, 1f) {
+    // toggleable = false: the module toggle is the single on/off (no redundant inner toggle).
+    private val inventoryHud by HUD("Inventory HUD", "Displays the main inventory in a movable Floyd HUD.", false, 12, 12, 1f) {
         drawInventoryHud(it)
     }
 

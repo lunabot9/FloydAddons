@@ -23,7 +23,9 @@ object FloydDayTrackerModule : Module(
     description = "Displays the current server day in a movable Floyd HUD.",
     toggled = false,
 ) {
-    private val dayTrackerHud by HUD("Day Tracker", "Displays the current server day in a movable Floyd HUD.", true, 24, 180, 1f) {
+    // toggleable = false: this module's only purpose is the HUD, so the module's own on/off is the
+    // single switch (no redundant inner toggle); the HUD stays draggable via the move icon.
+    private val dayTrackerHud by HUD("Day Tracker", "Displays the current server day in a movable Floyd HUD.", false, 24, 180, 1f) {
         drawDayTrackerHud(it)
     }
 

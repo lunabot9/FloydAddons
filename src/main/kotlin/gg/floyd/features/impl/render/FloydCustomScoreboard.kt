@@ -45,7 +45,8 @@ object FloydCustomScoreboard : Module(
 
     private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard Minecraft Font", true, desc = "Uses Minecraft's default font instead of Floyd's smooth NanoVG font for scoreboard text.")
 
-    private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", true, 10, 80, 1f) { example ->
+    // toggleable = false: the module toggle is the single on/off (no redundant inner toggle).
+    private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", false, 10, 80, 1f) { example ->
         drawScoreboardHud(example)
     }
 

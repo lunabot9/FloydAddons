@@ -78,7 +78,10 @@ object FloydFont : Module(
     fun runtimeFontOversample(): Float {
         val displaySize = fontDisplaySize.coerceAtLeast(0.5)
         val runtimeSize = (displaySize / 12.5).coerceAtLeast(0.5)
-        return (runtimeFontSize() / runtimeSize.toFloat()).coerceAtLeast(1f)
+        // 2x the Font-mod oversample: supersamples the glyph atlas more (crisper small text, fewer
+        // jagged edges) while leaving runtimeFontSize — and therefore the display size — unchanged.
+        // Trades a larger glyph atlas for sharpness; the standard fix for pixely TTF rendering.
+        return ((runtimeFontSize() / runtimeSize.toFloat()) * 2f).coerceAtLeast(1f)
     }
 
     /**
