@@ -2,6 +2,7 @@ package gg.floyd.utils.ui.rendering
 
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.utils.Color.Companion.alpha
 import gg.floyd.utils.Color.Companion.blue
 import gg.floyd.utils.Color.Companion.green
@@ -17,6 +18,7 @@ import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.system.MemoryUtil.memAlloc
 import org.lwjgl.system.MemoryUtil.memFree
 import java.nio.ByteBuffer
+import java.nio.file.Files
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
@@ -29,6 +31,16 @@ object NVGRenderer {
 
     val defaultFont by lazy(LazyThreadSafetyMode.NONE) {
         Font("Default", mc.resourceManager.getResource(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "font.ttf")).get().open())
+    }
+
+    fun activeFont(): Font {
+        val path = FloydFont.customFontPath()
+        if (FloydFont.isGlobalCustomFontEnabled() && path != null) {
+            return runCatching {
+                Font("Custom:${path.toAbsolutePath()}:${Files.getLastModifiedTime(path).toMillis()}", Files.newInputStream(path))
+            }.getOrDefault(defaultFont)
+        }
+        return defaultFont
     }
 
     private val fontMap = HashMap<Font, NVGFont>()

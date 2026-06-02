@@ -12,7 +12,9 @@ import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.MultiBufferSource
 import org.joml.Matrix3x2f
+import org.joml.Vector2f
 import org.lwjgl.opengl.GL33C
+import kotlin.math.roundToInt
 
 class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureInPictureRenderer<NVGPIPRenderer.NVGRenderState>(vertexConsumers) {
 
@@ -29,6 +31,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureI
 
         GL33C.glBindSampler(0, 0)
         NVGRenderer.beginFrame(width.toFloat(), height.toFloat())
+        if (state.renderScale != 1f) NVGRenderer.scale(state.renderScale, state.renderScale)
         state.renderContent()
         NVGRenderer.endFrame()
 
@@ -47,6 +50,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureI
         private val y: Int,
         private val width: Int,
         private val height: Int,
+        val renderScale: Float,
         private val poseMatrix: Matrix3x2f,
         private val scissor: ScreenRectangle?,
         private val bounds: ScreenRectangle?,
@@ -79,22 +83,33 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureI
             y: Int,
             width: Int,
             height: Int,
+            renderScaleMultiplier: Float = 1f,
             renderContent: () -> Unit
         ) {
             val scissor = context.scissorStack.peek()
             val pose = Matrix3x2f(context.pose())
-            val bounds = createBounds(x, y, x + width, y + height, pose, scissor)
+            val p0 = pose.transformPosition(Vector2f(x.toFloat(), y.toFloat()))
+            val p1 = pose.transformPosition(Vector2f((x + width).toFloat(), (y + height).toFloat()))
+            if (!p0.x.isFinite() || !p0.y.isFinite() || !p1.x.isFinite() || !p1.y.isFinite()) return
+            val screenLeft = minOf(p0.x, p1.x).roundToInt()
+            val screenTop = minOf(p0.y, p1.y).roundToInt()
+            val screenWidth = maxOf(p0.x, p1.x).roundToInt() - screenLeft
+            val screenHeight = maxOf(p0.y, p1.y).roundToInt() - screenTop
+            val renderScale = pose.transformDirection(Vector2f(1f, 0f)).length() * renderScaleMultiplier
+            if (!renderScale.isFinite()) return
+            val bounds = createBounds(screenLeft, screenTop, screenLeft + screenWidth, screenTop + screenHeight, scissor)
 
             val state = NVGRenderState(
-                x, y, width, height,
+                screenLeft, screenTop, screenWidth, screenHeight,
+                renderScale,
                 pose, scissor, bounds,
                 renderContent
             )
             context.guiRenderState.submitPicturesInPictureState(state)
         }
 
-        private fun createBounds(x0: Int, y0: Int, x1: Int, y1: Int, pose: Matrix3x2f, scissorArea: ScreenRectangle?): ScreenRectangle? {
-            val screenRect = ScreenRectangle(x0, y0, x1 - x0, y1 - y0).transformMaxBounds(pose)
+        private fun createBounds(x0: Int, y0: Int, x1: Int, y1: Int, scissorArea: ScreenRectangle?): ScreenRectangle? {
+            val screenRect = ScreenRectangle(x0, y0, x1 - x0, y1 - y0)
             return if (scissorArea != null) scissorArea.intersection(screenRect) else screenRect
         }
     }
