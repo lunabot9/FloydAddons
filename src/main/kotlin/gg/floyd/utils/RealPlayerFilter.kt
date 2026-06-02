@@ -2,43 +2,45 @@ package gg.floyd.utils
 
 import gg.floyd.FloydAddonsMod.mc
 import net.minecraft.world.entity.Entity
-import java.util.UUID
+import java.util.Locale
+import java.util.regex.Pattern
 
 /**
- * Shared "real player vs server-faked NPC" heuristic for Player ESP.
+ * Shared "real player vs server-faked NPC" heuristic. A real player's name appears in the tab
+ * player-info list and matches a valid Minecraft username pattern; server NPC holograms (donutsmp's
+ * "/<command>" entries, decorated/colored strings, etc.) do not. This mirrors the filter
+ * [gg.floyd.features.impl.render.FloydMobEsp] already applies, so Player ESP hides the same fakes.
  *
- * A real connected player — Java OR Bedrock (Geyser/Floodgate) — always has a tab player-list entry
- * keyed by their account UUID, so membership is tested by **UUID**, not by name. The previous
- * name-pattern test (`[a-zA-Z0-9_]{3,16}`) wrongly excluded Bedrock players, whose in-game name
- * carries a Geyser prefix (e.g. `.Gamertag`), can contain spaces, and may exceed 16 chars. Fake /
- * hologram NPC player entities (Citizens-style) are not present in the tab list by UUID, so they
- * stay filtered.
- *
- * The UUID set is cached for [TAB_LIST_CACHE_MS] since [isRealPlayer] is called from render paths.
- * Touches no GL — only `mc.connection`.
+ * The tab-name set is cached for [TAB_LIST_CACHE_MS] since [isRealPlayer] is called from render
+ * paths. Touches no GL — only `mc.connection`.
  */
 object RealPlayerFilter {
+    private val FORMATTING_CODE = Regex("§.")
+    private val playerNamePattern: Pattern = Pattern.compile("[a-zA-Z0-9_]{3,16}")
     private const val TAB_LIST_CACHE_MS = 1_000L
 
-    @Volatile private var tabListUuids: Set<UUID> = emptySet()
+    @Volatile private var tabListNames: Set<String> = emptySet()
     private var lastRefreshMs = 0L
 
-    /** Whether [entity]'s UUID is in the tab player list (a real connected player, Java or Bedrock). */
+    /** Whether [entity]'s name matches a valid-pattern entry currently in the tab player list. */
     fun isRealPlayer(entity: Entity): Boolean {
         refresh()
-        return tabListUuids.contains(entity.uuid)
+        val name = entity.name.string.replace(FORMATTING_CODE, "").lowercase(Locale.ROOT)
+        return tabListNames.contains(name)
     }
 
     private fun refresh(now: Long = System.currentTimeMillis()) {
         if (now - lastRefreshMs < TAB_LIST_CACHE_MS) return
         lastRefreshMs = now
         val connection = mc.connection ?: run {
-            tabListUuids = emptySet()
+            tabListNames = emptySet()
             return
         }
-        tabListUuids = connection.listedOnlinePlayers
+        tabListNames = connection.listedOnlinePlayers
             .asSequence()
-            .map { it.profile.id }
+            .mapNotNull { it.profile.name }
+            .filter { playerNamePattern.matcher(it).matches() }
+            .map { it.lowercase(Locale.ROOT) }
             .toSet()
     }
 }
