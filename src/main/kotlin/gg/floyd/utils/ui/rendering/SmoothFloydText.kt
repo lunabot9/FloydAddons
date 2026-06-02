@@ -42,17 +42,21 @@ object SmoothFloydText {
         val sx = pose.m00()
         val sy = pose.m11()
         val scale = max(kotlin.math.abs(sx), kotlin.math.abs(sy)).takeIf { it > 0f } ?: 1f
-        val drawX = p.x
-        val drawY = p.y
         val size = FONT_SIZE * scale
         val width = ceil(NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont)).toInt() + PADDING * 2 + if (shadow) 3 else 0
         val height = ceil(LINE_HEIGHT * scale).toInt() + PADDING * 2 + if (shadow) 3 else 0
-        val boundsX = kotlin.math.floor(drawX).toInt() - PADDING
-        val boundsY = kotlin.math.floor(drawY).toInt() - PADDING
+        val boundsX = kotlin.math.floor(p.x).toInt() - PADDING
+        val boundsY = kotlin.math.floor(p.y).toInt() - PADDING
+        val localX = PADDING.toFloat()
+        val localY = PADDING.toFloat()
 
+        // NVGPIPRenderer renders into the PiP texture's local coordinate space, then Minecraft
+        // blits that texture at (boundsX, boundsY). The previous version drew at absolute screen
+        // coordinates inside a tiny per-text PiP texture, so most text was clipped away and only
+        // near-origin labels survived in the corner.
         NVGPIPRenderer.draw(context, boundsX, boundsY, width, height) {
-            if (shadow) NVGRenderer.textShadow(text, drawX, drawY, size, color, NVGRenderer.defaultFont)
-            else NVGRenderer.text(text, drawX, drawY, size, color, NVGRenderer.defaultFont)
+            if (shadow) NVGRenderer.textShadow(text, localX, localY, size, color, NVGRenderer.defaultFont)
+            else NVGRenderer.text(text, localX, localY, size, color, NVGRenderer.defaultFont)
         }
         return true
     }
