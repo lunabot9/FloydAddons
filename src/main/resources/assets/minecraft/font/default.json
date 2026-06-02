@@ -1,6 +1,24 @@
 {
   "providers": [
-    { "type": "reference", "id": "minecraft:include/space" },
-    { "type": "ttf", "file": "floydaddons:font.ttf", "size": 10.0, "oversample": 16.0, "shift": [0.0, 1.0] }
+    {
+      "type": "ttf",
+      "file": "floydaddons:font.ttf",
+      "shift": [0, 0],
+      "size": 8.0,
+      "oversample": 4.0
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/space"
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/default",
+      "filter": { "uniform": false }
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/unifont"
+    }
   ]
 }
