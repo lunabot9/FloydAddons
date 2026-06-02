@@ -1,5 +1,7 @@
 # Floyd Addons
 
+[.gg/floyd](https://discord.gg/floyd)
+
 A Fabric **1.21.11** client mod: a module suite with a ClickGUI, HUD, ESP, and
 PvP utilities. Mod id `floydaddons`, package root `gg.floyd`.
 
