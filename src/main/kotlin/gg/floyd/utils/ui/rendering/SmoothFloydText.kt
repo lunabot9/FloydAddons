@@ -1,5 +1,6 @@
 package gg.floyd.utils.ui.rendering
 
+import gg.floyd.features.impl.render.FloydFont
 import net.minecraft.client.gui.GuiGraphics
 import org.joml.Vector2f
 import kotlin.math.ceil
@@ -17,6 +18,7 @@ object SmoothFloydText {
 
     @JvmStatic
     fun shouldUseForFloydCaller(): Boolean {
+        if (!FloydFont.isGlobalCustomFontEnabled()) return false
         val stack = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).walk { frames ->
             frames.anyMatch { frame ->
                 val name = frame.declaringClass.name
