@@ -6,7 +6,6 @@ import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.utils.render.HudPanel
-import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemStack
 import net.minecraft.client.gui.GuiGraphics
 import kotlin.math.roundToInt
 
@@ -69,7 +68,7 @@ object FloydInventoryHud : Module(
                 val y = row * slotSize + (slotSize - 16 * itemScale) / 2f
                 pose().translate(x, y)
                 pose().scale(itemScale, itemScale)
-                drawItemStack(stack, 0, 0)
+                renderItem(stack, 0, 0)
                 pose().popMatrix()
 
                 if (stack.count > 1) {
