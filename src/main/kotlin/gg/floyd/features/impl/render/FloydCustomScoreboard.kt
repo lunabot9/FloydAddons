@@ -6,6 +6,7 @@ import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.utils.render.HudPanel
+import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
@@ -277,8 +278,14 @@ object FloydCustomScoreboard : Module(
         val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
-        // TODO(blur): frosted blur backdrop here once PanelBlurPIPRenderer.drawInline (framebuffer
-        // snapshot to avoid sample-while-write feedback) is implemented. For now: fill + border only.
+        // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
+        if (FloydPanelStyle.blurFor(target)) {
+            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+                PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
+                PostHudOverlay.bindMainFbo()
+            }
+        }
         RoundRectPIPRenderer.drawInline(
             fx, fy, fw, fh,
             fill, fill, fill, fill,

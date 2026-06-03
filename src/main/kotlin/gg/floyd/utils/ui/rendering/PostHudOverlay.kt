@@ -6,6 +6,9 @@ import com.mojang.blaze3d.opengl.GlDevice
 import com.mojang.blaze3d.opengl.GlStateManager
 import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.blaze3d.textures.GpuTexture
+import com.mojang.blaze3d.textures.GpuTextureView
+import com.mojang.blaze3d.textures.TextureFormat
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
@@ -30,6 +33,33 @@ object PostHudOverlay {
 
     private val screenProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons PostHUD", -1000f, 1000f, true)
     private var boundFbo = 0
+
+    // Per-frame snapshot of the main color, so a panel's frosted blur can SAMPLE the backdrop while the
+    // pass WRITES the panel to the main framebuffer (sampling+writing the same texture is feedback).
+    private var blurColor: GpuTexture? = null
+    private var blurColorView: GpuTextureView? = null
+    private var blurW = 0
+    private var blurH = 0
+
+    /** The framebuffer snapshot for panel blur to sample (null until [render] has snapshotted this frame). */
+    fun blurSourceView(): GpuTextureView? = blurColorView
+
+    private fun snapshotForBlur(target: com.mojang.blaze3d.pipeline.RenderTarget) {
+        if (blurColor == null || blurW != target.width || blurH != target.height) {
+            blurColorView?.close(); blurColor?.close()
+            val device = RenderSystem.getDevice()
+            // COPY_DST (copy destination for the framebuffer snapshot) + TEXTURE_BINDING (sampled by the blur).
+            val usage = GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_TEXTURE_BINDING
+            val tex = device.createTexture({ "FloydAddons PostHUD blur source" }, usage, TextureFormat.RGBA8, target.width, target.height, 1, 1)
+            blurColor = tex
+            blurColorView = device.createTextureView(tex)
+            blurW = target.width
+            blurH = target.height
+        }
+        val src = target.colorTexture ?: return
+        val dst = blurColor ?: return
+        RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(src, dst, 0, 0, 0, 0, 0, target.width, target.height)
+    }
 
     /** Ortho over the whole main framebuffer in pixels — for vanilla draws (mc.font, items) that rely on it. */
     fun applyScreenProjection() {
@@ -62,6 +92,9 @@ object PostHudOverlay {
         // override PictureInPictureRenderer uses. NanoVG (raw GL) + our SDF pass ignore it.
         RenderSystem.outputColorTextureOverride = target.colorTextureView
         RenderSystem.outputDepthTextureOverride = target.depthTextureView
+
+        // Snapshot the framebuffer (world, here) so panel blur samples it instead of the FB it writes to.
+        snapshotForBlur(target)
         bindMainFbo()
 
         // Draw each Floyd panel directly, in painter's order. (Inventory / day-tracker / ESP overhead

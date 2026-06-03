@@ -1,5 +1,6 @@
 package gg.floyd.utils.render
 
+import com.mojang.blaze3d.ProjectionType
 import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
 import com.mojang.blaze3d.systems.RenderSystem
@@ -10,8 +11,10 @@ import com.mojang.blaze3d.vertex.Tesselator
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
+import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
+import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.MultiBufferSource
 import org.joml.*
@@ -129,6 +132,70 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         )
 
         fun clear() = uniformStorage.endFrame()
+
+        private val inlineProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons PanelBlur Inline", -1000f, 1000f, true)
+
+        /**
+         * Draws the frosted blur DIRECTLY to the main framebuffer (the post-HUD pass), in framebuffer
+         * pixels. Samples [PostHudOverlay.blurSourceView] (a per-frame snapshot of the framebuffer) so it
+         * never reads the same texture it writes. No-op until the snapshot exists this frame.
+         */
+        fun drawInline(
+            x: Float, y: Float, w: Float, h: Float,
+            radTL: Float, radTR: Float, radBR: Float, radBL: Float,
+            blurRadius: Float, boxKernel: Boolean
+        ) {
+            if (w <= 0f || h <= 0f) return
+            val source = PostHudOverlay.blurSourceView() ?: return
+            val target = Minecraft.getInstance().mainRenderTarget
+            RenderSystem.setProjectionMatrix(
+                inlineProjection.getBuffer(target.width.toFloat(), target.height.toFloat()),
+                ProjectionType.ORTHOGRAPHIC
+            )
+
+            val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
+            builder.addVertex(0f, 0f, 0f).setColor(-1)
+            builder.addVertex(0f, h, 0f).setColor(-1)
+            builder.addVertex(w, h, 0f).setColor(-1)
+            builder.addVertex(w, 0f, 0f).setColor(-1)
+            val mesh = builder.buildOrThrow()
+
+            val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
+                Matrix4f().translation(x, y, 0f), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
+            )
+
+            val uniformBuffer = uniformStorage.writeUniform { buffer ->
+                Std140Builder.intoBuffer(buffer)
+                    .putVec4(w * 0.5f, h * 0.5f, w, h)                                    // u_Rect
+                    .putVec4(radTL, radTR, radBR, radBL)                                  // u_Radii
+                    .putVec4(target.width.toFloat(), target.height.toFloat(), x, y)       // u_Screen
+                    .putVec4(blurRadius, if (boxKernel) 1f else 0f, 0f, 0f)               // u_Blur
+            }
+
+            val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+            val vertexBuffer = CustomRenderPipelines.PIPELINE_PANEL_BLUR.vertexFormat.uploadImmediateVertexBuffer(mesh.vertexBuffer())
+            val indexStorage = RenderSystem.getSequentialBuffer(mesh.drawState().mode())
+            val indexBuffer = indexStorage.getBuffer(mesh.drawState().indexCount())
+
+            mesh.use {
+                target.colorTextureView?.let { gpuTextureView ->
+                    RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                        { "FloydAddons Panel Blur Inline" }, gpuTextureView, OptionalInt.empty(),
+                        if (target.useDepth) target.depthTextureView else null,
+                        OptionalDouble.empty()
+                    )
+                }?.use { pass ->
+                    pass.setPipeline(CustomRenderPipelines.PIPELINE_PANEL_BLUR)
+                    RenderSystem.bindDefaultUniforms(pass)
+                    pass.setUniform("DynamicTransforms", dynamicTransforms)
+                    pass.setUniform("u", uniformBuffer)
+                    pass.bindTexture("Sampler0", source, sampler)
+                    pass.setVertexBuffer(0, vertexBuffer)
+                    pass.setIndexBuffer(indexBuffer, indexStorage.type())
+                    pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
+                }
+            }
+        }
 
         fun submit(
             context: GuiGraphics,
