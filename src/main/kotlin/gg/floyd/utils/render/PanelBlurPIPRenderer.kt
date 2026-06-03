@@ -11,7 +11,6 @@ import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.navigation.ScreenRectangle
-import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.MultiBufferSource
@@ -30,15 +29,11 @@ import kotlin.math.roundToInt
  * translucent panel fill + border composite cleanly on top.
  */
 class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
-    : PictureInPictureRenderer<PanelBlurPIPRenderer.State>(bufferSource) {
-
-    private var lastState: State? = null
+    : PooledPicturePIPRenderer<PanelBlurPIPRenderer.State>(bufferSource) {
 
     override fun getRenderStateClass(): Class<State> = State::class.java
 
-    override fun textureIsReadyToBlit(state: State): Boolean = false
-
-    override fun renderToTexture(state: State, poseStack: PoseStack) {
+    override fun renderContent(state: State, poseStack: PoseStack) {
         val w = state.width * state.scale
         val h = state.height * state.scale
 
@@ -91,8 +86,6 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
             }
         }
-
-        lastState = state
     }
 
     override fun getTextureLabel(): String = "FloydAddons Panel Blur PIP"
@@ -153,6 +146,21 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             val screenTop = minOf(p0.y, p1.y).roundToInt()
             val screenW = maxOf(p0.x, p1.x).roundToInt() - screenLeft
             val screenH = maxOf(p0.y, p1.y).roundToInt() - screenTop
+
+            // Skip the framebuffer blur where the panel overlaps the vanilla bottom-center HUD (hotbar,
+            // health, hunger, xp). A PIP blur can only sample the WORLD (the GUI isn't in the framebuffer
+            // yet when PIPs render), so over the bright hotbar the dark world reads as a black box. Dropping
+            // the blur there leaves the panel's translucent fill + border, which composites cleanly over the
+            // hotbar — "pass through" the hotbar instead of covering it with a dark blur. (screen* are in
+            // gui-scaled coords, matching guiScaledWidth/Height, because the HUD pose prescales by 1/guiScale.)
+            val window = Minecraft.getInstance().window
+            val centerX = window.guiScaledWidth / 2
+            val hudLeft = centerX - 95
+            val hudRight = centerX + 95
+            val hudTop = window.guiScaledHeight - 42
+            val overlapsBottomHud = screenLeft < hudRight && screenLeft + screenW > hudLeft &&
+                screenTop < window.guiScaledHeight && screenTop + screenH > hudTop
+            if (overlapsBottomHud) return
 
             val poseScale = pose.transformDirection(Vector2f(1f, 0f)).length()
 

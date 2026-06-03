@@ -95,3 +95,49 @@ object FloydUpdateCheckerModule : Module(
         }
     }
 }
+
+/**
+ * Stops the game pausing (opening the Game Menu) when the window loses focus, by forcing the vanilla
+ * `pauseOnLostFocus` option off while enabled. The user's original value is captured on enable and
+ * restored on disable; the option is re-pinned each client tick so nothing re-enables the pause.
+ * Crash-safe: all option access is guarded.
+ */
+object FloydFocusLossPrevention : Module(
+    name = "Focus Loss Prevention",
+    category = Category.MISC,
+    description = "Never pauses the game (opens the menu) when the window loses focus.",
+    toggled = false,
+) {
+    // The user's pauseOnLostFocus value before we forced it off; restored on disable.
+    private var savedPauseOnLostFocus: Boolean? = null
+
+    init {
+        // Only fires while subscribed (i.e. enabled); re-pins the option in case anything resets it.
+        on<TickEvent.ClientEnd> { enforce() }
+    }
+
+    override fun onEnable() {
+        super.onEnable()
+        enforce()
+    }
+
+    override fun onDisable() {
+        super.onDisable()
+        restore()
+    }
+
+    private fun enforce() {
+        runCatching {
+            val options = FloydAddonsMod.mc.options
+            if (savedPauseOnLostFocus == null) savedPauseOnLostFocus = options.pauseOnLostFocus
+            if (options.pauseOnLostFocus) options.pauseOnLostFocus = false
+        }
+    }
+
+    private fun restore() {
+        runCatching {
+            savedPauseOnLostFocus?.let { FloydAddonsMod.mc.options.pauseOnLostFocus = it }
+        }
+        savedPauseOnLostFocus = null
+    }
+}

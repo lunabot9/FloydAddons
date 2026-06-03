@@ -77,7 +77,7 @@ object FloydCustomScoreboard : Module(
                 "hudScale" to scoreboardHud.scale,
                 "minecraftFont" to useMinecraftScoreboardFont()
             ),
-            "cornerRadius" to FloydPanelStyle.panelCornerRadius
+            "cornerRadius" to FloydPanelStyle.cornerRadiusFor(FloydPanelStyle.PanelTarget.SCOREBOARD)
         )
     }
 
@@ -125,10 +125,9 @@ object FloydCustomScoreboard : Module(
             ?.toMutableList()
             ?: return if (example) drawScoreboardExample() else 0 to 0
 
-        if (lines.size > 1) lines.removeAt(lines.lastIndex)
         if (lines.isEmpty()) return if (example) drawScoreboardExample() else 0 to 0
 
-        return drawScoreboardBox(objective.displayName, Component.literal("FloydAddons"), lines, Component.literal(".gg/FLOYD").visualOrderText)
+        return drawScoreboardBox(objective.displayName, Component.literal("FloydAddons"), lines)
     }
 
     private fun GuiGraphics.drawScoreboardExample(): Pair<Int, Int> {
@@ -137,34 +136,32 @@ object FloydCustomScoreboard : Module(
             scoreLine("Bits: 12,345"),
             scoreLine("Location: Dungeon Hub"),
         )
-        return drawScoreboardBox(Component.literal("SKYBLOCK"), Component.literal("FloydAddons"), lines, Component.literal(".gg/FLOYD").visualOrderText)
+        return drawScoreboardBox(Component.literal("SKYBLOCK"), Component.literal("FloydAddons"), lines)
     }
 
-    private fun GuiGraphics.drawScoreboardBox(title: Component, brand: Component, lines: List<ScoreLine>, footer: FormattedCharSequence): Pair<Int, Int> {
+    private fun GuiGraphics.drawScoreboardBox(title: Component, brand: Component, lines: List<ScoreLine>): Pair<Int, Int> {
         val titleText = styledText(title.visualOrderText)
+        // The Floyd brand line tracks the panel border color (chroma / fade / solid) via the accent.
         val brandText = styledText(brand.visualOrderText, forcedColor = scoreboardAccentColor(0f))
-        val footerText = styledText(footer, forcedColor = scoreboardAccentColor(0.5f))
         val titleWidth = textWidth(titleText)
         val brandWidth = textWidth(brandText)
-        val footerWidth = textWidth(footerText)
         val colonWidth = textWidth(": ")
-        var maxLineWidth = max(max(titleWidth, brandWidth), footerWidth)
+        var maxLineWidth = max(titleWidth, brandWidth)
         for (line in lines) {
             val width = line.nameWidth + if (line.scoreWidth > 0f) colonWidth + line.scoreWidth else 0f
             maxLineWidth = max(maxLineWidth, width)
         }
 
-        val padding = FloydPanelStyle.panelPadding.coerceAtLeast(0)
+        val padding = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.SCOREBOARD).coerceAtLeast(0)
         val fontSize = scoreboardTextHeight()
         val lineHeight = ceil(fontSize + 1f).toInt().coerceAtLeast(9)
         val titlePad = 2
         val boxWidth = ceil(maxLineWidth + padding * 2).toInt()
         // Header holds the Floyd brand line on top, then the server objective title beneath it.
         val headerHeight = padding + lineHeight * 2 + titlePad * 2
-        val footerBarHeight = lineHeight + titlePad * 2 + padding
-        val boxHeight = headerHeight + lines.size * lineHeight + footerBarHeight
+        val boxHeight = headerHeight + lines.size * lineHeight + padding
 
-        val textElements = ArrayList<ScoreboardText>(lines.size * 2 + 3)
+        val textElements = ArrayList<ScoreboardText>(lines.size * 2 + 2)
         textElements += ScoreboardText(brandText, (boxWidth - brandWidth) / 2f, (padding + titlePad).toFloat())
         textElements += ScoreboardText(titleText, (boxWidth - titleWidth) / 2f, (padding + titlePad + lineHeight).toFloat())
 
@@ -175,7 +172,6 @@ object FloydCustomScoreboard : Module(
             if (line.scoreWidth > 0f) textElements += ScoreboardText(line.score, scoreRight - line.scoreWidth, lineY.toFloat())
             lineY += lineHeight
         }
-        textElements += ScoreboardText(footerText, (boxWidth - footerWidth) / 2f, (lineY + titlePad).toFloat())
 
         drawScoreboardPanelAndText(boxWidth, boxHeight, textElements)
         return boxWidth to boxHeight
@@ -208,11 +204,17 @@ object FloydCustomScoreboard : Module(
         if (useMinecraftScoreboardFont()) mc.font.lineHeight.toFloat() else scoreboardFontSize()
 
     private fun GuiGraphics.drawScoreboardPanelAndText(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
-        HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, HudPanel.panelBorderColors(scoreboardHud.x, scoreboardHud.y))
+        HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, FloydPanelStyle.PanelTarget.SCOREBOARD, HudPanel.panelBorderColors(FloydPanelStyle.PanelTarget.SCOREBOARD, scoreboardHud.x, scoreboardHud.y))
         if (useMinecraftScoreboardFont()) {
             for (text in texts) drawMinecraftScoreboardText(text)
         } else {
-            NVGPIPRenderer.draw(this, 0, 0, boxWidth, boxHeight, renderScaleMultiplier = mc.window.guiScale.toFloat()) {
+            // renderScaleMultiplier = guiScale / devicePixelRatio. guiScale cancels the HUD pose's
+            // 1/guiScale prescale (so NVG tracks the panel + mc.font lines); dividing by the NVG
+            // beginFrame's devicePixelRatio undoes the extra dpr it bakes in — without it the NVG text
+            // renders dpr-times too big on any non-native-fullscreen (retina dpr=2) mode while the
+            // mc.font lines stay correct. This keeps both fonts the same size at every window/gui mode.
+            val nvgScaleMultiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
+            NVGPIPRenderer.draw(this, 0, 0, boxWidth, boxHeight, renderScaleMultiplier = nvgScaleMultiplier) {
                 for (text in texts) drawScoreboardText(text)
             }
             for (text in texts) drawScoreboardMinecraftFallbacks(text)
@@ -254,25 +256,47 @@ object FloydCustomScoreboard : Module(
     }
 
     private fun styledText(text: FormattedCharSequence, forcedColor: Int? = null): StyledScoreboardText {
-        val segments = mutableListOf<ScoreboardTextSegment>()
-        val currentText = StringBuilder()
-        var currentColor: Int? = null
-        var currentMinecraftFont = false
+        // Apply Neck/Nick Hider + server/profile-id replacement to the scoreboard text up front. The
+        // vanilla swap is wired through FontMixin (Font.prepareText/width), but this scoreboard renders
+        // its custom font through NVGRenderer, which never touches Font — so without this the nick swap
+        // (and id hiding) would silently skip the NVG-rendered scoreboard. No-op when no replacements are
+        // active; idempotent for the mc.font fallback segments (their re-pass through FontMixin finds
+        // nothing left to replace). Covers both the NVG and Minecraft-font scoreboard paths uniformly.
+        val source = CustomNameReplacer.replaceSequenceIfNeeded(text)
+        // Collect every glyph (with its resolved color) up front so the neighbor rule can inspect the
+        // adjacent glyphs. No glyph is ever dropped: each renders in the custom font, or in the default
+        // Minecraft font when it is a 'skip' glyph or is directly trapped between two skip glyphs.
+        val codePoints = ArrayList<Int>()
+        val colors = ArrayList<Int>()
+        source.accept { _, style, codePoint ->
+            codePoints.add(codePoint)
+            colors.add(forcedColor ?: scoreboardStyleColor(style))
+            true
+        }
+        if (codePoints.isEmpty()) return StyledScoreboardText(emptyList())
 
-        fun flush() {
-            if (currentText.isEmpty()) return
-            segments += ScoreboardTextSegment(currentText.toString(), currentColor ?: 0xFFFFFFFF.toInt(), currentMinecraftFont)
-            currentText.clear()
+        val skip = BooleanArray(codePoints.size) { isSkipCodePoint(codePoints[it]) }
+        // A glyph uses the default Minecraft font when it is itself a skip glyph, or when it is a normal
+        // glyph directly surrounded by skip glyphs on BOTH sides (servers that wrap only certain letters
+        // in custom symbols). Everything else uses the custom override font.
+        val minecraftFont = BooleanArray(codePoints.size) { i ->
+            skip[i] || (i > 0 && i < codePoints.size - 1 && skip[i - 1] && skip[i + 1])
         }
 
-        text.accept { _, style, codePoint ->
-            val color = forcedColor ?: scoreboardStyleColor(style)
-            val minecraftFont = shouldUseMinecraftFontCodePoint(codePoint)
-            if ((currentColor != null && currentColor != color) || (currentText.isNotEmpty() && currentMinecraftFont != minecraftFont)) flush()
-            currentColor = color
-            currentMinecraftFont = minecraftFont
-            currentText.appendCodePoint(codePoint)
-            true
+        val segments = mutableListOf<ScoreboardTextSegment>()
+        val currentText = StringBuilder()
+        var currentColor = colors[0]
+        var currentMinecraftFont = minecraftFont[0]
+        fun flush() {
+            if (currentText.isEmpty()) return
+            segments += ScoreboardTextSegment(currentText.toString(), currentColor, currentMinecraftFont)
+            currentText.clear()
+        }
+        for (i in codePoints.indices) {
+            if (currentText.isNotEmpty() && (colors[i] != currentColor || minecraftFont[i] != currentMinecraftFont)) flush()
+            currentColor = colors[i]
+            currentMinecraftFont = minecraftFont[i]
+            currentText.appendCodePoint(codePoints[i])
         }
         flush()
         return StyledScoreboardText(segments)
@@ -283,9 +307,10 @@ object FloydCustomScoreboard : Module(
         return 0xFF000000.toInt() or (color and 0x00FFFFFF)
     }
 
-    private fun shouldUseMinecraftFontCodePoint(codePoint: Int): Boolean = codePoint !in 0x20..0x7E
+    /** A 'skip' glyph isn't provided by the custom override font, so it must fall back to the default font. */
+    private fun isSkipCodePoint(codePoint: Int): Boolean = codePoint !in 0x20..0x7E
 
-    private fun useMinecraftScoreboardFont(): Boolean = true
+    private fun useMinecraftScoreboardFont(): Boolean = scoreboardHudMinecraftFont
 
     private fun sidebarObjective(): Objective? {
         val player = mc.player ?: return null
@@ -297,7 +322,7 @@ object FloydCustomScoreboard : Module(
 
     /** Title/footer accent: the global panel border color (chroma/fade per [FloydPanelStyle]). */
     private fun scoreboardAccentColor(offset: Float): Int =
-        HudPanel.accentColor(FloydPanelStyle.panelBorderColor,
+        HudPanel.accentColor(FloydPanelStyle.borderColorFor(FloydPanelStyle.PanelTarget.SCOREBOARD),
             HudPanel.offsetPhase(HudPanel.hudRotationOffset(scoreboardHud.x, scoreboardHud.y, 0.38f), offset))
 
     private data class ScoreLine(val name: StyledScoreboardText, val score: StyledScoreboardText, val nameWidth: Float, val scoreWidth: Float)

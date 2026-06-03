@@ -24,7 +24,6 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.player.AbstractClientPlayer
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.item.ItemStack
-import kotlin.math.abs
 
 /**
  * ESP scoped to other players. Shows health and equipped items either as an
@@ -83,6 +82,14 @@ object FloydPlayerEsp : Module(
     // GPU safety: keep the panel texture well under the driver's max texture size. Only reached at
     // point-blank range; does not affect the scaling at normal distances.
     private const val OVERHEAD_MAX_PX = 4000f
+    // Time constant (seconds) for the per-player low-pass on the overhead plate's perspective scale.
+    // The raw depth-derived size jitters frame-to-frame while jumping in place / walking toward or away
+    // from a player (the jump arc + view bob wobble the eye-space depth), which reads as the plate
+    // snapping bigger/smaller. Smoothing the SIZE only (never the position) animates it cleanly. ~0.14s
+    // kills the flicker while staying responsive to real approach.
+    private const val OVERHEAD_SCALE_TAU = 0.14f
+    private val overheadScaleSmooth = HashMap<java.util.UUID, Float>()
+    private var lastOverheadScaleMs = 0L
 
     private val stalkAllAction by ActionSetting("Stalk All Players", desc = "Toggles Player ESP for all players (same as /fa stalk all).") {
         val on = stalkAll()
@@ -141,22 +148,40 @@ object FloydPlayerEsp : Module(
         if (!showHealth && !showEquipment) return
         val self = mc.player ?: return
 
-        for (player in otherPlayers()) {
+        // Per-frame low-pass coefficient (time-constant based, so it is frame-rate independent).
+        val now = System.currentTimeMillis()
+        val dt = if (lastOverheadScaleMs == 0L) 0.016f else (now - lastOverheadScaleMs).coerceIn(1L, 100L) / 1000f
+        lastOverheadScaleMs = now
+        val alpha = (1f - kotlin.math.exp(-dt / OVERHEAD_SCALE_TAU)).coerceIn(0f, 1f)
+        val seen = HashSet<java.util.UUID>()
+
+        // Farthest-first so a nearer player's plate always draws on top of a farther one when they overlap.
+        for (player in otherPlayers().sortedByDescending { it.distanceToSqr(self) }) {
             if (player.distanceToSqr(self) > 64.0 * 64.0) continue
             // Anchor = the plate's bottom-center, a fixed world distance above the head (above the nametag).
             val anchor = player.renderPos.add(0.0, player.bbHeight + OVERHEAD_ANCHOR_OFFSET, 0.0)
             val anchorScreen = WorldToScreen.project(anchor) ?: continue
-            // Project a point one world-block higher: the gui-pixel delta is exactly how many pixels
-            // one block spans at this depth — i.e. the same perspective scale the ESP box draws at.
-            val aboveScreen = WorldToScreen.project(anchor.add(0.0, 1.0, 0.0)) ?: continue
-            val pxPerBlock = abs(anchorScreen.y - aboveScreen.y)
-            if (pxPerBlock <= 0.01f) continue
+            // Perspective scale from the anchor's eye-space depth, NOT by projecting a vertical world
+            // offset: a `+1` block offset foreshortens to ~0 px when looking up/down (size breaks
+            // above/below) and oscillates under view-bob while moving/jumping (flicker). Depth-based
+            // scale is view-pitch-independent and bob-steady.
+            val target = WorldToScreen.screenScale(anchor) ?: continue
+            if (target <= 0.01f) continue
+            // Low-pass the SIZE per player so the plate animates smoothly between sizes instead of snapping
+            // every frame — kills the size flicker while jumping in place / walking toward or away. The
+            // POSITION (anchorScreen) is never smoothed, so the plate still tracks the head precisely.
+            val prev = overheadScaleSmooth[player.uuid]
+            val pxPerBlock = if (prev == null) target else prev + (target - prev) * alpha
+            overheadScaleSmooth[player.uuid] = pxPerBlock
+            seen.add(player.uuid)
             drawOverheadEntry(graphics, player, anchorScreen.x, anchorScreen.y, overheadScaleFactor(pxPerBlock, overheadScale))
         }
+        // Drop smoothing state for players no longer drawn so the map can't grow unbounded.
+        if (overheadScaleSmooth.size != seen.size) overheadScaleSmooth.keys.retainAll(seen)
     }
 
     private fun drawOverheadEntry(graphics: GuiGraphics, player: AbstractClientPlayer, anchorX: Float, anchorY: Float, scale: Float) {
-        val pad = FloydPanelStyle.panelPadding.coerceAtLeast(0)
+        val pad = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.ESP_OVERHEAD).coerceAtLeast(0)
         val hpText = if (showHealth) "$HEART ${player.health.toInt()}" else null
         val hpWidth = hpText?.let { mc.font.width(it) } ?: 0
         val items = if (showEquipment) equipmentOf(player).filter { !it.isEmpty } else emptyList()
@@ -189,9 +214,9 @@ object FloydPlayerEsp : Module(
         // "Border = ESP Color" tints the nameplate border with this player's ESP color (honouring its
         // chroma flag); otherwise it falls back to the global FloydPanelStyle border.
         if (borderIsEspColor) {
-            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, HudPanel.monochrome(color.rgba))
+            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, FloydPanelStyle.PanelTarget.ESP_OVERHEAD, HudPanel.monochrome(color.rgba))
         } else {
-            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight)
+            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, FloydPanelStyle.PanelTarget.ESP_OVERHEAD)
         }
 
         val rowHeight = if (items.isNotEmpty()) ICON_SIZE else mc.font.lineHeight

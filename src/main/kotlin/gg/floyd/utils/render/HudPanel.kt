@@ -1,6 +1,7 @@
 package gg.floyd.utils.render
 
 import gg.floyd.features.impl.render.FloydPanelStyle
+import gg.floyd.features.impl.render.FloydPanelStyle.PanelTarget
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
 import net.minecraft.client.gui.GuiGraphics
@@ -41,26 +42,27 @@ object HudPanel {
     fun fillPanel(
         graphics: GuiGraphics,
         x0: Int, y0: Int, x1: Int, y1: Int,
-        border: BorderColors = panelBorderColors(x0, y0),
-        fillColor: Int = FloydPanelStyle.panelBackgroundColor.rgba,
-        cornerRadius: Float = FloydPanelStyle.panelCornerRadius.toFloat(),
-        outlineWidth: Float = FloydPanelStyle.panelBorderWidth.toFloat()
+        panel: PanelTarget,
+        border: BorderColors = panelBorderColors(panel, x0, y0),
+        fillColor: Int = FloydPanelStyle.backgroundColorFor(panel).rgba,
+        cornerRadius: Float = FloydPanelStyle.cornerRadiusFor(panel).toFloat(),
+        outlineWidth: Float = FloydPanelStyle.borderWidthFor(panel).toFloat()
     ) {
         val radius = cornerRadius.coerceAtLeast(0f)
         val width = outlineWidth.coerceAtLeast(0f)
 
-        if (FloydPanelStyle.panelBlur) {
+        if (FloydPanelStyle.blurFor(panel)) {
             // Strength 0..20 -> blur radius 0..8 px (sampled with a step of 2, so ~0..16 px reach).
             // Skip imperceptible blur (< 0.5px) and tiny panels (< ~45x45px) — the per-fragment kernel
             // isn't worth running there.
-            val blurRadius = FloydPanelStyle.panelBlurStrength.coerceIn(0, 20) * 0.4f
+            val blurRadius = FloydPanelStyle.blurStrengthFor(panel).coerceIn(0, 20) * 0.4f
             val area = (x1 - x0) * (y1 - y0)
             if (blurRadius >= 0.5f && area >= 2000) {
                 PanelBlurPIPRenderer.submit(
                     graphics,
                     x0, y0, x1, y1,
                     radius, radius, radius, radius,
-                    blurRadius, FloydPanelStyle.panelBlurIsBox()
+                    blurRadius, FloydPanelStyle.blurIsBoxFor(panel)
                 )
             }
         }
@@ -84,8 +86,8 @@ object HudPanel {
      * is the default border for [fillPanel]; panels needing a custom border (e.g. an ESP-colored
      * nameplate) pass their own [BorderColors] instead.
      */
-    fun panelBorderColors(x: Int = 0, y: Int = 0, seed: Float = 0.38f): BorderColors =
-        circularBorderColors(FloydPanelStyle.panelBorderColor, hudRotationOffset(x, y, seed))
+    fun panelBorderColors(panel: PanelTarget, x: Int = 0, y: Int = 0, seed: Float = 0.38f): BorderColors =
+        circularBorderColors(FloydPanelStyle.borderColorFor(panel), hudRotationOffset(x, y, seed))
 
     /** Rotating gradient around the four corners (chroma/fade/solid per the [base] color's own settings). */
     fun circularBorderColors(base: Color, offset: Float): BorderColors =

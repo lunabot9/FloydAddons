@@ -21,8 +21,7 @@ object ClickGUIModule : Module(
     description = "Allows you to customize the UI."
 ) {
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
-    val clickGUIColor by ColorSetting("Color", Color(50, 150, 220), desc = "The color of the Click GUI.")
-    val clickGUIChroma by BooleanSetting("GUI Chroma", false, desc = "Cycles the Click GUI accent color through chroma.")
+    val clickGUIColor by ColorSetting("Color", Color(50, 150, 220), desc = "The color of the Click GUI — toggle chroma/fade inside the picker.")
 
     val roundedPanelBottom by BooleanSetting("Rounded Panel Bottoms", true, desc = "Whether to extend panels to make them rounded at the bottom.")
     private val openGuiKey by KeybindSetting("Open GUI Key", GLFW.GLFW_KEY_N, desc = "FloydAddons alternate GUI key.").onPress {
@@ -46,7 +45,7 @@ object ClickGUIModule : Module(
         "enabled" to enabled,
         "chatNotifications" to enableNotification,
         "color" to "#${clickGUIColor.hex()}",
-        "chroma" to clickGUIChroma,
+        "chroma" to clickGUIColor.chroma,
         "roundedPanelBottoms" to roundedPanelBottom,
         "panelCount" to panelSetting.size,
         "panels" to panelSetting.mapValues { (_, panel) ->
@@ -105,12 +104,13 @@ object ClickGUIModule : Module(
     private const val MODULE_ROW_HEIGHT = 16f
 
     /**
-     * The Click GUI accent color. When [clickGUIChroma] is enabled it chroma-cycles
-     * (reusing the memoized [ChromaCache] so the rainbow hue is computed at most once
-     * per frame per [offset]); otherwise it is the static [clickGUIColor].
+     * The Click GUI accent color. When [clickGUIColor] has chroma enabled (inside the color picker) it
+     * chroma-cycles (reusing the memoized [ChromaCache] so the rainbow hue is computed at most once per
+     * frame per [offset]); otherwise it is the static [clickGUIColor]. Chroma/fade now live in the
+     * picker, so there is no separate "GUI Chroma" toggle.
      */
     fun guiAccentColor(offset: Float = 0f): Int =
-        if (clickGUIChroma) 0xFF000000.toInt() or ChromaCache.rgbFor(offset) else clickGUIColor.rgba
+        if (clickGUIColor.chroma) 0xFF000000.toInt() or ChromaCache.rgbFor(offset) else clickGUIColor.rgba
 
     fun getStandardGuiScale(): Float {
         val verticalScale = (mc.window.screenHeight.toFloat() / 1080f) / NVGRenderer.devicePixelRatio()

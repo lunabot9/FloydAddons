@@ -69,6 +69,7 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         dragging?.let {
             it.x = (renderSpaceMouseX() + deltaX).coerceIn(0f, (mc.window.width - (it.width * it.scale)).coerceAtLeast(0f)).toInt()
             it.y = (renderSpaceMouseY() + deltaY).coerceIn(0f, (mc.window.height - (it.height * it.scale)).coerceAtLeast(0f)).toInt()
+            clampOutOfHotbar(it, it.width * it.scale, it.height * it.scale)
         }
 
         guiGraphics.pose().pushMatrix()
@@ -164,6 +165,28 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         // gui-scaled pose), so clamp against the framebuffer dimensions, not the logical window.
         hud.value.x = hud.value.x.coerceIn(0, (mc.window.width - width).toInt().coerceAtLeast(0))
         hud.value.y = hud.value.y.coerceIn(0, (mc.window.height - height).toInt().coerceAtLeast(0))
+        clampOutOfHotbar(hud.value, width, height)
+    }
+
+    /**
+     * Pushes a HUD element up out of the vanilla bottom-center HUD (hotbar / health / hunger / xp) so a
+     * Floyd panel can never sit over the hotbar. A panel over the hotbar can't show a real frosted blur
+     * (the GUI isn't in the framebuffer when the blur samples it) and would read as an empty/dark box,
+     * so we hard-prevent positioning it there instead. Only the centered hotbar strip is reserved — the
+     * bottom corners stay usable. Coordinates are framebuffer pixels (gui-scaled units * guiScale).
+     */
+    private fun clampOutOfHotbar(element: HudElement, fbWidth: Float, fbHeight: Float) {
+        if (fbWidth <= 0f || fbHeight <= 0f) return
+        val gs = mc.window.guiScale.toFloat()
+        val centerX = mc.window.width / 2f
+        val hotbarLeft = centerX - 95f * gs
+        val hotbarRight = centerX + 95f * gs
+        val hotbarTop = mc.window.height - 42f * gs
+        val overlapsHotbarX = element.x < hotbarRight && element.x + fbWidth > hotbarLeft
+        val reachesHotbar = element.y + fbHeight > hotbarTop
+        if (overlapsHotbarX && reachesHotbar) {
+            element.y = (hotbarTop - fbHeight).coerceAtLeast(0f).toInt()
+        }
     }
 
     private fun estimatedHudSize(hud: gg.floyd.clickgui.settings.impl.HUDSetting): Pair<Int, Int> =

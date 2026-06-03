@@ -33,6 +33,7 @@ import gg.floyd.features.impl.hiders.FloydProfileIdHider
 import gg.floyd.features.impl.hiders.FloydHideWatchdogMessages
 import gg.floyd.features.impl.hiders.FloydModHider
 import gg.floyd.features.impl.hiders.FloydNoArmor
+import gg.floyd.features.impl.misc.FloydFocusLossPrevention
 import gg.floyd.features.impl.misc.FloydSpoofClientBrand
 import gg.floyd.features.impl.misc.FloydCustomMainMenu
 import gg.floyd.features.impl.misc.FloydTaskbarIconModule
@@ -113,7 +114,7 @@ object ModuleManager {
             FloydAutoTotem, FloydPlayerEsp,
             FloydDiscordPresence, FloydLocalControl,
             // Misc compatibility (each feature is its own module).
-            FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule,
+            FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule, FloydFocusLossPrevention,
         )
 
         // hashmap, but would need to keep track when setting values change

@@ -46,7 +46,7 @@ object FloydInventoryHud : Module(
             "y" to inventoryHud.y,
             "hudScale" to inventoryHud.scale
         ),
-        "cornerRadius" to FloydPanelStyle.panelCornerRadius
+        "cornerRadius" to FloydPanelStyle.cornerRadiusFor(FloydPanelStyle.PanelTarget.INVENTORY)
     )
 
     private fun GuiGraphics.drawInventoryHud(example: Boolean): Pair<Int, Int> {
@@ -54,7 +54,7 @@ object FloydInventoryHud : Module(
         val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)
         val width = 9 * slotSize
         val height = 3 * slotSize
-        HudPanel.fillPanel(this, 0, 0, width, height)
+        HudPanel.fillPanel(this, 0, 0, width, height, FloydPanelStyle.PanelTarget.INVENTORY)
 
         if (inventory != null) {
             for (slot in 0 until 27) {

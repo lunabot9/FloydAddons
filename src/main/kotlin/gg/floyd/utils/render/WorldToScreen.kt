@@ -91,6 +91,40 @@ object WorldToScreen {
     }
 
     /**
+     * Gui-scaled screen pixels that one world block spans (vertically) at [pos] — i.e. the apparent
+     * size scale for a billboard anchored there. Derived from the projection's vertical focal term
+     * ([Matrix4f.m11]) and the point's eye-space depth (the perspective `w`), NOT by projecting a
+     * world-axis offset.
+     *
+     * Projecting a vertical `+1` block offset (the old approach) foreshortens to ~0 screen pixels when
+     * the camera looks up or down, and oscillates rapidly under view-bob while walking/jumping — which
+     * made the overhead plate's size break when a target was above/below and flicker while moving. The
+     * depth-based scale is independent of view pitch and far steadier under bob. Null if behind camera.
+     */
+    fun screenScale(pos: Vec3): Float? {
+        val proj = projection ?: return null
+        val view = modelView ?: return null
+        val cam = cameraPos
+
+        val clip = Vector4f(
+            (pos.x - cam.x).toFloat(),
+            (pos.y - cam.y).toFloat(),
+            (pos.z - cam.z).toFloat(),
+            1f
+        )
+        view.transform(clip)
+        // Strip the view-bob (baked into [projection]) from the depth so the apparent-size scale does
+        // not oscillate as the camera bobs while walking/jumping. project() keeps the bob so the plate
+        // still tracks the (bobbing) head; only the SIZE is held steady. Falls back to the bobbed
+        // projection when the bob has not been captured yet.
+        bob?.let { Matrix4f(it).invert().transform(clip) }
+        proj.transform(clip)
+        if (clip.w <= 0f) return null
+
+        return 0.5f * mc.window.guiScaledHeight * kotlin.math.abs(proj.m11()) / clip.w
+    }
+
+    /**
      * World-space start point for a tracer so that, after the frame's (bobbed) projection,
      * it lands exactly on screen center / the crosshair regardless of view bobbing.
      *

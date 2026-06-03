@@ -39,7 +39,7 @@ object FloydDayTrackerModule : Module(
             "day" to currentServerDay(),
             "label" to currentServerDayLabel()
         ),
-        "cornerRadius" to FloydPanelStyle.panelCornerRadius
+        "cornerRadius" to FloydPanelStyle.cornerRadiusFor(FloydPanelStyle.PanelTarget.DAY_TRACKER)
     )
 
     private fun currentServerDay(): Long? = mc.level?.let { (it.dayTime / 24000L) + 1L }
@@ -49,13 +49,17 @@ object FloydDayTrackerModule : Module(
     private fun GuiGraphics.drawDayTrackerHud(example: Boolean): Pair<Int, Int> {
         val label = currentServerDayLabel() ?: if (example) "Day 1" else return 0 to 0
 
-        val paddingX = 6
-        val paddingY = 6
-        val width = mc.font.width(label) + paddingX * 2
-        val height = mc.font.lineHeight + paddingY * 2
+        // Drawn with mc.font (drawString), NOT a second NVG PIP: PictureInPictureRenderer keeps one
+        // shared backing texture per render-state class, so a 2nd NVGPIPRenderer panel in the same frame
+        // fights the Custom Scoreboard's PIP (last-writer-wins) and flickers the panel border. The label
+        // is one short string, so the mc.font path looks fine and stays PIP-free. (With the global custom
+        // font on, mc.font is already the Floyd font, so it still reads as the custom look.)
+        val padding = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.DAY_TRACKER).coerceAtLeast(0)
+        val width = mc.font.width(label) + padding * 2
+        val height = mc.font.lineHeight + padding * 2
 
-        HudPanel.fillPanel(this, 0, 0, width, height)
-        drawString(mc.font, label, paddingX, paddingY, 0xFFFFFFFF.toInt(), false)
+        HudPanel.fillPanel(this, 0, 0, width, height, FloydPanelStyle.PanelTarget.DAY_TRACKER)
+        drawString(mc.font, label, padding, padding, 0xFFFFFFFF.toInt(), true)
         return width to height
     }
 }

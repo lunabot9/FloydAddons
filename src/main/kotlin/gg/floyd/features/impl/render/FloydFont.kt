@@ -78,10 +78,12 @@ object FloydFont : Module(
     fun runtimeFontOversample(): Float {
         val displaySize = fontDisplaySize.coerceAtLeast(0.5)
         val runtimeSize = (displaySize / 12.5).coerceAtLeast(0.5)
-        // 2x the Font-mod oversample: supersamples the glyph atlas more (crisper small text, fewer
-        // jagged edges) while leaving runtimeFontSize — and therefore the display size — unchanged.
-        // Trades a larger glyph atlas for sharpness; the standard fix for pixely TTF rendering.
-        return ((runtimeFontSize() / runtimeSize.toFloat()) * 2f).coerceAtLeast(1f)
+        // 2x the Font-mod oversample supersamples the glyph atlas (crisper small text) while leaving
+        // runtimeFontSize unchanged. CAPPED at 4: at the default display size the uncapped value is 8,
+        // which rasterizes ~64px glyph bitmaps that overflow Minecraft's 256x256 FontTexture atlas, so
+        // glyphs baked after it fills silently drop to the invisible missing glyph (the "/" and "u"
+        // disappearing from chat). Oversample 4 (~32px glyphs) stays crisper than vanilla while fitting.
+        return ((runtimeFontSize() / runtimeSize.toFloat()) * 2f).coerceIn(1f, 4f)
     }
 
     /**

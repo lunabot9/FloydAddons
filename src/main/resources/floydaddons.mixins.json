@@ -9,6 +9,7 @@
   "client": [
     "accessors.BeaconBeamAccessor",
     "accessors.CameraAccessor",
+    "accessors.GameRendererFogAccessor",
     "accessors.KeyMappingAccessor",
     "accessors.KeyMappingCategoryAccessor",
     "mixins.AnimationItemInHandRendererMixin",

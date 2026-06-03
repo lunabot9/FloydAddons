@@ -10,7 +10,6 @@ import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.navigation.ScreenRectangle
-import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.MultiBufferSource
@@ -19,15 +18,11 @@ import java.util.*
 import kotlin.math.roundToInt
 
 class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
-    : PictureInPictureRenderer<RoundRectPIPRenderer.State>(bufferSource) {
-
-    private var lastState: State? = null
+    : PooledPicturePIPRenderer<RoundRectPIPRenderer.State>(bufferSource) {
 
     override fun getRenderStateClass(): Class<State> = State::class.java
 
-    override fun textureIsReadyToBlit(state: State): Boolean = state.visuallyEquals(lastState)
-
-    override fun renderToTexture(state: State, poseStack: PoseStack) {
+    override fun renderContent(state: State, poseStack: PoseStack) {
         val w = state.width * state.scale
         val h = state.height * state.scale
 
@@ -75,8 +70,6 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
             }
         }
-
-        lastState = state
     }
 
     override fun getTextureLabel(): String = "FloydAddons Rounded Rectangle PIP"

@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.ColorSetting
 import gg.floyd.clickgui.settings.impl.ExtendedSearchableListSetting
 import gg.floyd.clickgui.settings.impl.MapSetting
@@ -14,6 +15,7 @@ import gg.floyd.utils.Identifiers
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.render.BlockIconCache
 import gg.floyd.utils.render.drawStyledBox
+import gg.floyd.utils.render.drawTracer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
 import net.minecraft.core.BlockPos
 import net.minecraft.core.SectionPos
@@ -24,6 +26,7 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.chunk.LevelChunk
 import net.minecraft.world.level.chunk.status.ChunkStatus
 import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import java.util.Locale
 
 /**
@@ -43,6 +46,7 @@ object FloydBlockSearch : Module(
 ) {
     private val color by ColorSetting("Color", Colors.ACCENT.copy().also { it.chroma = true }, desc = "Outline color (toggle chroma inside the picker).")
     private val boxStyle by SelectorSetting("Box Style", "Outline", listOf("Outline", "Filled", "Both"), desc = "How matched blocks are highlighted.")
+    private val tracers by BooleanSetting("Tracers", false, desc = "Draws a tracer line from your crosshair to each matched block (like Mob/Player ESP tracers).")
 
     private val blockSearchList by ExtendedSearchableListSetting(
         "Block List",
@@ -129,6 +133,7 @@ object FloydBlockSearch : Module(
                     x + 1.0 + HIGHLIGHT_INFLATE, y + 1.0 + HIGHLIGHT_INFLATE, z + 1.0 + HIGHLIGHT_INFLATE
                 )
                 drawStyledBox(box, color, drawStyle, depth = false)
+                if (tracers) drawTracer(Vec3(x + 0.5, y + 0.5, z + 0.5), color, depth = false, thickness = 2f)
             }
 
             // Warn once per interval that we are capped, so the user knows the highlight is partial.

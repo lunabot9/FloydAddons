@@ -1,8 +1,12 @@
 package gg.floyd.utils.render
 
+import com.mojang.blaze3d.buffers.GpuBufferSlice
+import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import gg.floyd.mixin.accessors.BeaconBeamAccessor
+import gg.floyd.mixin.accessors.GameRendererFogAccessor
+import net.minecraft.client.renderer.fog.FogRenderer
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.events.RenderEvent
 import gg.floyd.events.core.on
@@ -31,6 +35,15 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 private val BEAM_TEXTURE = Identifier.withDefaultNamespace("textures/entity/beacon_beam.png")
+
+/**
+ * The GameRenderer's "no fog" uniform buffer ([FogRenderer.FogMode.NONE]), used to draw ESP geometry
+ * unaffected by world fog (blindness / darkness / distance). Null if the accessor is unavailable, in
+ * which case the ESP simply renders with the current fog (its prior behavior).
+ */
+private fun noFogBuffer(): GpuBufferSlice? = runCatching {
+    (mc.gameRenderer as GameRendererFogAccessor).`floydaddons$getFogRenderer`().getBuffer(FogRenderer.FogMode.NONE)
+}.getOrNull()
 
 internal data class LineData(val from: Vec3, val to: Vec3, val color1: Int, val color2: Int, val thickness: Float, val depth: Boolean)
 internal data class BoxData(val aabb: AABB, val r: Float, val g: Float, val b: Float, val a: Float, val thickness: Float, val depth: Boolean)
@@ -77,6 +90,14 @@ object RenderBatchManager {
             val bufferSource = context.consumers() as? MultiBufferSource.BufferSource ?: return@on
             val camera = mc.gameRenderer.mainCamera.position()
 
+            // Draw the ESP world geometry (tracers, boxes, nameplate text) with fog DISABLED so
+            // blindness / darkness / distance fog never tints far-away players' ESP toward the (often
+            // black) fog color. We bind the "no fog" buffer, flush the ESP vertices ourselves, then
+            // restore the world's own fog so nothing else is affected.
+            val savedFog = RenderSystem.getShaderFog()
+            val noFog = noFogBuffer()
+            if (noFog != null) RenderSystem.setShaderFog(noFog)
+
             matrix.pushPose()
             matrix.translate(-camera.x, -camera.y, -camera.z)
 
@@ -87,10 +108,19 @@ object RenderBatchManager {
 
             matrix.renderQueuedBeaconBeams(renderConsumer.beaconBeams, camera)
             matrix.renderQueuedTexts(renderConsumer.texts, bufferSource, camera)
+
+            if (noFog != null) {
+                bufferSource.endBatch()
+                if (savedFog != null) RenderSystem.setShaderFog(savedFog)
+            }
             renderConsumer.clear()
 
             RoundRectPIPRenderer.clear()
             PanelBlurPIPRenderer.clear()
+            // Recycle the pooled per-panel PIP textures now that the prior frame's GUI flush has drawn
+            // every blit, so this frame's panels each get their own live texture (fixes overlapping
+            // Floyd panels flickering / going black from the single shared vanilla PIP texture).
+            PooledPicturePIPRenderer.recycleAll()
         }
     }
 }
