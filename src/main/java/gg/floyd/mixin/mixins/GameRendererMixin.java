@@ -3,6 +3,8 @@ package gg.floyd.mixin.mixins;
 import com.mojang.blaze3d.vertex.PoseStack;
 import gg.floyd.features.impl.hiders.FloydHiders;
 import gg.floyd.utils.render.WorldToScreen;
+import gg.floyd.utils.ui.rendering.PostHudOverlay;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -21,6 +23,14 @@ public class GameRendererMixin {
             FloydHiders.recordHurtCamera();
             ci.cancel();
         }
+    }
+
+    // The single immediate post-HUD pass for Floyd's custom panels: RETURN of GameRenderer.render is the
+    // first point where the main framebuffer holds world + fully-composited vanilla HUD, so panels drawn
+    // here composite in painter's order and their blur samples everything beneath. See PostHudOverlay.
+    @Inject(method = "render(Lnet/minecraft/client/DeltaTracker;Z)V", at = @At("RETURN"))
+    private void floydaddons$postHudPanelPass(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci) {
+        PostHudOverlay.INSTANCE.render();
     }
 
     /**

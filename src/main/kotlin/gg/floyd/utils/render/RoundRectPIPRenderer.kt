@@ -1,5 +1,6 @@
 package gg.floyd.utils.render
 
+import com.mojang.blaze3d.ProjectionType
 import com.mojang.blaze3d.buffers.Std140Builder
 import com.mojang.blaze3d.buffers.Std140SizeCalculator
 import com.mojang.blaze3d.systems.RenderSystem
@@ -11,6 +12,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
+import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.MultiBufferSource
 import org.joml.*
@@ -160,6 +162,81 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         )
 
         fun clear() = uniformStorage.endFrame()
+
+        // Screen-sized ortho for the inline (no-PIP) draw path: maps (0,0)-(fbW,fbH) framebuffer pixels.
+        private val inlineProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons RoundRect Inline", -1000f, 1000f, true)
+
+        private fun rf(c: Int) = (c ushr 16 and 0xFF) / 255f
+        private fun gf(c: Int) = (c ushr 8 and 0xFF) / 255f
+        private fun bf(c: Int) = (c and 0xFF) / 255f
+        private fun af(c: Int) = (c ushr 24 and 0xFF) / 255f
+
+        /**
+         * Draws a rounded rect (fill + per-corner SDF border) DIRECTLY to the currently-bound main
+         * framebuffer, in framebuffer-pixel coordinates, with no PIP / offscreen texture. For the
+         * post-HUD immediate panel pass: panels drawn this way composite in painter's order and never
+         * clobber each other. The caller must have the main framebuffer bound. [x],[y],[w],[h],
+         * radii and [outlineWidth] are final framebuffer pixels.
+         */
+        fun drawInline(
+            x: Float, y: Float, w: Float, h: Float,
+            fillTL: Int, fillTR: Int, fillBR: Int, fillBL: Int,
+            radTL: Float, radTR: Float, radBR: Float, radBL: Float,
+            outTL: Int, outTR: Int, outBR: Int, outBL: Int,
+            outlineWidth: Float
+        ) {
+            if (w <= 0f || h <= 0f) return
+            val target = Minecraft.getInstance().mainRenderTarget
+            RenderSystem.setProjectionMatrix(
+                inlineProjection.getBuffer(target.width.toFloat(), target.height.toFloat()),
+                ProjectionType.ORTHOGRAPHIC
+            )
+
+            val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
+            builder.addVertex(0f, 0f, 0f).setColor(fillTL)
+            builder.addVertex(0f, h, 0f).setColor(fillBL)
+            builder.addVertex(w, h, 0f).setColor(fillBR)
+            builder.addVertex(w, 0f, 0f).setColor(fillTR)
+            val mesh = builder.buildOrThrow()
+
+            // Mesh is local (0,0)-(w,h); the modelview translates it to the panel's framebuffer origin.
+            val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
+                Matrix4f().translation(x, y, 0f), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
+            )
+
+            val uniformBuffer = uniformStorage.writeUniform { buffer ->
+                Std140Builder.intoBuffer(buffer)
+                    .putVec4(w * 0.5f, h * 0.5f, w, h)
+                    .putVec4(radTL, radTR, radBR, radBL)
+                    .putVec4(rf(outTL), gf(outTL), bf(outTL), af(outTL))
+                    .putVec4(rf(outTR), gf(outTR), bf(outTR), af(outTR))
+                    .putVec4(rf(outBR), gf(outBR), bf(outBR), af(outBR))
+                    .putVec4(rf(outBL), gf(outBL), bf(outBL), af(outBL))
+                    .putVec4(outlineWidth, 0f, 0f, 0f)
+            }
+
+            val vertexBuffer = CustomRenderPipelines.PIPELINE_ROUND_RECT.vertexFormat.uploadImmediateVertexBuffer(mesh.vertexBuffer())
+            val indexStorage = RenderSystem.getSequentialBuffer(mesh.drawState().mode())
+            val indexBuffer = indexStorage.getBuffer(mesh.drawState().indexCount())
+
+            mesh.use {
+                target.colorTextureView?.let { gpuTextureView ->
+                    RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                        { "FloydAddons RoundRect Inline" }, gpuTextureView, OptionalInt.empty(),
+                        if (target.useDepth) target.depthTextureView else null,
+                        OptionalDouble.empty()
+                    )
+                }?.use { pass ->
+                    pass.setPipeline(CustomRenderPipelines.PIPELINE_ROUND_RECT)
+                    RenderSystem.bindDefaultUniforms(pass)
+                    pass.setUniform("DynamicTransforms", dynamicTransforms)
+                    pass.setUniform("u", uniformBuffer)
+                    pass.setVertexBuffer(0, vertexBuffer)
+                    pass.setIndexBuffer(indexBuffer, indexStorage.type())
+                    pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
+                }
+            }
+        }
 
         fun submit(
             context: GuiGraphics,
