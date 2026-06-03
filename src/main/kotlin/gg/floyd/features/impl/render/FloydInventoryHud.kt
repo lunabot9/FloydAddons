@@ -64,7 +64,9 @@ object FloydInventoryHud : Module(
                 if (stack.isEmpty) continue
 
                 pose().pushMatrix()
-                val itemScale = minOf(1f, slotSize / 16f)
+                // Scale the 16px item art to the 18-unit slot grid so items fill their slot (like the
+                // vanilla inventory) instead of capping at native size and leaving a gap at large scales.
+                val itemScale = slotSize / 18f
                 val x = col * slotSize + (slotSize - 16 * itemScale) / 2f
                 val y = row * slotSize + (slotSize - 16 * itemScale) / 2f
                 pose().translate(x, y)

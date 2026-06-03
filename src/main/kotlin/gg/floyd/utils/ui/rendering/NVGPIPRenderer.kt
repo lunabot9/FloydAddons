@@ -6,9 +6,9 @@ import com.mojang.blaze3d.opengl.GlStateManager
 import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
+import gg.floyd.utils.render.PooledPicturePIPRenderer
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.navigation.ScreenRectangle
-import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
 import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.MultiBufferSource
 import org.joml.Matrix3x2f
@@ -16,9 +16,9 @@ import org.joml.Vector2f
 import org.lwjgl.opengl.GL33C
 import kotlin.math.roundToInt
 
-class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PictureInPictureRenderer<NVGPIPRenderer.NVGRenderState>(vertexConsumers) {
+class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPicturePIPRenderer<NVGPIPRenderer.NVGRenderState>(vertexConsumers) {
 
-    override fun renderToTexture(state: NVGRenderState, poseStack: PoseStack) {
+    override fun renderContent(state: NVGRenderState, poseStack: PoseStack) {
         val colorTex = RenderSystem.outputColorTextureOverride ?: return
         val bufferManager = (RenderSystem.getDevice() as? GlDevice)?.directStateAccess() ?: return
         val glDepthTex = (RenderSystem.outputDepthTextureOverride?.texture() as? GlTexture) ?: return

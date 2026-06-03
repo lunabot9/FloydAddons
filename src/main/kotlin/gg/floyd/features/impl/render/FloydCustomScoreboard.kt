@@ -17,6 +17,7 @@ import net.minecraft.world.scores.DisplaySlot
 import net.minecraft.world.scores.Objective
 import net.minecraft.world.scores.PlayerScoreEntry
 import net.minecraft.world.scores.PlayerTeam
+import java.text.Normalizer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.ceil
 import kotlin.math.max
@@ -43,7 +44,9 @@ object FloydCustomScoreboard : Module(
     private const val SCOREBOARD_FONT_SIZE = 9f
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
 
-    private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard Minecraft Font", true, desc = "Uses Minecraft's default font instead of Floyd's smooth NanoVG font for scoreboard text.")
+    // Default OFF = Floyd's smooth NanoVG font. Safe from the old multi-PIP flicker because the
+    // scoreboard is now the only in-game NVG PIP (day tracker + inventory counts stay on mc.font).
+    private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard Minecraft Font", false, desc = "Uses Minecraft's default font instead of Floyd's smooth NanoVG font for scoreboard text.")
 
     // toggleable = false: the module toggle is the single on/off (no redundant inner toggle).
     private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", false, 10, 80, 1f) { example ->
@@ -157,13 +160,14 @@ object FloydCustomScoreboard : Module(
         val lineHeight = ceil(fontSize + 1f).toInt().coerceAtLeast(9)
         val titlePad = 2
         val boxWidth = ceil(maxLineWidth + padding * 2).toInt()
-        // Header holds the Floyd brand line on top, then the server objective title beneath it.
-        val headerHeight = padding + lineHeight * 2 + titlePad * 2
-        val boxHeight = headerHeight + lines.size * lineHeight + padding
+        // Server objective title sits on top; the Floyd brand line is anchored to the very bottom.
+        val titleY = padding + titlePad
+        val headerHeight = titleY + lineHeight + titlePad
+        val brandY = headerHeight + lines.size * lineHeight + titlePad
+        val boxHeight = brandY + lineHeight + padding
 
         val textElements = ArrayList<ScoreboardText>(lines.size * 2 + 2)
-        textElements += ScoreboardText(brandText, (boxWidth - brandWidth) / 2f, (padding + titlePad).toFloat())
-        textElements += ScoreboardText(titleText, (boxWidth - titleWidth) / 2f, (padding + titlePad + lineHeight).toFloat())
+        textElements += ScoreboardText(titleText, (boxWidth - titleWidth) / 2f, titleY.toFloat())
 
         var lineY = headerHeight
         val scoreRight = boxWidth - padding
@@ -172,6 +176,8 @@ object FloydCustomScoreboard : Module(
             if (line.scoreWidth > 0f) textElements += ScoreboardText(line.score, scoreRight - line.scoreWidth, lineY.toFloat())
             lineY += lineHeight
         }
+
+        textElements += ScoreboardText(brandText, (boxWidth - brandWidth) / 2f, brandY.toFloat())
 
         drawScoreboardPanelAndText(boxWidth, boxHeight, textElements)
         return boxWidth to boxHeight
@@ -264,23 +270,26 @@ object FloydCustomScoreboard : Module(
         // nothing left to replace). Covers both the NVG and Minecraft-font scoreboard paths uniformly.
         val source = CustomNameReplacer.replaceSequenceIfNeeded(text)
         // Collect every glyph (with its resolved color) up front so the neighbor rule can inspect the
-        // adjacent glyphs. No glyph is ever dropped: each renders in the custom font, or in the default
-        // Minecraft font when it is a 'skip' glyph or is directly trapped between two skip glyphs.
-        val codePoints = ArrayList<Int>()
+        // adjacent glyphs. No glyph is ever dropped: each renders in the custom font (possibly after
+        // NFKC-normalizing a fancy unicode glyph down to ASCII), or in the default Minecraft font when
+        // it is a 'skip' glyph or is directly trapped between two skip glyphs.
+        val glyphs = ArrayList<String>()
+        val skip = ArrayList<Boolean>()
         val colors = ArrayList<Int>()
         source.accept { _, style, codePoint ->
-            codePoints.add(codePoint)
+            val normalized = normalizeForScoreboardFont(codePoint)
+            glyphs.add(normalized ?: String(Character.toChars(codePoint)))
+            skip.add(normalized == null)
             colors.add(forcedColor ?: scoreboardStyleColor(style))
             true
         }
-        if (codePoints.isEmpty()) return StyledScoreboardText(emptyList())
+        if (glyphs.isEmpty()) return StyledScoreboardText(emptyList())
 
-        val skip = BooleanArray(codePoints.size) { isSkipCodePoint(codePoints[it]) }
         // A glyph uses the default Minecraft font when it is itself a skip glyph, or when it is a normal
         // glyph directly surrounded by skip glyphs on BOTH sides (servers that wrap only certain letters
         // in custom symbols). Everything else uses the custom override font.
-        val minecraftFont = BooleanArray(codePoints.size) { i ->
-            skip[i] || (i > 0 && i < codePoints.size - 1 && skip[i - 1] && skip[i + 1])
+        val minecraftFont = BooleanArray(glyphs.size) { i ->
+            skip[i] || (i > 0 && i < glyphs.size - 1 && skip[i - 1] && skip[i + 1])
         }
 
         val segments = mutableListOf<ScoreboardTextSegment>()
@@ -292,11 +301,11 @@ object FloydCustomScoreboard : Module(
             segments += ScoreboardTextSegment(currentText.toString(), currentColor, currentMinecraftFont)
             currentText.clear()
         }
-        for (i in codePoints.indices) {
+        for (i in glyphs.indices) {
             if (currentText.isNotEmpty() && (colors[i] != currentColor || minecraftFont[i] != currentMinecraftFont)) flush()
             currentColor = colors[i]
             currentMinecraftFont = minecraftFont[i]
-            currentText.appendCodePoint(codePoints[i])
+            currentText.append(glyphs[i])
         }
         flush()
         return StyledScoreboardText(segments)
@@ -307,8 +316,21 @@ object FloydCustomScoreboard : Module(
         return 0xFF000000.toInt() or (color and 0x00FFFFFF)
     }
 
-    /** A 'skip' glyph isn't provided by the custom override font, so it must fall back to the default font. */
-    private fun isSkipCodePoint(codePoint: Int): Boolean = codePoint !in 0x20..0x7E
+    /**
+     * The string to render in the custom (NVG) font for a source code point, or null when it cannot be
+     * represented there (a 'skip' glyph that must fall back to the default Minecraft font). ASCII passes
+     * through unchanged; non-ASCII is NFKC-normalized (full-width digits, ligatures, etc.) and accepted
+     * only when the result is pure ASCII. Normalize-only: nothing is ever dropped — a code point that
+     * cannot be normalized still renders via the mc.font fallback path.
+     */
+    private fun normalizeForScoreboardFont(codePoint: Int): String? {
+        if (codePoint in 0x20..0x7E) return String(Character.toChars(codePoint))
+        val normalized = runCatching {
+            Normalizer.normalize(String(Character.toChars(codePoint)), Normalizer.Form.NFKC)
+        }.getOrNull()
+        if (!normalized.isNullOrEmpty() && normalized.all { it.code in 0x20..0x7E }) return normalized
+        return null
+    }
 
     private fun useMinecraftScoreboardFont(): Boolean = scoreboardHudMinecraftFont
 

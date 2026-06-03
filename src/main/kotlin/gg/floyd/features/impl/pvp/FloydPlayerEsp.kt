@@ -88,7 +88,15 @@ object FloydPlayerEsp : Module(
     // snapping bigger/smaller. Smoothing the SIZE only (never the position) animates it cleanly. ~0.14s
     // kills the flicker while staying responsive to real approach.
     private const val OVERHEAD_SCALE_TAU = 0.14f
+    // Coarse geometric grid (~8% per level) the plate's on-screen size snaps to. Holding the size on a
+    // grid level keeps the rounded panel's integer pixel dimensions identical frame-to-frame, so the
+    // border/text/icons stop re-rasterizing (the "flickering/redrawing" while walking or jumping in
+    // place); the plate only re-rasters during a rare, eased transition when you move far enough to
+    // cross a level. Hysteresis (in [stickyQuantize]) prevents boundary chatter; OVERHEAD_SCALE_TAU
+    // eases each step so it animates as a clean monotonic zoom instead of popping.
+    private const val OVERHEAD_SCALE_STEP = 1.08f
     private val overheadScaleSmooth = HashMap<java.util.UUID, Float>()
+    private val overheadLevel = HashMap<java.util.UUID, Float>()
     private var lastOverheadScaleMs = 0L
 
     private val stalkAllAction by ActionSetting("Stalk All Players", desc = "Toggles Player ESP for all players (same as /fa stalk all).") {
@@ -167,17 +175,28 @@ object FloydPlayerEsp : Module(
             // scale is view-pitch-independent and bob-steady.
             val target = WorldToScreen.screenScale(anchor) ?: continue
             if (target <= 0.01f) continue
-            // Low-pass the SIZE per player so the plate animates smoothly between sizes instead of snapping
-            // every frame — kills the size flicker while jumping in place / walking toward or away. The
+            // Snap the on-screen size to a coarse geometric grid (with hysteresis) so the rounded panel's
+            // integer pixel dimensions hold steady between rare, eased steps instead of re-rasterizing
+            // (flickering) every frame as the depth drifts while walking toward/away or jumping in place.
+            val level = stickyQuantize(target, overheadLevel[player.uuid] ?: 0f, OVERHEAD_SCALE_STEP)
+            overheadLevel[player.uuid] = level
+            // Ease the rendered size toward the committed grid level so a level change animates as a clean
+            // monotonic zoom instead of popping; snap once settled so it holds pixel-identical. The
             // POSITION (anchorScreen) is never smoothed, so the plate still tracks the head precisely.
             val prev = overheadScaleSmooth[player.uuid]
-            val pxPerBlock = if (prev == null) target else prev + (target - prev) * alpha
+            val pxPerBlock = if (prev == null) level else {
+                val next = prev + (level - prev) * alpha
+                if (kotlin.math.abs(level - next) < level * 0.005f) level else next
+            }
             overheadScaleSmooth[player.uuid] = pxPerBlock
             seen.add(player.uuid)
             drawOverheadEntry(graphics, player, anchorScreen.x, anchorScreen.y, overheadScaleFactor(pxPerBlock, overheadScale))
         }
-        // Drop smoothing state for players no longer drawn so the map can't grow unbounded.
-        if (overheadScaleSmooth.size != seen.size) overheadScaleSmooth.keys.retainAll(seen)
+        // Drop smoothing state for players no longer drawn so the maps can't grow unbounded.
+        if (overheadScaleSmooth.size != seen.size) {
+            overheadScaleSmooth.keys.retainAll(seen)
+            overheadLevel.keys.retainAll(seen)
+        }
     }
 
     private fun drawOverheadEntry(graphics: GuiGraphics, player: AbstractClientPlayer, anchorX: Float, anchorY: Float, scale: Float) {
@@ -244,6 +263,31 @@ object FloydPlayerEsp : Module(
      */
     internal fun overheadScaleFactor(pxPerBlock: Float, scaleMultiplier: Float): Float =
         pxPerBlock * (OVERHEAD_WORLD_HEIGHT / OVERHEAD_REF_PX) * scaleMultiplier
+
+    /**
+     * Snaps a positive on-screen size to the nearest level of the geometric grid `step^n`. Keeping the
+     * plate's size on a grid level makes its integer pixel dimensions identical frame-to-frame, so the
+     * rounded panel/border stops re-rasterizing as the depth drifts. Pure for testing.
+     */
+    internal fun quantizeScale(value: Float, step: Float): Float {
+        if (value <= 0f || step <= 1f) return value
+        val n = Math.round(Math.log(value.toDouble()) / Math.log(step.toDouble()))
+        return Math.pow(step.toDouble(), n.toDouble()).toFloat()
+    }
+
+    /**
+     * [quantizeScale] with hysteresis: holds the previously committed grid level until [value] drifts
+     * more than ~70% of a step away from it (in log space), then snaps to the new nearest level. The
+     * dead-band stops residual depth jitter near a level boundary from flipping the plate size back and
+     * forth (chatter) while standing still or jumping in place. Pure for testing.
+     */
+    internal fun stickyQuantize(value: Float, prevLevel: Float, step: Float): Float {
+        if (prevLevel <= 0f) return quantizeScale(value, step)
+        if (value <= 0f || step <= 1f) return prevLevel
+        val logRatio = Math.log((value / prevLevel).toDouble())
+        if (Math.abs(logRatio) < Math.log(step.toDouble()) * 0.7) return prevLevel
+        return quantizeScale(value, step)
+    }
 
     /** Single-row panel dimensions (local px) for the overhead plate. Pure for layout testing. */
     internal fun overheadDimensions(hpWidth: Int, iconCount: Int, padding: Int, fontLineHeight: Int): OverheadDimensions {
