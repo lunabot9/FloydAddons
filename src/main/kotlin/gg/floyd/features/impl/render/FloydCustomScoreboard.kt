@@ -117,10 +117,23 @@ object FloydCustomScoreboard : Module(
         return vanillaScoreboardWouldRender.get()
     }
 
-    private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
-        val objective = sidebarObjective() ?: return if (example) drawScoreboardExample() else 0 to 0
-        if (!shouldDrawScoreboardHud(example, shouldUseCustomScoreboard(), objectivePresent = true)) return 0 to 0
-        val scoreboard = mc.level?.scoreboard ?: return if (example) drawScoreboardExample() else 0 to 0
+    private data class ScoreboardRender(val boxWidth: Int, val boxHeight: Int, val texts: List<ScoreboardText>)
+
+    /**
+     * Pure layout (NO GuiGraphics, no drawing) so it can run screen-independently from the world-end
+     * pass. Returns null when there is nothing to draw; with [example] true, returns placeholder content
+     * for the HUD editor.
+     */
+    private fun scoreboardRender(example: Boolean, requireVanillaSignal: Boolean = true): ScoreboardRender? {
+        val objective = sidebarObjective() ?: return if (example) exampleScoreboardRender() else null
+        // The vanilla-would-render signal is set during the HUD render, which is skipped while a screen is
+        // open — so the world-end path (renderAtWorldEnd) gates only on module-enabled + objective so the
+        // scoreboard stays visible with chat / inventory / the ClickGUI open.
+        val show = if (example) true
+            else if (requireVanillaSignal) shouldDrawScoreboardHud(false, shouldUseCustomScoreboard(), objectivePresent = true)
+            else enabled
+        if (!show) return null
+        val scoreboard = mc.level?.scoreboard ?: return if (example) exampleScoreboardRender() else null
         val lines = mc.level?.scoreboard?.listPlayerScores(objective)
             ?.asSequence()
             ?.filterNot(PlayerScoreEntry::isHidden)
@@ -133,23 +146,20 @@ object FloydCustomScoreboard : Module(
                 ScoreLine(name, score, textWidth(name), textWidth(score))
             }
             ?.toMutableList()
-            ?: return if (example) drawScoreboardExample() else 0 to 0
+            ?: return if (example) exampleScoreboardRender() else null
 
-        if (lines.isEmpty()) return if (example) drawScoreboardExample() else 0 to 0
+        if (lines.isEmpty()) return if (example) exampleScoreboardRender() else null
 
-        return drawScoreboardBox(objective.displayName, Component.literal("FloydAddons"), lines, example)
+        return buildScoreboardLayout(objective.displayName, Component.literal("FloydAddons"), lines)
     }
 
-    private fun GuiGraphics.drawScoreboardExample(): Pair<Int, Int> {
-        val lines = mutableListOf(
-            scoreLine("Purse: 1,234,567"),
-            scoreLine("Bits: 12,345"),
-            scoreLine("Location: Dungeon Hub"),
+    private fun exampleScoreboardRender(): ScoreboardRender =
+        buildScoreboardLayout(
+            Component.literal("SKYBLOCK"), Component.literal("FloydAddons"),
+            mutableListOf(scoreLine("Purse: 1,234,567"), scoreLine("Bits: 12,345"), scoreLine("Location: Dungeon Hub"))
         )
-        return drawScoreboardBox(Component.literal("SKYBLOCK"), Component.literal("FloydAddons"), lines, example = true)
-    }
 
-    private fun GuiGraphics.drawScoreboardBox(title: Component, brand: Component, lines: List<ScoreLine>, example: Boolean): Pair<Int, Int> {
+    private fun buildScoreboardLayout(title: Component, brand: Component, lines: List<ScoreLine>): ScoreboardRender {
         val titleText = styledText(title.visualOrderText)
         // The Floyd brand line tracks the panel border color (chroma / fade / solid) via the accent.
         val brandText = styledText(brand.visualOrderText, forcedColor = scoreboardAccentColor(0f))
@@ -172,7 +182,7 @@ object FloydCustomScoreboard : Module(
         val brandY = headerHeight + lines.size * lineHeight + titlePad
         val boxHeight = brandY + lineHeight + padding
 
-        val textElements = ArrayList<ScoreboardText>(lines.size * 2 + 2)
+        val textElements = ArrayList<ScoreboardText>(lines.size + 2)
         textElements += ScoreboardText(titleText, (boxWidth - titleWidth) / 2f, titleY.toFloat())
 
         var lineY = headerHeight
@@ -183,8 +193,27 @@ object FloydCustomScoreboard : Module(
 
         textElements += ScoreboardText(brandText, (boxWidth - brandWidth) / 2f, brandY.toFloat())
 
-        drawScoreboardPanelAndText(boxWidth, boxHeight, textElements, example)
-        return boxWidth to boxHeight
+        return ScoreboardRender(boxWidth, boxHeight, textElements)
+    }
+
+    // HUD element callback: in the editor it draws the preview (deferred) and always reports the size; in
+    // game it draws NOTHING here — the world-end pass [renderAtWorldEnd] draws the real scoreboard so it
+    // stays visible under chat / inventory / the ClickGUI (which then blur over it).
+    private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
+        val r = scoreboardRender(example) ?: return 0 to 0
+        if (example) drawScoreboardDeferred(r.boxWidth, r.boxHeight, r.texts)
+        return r.boxWidth to r.boxHeight
+    }
+
+    /**
+     * The real in-game scoreboard render, run screen-independently from the world-end post-HUD pass
+     * (PostHudOverlay). Draws directly to the bound main framebuffer using the HUD element's own
+     * framebuffer-pixel position/scale (no GuiGraphics pose), so it shows regardless of any open screen.
+     */
+    fun renderAtWorldEnd() {
+        if (mc.screen === gg.floyd.clickgui.HudManager) return // editor draws the preview via the deferred path
+        val r = scoreboardRender(false, requireVanillaSignal = false) ?: return
+        drawScoreboardInline(r.boxWidth, r.boxHeight, r.texts)
     }
 
     private fun scoreLine(name: String): ScoreLine {
@@ -213,88 +242,89 @@ object FloydCustomScoreboard : Module(
     private fun scoreboardTextHeight(): Float =
         if (useMinecraftScoreboardFont()) mc.font.lineHeight.toFloat() else scoreboardFontSize()
 
-    private fun GuiGraphics.drawScoreboardPanelAndText(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>, example: Boolean) {
-        // Editor preview (example) and the Minecraft-font mode keep the original deferred PIP path.
-        if (example || useMinecraftScoreboardFont()) {
-            HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, FloydPanelStyle.PanelTarget.SCOREBOARD, HudPanel.panelBorderColors(FloydPanelStyle.PanelTarget.SCOREBOARD, scoreboardHud.x, scoreboardHud.y))
-            if (useMinecraftScoreboardFont()) {
-                for (text in texts) drawMinecraftScoreboardText(text)
-            } else {
-                val nvgScaleMultiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
-                NVGPIPRenderer.draw(this, 0, 0, boxWidth, boxHeight, renderScaleMultiplier = nvgScaleMultiplier) {
-                    for (text in texts) drawScoreboardText(text)
-                }
-                for (text in texts) drawScoreboardMinecraftFallbacks(text)
+    /** Editor-preview / Minecraft-font path: the original deferred PIP render (GuiGraphics-based). */
+    private fun GuiGraphics.drawScoreboardDeferred(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
+        HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, FloydPanelStyle.PanelTarget.SCOREBOARD, HudPanel.panelBorderColors(FloydPanelStyle.PanelTarget.SCOREBOARD, scoreboardHud.x, scoreboardHud.y))
+        if (useMinecraftScoreboardFont()) {
+            for (text in texts) drawMinecraftScoreboardText(text)
+        } else {
+            val nvgScaleMultiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
+            NVGPIPRenderer.draw(this, 0, 0, boxWidth, boxHeight, renderScaleMultiplier = nvgScaleMultiplier) {
+                for (text in texts) drawScoreboardText(text)
             }
+            for (text in texts) drawScoreboardMinecraftFallbacks(text)
+        }
+    }
+
+    /**
+     * In-game render, drawn DIRECTLY to the main framebuffer from the world-end pass (no PIP, no
+     * GuiGraphics). Geometry comes from the HUD element's own framebuffer-pixel x/y/scale, so it is
+     * screen-independent (renders with any screen open). SDF bg/border draw in framebuffer space; NanoVG
+     * + mc.font draw in logical (/dpr) space — the FBO is re-bound between them because the SDF blaze3d
+     * render pass can retarget.
+     */
+    private fun drawScoreboardInline(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
+        val target = FloydPanelStyle.PanelTarget.SCOREBOARD
+        val dpr = NVGRenderer.devicePixelRatio()
+        val scale = scoreboardHud.scale
+        val fx = scoreboardHud.x.toFloat()
+        val fy = scoreboardHud.y.toFloat()
+        val fw = boxWidth * scale
+        val fh = boxHeight * scale
+
+        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
+        val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
+        val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
+
+        // TODO(blur): frosted blur backdrop here once PanelBlurPIPRenderer.drawInline (framebuffer
+        // snapshot to avoid sample-while-write feedback) is implemented. For now: fill + border only.
+        RoundRectPIPRenderer.drawInline(
+            fx, fy, fw, fh,
+            fill, fill, fill, fill,
+            radius, radius, radius, radius,
+            border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
+            outline
+        )
+
+        val originX = fx / dpr
+        val originY = fy / dpr
+        val textScale = scale / dpr
+        PostHudOverlay.bindMainFbo()
+        if (useMinecraftScoreboardFont()) {
+            drawScoreboardTextMc(texts, originX, originY, textScale, allSegments = true)
             return
         }
-
-        // In-game smooth-font scoreboard → the single post-HUD pass (no PIP). Compute the panel's
-        // framebuffer geometry from the live HUD pose now; PostHudOverlay replays these closures after
-        // the HUD is composited. context.pose() maps local -> gui-scaled coords, so multiply by guiScale
-        // to reach framebuffer pixels (the space drawInline / the bound FBO draw in). dpr maps to NanoVG's
-        // logical canvas. This mirrors the old PIP's poseScale*guiScale (radius/outline) and guiScale/dpr
-        // (text) math, just drawn inline instead of into an offscreen texture.
-        val pose = Matrix3x2f(pose())
-        val gs = mc.window.guiScale.toFloat()
-        val dpr = NVGRenderer.devicePixelRatio()
-        val poseScale = pose.transformDirection(Vector2f(1f, 0f)).length()
-        val p0 = pose.transformPosition(Vector2f(0f, 0f))
-        val p1 = pose.transformPosition(Vector2f(boxWidth.toFloat(), boxHeight.toFloat()))
-        val fx = minOf(p0.x, p1.x) * gs
-        val fy = minOf(p0.y, p1.y) * gs
-        val fw = kotlin.math.abs(p1.x - p0.x) * gs
-        val fh = kotlin.math.abs(p1.y - p0.y) * gs
-
-        val fill = FloydPanelStyle.backgroundColorFor(FloydPanelStyle.PanelTarget.SCOREBOARD).rgba
-        val border = HudPanel.panelBorderColors(FloydPanelStyle.PanelTarget.SCOREBOARD, scoreboardHud.x, scoreboardHud.y)
-        val radius = FloydPanelStyle.cornerRadiusFor(FloydPanelStyle.PanelTarget.SCOREBOARD).toFloat() * poseScale * gs
-        val outline = FloydPanelStyle.borderWidthFor(FloydPanelStyle.PanelTarget.SCOREBOARD).toFloat() * poseScale * gs
-
-        PostHudOverlay.enqueue {
-            RoundRectPIPRenderer.drawInline(
-                fx, fy, fw, fh,
-                fill, fill, fill, fill,
-                radius, radius, radius, radius,
-                border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
-                outline
-            )
-        }
-        val originX = p0.x * gs / dpr
-        val originY = p0.y * gs / dpr
-        val textScale = poseScale * gs / dpr
-        PostHudOverlay.enqueue {
-            NVGRenderer.beginFrame(mc.window.width.toFloat(), mc.window.height.toFloat())
-            NVGRenderer.translate(originX, originY)
-            NVGRenderer.scale(textScale, textScale)
-            for (text in texts) drawScoreboardText(text)
-            NVGRenderer.endFrame()
-        }
-        // Minecraft-font fallback glyphs (a server's fancy small-caps title, boxed-in symbols, etc.) drawn
-        // directly to the main framebuffer via mc.font — only the segments the NVG font can't render, never
-        // a whole dropped line — on top of the bg, in the same framebuffer frame as the NVG text.
+        NVGRenderer.beginFrame(mc.window.width.toFloat(), mc.window.height.toFloat())
+        NVGRenderer.translate(originX, originY)
+        NVGRenderer.scale(textScale, textScale)
+        for (text in texts) drawScoreboardText(text)
+        NVGRenderer.endFrame()
+        // mc.font fallback for glyphs the NVG font can't render (small-caps are already mapped to ASCII).
         if (texts.any { t -> t.value.segments.any { it.minecraftFont } }) {
-            // mc.font renders in logical (framebuffer/dpr) space — same as NanoVG, NOT the SDF's
-            // framebuffer space — so use the identical /dpr transform as the NVG text above.
-            val mcMatrix = Matrix4f().translate(originX, originY, 0f).scale(textScale, textScale, 1f)
-            PostHudOverlay.enqueue {
-                PostHudOverlay.applyScreenProjection()
-                val buffer = mc.renderBuffers().bufferSource()
-                val font = NVGRenderer.activeFont()
-                for (text in texts) {
-                    var segX = text.x
-                    for (segment in text.value.segments) {
-                        if (segment.minecraftFont) {
-                            mc.font.drawInBatch(segment.text, segX, text.y, segment.color, false, mcMatrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT)
-                            segX += mc.font.width(segment.text).toFloat()
-                        } else {
-                            segX += NVGRenderer.textWidth(segment.text, scoreboardFontSize(), font)
-                        }
-                    }
+            PostHudOverlay.bindMainFbo()
+            drawScoreboardTextMc(texts, originX, originY, textScale, allSegments = false)
+        }
+    }
+
+    /** Draws scoreboard text via mc.font to the bound main framebuffer (logical /dpr space). */
+    private fun drawScoreboardTextMc(texts: List<ScoreboardText>, originX: Float, originY: Float, textScale: Float, allSegments: Boolean) {
+        PostHudOverlay.applyScreenProjection()
+        val mcMatrix = Matrix4f().translate(originX, originY, 0f).scale(textScale, textScale, 1f)
+        val buffer = mc.renderBuffers().bufferSource()
+        val font = NVGRenderer.activeFont()
+        for (text in texts) {
+            var segX = text.x
+            for (segment in text.value.segments) {
+                if (allSegments || segment.minecraftFont) {
+                    mc.font.drawInBatch(segment.text, segX, text.y, segment.color, false, mcMatrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT)
+                    segX += mc.font.width(segment.text).toFloat()
+                } else {
+                    segX += NVGRenderer.textWidth(segment.text, scoreboardFontSize(), font)
                 }
-                buffer.endBatch()
             }
         }
+        buffer.endBatch()
     }
 
     private fun drawScoreboardText(text: ScoreboardText) {

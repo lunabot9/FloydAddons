@@ -6,6 +6,7 @@ import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.PoseStack
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.TextureSetup
@@ -98,6 +99,32 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
                 )
             )
             guiRenderState.submitPicturesInPictureState(state)
+        }
+
+        /**
+         * Renders an item-stack icon DIRECTLY to the bound main framebuffer for the post-HUD pass — no
+         * PIP / shared texture, so overlapping icons can't clobber each other (the old single-texture
+         * black-icon bug). The caller must have the main FBO bound and
+         * [com.mojang.blaze3d.systems.RenderSystem.outputColorTextureOverride] set (PostHudOverlay does).
+         * [x],[y],[size] are in logical (framebuffer/dpr) space — the same space mc.font draws in.
+         */
+        fun drawItemInline(item: ItemStack, x: Float, y: Float, size: Float) {
+            if (item.isEmpty) return
+            val tracking = TrackingItemStackRenderState()
+            mc.itemModelResolver.updateForTopItem(tracking, item, ItemDisplayContext.GUI, mc.level, mc.player, 0)
+
+            if (tracking.usesBlockLight()) mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_3D)
+            else mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_FLAT)
+
+            PostHudOverlay.applyScreenProjection()
+            val pose = PoseStack()
+            // Item models are GUI-rendered in a 16-unit box centred at the origin; map that to [size] px.
+            pose.translate(x + size / 2f, y + size / 2f, 0f)
+            pose.scale(size / 16f, -size / 16f, size / 16f)
+
+            val dispatcher = mc.gameRenderer.featureRenderDispatcher
+            tracking.submit(pose, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
+            dispatcher.renderAllFeatures()
         }
     }
 }

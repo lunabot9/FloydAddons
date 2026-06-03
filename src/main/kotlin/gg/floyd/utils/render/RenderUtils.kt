@@ -121,6 +121,11 @@ object RenderBatchManager {
             // every blit, so this frame's panels each get their own live texture (fixes overlapping
             // Floyd panels flickering / going black from the single shared vanilla PIP texture).
             PooledPicturePIPRenderer.recycleAll()
+
+            // Floyd's no-PIP HUD panels: drawn straight to the main framebuffer HERE — after the world
+            // but before the vanilla HUD / any open screen — so they always show (chat / inventory /
+            // ClickGUI), sit UNDER GUIs (which blur over them), and composite in one painter's-order pass.
+            gg.floyd.utils.ui.rendering.PostHudOverlay.render()
         }
     }
 }

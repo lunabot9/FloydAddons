@@ -7,41 +7,31 @@ import com.mojang.blaze3d.opengl.GlStateManager
 import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.features.impl.render.FloydCustomScoreboard
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import org.lwjgl.opengl.GL13C
 import org.lwjgl.opengl.GL33C
 
 /**
- * The single immediate post-HUD render pass for Floyd's custom panels.
+ * The single immediate Floyd-panel render pass, run at the WORLD→HUD boundary
+ * ([gg.floyd.events.RenderEvent.Last] / WorldRenderEvents.END_MAIN) — after the world is in the main
+ * framebuffer but BEFORE the vanilla HUD and any open screen render. Drawing here:
+ *  - makes the panels render regardless of any open screen (they don't vanish on chat/inventory/GUI),
+ *  - puts them UNDER the HUD and any GUI, so an open ClickGUI's blur composites over them,
+ *  - keeps them in ONE painter's-order pass straight to the framebuffer (no per-panel PIP texture), so
+ *    overlapping panels never clobber each other (the whole point of this rewrite).
  *
- * Runs at the RETURN of `GameRenderer.render`, the first frame point where the main framebuffer holds
- * the world + the fully-composited vanilla HUD. Panels [enqueue] a draw during the deferred HUD pass
- * (computing their framebuffer geometry from the live pose), and this pass replays them — directly to
- * the main framebuffer, in painter's order, with NO per-panel offscreen texture. That is what makes
- * overlapping Floyd panels rock-constant: a panel's frosted blur correctly samples world + HUD + every
- * earlier panel, borders never wash out, and item icons can't clobber each other (no per-panel PIPs).
- *
- * Each queued draw is a self-contained closure: a rounded-rect/blur SDF draw (blaze3d render pass to
- * the main color view) or a NanoVG text draw (raw GL to the bound FBO). The FBO is re-bound before
- * every closure so a blaze3d render pass that retargets internally can't leave the next NanoVG draw
- * pointed at the wrong framebuffer.
+ * Each panel draws directly (SDF rounded-rect in framebuffer-pixel space; NanoVG + mc.font + item models
+ * in logical /dpr space, via [RenderSystem.outputColorTextureOverride] which retargets vanilla draws to
+ * the main framebuffer). The FBO is re-bound between heterogeneous draws ([bindMainFbo]) because a
+ * blaze3d render pass can retarget internally.
  */
 object PostHudOverlay {
 
-    private val queue = ArrayList<() -> Unit>()
-
     private val screenProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons PostHUD", -1000f, 1000f, true)
+    private var boundFbo = 0
 
-    /** Enqueue a panel draw (framebuffer-pixel coords baked in) for this frame's post-HUD pass. */
-    fun enqueue(draw: () -> Unit) {
-        queue.add(draw)
-    }
-
-    /**
-     * Sets the orthographic projection over the whole main framebuffer (0,0)-(width,height) in pixels.
-     * Call inside an enqueued closure before any blaze3d/vanilla draw (item icons, mc.font fallbacks)
-     * that relies on [RenderSystem.getProjectionMatrix] rather than carrying its own.
-     */
+    /** Ortho over the whole main framebuffer in pixels — for vanilla draws (mc.font, items) that rely on it. */
     fun applyScreenProjection() {
         val t = mc.mainRenderTarget
         RenderSystem.setProjectionMatrix(
@@ -50,43 +40,39 @@ object PostHudOverlay {
         )
     }
 
+    /** Re-bind the main framebuffer + viewport (a blaze3d SDF render pass can retarget); call between draws. */
+    fun bindMainFbo() {
+        if (boundFbo == 0) return
+        val t = mc.mainRenderTarget
+        GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, boundFbo)
+        GlStateManager._viewport(0, 0, t.width, t.height)
+        GL33C.glBindSampler(0, 0)
+    }
+
     fun render() {
-        if (queue.isEmpty()) return
-        if (mc.level == null || mc.player == null || mc.options.hideGui || mc.screen != null) {
-            queue.clear()
-            return
-        }
+        if (mc.level == null || mc.player == null || mc.options.hideGui) return
         RenderSystem.assertOnRenderThread()
 
         val target = mc.mainRenderTarget
-        val dsa = (RenderSystem.getDevice() as? GlDevice)?.directStateAccess()
-        val colorTex = target.colorTexture as? GlTexture
-        if (dsa == null || colorTex == null) {
-            queue.clear()
-            return
-        }
-        val fbo = colorTex.getFbo(dsa, target.depthTexture as? GlTexture)
+        val dsa = (RenderSystem.getDevice() as? GlDevice)?.directStateAccess() ?: return
+        val colorTex = target.colorTexture as? GlTexture ?: return
+        boundFbo = colorTex.getFbo(dsa, target.depthTexture as? GlTexture)
 
-        // Redirect vanilla blaze3d rendering (mc.font glyphs, item models) to the main framebuffer for
-        // this pass — the same RenderSystem override PictureInPictureRenderer uses to retarget vanilla
-        // draws. NanoVG (raw GL) and our SDF render pass ignore it; mc.font / items respect it.
+        // Retarget vanilla blaze3d draws (mc.font glyphs, item models) to the main framebuffer — the same
+        // override PictureInPictureRenderer uses. NanoVG (raw GL) + our SDF pass ignore it.
         RenderSystem.outputColorTextureOverride = target.colorTextureView
         RenderSystem.outputDepthTextureOverride = target.depthTextureView
+        bindMainFbo()
 
-        for (draw in queue) {
-            // Re-bind the main framebuffer before each panel: a blaze3d SDF render pass can retarget
-            // internally, so a following NanoVG draw must be re-pointed at the main FBO.
-            GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, fbo)
-            GlStateManager._viewport(0, 0, target.width, target.height)
-            GL33C.glBindSampler(0, 0)
-            draw()
-        }
-        queue.clear()
+        // Draw each Floyd panel directly, in painter's order. (Inventory / day-tracker / ESP overhead
+        // migrate here next.)
+        FloydCustomScoreboard.renderAtWorldEnd()
 
         RenderSystem.outputColorTextureOverride = null
         RenderSystem.outputDepthTextureOverride = null
+        boundFbo = 0
 
-        // Restore the GL state NanoVG / the render pass leave dirty so MC's next frame starts clean.
+        // Restore the GL state NanoVG / the render pass leave dirty so MC's next draw is clean.
         GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, 0)
         GlStateManager._disableScissorTest()
         GlStateManager._depthMask(true)
