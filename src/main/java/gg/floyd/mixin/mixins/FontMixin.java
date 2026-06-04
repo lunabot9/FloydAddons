@@ -1,6 +1,7 @@
 package gg.floyd.mixin.mixins;
 
 import gg.floyd.features.impl.render.CustomNameReplacer;
+import gg.floyd.features.impl.render.FloydFont;
 import gg.floyd.utils.ChatChroma;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
@@ -25,6 +26,20 @@ public class FontMixin {
             text = CustomNameReplacer.replaceSequenceIfNeeded(text);
         }
         return ChatChroma.INSTANCE.transform(text);
+    }
+
+    // "Disable Text Shadow": force the dropShadow flag (the first boolean arg of each prepareText overload)
+    // to false for every rendered string/sequence, so all text — vanilla HUD and Floyd panels alike —
+    // draws flat with no 1px shadow. Both drawInBatch paths funnel through prepareText, so this one hook
+    // covers everything.
+    @ModifyVariable(method = "prepareText(Ljava/lang/String;FFIZI)Lnet/minecraft/client/gui/Font$PreparedText;", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private boolean floyd$noShadowString(boolean dropShadow) {
+        return dropShadow && !FloydFont.isTextShadowDisabled();
+    }
+
+    @ModifyVariable(method = "prepareText(Lnet/minecraft/util/FormattedCharSequence;FFIZZI)Lnet/minecraft/client/gui/Font$PreparedText;", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+    private boolean floyd$noShadowSequence(boolean dropShadow) {
+        return dropShadow && !FloydFont.isTextShadowDisabled();
     }
 
     @ModifyVariable(method = "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"), argsOnly = true)

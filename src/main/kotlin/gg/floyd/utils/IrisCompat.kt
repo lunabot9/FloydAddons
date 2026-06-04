@@ -20,6 +20,7 @@ interface IrisCompatability {
         init {
             registerRenderType(CustomRenderType.LINES_ESP, IrisShaderType.LINES)
             registerRenderType(CustomRenderType.LINES_TRANSLUCENT_ESP, IrisShaderType.LINES)
+            registerRenderType(CustomRenderType.LINES_AA_ESP, IrisShaderType.LINES)
             registerRenderType(CustomRenderType.QUADS_ESP, IrisShaderType.BASIC)
         }
     }

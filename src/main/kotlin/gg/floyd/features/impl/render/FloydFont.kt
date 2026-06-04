@@ -33,6 +33,7 @@ object FloydFont : Module(
     toggled = true,
 ) {
     val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Overrides the vanilla game font with Floyd's bundled font. Reload resources (F3+T) to apply.")
+    private val disableTextShadow by BooleanSetting("Disable Text Shadow", false, desc = "Removes the 1px drop shadow under ALL rendered text (vanilla HUD + every Floyd panel) for a cleaner, sharper look. Applies instantly, no reload needed.")
     private val fontDisplaySize by NumberSetting("Font Size", 25.0, 6.0, 50.0, 0.5, desc = "Display size for the global TTF provider. 25 matches the Font mod default. Reload resources (F3+T) to apply.")
     var selectedFont by StringSetting("Font", "", 96, desc = "Optional .ttf in config/floydaddons/fonts to use instead of the bundled font. Reload resources (F3+T) to apply.")
     private val listFonts by ActionSetting("List Fonts", desc = "Prints available .ttf files in chat.") {
@@ -63,6 +64,10 @@ object FloydFont : Module(
     /** Whether the bundled font should override the vanilla game font. OFF renders with the vanilla font. */
     @JvmStatic
     fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont
+
+    /** Whether all text drop shadows should be suppressed (drives [gg.floyd.mixin.mixins.FontMixin]). */
+    @JvmStatic
+    fun isTextShadowDisabled(): Boolean = enabled && disableTextShadow
 
     /** Minecraft TTF provider size computed like MichiJP's Font mod: display size / 12.5, supersampled and clamped to 20. */
     @JvmStatic

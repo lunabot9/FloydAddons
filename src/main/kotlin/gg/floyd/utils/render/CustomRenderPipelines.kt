@@ -26,6 +26,26 @@ object CustomRenderPipelines {
             .build()
     )
 
+    // Antialiased no-depth ESP lines: same screen-space line expansion as the vanilla LINES snippet, but
+    // a custom shader pair computes true analytic coverage (fwidth-normalized SDF feather on a noperspective
+    // pixel distance) so tracers/wireframes read as smooth thin strokes instead of hard, stair-stepped
+    // pixels. The fragment outputs PREMULTIPLIED alpha (so overlaps don't double-darken into dark dots),
+    // so the pipeline must use the premultiplied translucent blend to match.
+    val LINES_AA_ESP: RenderPipeline = RenderPipelines.register(
+        RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
+            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+            .withVertexShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/lines_aa"))
+            .withFragmentShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/lines_aa"))
+            .withBlend(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA)
+            // No backface culling: the screen-space line quad can wind either way depending on the
+            // segment's direction; culling it drops some angles into gaps. (The shader also flips the
+            // offset for winding consistency; this is belt-and-suspenders.)
+            .withCull(false)
+            .withDepthWrite(false)
+            .withLocation("${FloydAddonsMod.MOD_ID}/lines_aa_esp")
+            .build()
+    )
+
     val QUADS_ESP: RenderPipeline = RenderPipelines.register(
         RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
             .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)

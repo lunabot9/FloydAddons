@@ -63,6 +63,17 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         super.init()
     }
 
+    /**
+     * The Floyd HUD panels are drawn straight to the framebuffer by the single inline pass (PostHudOverlay,
+     * via the GameRenderer hook) BEFORE this editor screen renders — the SAME path used in game. The default
+     * blur+dim screen background would therefore dim the panels too and make the editor look different from
+     * the real HUD. Override it to a clear background so the editor is WYSIWYG (panels render exactly as in
+     * game, with one rendering system); the free cursor + per-panel hover tooltip indicate edit mode.
+     */
+    override fun renderBackground(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+        // intentionally empty — no dim/blur over the inline-rendered panels
+    }
+
     override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         super.render(guiGraphics, mouseX, mouseY, deltaTicks)
 

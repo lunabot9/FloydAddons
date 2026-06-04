@@ -235,8 +235,8 @@ object ModuleManager {
     fun render(guiGraphics: GuiGraphics, tickCounter: DeltaTracker) {
         if (mc.level == null || mc.player == null || mc.screen == HudManager || mc.options.hideGui) return
 
-        // World-anchored overhead ESP overlay, drawn in plain gui-scaled space.
-        gg.floyd.features.impl.pvp.FloydPlayerEsp.drawOverheadOverlay(guiGraphics)
+        // The overhead ESP nameplates now render from the world-end post-HUD pass (PostHudOverlay), like
+        // the other Floyd panels, so they stay visible with any screen open and composite under GUIs.
 
         guiGraphics.pose().pushMatrix()
         val sf = mc.window.guiScale

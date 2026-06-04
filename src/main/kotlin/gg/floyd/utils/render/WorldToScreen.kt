@@ -145,5 +145,40 @@ object WorldToScreen {
         return Vec3(cam.x + eyePoint.x, cam.y + eyePoint.y, cam.z + eyePoint.z)
     }
 
+    /**
+     * Re-aims a tracer's FAR endpoint onto the same camera-depth plane as [tracerOrigin] while keeping it
+     * in the exact same screen direction as [worldPos]. The returned point lies on the ray from the camera
+     * through [worldPos] (so it projects to the identical screen pixel as the real target — the tracer
+     * looks unchanged), but at view-space depth `-distance`, the same depth as the origin.
+     *
+     * Why: a tracer drawn straight to a far player spans a huge depth range (origin ~1 block away, player
+     * tens of blocks away). Its clip-space `w` therefore varies enormously along the segment, and the
+     * screen-space line expansion produces a line that is thick at the near (crosshair) end and tapers to
+     * nothing at the far (player) end. Pinning BOTH endpoints to the same depth plane makes the whole
+     * segment constant-`w`, so its on-screen width is uniform — a true single-width 2D-looking line — with
+     * no change to the renderer. Returns null if [worldPos] is at/behind the camera (caller falls back).
+     */
+    fun tracerTarget(worldPos: Vec3, distance: Float = 1f): Vec3? {
+        val view = modelView ?: return null
+        val cam = cameraPos
+
+        val rel = Vector4f(
+            (worldPos.x - cam.x).toFloat(),
+            (worldPos.y - cam.y).toFloat(),
+            (worldPos.z - cam.z).toFloat(),
+            1f
+        )
+        view.transform(rel)
+        val viewZ = rel.z                       // negative in front of the camera
+        if (viewZ > -1.0e-3f) return null       // at/behind the camera
+
+        val t = distance / -viewZ               // scale the camera->target ray to depth `distance`
+        return Vec3(
+            cam.x + t * (worldPos.x - cam.x),
+            cam.y + t * (worldPos.y - cam.y),
+            cam.z + t * (worldPos.z - cam.z)
+        )
+    }
+
     data class ScreenPos(val x: Float, val y: Float)
 }

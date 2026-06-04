@@ -238,6 +238,69 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             }
         }
 
+        /**
+         * WORLD-MVP variant of [drawInline] for a 3D billboard (the ESP overhead nameplate). Unlike
+         * drawInline it does NOT override the projection — it leaves the bound world ProjMat (proj×view)
+         * intact and passes [modelView] (the billboard basis translated to the rect's local top-left) as the
+         * DynamicTransforms ModelViewMat. The SDF rounded mask is computed entirely in local f_Position vs
+         * u_Rect space, so it is byte-identical to drawInline; only the transform differs.
+         */
+        fun drawWorld(
+            modelView: Matrix4f,
+            w: Float, h: Float,
+            fillTL: Int, fillTR: Int, fillBR: Int, fillBL: Int,
+            radTL: Float, radTR: Float, radBR: Float, radBL: Float,
+            outTL: Int, outTR: Int, outBR: Int, outBL: Int,
+            outlineWidth: Float
+        ) {
+            if (w <= 0f || h <= 0f) return
+
+            val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
+            builder.addVertex(0f, 0f, 0f).setColor(fillTL)
+            builder.addVertex(0f, h, 0f).setColor(fillBL)
+            builder.addVertex(w, h, 0f).setColor(fillBR)
+            builder.addVertex(w, 0f, 0f).setColor(fillTR)
+            val mesh = builder.buildOrThrow()
+
+            val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
+                modelView, Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
+            )
+
+            val uniformBuffer = uniformStorage.writeUniform { buffer ->
+                Std140Builder.intoBuffer(buffer)
+                    .putVec4(w * 0.5f, h * 0.5f, w, h)
+                    .putVec4(radTL, radTR, radBR, radBL)
+                    .putVec4(rf(outTL), gf(outTL), bf(outTL), af(outTL))
+                    .putVec4(rf(outTR), gf(outTR), bf(outTR), af(outTR))
+                    .putVec4(rf(outBR), gf(outBR), bf(outBR), af(outBR))
+                    .putVec4(rf(outBL), gf(outBL), bf(outBL), af(outBL))
+                    .putVec4(outlineWidth, 0f, 0f, 0f)
+            }
+
+            val vertexBuffer = CustomRenderPipelines.PIPELINE_ROUND_RECT.vertexFormat.uploadImmediateVertexBuffer(mesh.vertexBuffer())
+            val indexStorage = RenderSystem.getSequentialBuffer(mesh.drawState().mode())
+            val indexBuffer = indexStorage.getBuffer(mesh.drawState().indexCount())
+            val target = Minecraft.getInstance().mainRenderTarget
+
+            mesh.use {
+                (RenderSystem.outputColorTextureOverride ?: target.colorTextureView)?.let { gpuTextureView ->
+                    RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                        { "FloydAddons RoundRect World" }, gpuTextureView, OptionalInt.empty(),
+                        if (target.useDepth) Objects.requireNonNullElse(RenderSystem.outputDepthTextureOverride, target.depthTextureView) else null,
+                        OptionalDouble.empty()
+                    )
+                }?.use { pass ->
+                    pass.setPipeline(CustomRenderPipelines.PIPELINE_ROUND_RECT)
+                    RenderSystem.bindDefaultUniforms(pass)
+                    pass.setUniform("DynamicTransforms", dynamicTransforms)
+                    pass.setUniform("u", uniformBuffer)
+                    pass.setVertexBuffer(0, vertexBuffer)
+                    pass.setIndexBuffer(indexBuffer, indexStorage.type())
+                    pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
+                }
+            }
+        }
+
         fun submit(
             context: GuiGraphics,
             x0: Int, y0: Int, x1: Int, y1: Int,

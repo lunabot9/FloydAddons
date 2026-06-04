@@ -24,6 +24,14 @@ object CustomRenderType {
             .createRenderSetup()
     )
 
+    // Antialiased no-depth ESP lines (tracers + wireframes) — smooth, soft-edged strokes.
+    val LINES_AA_ESP: RenderType = RenderType.create(
+        "lines-aa-esp",
+        RenderSetup.builder(CustomRenderPipelines.LINES_AA_ESP)
+            .setOutputTarget(OutputTarget.ITEM_ENTITY_TARGET)
+            .createRenderSetup()
+    )
+
     // RenderTypes.DEBUG_FILLED_BOX || QUADS_ESP
 
     val QUADS_ESP: RenderType = RenderType.create(

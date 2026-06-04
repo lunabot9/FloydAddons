@@ -11,6 +11,8 @@ import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.textures.TextureFormat
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydDayTrackerModule
+import gg.floyd.features.impl.render.FloydInventoryHud
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import org.lwjgl.opengl.GL13C
 import org.lwjgl.opengl.GL33C
@@ -29,6 +31,13 @@ import org.lwjgl.opengl.GL33C
  * the main framebuffer). The FBO is re-bound between heterogeneous draws ([bindMainFbo]) because a
  * blaze3d render pass can retarget internally.
  */
+/**
+ * Which half of a panel is being drawn in the two-phase post-HUD pass. BACKGROUND = blaze3d (SDF fill +
+ * border, frosted blur, inventory item models); TEXT = NanoVG vector text. All backgrounds run before any
+ * text so NanoVG's GL-state corruption never precedes a blaze3d background. See [PostHudOverlay.render].
+ */
+enum class PanelPhase { BACKGROUND, TEXT }
+
 object PostHudOverlay {
 
     private val screenProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons PostHUD", -1000f, 1000f, true)
@@ -79,6 +88,32 @@ object PostHudOverlay {
         GL33C.glBindSampler(0, 0)
     }
 
+    /**
+     * Re-sync GL state between panels so one panel can't corrupt the next. A panel that draws text
+     * through NanoVG (raw OpenGL — the scoreboard, and the ESP overhead in NanoVG-font mode) mutates GL
+     * state behind blaze3d's *cached* state tracker; without resyncing, the NEXT panel's blaze3d render
+     * passes inherit the stale cache — the frosted blur samples a black/wrong texture and the rounded SDF
+     * fill silently drops (depth-test left on / blend left off). Mirrors the reset the PIP NanoVG path
+     * ([gg.floyd.utils.ui.rendering.NVGPIPRenderer]) does around its frame, but rebinds the MAIN
+     * framebuffer (not 0) so the next panel keeps drawing into it. Cheap; safe to call after every panel.
+     */
+    fun resetBetweenPanels() {
+        if (boundFbo == 0) return
+        val t = mc.mainRenderTarget
+        GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, boundFbo)
+        GlStateManager._viewport(0, 0, t.width, t.height)
+        GL33C.glActiveTexture(GL13C.GL_TEXTURE0)
+        GL33C.glBindSampler(0, 0)
+        GlStateManager._disableScissorTest()
+        GlStateManager._depthMask(true)
+        GlStateManager._colorMask(true, true, true, true)
+        GlStateManager._disableDepthTest()
+        GlStateManager._disableCull()
+        GlStateManager._enableBlend()
+        GlStateManager._blendFuncSeparate(770, 771, 1, 0)
+    }
+
+    @JvmStatic
     fun render() {
         if (mc.level == null || mc.player == null || mc.options.hideGui) return
         RenderSystem.assertOnRenderThread()
@@ -95,11 +130,57 @@ object PostHudOverlay {
 
         // Snapshot the framebuffer (world, here) so panel blur samples it instead of the FB it writes to.
         snapshotForBlur(target)
+
+        // Clear the main depth to far (1.0) ONCE this pass so 3D item models (drawn via the feature
+        // render dispatcher with depth-test/-write on) aren't rejected by leftover world+GUI depth — the
+        // same fresh-far depth a PIP gives items. Depth-only clear; the color (the rendered world) is
+        // untouched. Safe at END_MAIN: nothing world-renders after this point, and the main depth is
+        // re-cleared at the start of the next frame's world pass; the SDF rect/blur and mc.font/NanoVG
+        // draws are depth-test-off, so a cleared depth is harmless to them.
+        target.depthTexture?.let { depth ->
+            RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depth, 1.0)
+        }
         bindMainFbo()
 
-        // Draw each Floyd panel directly, in painter's order. (Inventory / day-tracker / ESP overhead
-        // migrate here next.)
-        FloydCustomScoreboard.renderAtWorldEnd()
+        // Item icons (3D item models) and mc.font text in this pass flush through RenderSystem's MODELVIEW
+        // matrix, which at END_MAIN is still the WORLD CAMERA view (the world was just rendered). Without
+        // resetting it, the icons/text are transformed by the camera — they swim/spin around the player as
+        // the view rotates instead of sitting still in their 2D panel. The SDF rect/blur use their own
+        // explicit transform matrices (Matrix4f().translation), so they're unaffected. Reset the modelview
+        // to identity for the whole panel pass; pop it back after so the vanilla HUD / screens draw normally.
+        val modelView = RenderSystem.getModelViewStack()
+        modelView.pushMatrix()
+        modelView.identity()
+
+        // Draw each Floyd panel directly to the framebuffer. ORDER MATTERS: NanoVG (the scoreboard's
+        // smooth-font text, and the ESP overhead in NanoVG-font mode) is RAW OpenGL — it mutates GL state
+        // behind blaze3d's cached state tracker, and that corruption can't be fully undone mid-frame
+        // (the frosted blur of a *later* panel then samples black and its SDF fill silently drops; only
+        // MC's next-frame setup truly recovers it). The item-model + mc.font panels are pure blaze3d
+        // (cache-consistent), so they're safe to draw first. So: all blaze3d panels first, the NanoVG
+        // scoreboard LAST, then the end-of-pass reset below cleans up before the vanilla HUD. resetBetweenPanels()
+        // keeps state tidy between them (and best-effort isolates the ESP's optional NanoVG mode).
+        // TWO PHASES so every panel can use NanoVG text without the multi-NanoVG black-box bug. NanoVG is
+        // raw GL: it corrupts blaze3d's cached state, so any blaze3d draw AFTER a NanoVG draw can render
+        // black. We therefore draw EVERY panel's blaze3d BACKGROUND first (SDF fill/border, frosted blur,
+        // and the inventory's 3D item models) while the state is clean, then EVERY panel's NanoVG TEXT
+        // last — after which nothing blaze3d runs in this pass, so the corruption is harmless. (Previously
+        // only the scoreboard could be NanoVG, and only by being drawn dead last.)
+        // NOTE: the ESP overhead is NOT drawn here — it's a true world-space billboard from RenderUtils'
+        // RenderEvent.Last pass; this screen-space pass only owns the 2D HUD panels.
+        FloydInventoryHud.renderAtWorldEnd(PanelPhase.BACKGROUND)
+        resetBetweenPanels()
+        FloydDayTrackerModule.renderAtWorldEnd(PanelPhase.BACKGROUND)
+        resetBetweenPanels()
+        FloydCustomScoreboard.renderAtWorldEnd(PanelPhase.BACKGROUND)
+        resetBetweenPanels()
+
+        FloydInventoryHud.renderAtWorldEnd(PanelPhase.TEXT)
+        FloydDayTrackerModule.renderAtWorldEnd(PanelPhase.TEXT)
+        FloydCustomScoreboard.renderAtWorldEnd(PanelPhase.TEXT)
+        resetBetweenPanels()
+
+        modelView.popMatrix()
 
         RenderSystem.outputColorTextureOverride = null
         RenderSystem.outputDepthTextureOverride = null

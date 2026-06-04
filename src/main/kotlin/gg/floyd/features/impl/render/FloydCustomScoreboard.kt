@@ -10,6 +10,7 @@ import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
+import gg.floyd.utils.ui.rendering.PanelPhase
 import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.Font
 import net.minecraft.client.renderer.LightTexture
@@ -50,6 +51,9 @@ object FloydCustomScoreboard : Module(
     toggled = false,
 ) {
     private const val SCOREBOARD_FONT_SIZE = 9f
+    // Per-letter phase step for the "FloydAddons" brand line so it sweeps left→right letter-by-letter
+    // using the panel's OWN border color (chroma rainbow / base↔fade gradient / flat solid).
+    private const val BRAND_LETTER_PHASE_STEP = 0.04f
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
 
     // Default OFF = Floyd's smooth NanoVG font. Safe from the old multi-PIP flicker because the
@@ -162,8 +166,11 @@ object FloydCustomScoreboard : Module(
 
     private fun buildScoreboardLayout(title: Component, brand: Component, lines: List<ScoreLine>): ScoreboardRender {
         val titleText = styledText(title.visualOrderText)
-        // The Floyd brand line tracks the panel border color (chroma / fade / solid) via the accent.
-        val brandText = styledText(brand.visualOrderText, forcedColor = scoreboardAccentColor(0f))
+        // The Floyd brand line sweeps left→right letter-by-letter using the panel's OWN border color
+        // (chroma -> rainbow flow, fade -> base↔fade gradient, solid -> flat color), so it always matches
+        // the configured scoreboard border. Each letter samples the border accent at a phase offset by its
+        // visual index; when the border is solid the offset is ignored so every letter is the same color.
+        val brandText = styledText(brand.visualOrderText, forcedColorAt = { i -> scoreboardAccentColor(i * BRAND_LETTER_PHASE_STEP) })
         val titleWidth = textWidth(titleText)
         val brandWidth = textWidth(brandText)
         // The right-hand score-number column is intentionally omitted; size the box to the names only.
@@ -197,24 +204,25 @@ object FloydCustomScoreboard : Module(
         return ScoreboardRender(boxWidth, boxHeight, textElements)
     }
 
-    // HUD element callback: in the editor it draws the preview (deferred) and always reports the size; in
-    // game it draws NOTHING here — the world-end pass [renderAtWorldEnd] draws the real scoreboard so it
-    // stays visible under chat / inventory / the ClickGUI (which then blur over it).
+    // HUD element callback: this NEVER draws — it only reports the panel's size so the HUD editor can size
+    // its drag box. Both in game AND in the editor the actual panel is drawn by the single inline pass
+    // [renderAtWorldEnd] (one rendering system everywhere, so fonts/blur/borders are identical and
+    // overlapping editor panels never clobber — the old deferred GuiGraphics/PIP preview is gone).
     private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
         val r = scoreboardRender(example) ?: return 0 to 0
-        if (example) drawScoreboardDeferred(r.boxWidth, r.boxHeight, r.texts)
         return r.boxWidth to r.boxHeight
     }
 
     /**
-     * The real in-game scoreboard render, run screen-independently from the world-end post-HUD pass
-     * (PostHudOverlay). Draws directly to the bound main framebuffer using the HUD element's own
-     * framebuffer-pixel position/scale (no GuiGraphics pose), so it shows regardless of any open screen.
+     * The single scoreboard render — drawn directly to the main framebuffer from the world-end post-HUD
+     * pass (PostHudOverlay), both in game AND while the HUD editor is open (the editor just drags it). Uses
+     * the HUD element's own framebuffer-pixel position/scale (no GuiGraphics pose), so it shows regardless
+     * of any open screen. In the editor it renders the example layout when there's no live sidebar.
      */
-    fun renderAtWorldEnd() {
-        if (mc.screen === gg.floyd.clickgui.HudManager) return // editor draws the preview via the deferred path
-        val r = scoreboardRender(false, requireVanillaSignal = false) ?: return
-        drawScoreboardInline(r.boxWidth, r.boxHeight, r.texts)
+    fun renderAtWorldEnd(phase: PanelPhase) {
+        val editor = mc.screen === gg.floyd.clickgui.HudManager
+        val r = scoreboardRender(example = editor, requireVanillaSignal = false) ?: return
+        drawScoreboardInline(r.boxWidth, r.boxHeight, r.texts, phase)
     }
 
     private fun scoreLine(name: String): ScoreLine {
@@ -264,7 +272,7 @@ object FloydCustomScoreboard : Module(
      * + mc.font draw in logical (/dpr) space — the FBO is re-bound between them because the SDF blaze3d
      * render pass can retarget.
      */
-    private fun drawScoreboardInline(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
+    private fun drawScoreboardInline(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>, phase: PanelPhase) {
         val target = FloydPanelStyle.PanelTarget.SCOREBOARD
         val dpr = NVGRenderer.devicePixelRatio()
         val scale = scoreboardHud.scale
@@ -273,31 +281,35 @@ object FloydCustomScoreboard : Module(
         val fw = boxWidth * scale
         val fh = boxHeight * scale
 
-        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
-        val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
-        val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
-        val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
+        if (phase == PanelPhase.BACKGROUND) {
+            val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+            val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
+            val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
+            val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
-        // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
-        if (FloydPanelStyle.blurFor(target)) {
-            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
-            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
-                PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
-                PostHudOverlay.bindMainFbo()
+            // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
+            if (FloydPanelStyle.blurFor(target)) {
+                val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+                if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+                    PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
+                    PostHudOverlay.bindMainFbo()
+                }
             }
+            RoundRectPIPRenderer.drawInline(
+                fx, fy, fw, fh,
+                fill, fill, fill, fill,
+                radius, radius, radius, radius,
+                border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
+                outline
+            )
+            return
         }
-        RoundRectPIPRenderer.drawInline(
-            fx, fy, fw, fh,
-            fill, fill, fill, fill,
-            radius, radius, radius, radius,
-            border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
-            outline
-        )
 
+        // TEXT phase (NanoVG, or the optional all-mc.font mode). Runs after every panel's background, so
+        // NanoVG's GL-state corruption can no longer black out a background — see PostHudOverlay.render.
         val originX = fx / dpr
         val originY = fy / dpr
         val textScale = scale / dpr
-        PostHudOverlay.bindMainFbo()
         if (useMinecraftScoreboardFont()) {
             drawScoreboardTextMc(texts, originX, originY, textScale, allSegments = true)
             return
@@ -368,7 +380,7 @@ object FloydCustomScoreboard : Module(
         }
     }
 
-    private fun styledText(text: FormattedCharSequence, forcedColor: Int? = null): StyledScoreboardText {
+    private fun styledText(text: FormattedCharSequence, forcedColor: Int? = null, forcedColorAt: ((Int) -> Int)? = null): StyledScoreboardText {
         // Apply Neck/Nick Hider + server/profile-id replacement to the scoreboard text up front. The
         // vanilla swap is wired through FontMixin (Font.prepareText/width), but this scoreboard renders
         // its custom font through NVGRenderer, which never touches Font — so without this the nick swap
@@ -387,7 +399,8 @@ object FloydCustomScoreboard : Module(
             val normalized = normalizeForScoreboardFont(codePoint)
             glyphs.add(normalized ?: String(Character.toChars(codePoint)))
             skip.add(normalized == null)
-            colors.add(forcedColor ?: scoreboardStyleColor(style))
+            // forcedColorAt colors per visual glyph index (left→right) for the brand's letter-by-letter chroma.
+            colors.add(forcedColorAt?.invoke(colors.size) ?: forcedColor ?: scoreboardStyleColor(style))
             true
         }
         if (glyphs.isEmpty()) return StyledScoreboardText(emptyList())

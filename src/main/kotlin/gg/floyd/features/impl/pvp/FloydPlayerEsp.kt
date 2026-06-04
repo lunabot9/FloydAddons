@@ -13,17 +13,26 @@ import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.utils.Colors
 import gg.floyd.utils.RealPlayerFilter
 import gg.floyd.utils.modMessage
+import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.blaze3d.vertex.PoseStack
 import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemStack
-import gg.floyd.utils.render.WorldToScreen
+import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemWorld
+import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.render.drawTracer
 import gg.floyd.utils.render.drawWireFrameBox
 import gg.floyd.utils.renderBoundingBox
 import gg.floyd.utils.renderPos
+import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.player.AbstractClientPlayer
+import net.minecraft.client.renderer.LightTexture
+import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.phys.Vec3
+import org.joml.Matrix4f
+import org.joml.Quaternionf
 
 /**
  * ESP scoped to other players. Shows health and equipped items either as an
@@ -66,38 +75,16 @@ object FloydPlayerEsp : Module(
     private const val ICON_SIZE = 16
     private const val ICON_SPACING = 18
 
-    // Overhead nameplate tuning (local px, before the per-frame perspective scale):
+    // Overhead nameplate tuning (local font-px; the GPU perspective scales the world billboard):
     private const val OVERHEAD_ICON_GAP = 2          // gap between equipment icons on the single row
     private const val OVERHEAD_TEXT_ICON_GAP = 4     // gap between the health text and the first icon
-    // Reference panel height (= ICON_SIZE + 2 * default padding) and the world height it maps to at
-    // Scale 1. Together they set the baseline: a default-padded plate renders ~OVERHEAD_WORLD_HEIGHT
-    // blocks tall on screen, then shrinks/grows with distance like the ESP box. No cap.
-    private const val OVERHEAD_REF_PX = 24f
-    private const val OVERHEAD_WORLD_HEIGHT = 0.55f
     // World height above the player's bounding box where the plate's bottom edge floats (above the nametag).
     private const val OVERHEAD_ANCHOR_OFFSET = 0.6
-    // Sub-pixel plates are invisible AND would allocate a degenerate 0-size GPU texture (OpenGL error
-    // 1281). Skip below this on-screen size. Not a scaling cap — just a "too far to see" cull.
-    private const val OVERHEAD_MIN_PX = 2f
-    // GPU safety: keep the panel texture well under the driver's max texture size. Only reached at
-    // point-blank range; does not affect the scaling at normal distances.
-    private const val OVERHEAD_MAX_PX = 4000f
-    // Time constant (seconds) for the per-player low-pass on the overhead plate's perspective scale.
-    // The raw depth-derived size jitters frame-to-frame while jumping in place / walking toward or away
-    // from a player (the jump arc + view bob wobble the eye-space depth), which reads as the plate
-    // snapping bigger/smaller. Smoothing the SIZE only (never the position) animates it cleanly. ~0.14s
-    // kills the flicker while staying responsive to real approach.
-    private const val OVERHEAD_SCALE_TAU = 0.14f
-    // Coarse geometric grid (~8% per level) the plate's on-screen size snaps to. Holding the size on a
-    // grid level keeps the rounded panel's integer pixel dimensions identical frame-to-frame, so the
-    // border/text/icons stop re-rasterizing (the "flickering/redrawing" while walking or jumping in
-    // place); the plate only re-rasters during a rare, eased transition when you move far enough to
-    // cross a level. Hysteresis (in [stickyQuantize]) prevents boundary chatter; OVERHEAD_SCALE_TAU
-    // eases each step so it animates as a clean monotonic zoom instead of popping.
-    private const val OVERHEAD_SCALE_STEP = 1.08f
-    private val overheadScaleSmooth = HashMap<java.util.UUID, Float>()
-    private val overheadLevel = HashMap<java.util.UUID, Float>()
-    private var lastOverheadScaleMs = 0L
+    // Fixed world size of one local font-pixel (vanilla nametag 1/40 == 0.025; renderQueuedTexts uses the
+    // same). [overheadScale] multiplies it. NO per-frame/per-player scaling, smoothing, quantize or easing —
+    // pure GPU perspective sizes the billboard, so it is correct on the FIRST frame a player appears (this
+    // is the entire fix for "starts huge then shrinks").
+    private const val OVERHEAD_WORLD_PX = 0.025f
 
     private val stalkAllAction by ActionSetting("Stalk All Players", desc = "Toggles Player ESP for all players (same as /fa stalk all).") {
         val on = stalkAll()
@@ -116,8 +103,8 @@ object FloydPlayerEsp : Module(
             if (mc.player == null) return@on
             for (other in otherPlayers()) {
                 val c = color
-                if (boxes) drawWireFrameBox(other.renderBoundingBox, c, thickness = 2f, depth = false)
-                if (tracers) drawTracer(other.renderPos.add(0.0, other.bbHeight / 2.0, 0.0), c, depth = false, thickness = 2f)
+                if (boxes) drawWireFrameBox(other.renderBoundingBox, c, thickness = 1.5f, depth = false)
+                if (tracers) drawTracer(other.renderPos.add(0.0, other.bbHeight / 2.0, 0.0), c, depth = false, thickness = 1.5f)
             }
         }
     }
@@ -139,68 +126,46 @@ object FloydPlayerEsp : Module(
     }
 
     /**
-     * Screen-space overhead nameplate: a SINGLE row of heart + health and the equipped-item icons,
-     * inside a tinted panel bordered with the ESP color. The plate is pinned a fixed world distance
-     * above the head and scaled per-frame by the SAME perspective factor the ESP box draws at, so it
-     * behaves like a physical, constant-world-size object floating over the player (a real nametag):
-     * it shrinks as you back away and grows as you approach, with no min/max cap. The [overheadScale]
-     * setting multiplies that world size.
-     *
-     * Drawn in the HUD pass (item icons need GuiGraphics) but in plain gui-scaled space, and the
-     * perspective factor is read straight from the bob-stable render matrices via [WorldToScreen],
-     * so the plate tracks heads without view-bob wobble.
+     * WORLD-SPACE billboard overhead, drawn from RenderUtils' RenderEvent.Last (END_MAIN) pass with the
+     * world PoseStack + camera + camera rotation — the same basis renderQueuedTexts billboards nametag
+     * text with. The plate is a constant-world-size object over each player; pure GPU perspective sizes it,
+     * so a freshly-appearing player draws at the steady size on its FIRST frame (no "starts huge"). There is
+     * no screen projection, pxPerBlock, smoothing, quantize or easing anywhere — only the fixed world S.
      */
-    fun drawOverheadOverlay(graphics: GuiGraphics) {
+    fun renderOverheadBillboard(pose: PoseStack, camera: Vec3, cameraRotation: Quaternionf, bufferSource: MultiBufferSource.BufferSource) {
         if (!enabled) return
         if (display != 0 && display != 2) return
         if (!showHealth && !showEquipment) return
         val self = mc.player ?: return
 
-        // Per-frame low-pass coefficient (time-constant based, so it is frame-rate independent).
-        val now = System.currentTimeMillis()
-        val dt = if (lastOverheadScaleMs == 0L) 0.016f else (now - lastOverheadScaleMs).coerceIn(1L, 100L) / 1000f
-        lastOverheadScaleMs = now
-        val alpha = (1f - kotlin.math.exp(-dt / OVERHEAD_SCALE_TAU)).coerceIn(0f, 1f)
-        val seen = HashSet<java.util.UUID>()
+        // Equipment icons are real item models drawn through the vanilla item path, which depth-tests
+        // against the world — so they'd vanish behind any block between you and the player, while the
+        // rounded plate (no-depth SDF) and the health text (see-through) sit on top. Clear the main depth
+        // once here so the icons composite on top of the plate like the rest of it. Safe: the first-person
+        // hand renders after this (END_MAIN) and always draws on top regardless of prior depth.
+        if (showEquipment) {
+            mc.mainRenderTarget.depthTexture?.let { depth ->
+                RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(depth, 1.0)
+            }
+        }
 
-        // Farthest-first so a nearer player's plate always draws on top of a farther one when they overlap.
+        // Farthest-first so a nearer plate composits on top of a farther one when they overlap.
         for (player in otherPlayers().sortedByDescending { it.distanceToSqr(self) }) {
             if (player.distanceToSqr(self) > 64.0 * 64.0) continue
-            // Anchor = the plate's bottom-center, a fixed world distance above the head (above the nametag).
             val anchor = player.renderPos.add(0.0, player.bbHeight + OVERHEAD_ANCHOR_OFFSET, 0.0)
-            val anchorScreen = WorldToScreen.project(anchor) ?: continue
-            // Perspective scale from the anchor's eye-space depth, NOT by projecting a vertical world
-            // offset: a `+1` block offset foreshortens to ~0 px when looking up/down (size breaks
-            // above/below) and oscillates under view-bob while moving/jumping (flicker). Depth-based
-            // scale is view-pitch-independent and bob-steady.
-            val target = WorldToScreen.screenScale(anchor) ?: continue
-            if (target <= 0.01f) continue
-            // Snap the on-screen size to a coarse geometric grid (with hysteresis) so the rounded panel's
-            // integer pixel dimensions hold steady between rare, eased steps instead of re-rasterizing
-            // (flickering) every frame as the depth drifts while walking toward/away or jumping in place.
-            val level = stickyQuantize(target, overheadLevel[player.uuid] ?: 0f, OVERHEAD_SCALE_STEP)
-            overheadLevel[player.uuid] = level
-            // Ease the rendered size toward the committed grid level so a level change animates as a clean
-            // monotonic zoom instead of popping; snap once settled so it holds pixel-identical. The
-            // POSITION (anchorScreen) is never smoothed, so the plate still tracks the head precisely.
-            val prev = overheadScaleSmooth[player.uuid]
-            val pxPerBlock = if (prev == null) level else {
-                val next = prev + (level - prev) * alpha
-                if (kotlin.math.abs(level - next) < level * 0.005f) level else next
-            }
-            overheadScaleSmooth[player.uuid] = pxPerBlock
-            seen.add(player.uuid)
-            drawOverheadEntry(graphics, player, anchorScreen.x, anchorScreen.y, overheadScaleFactor(pxPerBlock, overheadScale))
-        }
-        // Drop smoothing state for players no longer drawn so the maps can't grow unbounded.
-        if (overheadScaleSmooth.size != seen.size) {
-            overheadScaleSmooth.keys.retainAll(seen)
-            overheadLevel.keys.retainAll(seen)
+            drawOverheadBillboard(pose, player, anchor, camera, cameraRotation, bufferSource)
         }
     }
 
-    private fun drawOverheadEntry(graphics: GuiGraphics, player: AbstractClientPlayer, anchorX: Float, anchorY: Float, scale: Float) {
-        val pad = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.ESP_OVERHEAD).coerceAtLeast(0)
+    private fun drawOverheadBillboard(
+        pose: PoseStack, player: AbstractClientPlayer, anchor: Vec3, camera: Vec3, cameraRotation: Quaternionf,
+        bufferSource: MultiBufferSource.BufferSource
+    ) {
+        val target = FloydPanelStyle.PanelTarget.ESP_OVERHEAD
+        // The overhead is a COMPACT floating nameplate, not a full HUD panel. The shared panel-style
+        // padding/radius are tuned for big screen panels (scoreboard/inventory) and look chunky/over-padded
+        // on this small world plate, so halve them here for a tighter nameplate (clamped to a sane minimum).
+        val pad = (FloydPanelStyle.paddingFor(target) / 2).coerceAtLeast(1)
         val hpText = if (showHealth) "$HEART ${player.health.toInt()}" else null
         val hpWidth = hpText?.let { mc.font.width(it) } ?: 0
         val items = if (showEquipment) equipmentOf(player).filter { !it.isEmpty } else emptyList()
@@ -208,85 +173,76 @@ object FloydPlayerEsp : Module(
         val dims = overheadDimensions(hpWidth, items.size, pad, mc.font.lineHeight)
         if (dims.panelWidth <= 0) return
 
-        // Per-frame on-screen size of the plate (the panel extends UP from the anchor).
-        val scaledW = scale * dims.panelWidth
-        val scaledH = scale * dims.panelHeight
-        if (scaledW < OVERHEAD_MIN_PX || scaledH < OVERHEAD_MIN_PX) return
-        // Cull plates entirely off-screen so we don't render (and texture-allocate) a plate per
-        // off-screen player on a crowded server.
-        val guiW = mc.window.guiScaledWidth.toFloat()
-        val guiH = mc.window.guiScaledHeight.toFloat()
-        val halfW = scaledW / 2f
-        if (anchorX + halfW < 0f || anchorX - halfW > guiW || anchorY < 0f || anchorY - scaledH > guiH) return
-        // Clamp only when the texture would approach the GPU's max size (point-blank); preserves aspect.
-        val drawScale = if (scaledW > OVERHEAD_MAX_PX || scaledH > OVERHEAD_MAX_PX)
-            scale * (OVERHEAD_MAX_PX / maxOf(scaledW, scaledH)) else scale
+        val s = OVERHEAD_WORLD_PX * overheadScale
 
-        // Plate bottom-center sits at the anchor and extends upward; everything inside the pushed
-        // pose (panel, text, icons) is scaled together by the per-frame perspective factor.
-        val left = -dims.panelWidth / 2
-        val top = -dims.panelHeight
-        graphics.pose().pushMatrix()
-        graphics.pose().translate(anchorX, anchorY)
-        graphics.pose().scale(drawScale, drawScale)
+        // Billboard BASIS = world PoseStack (identity model) . translate(anchor-camera) . rotate(camRot)
+        // . scale(s,-s,s). After this 1 local unit == 1 font-px, +x screen-right, +y screen-DOWN, origin ==
+        // anchor. Identical recipe to RenderUtils.renderQueuedTexts.
+        val basis = Matrix4f(pose.last().pose())
+            .translate((anchor.x - camera.x).toFloat(), (anchor.y - camera.y).toFloat(), (anchor.z - camera.z).toFloat())
+            .rotate(cameraRotation)
+            .scale(s, -s, s)
 
-        // "Border = ESP Color" tints the nameplate border with this player's ESP color (honouring its
-        // chroma flag); otherwise it falls back to the global FloydPanelStyle border.
-        if (borderIsEspColor) {
-            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, FloydPanelStyle.PanelTarget.ESP_OVERHEAD, HudPanel.monochrome(color.rgba))
-        } else {
-            HudPanel.fillPanel(graphics, left, top, left + dims.panelWidth, top + dims.panelHeight, FloydPanelStyle.PanelTarget.ESP_OVERHEAD)
-        }
+        // The health text below billboards correctly because mc.font bakes `basis` into its vertices and
+        // then bufferSource.endBatch() multiplies by RenderSystem.getModelViewMatrix() (the world camera
+        // VIEW rotation) at flush time. The rect (drawWorld sets DynamicTransforms.ModelViewMat directly)
+        // and the item icons (drawItemWorld pushes the modelview to identity) DON'T get that view matrix
+        // applied for free, so they were missing the camera rotation and swam around the camera. Fold the
+        // same view matrix into their transforms up front so all three share one world transform: this is
+        // the matrix the text's flush applies, captured once here.
+        val viewBasis = Matrix4f(RenderSystem.getModelViewMatrix()).mul(basis)
 
+        // Local panel rect: bottom edge on the anchor -> top-left = (-w/2, -h).
+        val left = (-dims.panelWidth / 2).toFloat()
+        val top = (-dims.panelHeight).toFloat()
+
+        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        // "Border = ESP Color" tints with this player's ESP color (honouring chroma); else the global panel
+        // border, seeded by the (stable) world anchor so adjacent plates animate out of phase.
+        val border = if (borderIsEspColor) HudPanel.monochrome(color.rgba)
+            else HudPanel.panelBorderColors(target, anchor.x.toInt(), anchor.z.toInt())
+        val radius = (FloydPanelStyle.cornerRadiusFor(target) / 2f).coerceAtLeast(1f)
+        // Thinner border too — the full HUD border width reads as a heavy, chunky outline on the small plate.
+        val outline = (FloydPanelStyle.borderWidthFor(target) / 2f).coerceAtLeast(1f)
+
+        // 1) Rounded panel + border (world MVP = view×basis translated to the rect's local top-left).
+        RoundRectPIPRenderer.drawWorld(
+            Matrix4f(viewBasis).translate(left, top, 0f),
+            dims.panelWidth.toFloat(), dims.panelHeight.toFloat(),
+            fill, fill, fill, fill,
+            radius, radius, radius, radius,
+            border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
+            outline
+        )
+
+        // ---- Content row (font-px local space, +y DOWN; the basis -y flip already matches glyph layout). ----
         val rowHeight = if (items.isNotEmpty()) ICON_SIZE else mc.font.lineHeight
         val rowTop = top + pad
-        var cx = left + pad
+
+        // 2) Heart + health text — same recipe as renderQueuedTexts. mc.font keeps the heart glyph.
         if (hpText != null) {
-            val ty = rowTop + (rowHeight - mc.font.lineHeight) / 2
-            graphics.drawString(mc.font, hpText, cx, ty, Colors.MINECRAFT_RED.rgba, true)
-            cx += hpWidth + if (items.isNotEmpty()) OVERHEAD_TEXT_ICON_GAP else 0
-        }
-        val iconTop = rowTop + (rowHeight - ICON_SIZE) / 2
-        for (stack in items) {
-            graphics.drawItemStack(stack, cx, iconTop)
-            cx += ICON_SIZE + OVERHEAD_ICON_GAP
+            val tyLocal = rowTop + (rowHeight - mc.font.lineHeight) / 2f
+            mc.font.drawInBatch(
+                hpText, left + pad, tyLocal, Colors.MINECRAFT_RED.rgba, true,
+                basis, bufferSource, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT
+            )
+            bufferSource.endBatch()   // composit this plate's text immediately over its own rect
         }
 
-        graphics.pose().popMatrix()
-    }
-
-    /**
-     * Per-frame perspective scale for the overhead plate. [pxPerBlock] is how many gui pixels one
-     * world block spans at the plate's depth (measured from the real render matrices), so the result
-     * grows as the player approaches and shrinks as they recede — never capped. [scaleMultiplier] is
-     * the user's [overheadScale] setting. Pure for testing the closer-is-bigger invariant.
-     */
-    internal fun overheadScaleFactor(pxPerBlock: Float, scaleMultiplier: Float): Float =
-        pxPerBlock * (OVERHEAD_WORLD_HEIGHT / OVERHEAD_REF_PX) * scaleMultiplier
-
-    /**
-     * Snaps a positive on-screen size to the nearest level of the geometric grid `step^n`. Keeping the
-     * plate's size on a grid level makes its integer pixel dimensions identical frame-to-frame, so the
-     * rounded panel/border stops re-rasterizing as the depth drifts. Pure for testing.
-     */
-    internal fun quantizeScale(value: Float, step: Float): Float {
-        if (value <= 0f || step <= 1f) return value
-        val n = Math.round(Math.log(value.toDouble()) / Math.log(step.toDouble()))
-        return Math.pow(step.toDouble(), n.toDouble()).toFloat()
-    }
-
-    /**
-     * [quantizeScale] with hysteresis: holds the previously committed grid level until [value] drifts
-     * more than ~70% of a step away from it (in log space), then snaps to the new nearest level. The
-     * dead-band stops residual depth jitter near a level boundary from flipping the plate size back and
-     * forth (chatter) while standing still or jumping in place. Pure for testing.
-     */
-    internal fun stickyQuantize(value: Float, prevLevel: Float, step: Float): Float {
-        if (prevLevel <= 0f) return quantizeScale(value, step)
-        if (value <= 0f || step <= 1f) return prevLevel
-        val logRatio = Math.log((value / prevLevel).toDouble())
-        if (Math.abs(logRatio) < Math.log(step.toDouble()) * 0.7) return prevLevel
-        return quantizeScale(value, step)
+        // 3) Equipment icons — each centered in an ICON_SIZE local box, under the same basis. The
+        //    scale(+,-,+) inside drawItemWorld's MVP undoes the basis -y flip so the item is upright.
+        if (items.isNotEmpty()) {
+            val gapAfterText = if (hpText != null) OVERHEAD_TEXT_ICON_GAP else 0
+            var cxLocal = left + pad + hpWidth + gapAfterText
+            val iconTopLocal = rowTop + (rowHeight - ICON_SIZE) / 2f
+            for (stack in items) {
+                val iconMv = Matrix4f(viewBasis)
+                    .translate(cxLocal + ICON_SIZE / 2f, iconTopLocal + ICON_SIZE / 2f, 0f)
+                    .scale(ICON_SIZE.toFloat(), -ICON_SIZE.toFloat(), ICON_SIZE.toFloat())
+                drawItemWorld(stack, iconMv)
+                cxLocal += ICON_SIZE + OVERHEAD_ICON_GAP
+            }
+        }
     }
 
     /** Single-row panel dimensions (local px) for the overhead plate. Pure for layout testing. */

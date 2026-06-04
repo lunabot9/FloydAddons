@@ -109,6 +109,14 @@ object RenderBatchManager {
             matrix.renderQueuedBeaconBeams(renderConsumer.beaconBeams, camera)
             matrix.renderQueuedTexts(renderConsumer.texts, bufferSource, camera)
 
+            // World-space ESP overhead billboards (nameplate panel + health + equipment icons) — drawn in
+            // this same no-fog world pass so the GPU perspective sizes them like vanilla nametags (the
+            // entire fix for the old screen-scale "starts huge then shrinks"). `matrix` is the base
+            // (identity-model) world PoseStack after the popPose above; health text queues into bufferSource
+            // (flushed at the endBatch below), the SDF rect + item icons flush themselves.
+            val cameraRotation = mc.gameRenderer.mainCamera.rotation()
+            gg.floyd.features.impl.pvp.FloydPlayerEsp.renderOverheadBillboard(matrix, camera, cameraRotation, bufferSource)
+
             if (noFog != null) {
                 bufferSource.endBatch()
                 if (savedFog != null) RenderSystem.setShaderFog(savedFog)
@@ -122,10 +130,10 @@ object RenderBatchManager {
             // Floyd panels flickering / going black from the single shared vanilla PIP texture).
             PooledPicturePIPRenderer.recycleAll()
 
-            // Floyd's no-PIP HUD panels: drawn straight to the main framebuffer HERE — after the world
-            // but before the vanilla HUD / any open screen — so they always show (chat / inventory /
-            // ClickGUI), sit UNDER GUIs (which blur over them), and composite in one painter's-order pass.
-            gg.floyd.utils.ui.rendering.PostHudOverlay.render()
+            // NOTE: Floyd's no-PIP HUD panels are NOT drawn here. END_MAIN fires before the first-person
+            // hand item is rendered (renderItemInHand runs later inside renderLevel/GameRenderer), so drawing
+            // here would put the held item ON TOP of the HUD panels. The panel pass now runs from
+            // GameRendererMixin at GuiRenderState.reset — after the world+hand, before the vanilla HUD/screen.
         }
     }
 }
@@ -135,8 +143,9 @@ private fun Int.isFullyOpaque(): Boolean = ((this ushr 24) and 0xFF) == 0xFF
 private fun resolveLineRenderType(depth: Boolean, fullyOpaque: Boolean) = when {
     depth && fullyOpaque -> RenderTypes.LINES
     depth -> RenderTypes.LINES_TRANSLUCENT
-    fullyOpaque -> CustomRenderType.LINES_ESP
-    else -> CustomRenderType.LINES_TRANSLUCENT_ESP
+    // No-depth ESP lines (tracers + wireframes) go through the antialiased line type for smooth, soft
+    // edges. It uses translucent blend, so it serves both the opaque- and translucent-color cases.
+    else -> CustomRenderType.LINES_AA_ESP
 }
 
 private fun LineData.renderType() = resolveLineRenderType(
@@ -303,9 +312,19 @@ fun RenderEvent.Extract.drawTracer(to: Vec3, color: Color, depth: Boolean, thick
     if (mc.player == null) return
     // Lock the origin to the crosshair / screen-center so the tracer does not wobble with
     // view bobbing. Fall back to the eye position if the render matrices are unavailable.
-    val from = WorldToScreen.tracerOrigin()
-        ?: mc.player?.let { it.renderPos.add(it.forward.add(0.0, it.eyeHeight.toDouble(), 0.0)) }
-        ?: return
+    val origin = WorldToScreen.tracerOrigin()
+    if (origin != null) {
+        // Matrices ready: aim the far endpoint onto the origin's DEPTH PLANE (same screen direction as
+        // `to`). Both endpoints then sit at the same camera depth, so the whole tracer is constant-depth
+        // -> uniform on-screen width (no taper) AND it never crosses the camera/near plane (fixing the
+        // "tracer vanishes/glitches as it passes through the camera"). If `to` is at or behind the camera
+        // there is simply no on-screen point to trace to, so we cleanly skip rather than glitch.
+        val target = WorldToScreen.tracerTarget(to) ?: return
+        drawLine(listOf(origin, target), color, depth, thickness)
+        return
+    }
+    // Matrices not captured yet (first frames): fall back to an eye-anchored origin and the real target.
+    val from = mc.player?.let { it.renderPos.add(it.forward.add(0.0, it.eyeHeight.toDouble(), 0.0)) } ?: return
     drawLine(listOf(from, to), color, depth, thickness)
 }
 
