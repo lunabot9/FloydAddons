@@ -43,9 +43,24 @@ object FloydInventoryHud : Module(
         drawInventoryHud(it)
     }
 
+    // Reference GUI scale the panel is calibrated against. The slot grid is sized in framebuffer pixels as
+    // 18 * inventoryHudScale * (guiScale / REFERENCE_GUI_SCALE) — i.e. it scales WITH Minecraft's effective
+    // GUI scale (mc.window.guiScale), which itself tracks the framebuffer resolution. That makes the panel a
+    // CONSTANT fraction of the screen on every platform/resolution/DPI (the whole cross-platform-scaling fix:
+    // the old code used raw framebuffer px with no guiScale term, so it shrank on high-DPI displays and never
+    // responded to the GUI Scale slider). REFERENCE_GUI_SCALE = 2 means "behaves exactly as before at GUI
+    // scale 2, and proportionally everywhere else."
+    private const val REFERENCE_GUI_SCALE = 2f
+
+    /** One inventory slot in framebuffer pixels, normalized to [REFERENCE_GUI_SCALE] so it scales with guiScale. */
+    private fun slotSizePx(): Int {
+        val gs = mc.window.guiScale.coerceAtLeast(1).toFloat()
+        return (18f * inventoryHudScale * gs / REFERENCE_GUI_SCALE).roundToInt().coerceAtLeast(12)
+    }
+
     init {
         HudSizeRegistry.register("Inventory HUD") {
-            val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)
+            val slotSize = slotSizePx()
             val pad = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.INVENTORY).coerceAtLeast(0)
             9 * slotSize + 2 * pad to 3 * slotSize + 2 * pad
         }
@@ -68,7 +83,7 @@ object FloydInventoryHud : Module(
     // [renderAtWorldEnd], so the editor and in-game use ONE rendering system (identical fonts/blur/border,
     // no overlap clobber).
     private fun GuiGraphics.drawInventoryHud(example: Boolean): Pair<Int, Int> {
-        val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)
+        val slotSize = slotSizePx()
         val pad = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.INVENTORY).coerceAtLeast(0)
         return (9 * slotSize + 2 * pad) to (3 * slotSize + 2 * pad)
     }
@@ -78,8 +93,10 @@ object FloydInventoryHud : Module(
      * pass ([PostHudOverlay]), both in game AND while the HUD editor is open (the editor just drags it). Uses
      * the HUD element's own framebuffer-pixel position/scale, so it shows regardless of any open screen.
      */
-    // NanoVG font size for the stack counts — matches the scoreboard's vector text for a consistent look.
-    private const val COUNT_FONT_SIZE = 9f
+    // Stack-count text height as a fraction of one slot, so the count TRACKS the slot/item size at any
+    // guiScale (a fixed px size would look tiny in the larger slots high-DPI displays now produce). 0.45 of
+    // an 18-unit slot ≈ 8px, matching vanilla's count proportion.
+    private const val COUNT_FONT_RATIO = 0.45f
 
     /**
      * Two-phase render from the world-end post-HUD pass ([PostHudOverlay]). BACKGROUND draws the blaze3d
@@ -101,7 +118,7 @@ object FloydInventoryHud : Module(
         val fx = inventoryHud.x.toFloat()
         val fy = inventoryHud.y.toFloat()
 
-        val slotSize = (18 * inventoryHudScale).roundToInt().coerceAtLeast(12)
+        val slotSize = slotSizePx()
         // Padding insets the slot grid from the border (so the panel's Padding setting has a visible effect).
         val pad = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
         val boxWidth = 9 * slotSize + 2 * pad
@@ -157,6 +174,9 @@ object FloydInventoryHud : Module(
         val originX = fx / dpr
         val originY = fy / dpr
         val textScale = scale / dpr
+        // Count height tracks the slot so it stays proportional at any guiScale (see COUNT_FONT_RATIO).
+        val countFontSize = slotSize * COUNT_FONT_RATIO
+        val itemPx = 16f * itemScale
         NVGRenderer.beginFrame(mc.window.width.toFloat(), mc.window.height.toFloat())
         NVGRenderer.translate(originX, originY)
         NVGRenderer.scale(textScale, textScale)
@@ -166,13 +186,15 @@ object FloydInventoryHud : Module(
             val stack: ItemStack = inventory.getItem(slot + 9)
             if (stack.isEmpty || stack.count <= 1) continue
 
-            val localX = pad + col * slotSize + (slotSize - 16 * itemScale) / 2f
-            val localY = pad + row * slotSize + (slotSize - 16 * itemScale) / 2f
+            val localX = pad + col * slotSize + (slotSize - itemPx) / 2f
+            val localY = pad + row * slotSize + (slotSize - itemPx) / 2f
             val count = stack.count.toString()
-            // Centered in the slot, near the bottom (same placement as before, NanoVG metrics).
-            val tx = localX + (slotSize - NVGRenderer.textWidth(count, COUNT_FONT_SIZE, font)) / 2f + 1
-            val ty = localY + slotSize - COUNT_FONT_SIZE - 3
-            NVGRenderer.text(count, tx, ty, COUNT_FONT_SIZE, 0xFFFFFFFF.toInt(), font)
+            // RIGHT-aligned to the item's bottom-right (vanilla placement), so the ones digit sits in a fixed
+            // column — a 1-digit count and the ones digit of a 2-digit count line up instead of drifting with
+            // the old centered placement.
+            val tx = localX + itemPx - NVGRenderer.textWidth(count, countFontSize, font) - 1f
+            val ty = localY + itemPx - countFontSize - 1f
+            NVGRenderer.text(count, tx, ty, countFontSize, 0xFFFFFFFF.toInt(), font)
         }
         NVGRenderer.endFrame()
     }
