@@ -6,7 +6,6 @@ import com.google.gson.JsonPrimitive
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import gg.floyd.FloydAddonsMod
-import gg.floyd.clickgui.Panel
 import gg.floyd.clickgui.settings.Saving
 import gg.floyd.features.Category
 import gg.floyd.features.Module
@@ -302,14 +301,13 @@ object FloydSidecarConfig {
     }
 
     private fun seedMissingPanelDefaults() {
-        val activeCategories = Category.categories.values.toList()
-        val gap = 20f
-        activeCategories.forEachIndexed { index, category ->
-            ClickGUIModule.panelSetting.getOrPut(category.name) {
+        val defaults = ClickGUIModule.defaultPanelLayout()
+        for ((categoryName, layout) in defaults) {
+            ClickGUIModule.panelSetting.getOrPut(categoryName) {
                 ClickGUIModule.PanelData(
-                    x = 10f + (Panel.WIDTH + gap) * index,
-                    y = 10f,
-                    extended = true,
+                    x = layout.x,
+                    y = layout.y,
+                    extended = layout.extended,
                 )
             }
         }

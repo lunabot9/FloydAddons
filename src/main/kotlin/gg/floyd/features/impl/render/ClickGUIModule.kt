@@ -1,6 +1,5 @@
 package gg.floyd.features.impl.render
 
-import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.Panel
 import gg.floyd.clickgui.settings.AlwaysActive
@@ -21,7 +20,7 @@ object ClickGUIModule : Module(
     description = "Allows you to customize the UI."
 ) {
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
-    val clickGUIColor by ColorSetting("Color", Color(50, 150, 220), desc = "The color of the Click GUI — toggle chroma/fade inside the picker.")
+    val clickGUIColor by ColorSetting("Color", Color(50, 150, 220).also { it.chroma = true }, desc = "The color of the Click GUI — toggle chroma/fade inside the picker.")
 
     val roundedPanelBottom by BooleanSetting("Rounded Panel Bottoms", true, desc = "Whether to extend panels to make them rounded at the bottom.")
     private val openGuiKey by KeybindSetting("Open GUI Key", GLFW.GLFW_KEY_N, desc = "FloydAddons alternate GUI key.").onPress {
@@ -67,10 +66,24 @@ object ClickGUIModule : Module(
         val hasOffscreen = activeCategories.any { category ->
             panelSetting[category.name]?.let { it.x < 0f || it.x + Panel.WIDTH > availableWidth } ?: true
         }
-        if (hasMissing || hasOffscreen) resetPositions()
+        val hasStackedDefaults = activeCategories
+            .mapNotNull { category -> panelSetting[category.name]?.let { category.name to it } }
+            .groupBy { (_, panel) -> panel.x to panel.y }
+            .values
+            .any { entries -> entries.size > 1 }
+        if (hasMissing || hasOffscreen || hasStackedDefaults) resetPositions()
     }
 
     fun resetPositions() {
+        defaultPanelLayout().forEach { (categoryName, layout) ->
+            val setting = panelSetting.getOrPut(categoryName) { PanelData() }
+            setting.x = layout.x
+            setting.y = layout.y
+            setting.extended = true
+        }
+    }
+
+    fun defaultPanelLayout(): Map<String, PanelData> {
         val activeCategories = Category.categories.values.toList()
         val availableWidth = mc.window.screenWidth / getStandardGuiScale()
         val gap = 20f
@@ -78,6 +91,7 @@ object ClickGUIModule : Module(
         var x = 10f
         var y = 10f
         var rowMaxHeight = 0f
+        val layout = linkedMapOf<String, PanelData>()
         activeCategories.forEach { category ->
             // Wrap to a new row when the panel would extend past the right edge, so no panel is ever
             // pushed off-screen regardless of window width or how many categories exist.
@@ -86,13 +100,11 @@ object ClickGUIModule : Module(
                 y += rowMaxHeight + rowGap
                 rowMaxHeight = 0f
             }
-            val setting = panelSetting.getOrPut(category.name) { PanelData() }
-            setting.x = x
-            setting.y = y
-            setting.extended = true
+            layout[category.name] = PanelData(x = x, y = y, extended = true)
             rowMaxHeight = max(rowMaxHeight, estimatedPanelHeight(category))
             x += Panel.WIDTH + gap
         }
+        return layout
     }
 
     /** Rough extended-panel height (header + one row per module) used for default row-wrapping spacing. */
