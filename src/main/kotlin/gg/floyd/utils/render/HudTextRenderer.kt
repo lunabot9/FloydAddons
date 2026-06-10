@@ -47,6 +47,42 @@ object HudTextRenderer {
         light: Int = LightTexture.FULL_BRIGHT
     ) = drawSegments(listOf(Segment(text, color)), x, y, scale, alignment, displayMode, light)
 
+    // Scratch pose for the deferred path — drawInBatch bakes glyph vertices EAGERLY (proven by
+    // NvgTextReplay, which reuses one buffer across distinct per-run matrices), so reusing one
+    // Matrix4f across queued draws is safe. Render-thread-only, non-reentrant.
+    private val deferredPose = Matrix4f()
+
+    /**
+     * Queues [text] into the shared HUD buffer WITHOUT flushing — pair with [flushDeferred] after
+     * the last queued draw. One flush for N texts instead of N (the Inventory HUD's 27 stack
+     * counts were 27 endBatch+rebind round-trips per frame), and no per-call list/Matrix4f.
+     */
+    fun drawTextDeferred(
+        text: String,
+        x: Float,
+        y: Float,
+        scale: Float,
+        color: Int,
+        alignment: Alignment = Alignment.LEFT,
+        displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
+        light: Int = LightTexture.FULL_BRIGHT
+    ) {
+        if (text.isEmpty() || scale <= 0f) return
+        PostHudOverlay.applyScreenProjection()
+        deferredPose.translation(x, y, 0f).scale(scale, scale, 1f)
+        val segX = when (alignment) {
+            Alignment.LEFT -> 0f
+            Alignment.RIGHT -> -MsdfFontMetrics.unitWidth(text)
+        }
+        mc.font.drawInBatch(text, segX, 0f, color, false, deferredPose, mc.renderBuffers().bufferSource(), displayMode, 0, light)
+    }
+
+    /** Flushes everything queued by [drawTextDeferred] and re-binds the main FBO. */
+    fun flushDeferred() {
+        mc.renderBuffers().bufferSource().endBatch()
+        PostHudOverlay.bindMainFbo()
+    }
+
     /** Draws [segments] as one line, advancing by their un-ceiled float widths. See [drawText]. */
     fun drawSegments(
         segments: List<Segment>,

@@ -123,10 +123,56 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
             if (item.isEmpty) return
             val tracking = TrackingItemStackRenderState()
             mc.itemModelResolver.updateForTopItem(tracking, item, ItemDisplayContext.GUI, mc.level, mc.player, 0)
+            beginInlineBatch()
+            submitInline(tracking, x, y, size)
+            flushInlineBatch()
+        }
 
-            if (tracking.usesBlockLight()) mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_3D)
-            else mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_FLAT)
+        // ---- Batched inline item pass ------------------------------------------------------------
+        // ONE projection set, ONE fog swap, lighting set per GROUP (flat/3D), ONE
+        // renderAllFeatures+endBatch per non-empty group — vs per-item everything (the Inventory
+        // HUD's 27 items measured 786µs + 197KB per frame on the per-item path). The shared
+        // PoseStack is safe across submits because the submit pipeline copies pose state into the
+        // render nodes (the standard entity-render pattern: many submits share one stack, flushed
+        // later). Render-thread-only, non-reentrant. Entries are pooled — steady state allocates
+        // nothing. Callers may cache TrackingItemStackRenderState across frames and re-submit it
+        // (the vanilla PIP cache pattern); see FloydInventoryHud's per-slot cache.
 
+        private class InlineEntry {
+            var tracking: TrackingItemStackRenderState? = null
+            var x = 0f
+            var y = 0f
+            var size = 0f
+        }
+
+        private val inlineFlat = ArrayList<InlineEntry>()
+        private val inlineLit = ArrayList<InlineEntry>()
+        private var inlineFlatCount = 0
+        private var inlineLitCount = 0
+        private val inlinePose = PoseStack()
+
+        fun beginInlineBatch() {
+            inlineFlatCount = 0
+            inlineLitCount = 0
+        }
+
+        fun submitInline(tracking: TrackingItemStackRenderState, x: Float, y: Float, size: Float) {
+            val group: ArrayList<InlineEntry>
+            val index: Int
+            if (tracking.usesBlockLight()) {
+                group = inlineLit; index = inlineLitCount++
+            } else {
+                group = inlineFlat; index = inlineFlatCount++
+            }
+            val entry = if (index < group.size) group[index] else InlineEntry().also { group.add(it) }
+            entry.tracking = tracking
+            entry.x = x
+            entry.y = y
+            entry.size = size
+        }
+
+        fun flushInlineBatch() {
+            if (inlineFlatCount == 0 && inlineLitCount == 0) return
             // Framebuffer-pixel ortho over the whole main FB (same projection mc.font uses in this pass).
             PostHudOverlay.applyScreenProjection()
 
@@ -134,30 +180,44 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
             // (core/entity.fsh) ends with apply_fog(color, length(Position), ..., FogColor); our pose puts
             // the item at screen-pixel coords (length = hundreds), so the fog value saturates to 1.0 and the
             // texel is REPLACED by the fog color — items come out as flat gray/white silhouettes. Vanilla
-            // GUI/PIP items render with FogMode.NONE (FogColor.a = 0 -> apply_fog is a no-op), which is why
-            // the editor path is perfect. Bind a zeroed no-fog UBO for the draw, then restore the world fog
-            // so the subsequent panels / vanilla HUD aren't left fog-less.
+            // GUI/PIP items render with FogMode.NONE (FogColor.a = 0 -> apply_fog is a no-op). Bind a zeroed
+            // no-fog UBO for the pass, then restore the world fog so subsequent draws aren't left fog-less.
             val savedFog = RenderSystem.getShaderFog()
             RenderSystem.setShaderFog(noFogUbo())
             try {
-                val pose = PoseStack()
-                // A GUI item model (after its ItemDisplayContext.GUI display transform) occupies a ~1-unit
-                // box centred at the origin, so under the framebuffer-pixel ortho 1 unit == 1 px and the pose
-                // scale IS the on-screen size in px: scale by [size] to fill a [size]px box. (Y flipped:
-                // screen +y is down vs model +y up; Z scaled to match so the iso depth stays proportional.)
-                pose.translate(x + size / 2f, y + size / 2f, 0f)
-                pose.scale(size, -size, size)
-
-                val dispatcher = mc.gameRenderer.featureRenderDispatcher
-                tracking.submit(pose, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
-                dispatcher.renderAllFeatures()
-                // CRITICAL: renderAllFeatures() only QUEUES geometry into the feature buffer source; it is not
-                // drawn until the batch ends. The PIP path works because PictureInPictureRenderer.prepare()
-                // calls bufferSource.endBatch() after renderToTexture. Inline we must flush it ourselves.
-                mc.renderBuffers().bufferSource().endBatch()
+                drawInlineGroup(inlineFlat, inlineFlatCount, Lighting.Entry.ITEMS_FLAT)
+                drawInlineGroup(inlineLit, inlineLitCount, Lighting.Entry.ITEMS_3D)
             } finally {
                 savedFog?.let { RenderSystem.setShaderFog(it) }
             }
+            PostHudOverlay.bindMainFbo()
+            // Drop tracking refs so cached states aren't pinned by the pool between frames.
+            for (entry in inlineFlat) entry.tracking = null
+            for (entry in inlineLit) entry.tracking = null
+        }
+
+        private fun drawInlineGroup(group: ArrayList<InlineEntry>, count: Int, lighting: Lighting.Entry) {
+            if (count == 0) return
+            mc.gameRenderer.lighting.setupFor(lighting)
+            val dispatcher = mc.gameRenderer.featureRenderDispatcher
+            for (i in 0 until count) {
+                val entry = group[i]
+                // A GUI item model (after its ItemDisplayContext.GUI display transform) occupies a ~1-unit
+                // box centred at the origin, so under the framebuffer-pixel ortho 1 unit == 1 px and the
+                // pose scale IS the on-screen size in px. (Y flipped: screen +y is down vs model +y up;
+                // Z scaled to match so the iso depth stays proportional.)
+                inlinePose.pushPose()
+                inlinePose.translate(entry.x + entry.size / 2f, entry.y + entry.size / 2f, 0f)
+                inlinePose.scale(entry.size, -entry.size, entry.size)
+                entry.tracking!!.submit(inlinePose, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
+                inlinePose.popPose()
+            }
+            dispatcher.renderAllFeatures()
+            // renderAllFeatures() only QUEUES geometry into the feature buffer source; it is not drawn
+            // until the batch ends. The PIP path works because PictureInPictureRenderer.prepare() calls
+            // bufferSource.endBatch() after renderToTexture. Inline we must flush it ourselves — once
+            // per lighting group (the lighting UBO is read at draw time, so groups can't share a flush).
+            mc.renderBuffers().bufferSource().endBatch()
         }
 
         // Cached zeroed Fog UBO (built once). FogColor alpha 0 makes core/entity.fsh's apply_fog() a no-op,

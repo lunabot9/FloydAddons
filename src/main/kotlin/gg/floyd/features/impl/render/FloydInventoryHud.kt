@@ -13,7 +13,9 @@ import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.renderer.item.TrackingItemStackRenderState
 import net.minecraft.world.entity.player.Inventory
+import net.minecraft.world.item.ItemDisplayContext
 import net.minecraft.world.item.ItemStack
 import kotlin.math.roundToInt
 
@@ -150,8 +152,11 @@ object FloydInventoryHud : Module(
         // Item icons (drawn DIRECTLY, no PIP — fixes the old single-texture black-icon clobber). Each
         // item's local slot position/size (slot-grid px) maps to FRAMEBUFFER px (the same space the SDF
         // rect uses, so they co-locate): framebuffer = fx + local*scale, size = 16*itemScale*scale.
+        // ONE batched pass (two lighting groups, one flush each) with per-slot cached render states —
+        // the per-item path measured 786µs + 197KB per frame (27× resolver+PoseStack+fog swap+endBatch).
         val itemSizePx = 16f * itemScale * scale
         val itemPx = 16f * itemScale
+        ItemStateRenderer.beginInlineBatch()
         for (slot in 0 until 27) {
             val col = slot % 9
             val row = slot / 9
@@ -160,15 +165,17 @@ object FloydInventoryHud : Module(
 
             val localX = pad + col * slotSize + (slotSize - itemPx) / 2f
             val localY = pad + row * slotSize + (slotSize - itemPx) / 2f
-            ItemStateRenderer.drawItemInline(stack, fx + localX * scale, fy + localY * scale, itemSizePx)
-            PostHudOverlay.bindMainFbo()
+            ItemStateRenderer.submitInline(trackingFor(slot, stack), fx + localX * scale, fy + localY * scale, itemSizePx)
         }
+        ItemStateRenderer.flushInlineBatch()
 
         // Stack counts via the shared mc.font helper (the global MSDF font) — drawn AFTER the item
-        // models so the counts composite on top, in the same framebuffer-pixel space.
+        // models so the counts composite on top, in the same framebuffer-pixel space; queued with the
+        // deferred path so all counts share ONE batch flush.
         // Count height tracks the slot so it stays proportional at any guiScale (see COUNT_FONT_RATIO).
         val countFontSize = slotSize * COUNT_FONT_RATIO
         val countScale = scale * countFontSize / MsdfFontMetrics.LINE_HEIGHT
+        var anyCount = false
         for (slot in 0 until 27) {
             val col = slot % 9
             val row = slot / 9
@@ -182,7 +189,40 @@ object FloydInventoryHud : Module(
             // drifting. The helper measures with the same MsdfFontMetrics floats the glyphs render with.
             val tx = fx + (localX + itemPx - 1f) * scale
             val ty = fy + (localY + itemPx - countFontSize - 1f) * scale
-            HudTextRenderer.drawText(stack.count.toString(), tx, ty, countScale, 0xFFFFFFFF.toInt(), HudTextRenderer.Alignment.RIGHT)
+            HudTextRenderer.drawTextDeferred(countText(slot, stack.count), tx, ty, countScale, 0xFFFFFFFF.toInt(), HudTextRenderer.Alignment.RIGHT)
+            anyCount = true
         }
+        if (anyCount) HudTextRenderer.flushDeferred()
+    }
+
+    // ---- Per-slot render-state + count-string caches ---------------------------------------------
+    // updateForTopItem re-resolves the item model — pointless when the slot hasn't changed, which is
+    // virtually every frame. Keyed on stack identity + count + damage (damage mutates in place; other
+    // in-place component mutation is rare enough to accept — a slot refresh re-resolves on any
+    // inventory packet because that replaces the ItemStack instance).
+    private val cachedTracking = arrayOfNulls<TrackingItemStackRenderState>(27)
+    private val cachedStack = arrayOfNulls<ItemStack>(27)
+    private val cachedCount = IntArray(27)
+    private val cachedDamage = IntArray(27)
+    private val cachedCountText = arrayOfNulls<String>(27)
+
+    private fun trackingFor(slot: Int, stack: ItemStack): TrackingItemStackRenderState {
+        val cached = cachedTracking[slot]
+        if (cached != null && cachedStack[slot] === stack && cachedCount[slot] == stack.count && cachedDamage[slot] == stack.damageValue) {
+            return cached
+        }
+        val tracking = cached ?: TrackingItemStackRenderState().also { cachedTracking[slot] = it }
+        mc.itemModelResolver.updateForTopItem(tracking, stack, ItemDisplayContext.GUI, mc.level, mc.player, 0)
+        cachedStack[slot] = stack
+        cachedCount[slot] = stack.count
+        cachedDamage[slot] = stack.damageValue
+        cachedCountText[slot] = null
+        return tracking
+    }
+
+    private fun countText(slot: Int, count: Int): String {
+        // trackingFor has already validated the slot key this frame; only re-format on change.
+        cachedCountText[slot]?.let { return it }
+        return count.toString().also { cachedCountText[slot] = it }
     }
 }

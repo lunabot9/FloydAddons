@@ -133,6 +133,41 @@ Cross-platform gate: diff audited — no platform/dpr/guiScale/window/native cou
 independent). New scratches documented render-thread-only. guiScale/window-size matrix
 run deferred to the end-of-mission batch (world-space feature, no screen coupling).
 
+### 2. Inventory HUD (2026-06-10) — FIXED
+
+Scene: perfarena-hud (27 main-inv items + 15-line sidebar). Baseline: +21.2 MB/s alloc
+(spread 0.18); section `PostHud.InventoryHud` 786 µs + 197 KB **per frame**. Frame time
+was never the issue (delta within noise) — this was a pure GC-pressure offender.
+
+Root cause: per ITEM per FRAME — fresh `TrackingItemStackRenderState` + full
+`updateForTopItem` model re-resolution, fresh `PoseStack`, fog-UBO save/set/restore,
+lighting setup, projection set, `renderAllFeatures()` + **full `endBatch()` flush**, and
+FBO rebind (27× each); plus one `HudTextRenderer.drawText` per stack count = 27 more
+endBatch+rebind round-trips and a `listOf(Segment)`+`Matrix4f` per call.
+
+Fix:
+- Per-slot render-state cache keyed on (stack identity, count, damage) — the resolver
+  runs only when a slot actually changes, not 27×/frame.
+- `ItemStateRenderer` inline batch: one projection set + one fog swap per frame,
+  lighting set per GROUP (flat/3D), one `renderAllFeatures`+`endBatch` per non-empty
+  group (2 flushes max instead of 27); pooled entries, shared PoseStack (submit copies
+  pose state — the standard entity-render pattern).
+- `HudTextRenderer.drawTextDeferred`/`flushDeferred`: counts share ONE batch flush;
+  scratch Matrix4f (drawInBatch bakes vertices eagerly — proven by NvgTextReplay's
+  per-run matrices); cached count strings.
+
+| Metric (ON-delta, 30s × 3, spread in parens) | BEFORE | AFTER |
+|---|---|---|
+| alloc MB/s | **+21.2** (0.18) | **+4.09** (0.19) — 5.2× less |
+| frame p99 ms | −0.135 (0.299) | −0.059 (0.050) |
+| section /frame | 786 µs / 197 KB | **197 µs / 40 KB** |
+
+Live-verified: 27-item grid renders identically; mixed lighting groups (3D block items
+beside flat items) correct; stack counts ("37"/"5") right-aligned correctly; scene
+restored after the count check. Remaining ~4 MB/s = vanilla submit-node + per-glyph
+internals + per-panel SDF/blur meshes — shared infra, revisit only if it tops the
+re-baseline.
+
 ## Cross-platform audit notes
 
 _(pending — per-feature gate d)_
