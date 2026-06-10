@@ -168,6 +168,34 @@ restored after the count check. Remaining ~4 MB/s = vanilla submit-node + per-gl
 internals + per-panel SDF/blur meshes — shared infra, revisit only if it tops the
 re-baseline.
 
+### 3. Custom Scoreboard (2026-06-10) — FIXED
+
+Scene: perfarena-hud (15-line sidebar). Baseline: +16.9 MB/s vs the VANILLA sidebar
+(spread 0.63); sections `PostHud.Scoreboard` 459 µs + 233 KB/frame plus
+`HudLayer.elements` 82 µs + 150 KB/frame — the full layout (sort, per-glyph String +
+NFKC normalization, width measurement) ran **twice per frame**, then 17 endBatch+rebind
+round-trips for the text.
+
+Fix:
+- Layout cache invalidated by a packet-driven epoch (`ClientboundSetScore/ResetScore/
+  SetObjective/SetDisplayObjective/SetPlayerTeam` via the existing onReceive hooks).
+  Packets fire on the Netty thread before the main thread applies the data, so a bump
+  opens a 150 ms rebuild window; 1 Hz fallback covers config drift (nick-hider edits).
+- The brand line's letter-by-letter chroma is RECOLORED per frame from cached glyphs
+  (geometry is color-independent) — animation identical, layout untouched.
+- HUD-editor size callback serves the cached dimensions (was the second full layout).
+- All text queued via `drawSegmentsDeferred` → ONE batch flush per frame instead of 17.
+
+| Metric (ON-delta vs vanilla sidebar, 30s × 3) | BEFORE | AFTER |
+|---|---|---|
+| alloc MB/s | **+16.9** (0.63) | **−19.1** (0.18) — ON now allocates LESS than vanilla |
+| section /frame | 459 µs / 233 KB (+82 µs / 150 KB editor callback) | **57 µs / 41 KB** |
+| frame p50/p99 | noise | noise (never the issue) |
+
+Live-verified: full 15-line panel + centered title + brand render identically from
+cache; `ZZ_NewLine` added via /scoreboard appears in correct sort position < 0.6 s
+(packet invalidation), disappears on reset; brand chroma animates across screenshots.
+
 ## Cross-platform audit notes
 
 _(pending — per-feature gate d)_

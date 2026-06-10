@@ -2,8 +2,14 @@ package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.HudSizeRegistry
+import gg.floyd.events.core.onReceive
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import net.minecraft.network.protocol.game.ClientboundResetScorePacket
+import net.minecraft.network.protocol.game.ClientboundSetDisplayObjectivePacket
+import net.minecraft.network.protocol.game.ClientboundSetObjectivePacket
+import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket
+import net.minecraft.network.protocol.game.ClientboundSetScorePacket
 import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.render.HudTextRenderer
@@ -61,6 +67,20 @@ object FloydCustomScoreboard : Module(
             scoreboardRender(example = true, requireVanillaSignal = false)
                 ?.let { it.boxWidth to it.boxHeight } ?: (180 to 120)
         }
+
+        // Layout-cache invalidation: every packet that can change sidebar content/teams/display.
+        // These fire on the Netty thread (see the rebuild window in the cache policy above).
+        onReceive<ClientboundSetScorePacket> { invalidateLayout() }
+        onReceive<ClientboundResetScorePacket> { invalidateLayout() }
+        onReceive<ClientboundSetObjectivePacket> { invalidateLayout() }
+        onReceive<ClientboundSetDisplayObjectivePacket> { invalidateLayout() }
+        onReceive<ClientboundSetPlayerTeamPacket> { invalidateLayout() }
+    }
+
+    override fun onEnable() {
+        super.onEnable()
+        cachedLayoutEpoch = -1L
+        cachedLayout = null
     }
 
     @JvmStatic
@@ -115,7 +135,32 @@ object FloydCustomScoreboard : Module(
         return vanillaScoreboardWouldRender.get()
     }
 
-    private data class ScoreboardRender(val boxWidth: Int, val boxHeight: Int, val texts: List<ScoreboardText>)
+    /**
+     * [brandGlyphs] is kept so the brand line's letter-by-letter chroma can be RECOLORED per frame
+     * from the cached layout without re-running the full layout (the brand element is always
+     * [texts].last()); width is color-independent, so geometry stays valid.
+     */
+    private data class ScoreboardRender(val boxWidth: Int, val boxHeight: Int, val texts: List<ScoreboardText>, val brandGlyphs: List<String>)
+
+    // ---- Layout cache -----------------------------------------------------------------------------
+    // The full layout (sort + per-glyph normalization/String building + width measurement) used to run
+    // TWICE per frame (world-end draw + HUD-editor size callback): measured 459µs + 233KB per frame in
+    // the world-end pass alone. Sidebar content only changes on scoreboard/team packets, so the layout
+    // is cached and invalidated by a packet-driven epoch. Packet events fire on the NETTY thread
+    // before the main thread applies the data, so an epoch bump also opens a short rebuild window
+    // (REBUILD_WINDOW_MS) to catch the apply landing a frame later; a 1 Hz fallback rebuild covers
+    // rare driftwithout packets (nick-hider/replacer config edits).
+    private val layoutEpoch = java.util.concurrent.atomic.AtomicLong()
+    private var cachedLayoutEpoch = -1L
+    private var cachedLayout: ScoreboardRender? = null
+    private var lastLayoutMs = 0L
+    private var rebuildWindowEndMs = 0L
+    private const val REBUILD_WINDOW_MS = 150L
+    private const val FALLBACK_REBUILD_MS = 1000L
+
+    private fun invalidateLayout() {
+        layoutEpoch.incrementAndGet()
+    }
 
     /**
      * Pure layout (NO GuiGraphics, no drawing) so it can run screen-independently from the world-end
@@ -163,7 +208,9 @@ object FloydCustomScoreboard : Module(
         // (chroma -> rainbow flow, fade -> base↔fade gradient, solid -> flat color), so it always matches
         // the configured scoreboard border. Each letter samples the border accent at a phase offset by its
         // visual index; when the border is solid the offset is ignored so every letter is the same color.
-        val brandText = styledText(brand.visualOrderText, forcedColorAt = { i -> scoreboardAccentColor(i * BRAND_LETTER_PHASE_STEP) })
+        // The glyphs are kept on the layout so the draw path can RECOLOR them per frame from the cache.
+        val brandGlyphs = collectGlyphs(brand.visualOrderText)
+        val brandText = brandSegments(brandGlyphs)
         val titleWidth = textWidth(titleText)
         val brandWidth = textWidth(brandText)
         // The right-hand score-number column is intentionally omitted; size the box to the names only.
@@ -192,9 +239,42 @@ object FloydCustomScoreboard : Module(
             lineY += lineHeight
         }
 
+        // Brand is ALWAYS the last element — the cached-draw path relies on this to recolor it.
         textElements += ScoreboardText(brandText, (boxWidth - brandWidth) / 2f, brandY.toFloat())
 
-        return ScoreboardRender(boxWidth, boxHeight, textElements)
+        return ScoreboardRender(boxWidth, boxHeight, textElements, brandGlyphs)
+    }
+
+    /** The normalized glyph strings of [text] (the same normalization [styledText] applies), colorless. */
+    private fun collectGlyphs(text: FormattedCharSequence): List<String> {
+        val glyphs = ArrayList<String>()
+        CustomNameReplacer.replaceSequenceIfNeeded(text).accept { _, _, codePoint ->
+            glyphs.add(normalizeForScoreboardFont(codePoint) ?: String(Character.toChars(codePoint)))
+            true
+        }
+        return glyphs
+    }
+
+    /**
+     * Builds the brand line's per-letter chroma segments from cached glyphs — the per-frame recolor
+     * path (same merge logic as [styledText], same accent sampling as the original forcedColorAt).
+     */
+    private fun brandSegments(glyphs: List<String>): StyledScoreboardText {
+        if (glyphs.isEmpty()) return StyledScoreboardText(emptyList())
+        val segments = mutableListOf<HudTextRenderer.Segment>()
+        val currentText = StringBuilder()
+        var currentColor = scoreboardAccentColor(0f)
+        for (i in glyphs.indices) {
+            val color = scoreboardAccentColor(i * BRAND_LETTER_PHASE_STEP)
+            if (currentText.isNotEmpty() && color != currentColor) {
+                segments += HudTextRenderer.Segment(currentText.toString(), currentColor)
+                currentText.clear()
+            }
+            currentColor = color
+            currentText.append(glyphs[i])
+        }
+        if (currentText.isNotEmpty()) segments += HudTextRenderer.Segment(currentText.toString(), currentColor)
+        return StyledScoreboardText(segments)
     }
 
     // HUD element callback: this NEVER draws — it only reports the panel's size so the HUD editor can size
@@ -202,6 +282,12 @@ object FloydCustomScoreboard : Module(
     // [renderAtWorldEnd] (one rendering system everywhere, so fonts/blur/borders are identical and
     // overlapping editor panels never clobber — the old deferred GuiGraphics/PIP preview is gone).
     private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
+        // In game, serve the size from the layout cache (renderAtWorldEnd keeps it fresh and runs
+        // earlier in the frame) — this callback used to run the FULL layout a second time per frame.
+        if (!example) {
+            cachedLayout?.let { return it.boxWidth to it.boxHeight }
+            return 0 to 0
+        }
         val r = scoreboardRender(example) ?: return 0 to 0
         return r.boxWidth to r.boxHeight
     }
@@ -214,8 +300,21 @@ object FloydCustomScoreboard : Module(
      */
     fun renderAtWorldEnd() {
         val editor = mc.screen === gg.floyd.clickgui.HudManager
-        val r = scoreboardRender(example = editor, requireVanillaSignal = false) ?: return
-        drawScoreboardInline(r.boxWidth, r.boxHeight, r.texts)
+        if (editor) {
+            // Editor preview (example layout when no live sidebar): uncached — transient screen.
+            val r = scoreboardRender(example = true, requireVanillaSignal = false) ?: return
+            drawScoreboardInline(r)
+            return
+        }
+        val now = System.currentTimeMillis()
+        val epoch = layoutEpoch.get()
+        if (epoch != cachedLayoutEpoch || now < rebuildWindowEndMs || now - lastLayoutMs > FALLBACK_REBUILD_MS) {
+            if (epoch != cachedLayoutEpoch) rebuildWindowEndMs = now + REBUILD_WINDOW_MS
+            cachedLayoutEpoch = epoch
+            lastLayoutMs = now
+            cachedLayout = scoreboardRender(example = false, requireVanillaSignal = false)
+        }
+        drawScoreboardInline(cachedLayout ?: return)
     }
 
     private fun scoreLine(name: String): ScoreLine {
@@ -239,13 +338,14 @@ object FloydCustomScoreboard : Module(
      * screen projection and re-binds the FBO around its batch because a blaze3d render pass can
      * retarget.
      */
-    private fun drawScoreboardInline(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
+    private fun drawScoreboardInline(r: ScoreboardRender) {
+        val texts = r.texts
         val target = FloydPanelStyle.PanelTarget.SCOREBOARD
         val scale = scoreboardHud.scale
         val fx = scoreboardHud.x.toFloat()
         val fy = scoreboardHud.y.toFloat()
-        val fw = boxWidth * scale
-        val fh = boxHeight * scale
+        val fw = r.boxWidth * scale
+        val fh = r.boxHeight * scale
 
         val fill = FloydPanelStyle.backgroundColorFor(target).rgba
         val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
@@ -268,11 +368,18 @@ object FloydCustomScoreboard : Module(
             outline
         )
 
-        // Text via the shared mc.font helper. Layout positions are in local panel units (= 9px font
-        // units, SCOREBOARD_FONT_SIZE = 9), so one font unit maps to [scale] framebuffer px.
-        for (text in texts) {
-            HudTextRenderer.drawSegments(text.value.segments, fx + text.x * scale, fy + text.y * scale, scale)
+        // Text via the shared mc.font helper, all queued into ONE batch flush (this loop used to
+        // endBatch+rebind per line — ~17 flushes/frame). Layout positions are in local panel units
+        // (= 9px font units, SCOREBOARD_FONT_SIZE = 9), so one font unit maps to [scale] framebuffer
+        // px. The brand line (always last) is recolored per frame from the cached glyphs so its
+        // letter-by-letter chroma keeps animating while the layout itself stays cached.
+        for (i in 0 until texts.size - 1) {
+            val text = texts[i]
+            HudTextRenderer.drawSegmentsDeferred(text.value.segments, fx + text.x * scale, fy + text.y * scale, scale)
         }
+        val brand = texts.last()
+        HudTextRenderer.drawSegmentsDeferred(brandSegments(r.brandGlyphs).segments, fx + brand.x * scale, fy + brand.y * scale, scale)
+        HudTextRenderer.flushDeferred()
     }
 
     private fun styledText(text: FormattedCharSequence, forcedColor: Int? = null, forcedColorAt: ((Int) -> Int)? = null): StyledScoreboardText {

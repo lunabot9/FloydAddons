@@ -77,7 +77,31 @@ object HudTextRenderer {
         mc.font.drawInBatch(text, segX, 0f, color, false, deferredPose, mc.renderBuffers().bufferSource(), displayMode, 0, light)
     }
 
-    /** Flushes everything queued by [drawTextDeferred] and re-binds the main FBO. */
+    /** Segment variant of [drawTextDeferred] — one line, no flush; pair with [flushDeferred]. */
+    fun drawSegmentsDeferred(
+        segments: List<Segment>,
+        x: Float,
+        y: Float,
+        scale: Float,
+        alignment: Alignment = Alignment.LEFT,
+        displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
+        light: Int = LightTexture.FULL_BRIGHT
+    ) {
+        if (segments.isEmpty() || scale <= 0f) return
+        PostHudOverlay.applyScreenProjection()
+        deferredPose.translation(x, y, 0f).scale(scale, scale, 1f)
+        val buffer = mc.renderBuffers().bufferSource()
+        var segX = when (alignment) {
+            Alignment.LEFT -> 0f
+            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.text) }
+        }
+        for (segment in segments) {
+            mc.font.drawInBatch(segment.text, segX, 0f, segment.color, false, deferredPose, buffer, displayMode, 0, light)
+            segX += MsdfFontMetrics.unitWidth(segment.text)
+        }
+    }
+
+    /** Flushes everything queued by [drawTextDeferred]/[drawSegmentsDeferred] and re-binds the main FBO. */
     fun flushDeferred() {
         mc.renderBuffers().bufferSource().endBatch()
         PostHudOverlay.bindMainFbo()
