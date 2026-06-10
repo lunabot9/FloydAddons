@@ -205,10 +205,29 @@ object FloydInventoryHud : Module(
     private val cachedCount = IntArray(27)
     private val cachedDamage = IntArray(27)
     private val cachedCountText = arrayOfNulls<String>(27)
+    // Resource-reload guard: a reload (F3+T / server pack) re-stitches atlases without replacing
+    // inventory ItemStack instances, so the identity key alone would keep serving render states
+    // that reference pre-reload baked models. The font epoch bumps on every resource reload.
+    private var cachedResourceEpoch = -1
+
+    // Items whose GUI model is property-dispatched on live world/player state (needle/dial angle):
+    // resolving once would freeze them, so they re-resolve every frame like the pre-cache path.
+    private val liveModelItems = setOf(
+        net.minecraft.world.item.Items.CLOCK,
+        net.minecraft.world.item.Items.COMPASS,
+        net.minecraft.world.item.Items.RECOVERY_COMPASS,
+    )
 
     private fun trackingFor(slot: Int, stack: ItemStack): TrackingItemStackRenderState {
+        val epoch = gg.floyd.utils.FloydFontProviders.fontEpoch()
+        if (epoch != cachedResourceEpoch) {
+            cachedResourceEpoch = epoch
+            clearSlotCache()
+        }
         val cached = cachedTracking[slot]
-        if (cached != null && cachedStack[slot] === stack && cachedCount[slot] == stack.count && cachedDamage[slot] == stack.damageValue) {
+        if (cached != null && cachedStack[slot] === stack && cachedCount[slot] == stack.count &&
+            cachedDamage[slot] == stack.damageValue && stack.item !in liveModelItems
+        ) {
             return cached
         }
         val tracking = cached ?: TrackingItemStackRenderState().also { cachedTracking[slot] = it }
@@ -218,6 +237,18 @@ object FloydInventoryHud : Module(
         cachedDamage[slot] = stack.damageValue
         cachedCountText[slot] = null
         return tracking
+    }
+
+    private fun clearSlotCache() {
+        cachedTracking.fill(null)
+        cachedStack.fill(null)
+        cachedCountText.fill(null)
+    }
+
+    override fun onDisable() {
+        // Drop the ItemStack/render-state pins (stacks can carry large component payloads).
+        clearSlotCache()
+        super.onDisable()
     }
 
     private fun countText(slot: Int, count: Int): String {

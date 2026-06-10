@@ -293,7 +293,10 @@ object FloydPerf {
 
         if (includeSections) {
             root["sectionsNote"] = "Inclusive times — PostHud.* nests under PostHud.total, ClickGUI.textReplay under " +
-                "ClickGUI.nvgPip; do not sum parents with children. p50/p95/p99 are log-bucket upper bounds (<= ~9% high); max is exact."
+                "ClickGUI.nvgPip, BlockSearch.reselect under FloydBlockSearch.Extract; do not sum parents with children. " +
+                "RenderBatchManager.Last is SHARED: it flushes every feature's queued world geometry (ESP boxes/tracers, " +
+                "Block Search batches), so its cost is not attributable to one feature. " +
+                "p50/p95/p99 are log-bucket upper bounds (<= ~9% high); max is exact."
             root["sections"] = window.sectionAccs.entries
                 .sortedByDescending { it.value.totalNs }
                 .associate { (label, acc) ->

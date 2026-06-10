@@ -119,6 +119,8 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
          * [PostHudOverlay.applyScreenProjection] projects (ortho over the whole framebuffer in pixels).
          * The item's 16-unit GUI model box is centred at (x+size/2, y+size/2) and scaled to [size] px.
          */
+        /** Single-item convenience over the inline batch. Must NOT be called between another
+         * caller's [beginInlineBatch] and [flushInlineBatch] — it resets and flushes the shared batch. */
         fun drawItemInline(item: ItemStack, x: Float, y: Float, size: Float) {
             if (item.isEmpty) return
             val tracking = TrackingItemStackRenderState()
@@ -189,11 +191,11 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
                 drawInlineGroup(inlineLit, inlineLitCount, Lighting.Entry.ITEMS_3D)
             } finally {
                 savedFog?.let { RenderSystem.setShaderFog(it) }
+                PostHudOverlay.bindMainFbo()
+                // Drop tracking refs even if a group draw threw, so cached states aren't pinned.
+                for (entry in inlineFlat) entry.tracking = null
+                for (entry in inlineLit) entry.tracking = null
             }
-            PostHudOverlay.bindMainFbo()
-            // Drop tracking refs so cached states aren't pinned by the pool between frames.
-            for (entry in inlineFlat) entry.tracking = null
-            for (entry in inlineLit) entry.tracking = null
         }
 
         private fun drawInlineGroup(group: ArrayList<InlineEntry>, count: Int, lighting: Lighting.Entry) {

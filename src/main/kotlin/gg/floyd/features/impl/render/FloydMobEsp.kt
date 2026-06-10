@@ -23,6 +23,7 @@ import gg.floyd.utils.renderBoundingBox
 import gg.floyd.utils.renderPos
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.moduleToggle
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.resources.Identifier
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.entity.Entity
@@ -142,6 +143,16 @@ object FloydMobEsp : Module(
             if (enabled && hasFilters()) scanNpcNames()
         }
 
+        // Fabric-level (fires regardless of module enabled state): drop everything that pins
+        // Entity/Level objects when the world goes away — the reusable renderTargetsScratch
+        // otherwise holds the last frame's entities (and through them the dead ClientLevel)
+        // until the module next renders in a new world.
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
+            renderTargetsScratch.clear()
+            colorCache.clear()
+            clearResolvedTargets()
+        }
+
         on<RenderEvent.Extract> {
             val level = mc.level ?: return@on
             val player = mc.player ?: return@on
@@ -172,6 +183,14 @@ object FloydMobEsp : Module(
                 }
             }
         }
+    }
+
+    override fun onDisable() {
+        // Release entity/level pins and per-entity caches; rebuilt on the first scan after re-enable.
+        renderTargetsScratch.clear()
+        colorCache.clear()
+        clearResolvedTargets()
+        super.onDisable()
     }
 
     private fun scanTargets() {
@@ -840,7 +859,10 @@ object FloydMobEsp : Module(
     }
 
     private fun FilterColor.toColor(): Color {
-        if (chroma) return chromaColor()
+        // LIVE chroma Color (rgba samples ChromaCache per read), NOT a baked snapshot — the result
+        // is cached per entity for 10 frames in colorCache, and a snapshot would quantize the
+        // rainbow to ~6Hz steps (it animated per frame before the cache existed).
+        if (chroma) return Color(0xFFFFFFFF.toInt()).also { it.chroma = true }
         return Color(hex + "FF")
     }
 

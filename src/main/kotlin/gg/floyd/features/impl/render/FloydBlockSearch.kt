@@ -20,6 +20,7 @@ import gg.floyd.utils.render.drawStyledBoxBatch
 import gg.floyd.utils.render.drawTracerFan
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.minecraft.core.BlockPos
 import net.minecraft.core.SectionPos
 import net.minecraft.core.registries.BuiltInRegistries
@@ -232,6 +233,16 @@ object FloydBlockSearch : Module(
             if (enabled && activeIds().isNotEmpty()) indexChunk(chunk)
         }
         ClientChunkEvents.CHUNK_UNLOAD.register { _, chunk -> removeChunk(ChunkPos.asLong(chunk.pos.x, chunk.pos.z)) }
+
+        // Fabric-level (fires regardless of module enabled state): the level-identity guard holds a
+        // strong ClientLevel reference — without this, a disconnect leaves the entire dead level
+        // (chunks, entity sections) reachable from indexedLevel until the next world's first
+        // CHUNK_LOAD. Deliberately NOT nulled in clearIndex: reindexAll() clears then re-indexes
+        // the SAME level, and a nulled identity there would make the next frame wipe the rebuild.
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
+            clearIndex()
+            indexedLevel = null
+        }
     }
 
     /**

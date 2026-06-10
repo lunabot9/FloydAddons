@@ -56,7 +56,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
             NVGRenderer.scale(ClickGUIModule.getStandardGuiScale(), ClickGUIModule.getStandardGuiScale())
 
-            drawTitle(searchBarX, searchBarY, 22f)
+            drawTitle(searchBarX, searchBarY)
             SearchBar.draw(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
             drawCommunity(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
 
@@ -270,8 +270,12 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         }
     }
 
-    /** Renders the "FloydAddons" title above the search bar, tinted with the GUI accent (chroma-cycling per character). */
-    private fun drawTitle(x: Float, searchBarY: Float, size: Float) {
+    /**
+     * Renders the "FloydAddons" title above the search bar, tinted with the GUI accent
+     * (chroma-cycling per character). Size is fixed at 22f — the width cache is keyed to it.
+     */
+    private fun drawTitle(x: Float, searchBarY: Float) {
+        val size = 22f
         val widths = titleWidths.get()
         val titleWidth = widths[0]
         val startX = x + 175f - titleWidth / 2f

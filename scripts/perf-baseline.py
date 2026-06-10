@@ -120,6 +120,10 @@ def run_clickgui(bridge: Bridge, world: str, seconds: float, warmup: float, repe
 def emit_table() -> str:
     rows = []
     for path in sorted(RESULTS.glob("*--*.json")):
+        # Per-feature fix-verification runs are written as "<world>--<Feature>-after.json" into the
+        # same dir; including them would silently overwrite baseline rows with fix-era numbers.
+        if path.stem.endswith("-after"):
+            continue
         data = json.loads(path.read_text())
         ab = data.get("ab")
         if not ab:

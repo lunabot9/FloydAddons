@@ -155,7 +155,10 @@ object FloydCustomScoreboard : Module(
     private var cachedLayout: ScoreboardRender? = null
     private var lastLayoutMs = 0L
     private var rebuildWindowEndMs = 0L
-    private const val REBUILD_WINDOW_MS = 150L
+    // 500ms: the Netty-thread epoch bump precedes the main-thread packet apply; on a laggy
+    // integrated/remote server the apply can land >150ms later, which would have left stale lines
+    // until the 1Hz fallback. Rebuilds are ~0.4ms, so a generous window is nearly free.
+    private const val REBUILD_WINDOW_MS = 500L
     private const val FALLBACK_REBUILD_MS = 1000L
 
     private fun invalidateLayout() {
@@ -304,6 +307,14 @@ object FloydCustomScoreboard : Module(
             // Editor preview (example layout when no live sidebar): uncached — transient screen.
             val r = scoreboardRender(example = true, requireVanillaSignal = false) ?: return
             drawScoreboardInline(r)
+            return
+        }
+        // The enabled gate used to live inside the per-frame scoreboardRender; with the cache it
+        // must be HERE or a disable keeps ghost-drawing the stale layout (alongside the returning
+        // vanilla sidebar) until the 1 Hz fallback. Also releases the cached layout on disable.
+        if (!enabled) {
+            cachedLayout = null
+            cachedLayoutEpoch = -1L
             return
         }
         val now = System.currentTimeMillis()

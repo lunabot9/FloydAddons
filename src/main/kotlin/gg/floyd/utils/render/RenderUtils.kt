@@ -96,21 +96,23 @@ class RenderConsumer {
 object RenderBatchManager {
     val renderConsumer = RenderConsumer()
 
+    // Last-flushed-frame counts for the bridge: /state's callClient lands BETWEEN frames, after
+    // the per-frame clear(), so the live "queued" sizes read 0 structurally. These are captured
+    // at flush time (volatile publication for the HTTP threads) and are the numbers e2e
+    // verification should assert on.
+    @Volatile private var lastFlushedCounts: Map<String, Int> = emptyMap()
+
     fun state(): Map<String, Any?> = mapOf(
         "queued" to mapOf(
             "lines" to renderConsumer.lines.size,
             "filledBoxes" to renderConsumer.filledBoxes.size,
             "wireBoxes" to renderConsumer.wireBoxes.size,
             "wireBoxBatches" to renderConsumer.wireBoxBatches.size,
-            "wireBoxBatchBoxes" to renderConsumer.wireBoxBatches.sumOf { it.aabbs.size },
-            "filledBoxBatches" to renderConsumer.filledBoxBatches.size,
-            "filledBoxBatchBoxes" to renderConsumer.filledBoxBatches.sumOf { it.aabbs.size },
-            "tracerFans" to renderConsumer.tracerFans.size,
-            "tracerFanTargets" to renderConsumer.tracerFans.sumOf { it.targets.size },
             "beaconBeams" to renderConsumer.beaconBeams.size,
             "texts" to renderConsumer.texts.size,
             "texturedQuads" to renderConsumer.texturedQuads.size
-        )
+        ),
+        "lastFlushed" to lastFlushedCounts
     )
 
     init {
@@ -150,6 +152,22 @@ object RenderBatchManager {
             if (noFog != null) {
                 bufferSource.endBatch()
                 if (savedFog != null) RenderSystem.setShaderFog(savedFog)
+            }
+            if (renderConsumer.lines.isNotEmpty() || renderConsumer.wireBoxes.isNotEmpty() ||
+                renderConsumer.wireBoxBatches.isNotEmpty() || renderConsumer.filledBoxBatches.isNotEmpty() ||
+                renderConsumer.tracerFans.isNotEmpty() || renderConsumer.filledBoxes.isNotEmpty()
+            ) {
+                lastFlushedCounts = mapOf(
+                    "lines" to renderConsumer.lines.size,
+                    "wireBoxes" to renderConsumer.wireBoxes.size,
+                    "filledBoxes" to renderConsumer.filledBoxes.size,
+                    "wireBoxBatchBoxes" to renderConsumer.wireBoxBatches.sumOf { it.aabbs.size },
+                    "filledBoxBatchBoxes" to renderConsumer.filledBoxBatches.sumOf { it.aabbs.size },
+                    "tracerFanTargets" to renderConsumer.tracerFans.sumOf { it.targets.size },
+                    "texts" to renderConsumer.texts.size,
+                )
+            } else if (lastFlushedCounts.isNotEmpty()) {
+                lastFlushedCounts = emptyMap()
             }
             renderConsumer.clear()
 
