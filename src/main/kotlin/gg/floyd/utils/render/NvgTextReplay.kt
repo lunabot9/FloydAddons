@@ -3,6 +3,7 @@ package gg.floyd.utils.render
 import com.mojang.blaze3d.systems.RenderSystem
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.utils.font.MsdfFontMetrics
+import gg.floyd.utils.perf.FloydPerf
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.gui.Font
 import net.minecraft.client.renderer.LightTexture
@@ -119,6 +120,10 @@ object NvgTextReplay {
      */
     fun replay(runs: List<DeferredNvgText>, slotWidth: Int, slotHeight: Int, bufferSource: MultiBufferSource.BufferSource) {
         if (runs.isEmpty()) return
+        FloydPerf.section("ClickGUI.textReplay") { replayInner(runs, slotWidth, slotHeight, bufferSource) }
+    }
+
+    private fun replayInner(runs: List<DeferredNvgText>, slotWidth: Int, slotHeight: Int, bufferSource: MultiBufferSource.BufferSource) {
         val dpr = NVGRenderer.devicePixelRatio()
 
         // Glyph quads flush through RenderSystem's MODELVIEW; force identity for the replay (the

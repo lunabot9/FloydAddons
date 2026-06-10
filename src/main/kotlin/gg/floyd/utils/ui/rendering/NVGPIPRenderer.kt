@@ -7,6 +7,7 @@ import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import gg.floyd.FloydAddonsMod
+import gg.floyd.utils.perf.FloydPerf
 import gg.floyd.utils.render.NvgTextReplay
 import gg.floyd.utils.render.PooledPicturePIPRenderer
 import net.minecraft.client.gui.GuiGraphics
@@ -40,6 +41,10 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
      * sub-frame because the replay's blaze3d render passes retarget and bind samplers.
      */
     override fun renderContent(state: NVGRenderState, poseStack: PoseStack) {
+        FloydPerf.section("ClickGUI.nvgPip") { renderContentInner(state) }
+    }
+
+    private fun renderContentInner(state: NVGRenderState) {
         val slot = bindSlotTarget() ?: return
 
         NvgTextReplay.beginFrameCounts()

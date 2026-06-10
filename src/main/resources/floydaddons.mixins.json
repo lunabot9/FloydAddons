@@ -43,6 +43,7 @@
     "mixins.LevelRendererMixin",
     "mixins.LivingEntityRendererMixin",
     "mixins.ParticleEngineMixin",
+    "mixins.PerfFrameMixin",
     "mixins.PlayerTabOverlayMixin",
     "mixins.ScreenEffectRendererMixin",
     "mixins.ScreenMixin",

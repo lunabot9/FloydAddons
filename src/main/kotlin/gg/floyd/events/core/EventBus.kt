@@ -1,6 +1,7 @@
 package gg.floyd.events.core
 
 import gg.floyd.events.PacketEvent
+import gg.floyd.utils.perf.FloydPerf
 import net.minecraft.network.protocol.Packet
 import net.minecraft.util.profiling.Profiler
 import net.minecraft.util.profiling.ProfilerFiller
@@ -103,7 +104,7 @@ object EventBus {
 
         invokers[eventClass] = when {
             activeListeners.isEmpty() -> EmptyInvoker
-            else -> InvokerFactory.build(activeListeners)
+            else -> InvokerFactory.build(eventClass, activeListeners)
         }
     }
 
@@ -136,13 +137,27 @@ object EventBus {
     }
 
     private object InvokerFactory {
-        fun build(listeners: Array<EventListener<Event>>): Invoker {
+        fun build(eventClass: Class<out Event>, listeners: Array<EventListener<Event>>): Invoker {
+            // Precomputed per-listener /perf section labels — zero per-dispatch string work.
+            val perfLabels = Array(listeners.size) { i ->
+                "${listeners[i].subscriberName}.${eventClass.simpleName}"
+            }
             return object : Invoker {
                 override fun invoke(event: Event, profiler: ProfilerFiller) {
-                    for (listener in listeners) {
+                    for (i in listeners.indices) {
+                        val listener = listeners[i]
                         profiler.push(listener.subscriberName)
                         try {
-                            listener.invoke(event)
+                            if (FloydPerf.sectionsArmed) {
+                                val token = FloydPerf.sectionBegin()
+                                try {
+                                    listener.invoke(event)
+                                } finally {
+                                    FloydPerf.sectionEnd(perfLabels[i], token)
+                                }
+                            } else {
+                                listener.invoke(event)
+                            }
                         } finally {
                             profiler.pop()
                         }

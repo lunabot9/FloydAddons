@@ -12,6 +12,7 @@ import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.utils.Identifiers
 import gg.floyd.utils.moduleToggle
+import gg.floyd.utils.perf.FloydPerfCounters
 import gg.floyd.utils.render.BlockIconCache
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier
@@ -120,6 +121,9 @@ object FloydXray : Module(
 
     @JvmStatic
     fun isOpaque(state: BlockState): Boolean {
+        // Counter, not a nanoTime section: this runs per-BlockState on Sodium's section-compile
+        // worker threads — millions of calls during a rebuild burst; timing each would distort.
+        FloydPerfCounters.xrayIsOpaqueCalls.increment()
         val id = BuiltInRegistries.BLOCK.getKey(state.block).toString()
         return opaqueBlocks[id] == true
     }

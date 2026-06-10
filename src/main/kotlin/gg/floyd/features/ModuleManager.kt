@@ -11,6 +11,7 @@ import gg.floyd.config.FloydSidecarConfig
 import gg.floyd.config.ModuleConfig
 import gg.floyd.events.InputEvent
 import gg.floyd.events.core.on
+import gg.floyd.utils.perf.FloydPerf
 import gg.floyd.features.ModuleManager.configs
 import gg.floyd.features.impl.camera.FloydCamera
 import gg.floyd.features.impl.camera.FloydFreecam
@@ -241,8 +242,10 @@ object ModuleManager {
         guiGraphics.pose().pushMatrix()
         val sf = mc.window.guiScale
         guiGraphics.pose().scale(1f / sf, 1f / sf)
-        for (hudSettings in hudSettingsCache) {
-            if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
+        FloydPerf.section("HudLayer.elements") {
+            for (hudSettings in hudSettingsCache) {
+                if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
+            }
         }
         guiGraphics.pose().popMatrix()
     }

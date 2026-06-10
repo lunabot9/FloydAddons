@@ -35,6 +35,7 @@ import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydXray
 import gg.floyd.utils.FloydFontProviders
 import gg.floyd.utils.font.MsdfAtlas
+import gg.floyd.utils.perf.FloydPerf
 import gg.floyd.utils.font.MsdfGlyphProvider
 import gg.floyd.utils.font.MsdfNative
 import gg.floyd.utils.render.BlockIconCache
@@ -149,7 +150,7 @@ object FloydLocalControl : Module(
     private val gson = GsonBuilder().serializeNulls().setPrettyPrinting().create()
     private val settingsPath: Path = FloydAddonsMod.configFile.toPath().resolve("control-bridge.json")
     private const val maxBodyBytes = 8192
-    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck", "/entities", "/fontdebug")
+    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck", "/entities", "/fontdebug", "/perf")
 
     private val port by NumberSetting("Port", FloydLocalControlSettings.DEFAULT_PORT, 1024, 65535, 1, desc = "Local control bridge port.")
 
@@ -274,6 +275,7 @@ object FloydLocalControl : Module(
                 "/iconcheck" -> requireMethod(exchange, "GET") { send(exchange, 200, iconCheckPayload()) }
                 "/entities" -> requireMethod(exchange, "GET") { send(exchange, 200, entitiesPayload()) }
                 "/fontdebug" -> requireMethod(exchange, "GET") { send(exchange, 200, fontDebugPayload(queryParams(exchange)["ab"] == "1")) }
+                "/perf" -> requireMethod(exchange, "GET") { handlePerf(exchange) }
                 else -> send(exchange, 404, mapOf("ok" to false, "error" to "not_found"))
             }
         } catch (e: IllegalArgumentException) {
@@ -654,6 +656,20 @@ object FloydLocalControl : Module(
                     val server = ServerData(addressText, addressText, ServerData.Type.OTHER)
                     ConnectScreen.startConnecting(mc.screen ?: TitleScreen(), mc, address, server, false, null)
                 }
+                "disconnect", "quitWorld", "leaveWorld" -> {
+                    if (mc.level == null) throw IllegalArgumentException("not_connected")
+                    // EXACTLY the pause-menu quit path: disconnectFromWorld does
+                    // level.disconnect -> saving screen -> TitleScreen as one flow. Calling
+                    // disconnectWithSavingScreen WITHOUT level.disconnect first deadlocks the
+                    // client thread on the saving screen (live-reproduced 2026-06-10). Queued
+                    // instead of inline because the save pumps the client thread; callers poll
+                    // /state until connected=false.
+                    mc.execute {
+                        runCatching {
+                            mc.disconnectFromWorld(net.minecraft.client.multiplayer.ClientLevel.DEFAULT_QUIT_MESSAGE)
+                        }.onFailure { FloydAddonsMod.logger.warn("Failed to disconnect from world", it) }
+                    }
+                }
                 "openWorld", "loadWorld", "singleplayer" -> {
                     val levelId = body["world"]?.takeIf { !it.isJsonNull }?.asString
                         ?: body["level"]?.takeIf { !it.isJsonNull }?.asString
@@ -852,6 +868,29 @@ object FloydLocalControl : Module(
             mapOf("ok" to true, "typed" to text.length, "cleared" to clear, "submitted" to submit, "handled" to handled)
         }
         send(exchange, 200, result)
+    }
+
+    /**
+     * Samples [seconds] of frame times (and per-feature sections + render-thread allocation when
+     * `sections=1`) and returns percentiles. Blocking by design: the render thread records into
+     * preallocated arrays and completes the future at the window's last frame boundary; this HTTP
+     * worker parks on a BOUNDED get (the 2-thread pool keeps one worker free). Concurrent windows
+     * are rejected with 400 perf_busy. Avoid hitting other client-thread endpoints (e.g. /state)
+     * while a window is recording — they steal render-thread time and perturb the measurement.
+     */
+    private fun handlePerf(exchange: HttpExchange) {
+        val params = queryParams(exchange)
+        val seconds = params["seconds"]?.toDoubleOrNull() ?: 10.0
+        if (!(seconds in 1.0..120.0)) throw IllegalArgumentException("seconds_out_of_range")
+        val sections = params["sections"] == "1"
+        val window = FloydPerf.startWindow(seconds, sections)
+        try {
+            window.future.get(seconds.toLong() + 15, TimeUnit.SECONDS)
+            send(exchange, 200, FloydPerf.summarize(window, sections))
+        } catch (_: TimeoutException) {
+            FloydPerf.cancel(window)
+            throw IllegalArgumentException("perf_timeout_no_frames")
+        }
     }
 
     private fun handleScreenshot(exchange: HttpExchange) {

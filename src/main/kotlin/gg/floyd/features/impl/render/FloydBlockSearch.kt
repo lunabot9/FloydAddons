@@ -13,6 +13,8 @@ import gg.floyd.features.ModuleManager
 import gg.floyd.utils.Colors
 import gg.floyd.utils.Identifiers
 import gg.floyd.utils.modMessage
+import gg.floyd.utils.perf.FloydPerf
+import gg.floyd.utils.perf.FloydPerfCounters
 import gg.floyd.utils.render.BlockIconCache
 import gg.floyd.utils.render.drawStyledBox
 import gg.floyd.utils.render.drawTracer
@@ -171,7 +173,8 @@ object FloydBlockSearch : Module(
     fun isActive(): Boolean = enabled
 
     /** Scans a single chunk's non-air sections once and stores its matching positions. */
-    private fun indexChunk(chunk: LevelChunk) {
+    private fun indexChunk(chunk: LevelChunk): Unit = FloydPerf.section("BlockSearch.indexChunk") {
+        FloydPerfCounters.blockSearchChunkScans.increment()
         val ids = activeIds()
         val key = ChunkPos.asLong(chunk.pos.x, chunk.pos.z)
         if (ids.isEmpty()) { removeChunk(key); return }
@@ -224,6 +227,7 @@ object FloydBlockSearch : Module(
     @JvmStatic
     fun handleClientBlockChange(pos: BlockPos, state: BlockState) {
         if (!enabled) return
+        FloydPerfCounters.blockSearchBlockChanges.increment()
         val ids = activeIds()
         if (ids.isEmpty()) return
         val key = ChunkPos.asLong(pos)

@@ -13,6 +13,7 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydDayTrackerModule
 import gg.floyd.features.impl.render.FloydInventoryHud
+import gg.floyd.utils.perf.FloydPerf
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import org.lwjgl.opengl.GL13C
 import org.lwjgl.opengl.GL33C
@@ -86,6 +87,10 @@ object PostHudOverlay {
     @JvmStatic
     fun render() {
         if (mc.level == null || mc.player == null || mc.options.hideGui) return
+        FloydPerf.section("PostHud.total") { renderPass() }
+    }
+
+    private fun renderPass() {
         RenderSystem.assertOnRenderThread()
 
         val target = mc.mainRenderTarget
@@ -132,9 +137,9 @@ object PostHudOverlay {
         // the vanilla HUD.
         // NOTE: the ESP overhead is NOT drawn here — it's a true world-space billboard from RenderUtils'
         // RenderEvent.Last pass; this screen-space pass only owns the 2D HUD panels.
-        FloydInventoryHud.renderAtWorldEnd()
-        FloydDayTrackerModule.renderAtWorldEnd()
-        FloydCustomScoreboard.renderAtWorldEnd()
+        FloydPerf.section("PostHud.InventoryHud") { FloydInventoryHud.renderAtWorldEnd() }
+        FloydPerf.section("PostHud.DayTracker") { FloydDayTrackerModule.renderAtWorldEnd() }
+        FloydPerf.section("PostHud.Scoreboard") { FloydCustomScoreboard.renderAtWorldEnd() }
 
         modelView.popMatrix()
 
