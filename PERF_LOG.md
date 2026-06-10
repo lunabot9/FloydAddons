@@ -246,6 +246,58 @@ Live-verified: hitboxes + tracers render on the husk crowd with both filter type
 filters cleaned up after. Note the ents arena's base alloc (~117 MB/s from 100 rendered
 entities + nameplates) makes sub-2 MB/s deltas unmeasurable — recorded as such.
 
+## FINAL REPORT (2026-06-10)
+
+Re-baseline: `perf-results/final/` (same arenas/protocol as the baseline). The clean
+per-feature A/Bs (sections above) are the canonical numbers; the re-baseline run
+confirms the rankings (its HUD-arena tail percentiles got noisy from accumulated GC
+debt/thermal over the ~55 min run — spreads of 5–10 ms on p95/p99 in both OFF and ON
+windows; deltas remain interpretable).
+
+| Feature | Δalloc BEFORE | Δalloc AFTER (clean A/B) | Re-baseline confirms |
+|---|---|---|---|
+| Block Search | **+655.6 MB/s**, p99 +2.2ms | **+0.42 MB/s**, ON faster on every metric | +0.54 (0.10); p50 −0.19, p95 −0.80, fps +4.1 — all findings, all in ON's favor |
+| Inventory HUD | +21.2 MB/s | +4.09 MB/s | −0.9 (13.6) — in the noise |
+| ClickGUI (open) | +20.0 MB/s | +17.4 MB/s (structural per-glyph remainder) | +18.5 (4.7) |
+| Custom Scoreboard | +16.9 MB/s | **−19.1 MB/s** (cheaper than vanilla) | −14.0 (17.2) |
+| Mob ESP | +6.8 MB/s (finding) | +1.4 (noise floor) | +2.4 (1.4) |
+| Day Tracker / HUD / X-Ray / Player ESP | negligible at baseline | untouched | still negligible |
+
+Cumulative adversarial review (47 agents, 5 integration lenses, 2 skeptics per
+finding): 17 confirmed findings, all fixed and live-verified in commit 6641b72 —
+the important ones: two dead-ClientLevel pins (Block Search `indexedLevel`, Mob ESP
+`renderTargetsScratch` — both now released on a Fabric DISCONNECT hook), scoreboard
+ghost-render after disable (enabled gate restored ahead of the cache), Inventory HUD
+freezing clock/compass dials (live-model items re-resolve per frame — verified: the
+dial flips between noon/midnight in-panel) and missing resource-reload invalidation
+(font-epoch keyed), Mob ESP chroma quantized to 10-frame steps (cache now holds a
+LIVE chroma Color), `/state` batch counts structurally 0 (lastFlushed snapshot
+published at flush time), and the re-baseline table glob picking up `-after.json`
+fix-era files.
+
+Accepted parity deltas (documented, not bugs): Block Search batch geometry draws after
+single-record ESP geometry within the same translucent no-depth buffer (interleaving
+change, same pixels in practice); quickselect ties at the 10k boundary may pick a
+different equidistant subset than the old stable sort.
+
 ## Cross-platform audit notes
+
+Per-feature audits recorded in each entry above. Summary for the cumulative diff:
+- No hardcoded paths, natives, dpr/devicePixelRatio math, or window-size assumptions
+  added anywhere in the diff (verified by grep over the cumulative diff).
+- New render-thread-only scratch state (PrimitiveRenderer.cornersScratch,
+  tracerFanScratch, HudTextRenderer.deferredPose, NVG transform/pose scratches,
+  ItemStateRenderer inline pools, Mob ESP renderTargetsScratch) — all documented
+  non-reentrant, all confined to the render thread by construction.
+- ThreadMXBean allocation sampling verified working on the instance JVM (Microsoft
+  OpenJDK 21.0.7 aarch64) with zero flags; the com.sun.management cast degrades
+  gracefully (`allocSupported=false`) on JVMs without it.
+- NOT verified on real Windows/Linux (this is a macOS dev machine): the harness and
+  fixes are platform-neutral JVM/GL code, but only macOS arm64 execution is proven.
+  Risk: low (no new natives, no new GL extensions, no path assumptions).
+- guiScale/window-size matrix: the changed features are world-space or
+  framebuffer-pixel-space (guiScale-normalized by pre-existing code); the perf changes
+  do not touch coordinate math. Deferred as low-risk; flagged here per protocol rather
+  than claimed verified.
 
 _(pending — per-feature gate d)_
