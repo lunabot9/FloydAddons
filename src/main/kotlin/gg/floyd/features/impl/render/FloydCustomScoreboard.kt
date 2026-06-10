@@ -2,21 +2,14 @@ package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.HudSizeRegistry
-import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.render.HudPanel
+import gg.floyd.utils.render.HudTextRenderer
 import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
-import gg.floyd.utils.ui.rendering.NVGPIPRenderer
-import gg.floyd.utils.ui.rendering.NVGRenderer
-import gg.floyd.utils.ui.rendering.PanelPhase
 import gg.floyd.utils.ui.rendering.PostHudOverlay
-import net.minecraft.client.gui.Font
-import net.minecraft.client.renderer.LightTexture
-import org.joml.Matrix3x2f
-import org.joml.Matrix4f
-import org.joml.Vector2f
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
@@ -30,14 +23,14 @@ import java.text.Normalizer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.ceil
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 /**
  * Standalone toggle for the Floyd custom scoreboard.
  *
  * When enabled, the vanilla sidebar is replaced by this module's rounded, gradient-bordered
- * scoreboard, rendered through the global custom font (vanilla [net.minecraft.client.gui.Font]),
- * so it inherits color pass-through, glyph fallback, and overlay blur for free.
+ * scoreboard. Text renders through the global mc.font (the MSDF custom-font provider), via the
+ * shared [HudTextRenderer] world-end helper, so it inherits per-codepoint glyph fallback and the
+ * exact float advances the layout measures with ([MsdfFontMetrics]).
  *
  * Previously this was a buried `Custom Scoreboard` BooleanSetting inside [FloydRender]; it is now
  * its own module and owns the movable scoreboard HUD element. All cosmetics (background, border
@@ -56,17 +49,18 @@ object FloydCustomScoreboard : Module(
     private const val BRAND_LETTER_PHASE_STEP = 0.04f
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
 
-    // Default OFF = Floyd's smooth NanoVG font. Safe from the old multi-PIP flicker because the
-    // scoreboard is now the only in-game NVG PIP (day tracker + inventory counts stay on mc.font).
-    private val scoreboardHudMinecraftFont by BooleanSetting("Scoreboard Minecraft Font", false, desc = "Uses Minecraft's default font instead of Floyd's smooth NanoVG font for scoreboard text.")
-
     // toggleable = false: the module toggle is the single on/off (no redundant inner toggle).
     private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", false, 10, 80, 1f) { example ->
         drawScoreboardHud(example)
     }
 
     init {
-        HudSizeRegistry.register("Scoreboard HUD") { 180 to 120 }
+        // The editor drag box must match the rendered panel, so the estimate comes from the same
+        // layout (and therefore the same MsdfFontMetrics widths) the world-end render draws with.
+        HudSizeRegistry.register("Scoreboard HUD") {
+            scoreboardRender(example = true, requireVanillaSignal = false)
+                ?.let { it.boxWidth to it.boxHeight } ?: (180 to 120)
+        }
     }
 
     @JvmStatic
@@ -89,8 +83,7 @@ object FloydCustomScoreboard : Module(
                 ),
                 "x" to scoreboardHud.x,
                 "y" to scoreboardHud.y,
-                "hudScale" to scoreboardHud.scale,
-                "minecraftFont" to useMinecraftScoreboardFont()
+                "hudScale" to scoreboardHud.scale
             ),
             "cornerRadius" to FloydPanelStyle.cornerRadiusFor(FloydPanelStyle.PanelTarget.SCOREBOARD)
         )
@@ -180,7 +173,7 @@ object FloydCustomScoreboard : Module(
         }
 
         val padding = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.SCOREBOARD).coerceAtLeast(0)
-        val fontSize = scoreboardTextHeight()
+        val fontSize = SCOREBOARD_FONT_SIZE
         val lineHeight = ceil(fontSize + 1f).toInt().coerceAtLeast(9)
         val titlePad = 2
         val boxWidth = ceil(maxLineWidth + padding * 2).toInt()
@@ -219,10 +212,10 @@ object FloydCustomScoreboard : Module(
      * the HUD element's own framebuffer-pixel position/scale (no GuiGraphics pose), so it shows regardless
      * of any open screen. In the editor it renders the example layout when there's no live sidebar.
      */
-    fun renderAtWorldEnd(phase: PanelPhase) {
+    fun renderAtWorldEnd() {
         val editor = mc.screen === gg.floyd.clickgui.HudManager
         val r = scoreboardRender(example = editor, requireVanillaSignal = false) ?: return
-        drawScoreboardInline(r.boxWidth, r.boxHeight, r.texts, phase)
+        drawScoreboardInline(r.boxWidth, r.boxHeight, r.texts)
     }
 
     private fun scoreLine(name: String): ScoreLine {
@@ -230,201 +223,89 @@ object FloydCustomScoreboard : Module(
         return ScoreLine(text, StyledScoreboardText.EMPTY, textWidth(text), 0f)
     }
 
-    private fun textWidth(text: String): Float =
-        if (useMinecraftScoreboardFont()) mc.font.width(text).toFloat()
-        else NVGRenderer.textWidth(text, scoreboardFontSize(), NVGRenderer.activeFont())
+    private fun textWidth(text: String): Float = MsdfFontMetrics.width(text, SCOREBOARD_FONT_SIZE)
 
     private fun textWidth(text: StyledScoreboardText): Float {
         var width = 0f
-        for (segment in text.segments) {
-            width += if (useMinecraftScoreboardFont() || segment.minecraftFont) {
-                mc.font.width(segment.text).toFloat()
-            } else {
-                NVGRenderer.textWidth(segment.text, scoreboardFontSize(), NVGRenderer.activeFont())
-            }
-        }
+        for (segment in text.segments) width += MsdfFontMetrics.width(segment.text, SCOREBOARD_FONT_SIZE)
         return width
-    }
-
-    private fun scoreboardFontSize(): Float = SCOREBOARD_FONT_SIZE
-
-    private fun scoreboardTextHeight(): Float =
-        if (useMinecraftScoreboardFont()) mc.font.lineHeight.toFloat() else scoreboardFontSize()
-
-    /** Editor-preview / Minecraft-font path: the original deferred PIP render (GuiGraphics-based). */
-    private fun GuiGraphics.drawScoreboardDeferred(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
-        HudPanel.fillPanel(this, 0, 0, boxWidth, boxHeight, FloydPanelStyle.PanelTarget.SCOREBOARD, HudPanel.panelBorderColors(FloydPanelStyle.PanelTarget.SCOREBOARD, scoreboardHud.x, scoreboardHud.y))
-        if (useMinecraftScoreboardFont()) {
-            for (text in texts) drawMinecraftScoreboardText(text)
-        } else {
-            val nvgScaleMultiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
-            NVGPIPRenderer.draw(this, 0, 0, boxWidth, boxHeight, renderScaleMultiplier = nvgScaleMultiplier) {
-                for (text in texts) drawScoreboardText(text)
-            }
-            for (text in texts) drawScoreboardMinecraftFallbacks(text)
-        }
     }
 
     /**
      * In-game render, drawn DIRECTLY to the main framebuffer from the world-end pass (no PIP, no
      * GuiGraphics). Geometry comes from the HUD element's own framebuffer-pixel x/y/scale, so it is
-     * screen-independent (renders with any screen open). SDF bg/border draw in framebuffer space; NanoVG
-     * + mc.font draw in logical (/dpr) space — the FBO is re-bound between them because the SDF blaze3d
-     * render pass can retarget.
+     * screen-independent (renders with any screen open). Background (SDF fill/border + frosted blur)
+     * and the mc.font text all draw in framebuffer-pixel space; [HudTextRenderer] re-applies the
+     * screen projection and re-binds the FBO around its batch because a blaze3d render pass can
+     * retarget.
      */
-    private fun drawScoreboardInline(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>, phase: PanelPhase) {
+    private fun drawScoreboardInline(boxWidth: Int, boxHeight: Int, texts: List<ScoreboardText>) {
         val target = FloydPanelStyle.PanelTarget.SCOREBOARD
-        val dpr = NVGRenderer.devicePixelRatio()
         val scale = scoreboardHud.scale
         val fx = scoreboardHud.x.toFloat()
         val fy = scoreboardHud.y.toFloat()
         val fw = boxWidth * scale
         val fh = boxHeight * scale
 
-        if (phase == PanelPhase.BACKGROUND) {
-            val fill = FloydPanelStyle.backgroundColorFor(target).rgba
-            val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
-            val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
-            val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
+        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
+        val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
+        val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
-            // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
-            if (FloydPanelStyle.blurFor(target)) {
-                val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
-                if (blurRadius >= 0.5f && fw * fh >= 2000f) {
-                    PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
-                    PostHudOverlay.bindMainFbo()
-                }
+        // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
+        if (FloydPanelStyle.blurFor(target)) {
+            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+                PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
+                PostHudOverlay.bindMainFbo()
             }
-            RoundRectPIPRenderer.drawInline(
-                fx, fy, fw, fh,
-                fill, fill, fill, fill,
-                radius, radius, radius, radius,
-                border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
-                outline
-            )
-            return
         }
+        RoundRectPIPRenderer.drawInline(
+            fx, fy, fw, fh,
+            fill, fill, fill, fill,
+            radius, radius, radius, radius,
+            border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
+            outline
+        )
 
-        // TEXT phase (NanoVG, or the optional all-mc.font mode). Runs after every panel's background, so
-        // NanoVG's GL-state corruption can no longer black out a background — see PostHudOverlay.render.
-        val originX = fx / dpr
-        val originY = fy / dpr
-        val textScale = scale / dpr
-        if (useMinecraftScoreboardFont()) {
-            drawScoreboardTextMc(texts, originX, originY, textScale, allSegments = true)
-            return
-        }
-        NVGRenderer.beginFrame(mc.window.width.toFloat(), mc.window.height.toFloat())
-        NVGRenderer.translate(originX, originY)
-        NVGRenderer.scale(textScale, textScale)
-        for (text in texts) drawScoreboardText(text)
-        NVGRenderer.endFrame()
-        // mc.font fallback for glyphs the NVG font can't render (small-caps are already mapped to ASCII).
-        if (texts.any { t -> t.value.segments.any { it.minecraftFont } }) {
-            PostHudOverlay.bindMainFbo()
-            drawScoreboardTextMc(texts, originX, originY, textScale, allSegments = false)
-        }
-    }
-
-    /** Draws scoreboard text via mc.font to the bound main framebuffer (logical /dpr space). */
-    private fun drawScoreboardTextMc(texts: List<ScoreboardText>, originX: Float, originY: Float, textScale: Float, allSegments: Boolean) {
-        PostHudOverlay.applyScreenProjection()
-        val mcMatrix = Matrix4f().translate(originX, originY, 0f).scale(textScale, textScale, 1f)
-        val buffer = mc.renderBuffers().bufferSource()
-        val font = NVGRenderer.activeFont()
+        // Text via the shared mc.font helper. Layout positions are in local panel units (= 9px font
+        // units, SCOREBOARD_FONT_SIZE = 9), so one font unit maps to [scale] framebuffer px.
         for (text in texts) {
-            var segX = text.x
-            for (segment in text.value.segments) {
-                if (allSegments || segment.minecraftFont) {
-                    mc.font.drawInBatch(segment.text, segX, text.y, segment.color, false, mcMatrix, buffer, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT)
-                    segX += mc.font.width(segment.text).toFloat()
-                } else {
-                    segX += NVGRenderer.textWidth(segment.text, scoreboardFontSize(), font)
-                }
-            }
-        }
-        buffer.endBatch()
-    }
-
-    private fun drawScoreboardText(text: ScoreboardText) {
-        var segmentX = text.x
-        val font = NVGRenderer.activeFont()
-        for (segment in text.value.segments) {
-            if (segment.minecraftFont) {
-                segmentX += mc.font.width(segment.text).toFloat()
-                continue
-            }
-            NVGRenderer.text(segment.text, segmentX, text.y, scoreboardFontSize(), segment.color, font)
-            segmentX += NVGRenderer.textWidth(segment.text, scoreboardFontSize(), font)
-        }
-    }
-
-    private fun GuiGraphics.drawMinecraftScoreboardText(text: ScoreboardText) {
-        var segmentX = text.x
-        for (segment in text.value.segments) {
-            drawString(mc.font, segment.text, segmentX.roundToInt(), text.y.roundToInt(), segment.color, false)
-            segmentX += mc.font.width(segment.text).toFloat()
-        }
-    }
-
-    private fun GuiGraphics.drawScoreboardMinecraftFallbacks(text: ScoreboardText) {
-        var segmentX = text.x
-        val font = NVGRenderer.activeFont()
-        for (segment in text.value.segments) {
-            if (segment.minecraftFont) {
-                drawString(mc.font, segment.text, segmentX.roundToInt(), text.y.roundToInt(), segment.color, false)
-                segmentX += mc.font.width(segment.text).toFloat()
-            } else {
-                segmentX += NVGRenderer.textWidth(segment.text, scoreboardFontSize(), font)
-            }
+            HudTextRenderer.drawSegments(text.value.segments, fx + text.x * scale, fy + text.y * scale, scale)
         }
     }
 
     private fun styledText(text: FormattedCharSequence, forcedColor: Int? = null, forcedColorAt: ((Int) -> Int)? = null): StyledScoreboardText {
         // Apply Neck/Nick Hider + server/profile-id replacement to the scoreboard text up front. The
-        // vanilla swap is wired through FontMixin (Font.prepareText/width), but this scoreboard renders
-        // its custom font through NVGRenderer, which never touches Font — so without this the nick swap
-        // (and id hiding) would silently skip the NVG-rendered scoreboard. No-op when no replacements are
-        // active; idempotent for the mc.font fallback segments (their re-pass through FontMixin finds
-        // nothing left to replace). Covers both the NVG and Minecraft-font scoreboard paths uniformly.
+        // draw path re-passes through FontMixin (Font.prepareText) where the replacement is idempotent,
+        // but the LAYOUT widths are measured via MsdfFontMetrics/StringSplitter, which FontMixin does
+        // not hook — so without this upfront pass the box would be sized for the unreplaced text.
         val source = CustomNameReplacer.replaceSequenceIfNeeded(text)
-        // Collect every glyph (with its resolved color) up front so the neighbor rule can inspect the
-        // adjacent glyphs. No glyph is ever dropped: each renders in the custom font (possibly after
-        // NFKC-normalizing a fancy unicode glyph down to ASCII), or in the default Minecraft font when
-        // it is a 'skip' glyph or is directly trapped between two skip glyphs.
+        // Collect every glyph with its resolved color. No glyph is ever dropped: fancy unicode is
+        // NFKC/small-caps-normalized down to ASCII where possible (so it renders in the smooth custom
+        // font); anything else passes through unchanged and renders via mc.font's per-codepoint
+        // fallback (unifont), measured with exactly the advances it renders with.
         val glyphs = ArrayList<String>()
-        val skip = ArrayList<Boolean>()
         val colors = ArrayList<Int>()
         source.accept { _, style, codePoint ->
-            val normalized = normalizeForScoreboardFont(codePoint)
-            glyphs.add(normalized ?: String(Character.toChars(codePoint)))
-            skip.add(normalized == null)
+            glyphs.add(normalizeForScoreboardFont(codePoint) ?: String(Character.toChars(codePoint)))
             // forcedColorAt colors per visual glyph index (left→right) for the brand's letter-by-letter chroma.
             colors.add(forcedColorAt?.invoke(colors.size) ?: forcedColor ?: scoreboardStyleColor(style))
             true
         }
         if (glyphs.isEmpty()) return StyledScoreboardText(emptyList())
 
-        // A glyph uses the default Minecraft font when it is itself a skip glyph, or when it is a normal
-        // glyph directly surrounded by skip glyphs on BOTH sides (servers that wrap only certain letters
-        // in custom symbols). Everything else uses the custom override font.
-        val minecraftFont = BooleanArray(glyphs.size) { i ->
-            skip[i] || (i > 0 && i < glyphs.size - 1 && skip[i - 1] && skip[i + 1])
-        }
-
-        val segments = mutableListOf<ScoreboardTextSegment>()
+        val segments = mutableListOf<HudTextRenderer.Segment>()
         val currentText = StringBuilder()
         var currentColor = colors[0]
-        var currentMinecraftFont = minecraftFont[0]
         fun flush() {
             if (currentText.isEmpty()) return
-            segments += ScoreboardTextSegment(currentText.toString(), currentColor, currentMinecraftFont)
+            segments += HudTextRenderer.Segment(currentText.toString(), currentColor)
             currentText.clear()
         }
         for (i in glyphs.indices) {
-            if (currentText.isNotEmpty() && (colors[i] != currentColor || minecraftFont[i] != currentMinecraftFont)) flush()
+            if (currentText.isNotEmpty() && colors[i] != currentColor) flush()
             currentColor = colors[i]
-            currentMinecraftFont = minecraftFont[i]
             currentText.append(glyphs[i])
         }
         flush()
@@ -437,17 +318,17 @@ object FloydCustomScoreboard : Module(
     }
 
     /**
-     * The string to render in the custom (NVG) font for a source code point, or null when it cannot be
-     * represented there (a 'skip' glyph that must fall back to the default Minecraft font). ASCII passes
-     * through unchanged; non-ASCII is NFKC-normalized (full-width digits, ligatures, etc.) and accepted
-     * only when the result is pure ASCII. Normalize-only: nothing is ever dropped — a code point that
-     * cannot be normalized still renders via the mc.font fallback path.
+     * The ASCII string a source code point normalizes to (so it renders in the smooth custom font),
+     * or null when it has no ASCII form. ASCII passes through unchanged; non-ASCII is NFKC-normalized
+     * (full-width digits, ligatures, etc.) and accepted only when the result is pure ASCII.
+     * Normalize-only: nothing is ever dropped — a code point that cannot be normalized passes through
+     * verbatim and renders via mc.font's per-codepoint fallback (unifont).
      */
     private fun normalizeForScoreboardFont(codePoint: Int): String? {
         if (codePoint in 0x20..0x7E) return String(Character.toChars(codePoint))
         // Latin "small caps" Unicode (servers love these in titles, e.g. ᴀɴᴛɪᴄʜᴇᴀᴛ) have no NFKC ASCII
-        // decomposition AND don't render via mc.font here, so map them to their plain letter — the title
-        // then renders in the smooth NVG font like everything else, instead of vanishing.
+        // decomposition and would fall back to unifont, so map them to their plain letter — the title
+        // then renders in the smooth custom font like everything else.
         SMALL_CAPS_TO_ASCII[codePoint]?.let { return it.toString() }
         val normalized = runCatching {
             Normalizer.normalize(String(Character.toChars(codePoint)), Normalizer.Form.NFKC)
@@ -464,8 +345,6 @@ object FloydCustomScoreboard : Module(
         0x1D1C to 'U', 0x1D20 to 'V', 0x1D21 to 'W', 0x028F to 'Y', 0x1D22 to 'Z'
     )
 
-    private fun useMinecraftScoreboardFont(): Boolean = scoreboardHudMinecraftFont
-
     private fun sidebarObjective(): Objective? {
         val player = mc.player ?: return null
         val scoreboard = mc.level?.scoreboard ?: return null
@@ -481,8 +360,7 @@ object FloydCustomScoreboard : Module(
 
     private data class ScoreLine(val name: StyledScoreboardText, val score: StyledScoreboardText, val nameWidth: Float, val scoreWidth: Float)
     private data class ScoreboardText(val value: StyledScoreboardText, val x: Float, val y: Float)
-    private data class StyledScoreboardText(val segments: List<ScoreboardTextSegment>) {
+    private data class StyledScoreboardText(val segments: List<HudTextRenderer.Segment>) {
         companion object { val EMPTY = StyledScoreboardText(emptyList()) }
     }
-    private data class ScoreboardTextSegment(val text: String, val color: Int, val minecraftFont: Boolean = false)
 }

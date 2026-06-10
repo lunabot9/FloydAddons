@@ -3,6 +3,7 @@ package gg.floyd.clickgui
 import gg.floyd.clickgui.ClickGUI.gray38
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Colors
+import gg.floyd.utils.font.FontEpochCache
 import gg.floyd.utils.ui.TextInputHandler
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.CharacterEvent
@@ -15,11 +16,12 @@ object SearchBar {
         private set(value) {
             if (value == field || value.length > 16) return
             field = value
-            searchWidth = NVGRenderer.textWidth(value, 20f, NVGRenderer.defaultFont)
+            searchWidth.invalidate()
         }
 
-    private var placeHolderWidth = NVGRenderer.textWidth("Search here...", 20f, NVGRenderer.defaultFont)
-    private var searchWidth = NVGRenderer.textWidth(currentSearch, 20f, NVGRenderer.defaultFont)
+    // Epoch-checked so the cached widths re-measure after a mid-session font reload.
+    private val placeHolderWidth = FontEpochCache { NVGRenderer.textWidth("Search here...", 20f, NVGRenderer.defaultFont) }
+    private val searchWidth = FontEpochCache { NVGRenderer.textWidth(currentSearch, 20f, NVGRenderer.defaultFont) }
 
     private val textInputHandler = TextInputHandler(
         textProvider = { currentSearch },
@@ -33,8 +35,8 @@ object SearchBar {
 
         val textY = y + 10f
 
-        if (currentSearch.isEmpty()) NVGRenderer.text("Search here...", x + 175f - placeHolderWidth / 2, textY, 20f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        textInputHandler.x = (x + 175f - searchWidth / 2 - if (currentSearch.isEmpty()) placeHolderWidth / 2 + 2f else 0f).coerceAtLeast(x)
+        if (currentSearch.isEmpty()) NVGRenderer.text("Search here...", x + 175f - placeHolderWidth.get() / 2, textY, 20f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        textInputHandler.x = (x + 175f - searchWidth.get() / 2 - if (currentSearch.isEmpty()) placeHolderWidth.get() / 2 + 2f else 0f).coerceAtLeast(x)
         textInputHandler.y = textY - 1
         textInputHandler.width = 250f
         textInputHandler.height = 22f

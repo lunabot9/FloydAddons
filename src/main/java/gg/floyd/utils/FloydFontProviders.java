@@ -8,6 +8,8 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import gg.floyd.FloydAddonsMod;
 import gg.floyd.features.impl.render.FloydFont;
+import gg.floyd.utils.font.MsdfGlyphProvider;
+import gg.floyd.utils.font.MsdfNative;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.font.providers.FreeTypeUtil;
 import net.minecraft.client.gui.font.providers.GlyphProviderDefinition;
@@ -22,12 +24,15 @@ import org.lwjgl.util.freetype.FT_Face;
 import org.lwjgl.util.freetype.FreeType;
 import org.slf4j.Logger;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Runtime control for Floyd's global custom-font override.
@@ -44,7 +49,77 @@ public final class FloydFontProviders {
     /** Path inside the bundled resource pack referenced by {@code assets/minecraft/font/default.json}. */
     private static final Identifier BUNDLED_FONT = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "font.ttf");
 
+    private static volatile boolean msdfSetupWarned = false;
+
+    /**
+     * D1(c) latch: set by a mid-session MSDF glyph-generation failure and consumed by the next
+     * {@link #adjustDefaultFont} pass over {@code minecraft:default}, which then emits the vanilla
+     * TTF definition instead of the MSDF one. Consuming (rather than sticking) means a later
+     * user-initiated reload retries MSDF; if it fails again, another one-shot reload re-forces the
+     * TTF fallback.
+     */
+    private static final AtomicBoolean MSDF_DISABLED_UNTIL_RELOAD = new AtomicBoolean(false);
+
+    /** Debounce for the one-shot failure reload; reset when the latch is consumed. */
+    private static final AtomicBoolean MSDF_FAILURE_RELOAD_SCHEDULED = new AtomicBoolean(false);
+
+    /**
+     * Monotonic font epoch, bumped every time the {@code minecraft:default} provider list is
+     * rebuilt (every font reload: the FloydFont "Reload Font" action, F3+T, font-size /
+     * custom-font changes, server resource packs). Session-lived width caches (ClickGUI widgets,
+     * see {@code gg.floyd.utils.font.FontEpochCache}) key on this so cached advances never go
+     * stale across a mid-session font change.
+     */
+    private static final AtomicInteger FONT_EPOCH = new AtomicInteger();
+
+    /**
+     * The metrics definition + BYO path the live MSDF provider was built with — recorded so the
+     * /fontdebug A/B endpoint can build a vanilla {@link TrueTypeGlyphProvider} from the exact
+     * same bytes at the exact same size/oversample/shift/skip.
+     */
+    private static volatile TrueTypeGlyphProviderDefinition lastMsdfMetrics = null;
+    private static volatile Path lastMsdfByoPath = null;
+
     private FloydFontProviders() {
+    }
+
+    /**
+     * Mid-session per-glyph generation failure (design D1(c)): the failing bake already returned
+     * the missing glyph; here we latch MSDF off for the next font reload and schedule that reload
+     * once (debounced). Crash-safe — this runs inside the render loop's bake path.
+     */
+    public static void onMsdfGenerationFailure() {
+        try {
+            MSDF_DISABLED_UNTIL_RELOAD.set(true);
+            if (MSDF_FAILURE_RELOAD_SCHEDULED.compareAndSet(false, true)) {
+                Minecraft minecraft = Minecraft.getInstance();
+                minecraft.execute(minecraft::reloadResourcePacks);
+            }
+        } catch (Throwable t) {
+            LOGGER.warn("Floyd MSDF failure-reload scheduling failed", t);
+        }
+    }
+
+    /** Whether the D1(c) latch is currently armed (surfaced by /fontdebug). */
+    public static boolean isMsdfDisabledUntilReload() {
+        return MSDF_DISABLED_UNTIL_RELOAD.get();
+    }
+
+    /** Current font epoch; changes whenever the default-font provider list is rebuilt. */
+    public static int fontEpoch() {
+        return FONT_EPOCH.get();
+    }
+
+    /**
+     * Builds a throwaway vanilla {@link TrueTypeGlyphProvider} over the same font bytes and
+     * metrics as the live MSDF provider, for the /fontdebug {@code ?ab=1} advance-parity check
+     * (risk R2). The caller must {@code close()} it.
+     */
+    public static GlyphProvider buildAbComparisonProvider() {
+        TrueTypeGlyphProviderDefinition metrics = lastMsdfMetrics;
+        if (metrics == null) throw new IllegalStateException("no_msdf_provider_loaded");
+        Path byoPath = lastMsdfByoPath;
+        return byoPath != null ? loadFromFile(byoPath, metrics) : loadBundled(metrics);
     }
 
     /**
@@ -61,9 +136,19 @@ public final class FloydFontProviders {
             Identifier fontId, List<Pair<?, GlyphProviderDefinition.Conditional>> loaded) {
         if (loaded == null || loaded.isEmpty()) return loaded;
         if (!fontId.equals(Minecraft.DEFAULT_FONT)) return loaded;
+        // The default font's providers are being rebuilt: advances may change, invalidate caches.
+        FONT_EPOCH.incrementAndGet();
 
         boolean enabled = FloydFont.isGlobalCustomFontEnabled();
         Path byoPath = FloydFont.customFontPath();
+        // Consume the D1(c) failure latch: this reload forces the vanilla TTF fallback, and the
+        // debounce resets so a later failure can schedule another one-shot reload.
+        boolean latched = MSDF_DISABLED_UNTIL_RELOAD.getAndSet(false);
+        if (latched) {
+            MSDF_FAILURE_RELOAD_SCHEDULED.set(false);
+            LOGGER.warn("Floyd MSDF disabled for this font reload after a mid-session generation failure; using the TTF provider");
+        }
+        boolean msdf = enabled && !latched && msdfAvailable();
 
         List<Pair<?, GlyphProviderDefinition.Conditional>> result = new ArrayList<>(loaded.size());
         for (Pair<?, GlyphProviderDefinition.Conditional> entry : loaded) {
@@ -79,6 +164,14 @@ public final class FloydFontProviders {
             }
 
             TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
+            if (msdf) {
+                GlyphProviderDefinition.Conditional msdfReplacement = msdfConditional(entry.getSecond(), runtimeMetrics, byoPath);
+                if (msdfReplacement != null) {
+                    result.add(entry.mapSecond(ignored -> msdfReplacement));
+                    continue;
+                }
+                // MSDF definition could not be built; fall through to the TTF paths.
+            }
             if (byoPath != null) {
                 GlyphProviderDefinition.Conditional replacement = byoConditional(entry.getSecond(), runtimeMetrics, byoPath);
                 if (replacement != null) {
@@ -106,6 +199,102 @@ public final class FloydFontProviders {
                 FloydFont.runtimeFontOversample(),
                 bundled.shift(),
                 bundled.skip());
+    }
+
+    /**
+     * Whether the MSDF font path can be used: the lwjgl-msdfgen natives must link and initialize.
+     * Probing (and any unexpected classloading failure around it) is crash-safe — link failures
+     * are {@link Error}s, so everything is caught and reported as "unavailable" instead.
+     */
+    private static boolean msdfAvailable() {
+        try {
+            return MsdfNative.probe();
+        } catch (Throwable t) {
+            if (!msdfSetupWarned) {
+                msdfSetupWarned = true;
+                LOGGER.warn("Floyd MSDF font path unavailable, keeping the TTF provider", t);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Builds the MSDF replacement for the bundled TTF provider: an anonymous definition whose
+     * loader constructs {@link MsdfGlyphProvider} from the BYO .ttf (when selected) or the bundled
+     * font bytes, at the same runtime metrics as the TTF provider it replaces. Every failure path
+     * falls back to the existing TTF providers, so the global font keeps working.
+     */
+    private static GlyphProviderDefinition.Conditional msdfConditional(
+            GlyphProviderDefinition.Conditional original,
+            TrueTypeGlyphProviderDefinition metrics,
+            Path byoPath) {
+        try {
+            GlyphProviderDefinition.Loader loader = resourceManager -> {
+                try {
+                    return loadMsdfProvider(resourceManager, metrics, byoPath);
+                } catch (Throwable t) {
+                    LOGGER.warn("Floyd MSDF provider failed to load{}", byoPath != null ? " for custom font " + byoPath : "", t);
+                    if (byoPath != null) {
+                        // D9 chain: custom MSDF -> bundled MSDF -> custom TTF (which itself falls
+                        // back to the bundled TTF) -> vanilla. Each step is crash-safe.
+                        try {
+                            return loadMsdfProvider(resourceManager, metrics, null);
+                        } catch (Throwable bundledFailure) {
+                            LOGGER.warn("Floyd bundled MSDF fallback also failed, falling back to the TTF chain", bundledFailure);
+                        }
+                        return loadFromFile(byoPath, metrics);
+                    }
+                    return loadBundled(metrics);
+                }
+            };
+            GlyphProviderDefinition msdfDefinition = new GlyphProviderDefinition() {
+                @Override
+                public GlyphProviderType type() {
+                    return GlyphProviderType.TTF;
+                }
+
+                @Override
+                public Either<Loader, Reference> unpack() {
+                    return Either.left(loader);
+                }
+            };
+            return new GlyphProviderDefinition.Conditional(msdfDefinition, original.filter());
+        } catch (Throwable t) {
+            if (!msdfSetupWarned) {
+                msdfSetupWarned = true;
+                LOGGER.warn("Floyd MSDF definition could not be built, keeping the TTF provider", t);
+            }
+            return null;
+        }
+    }
+
+    private static GlyphProvider loadMsdfProvider(
+            ResourceManager resourceManager,
+            TrueTypeGlyphProviderDefinition metrics,
+            Path byoPath) throws IOException {
+        ByteBuffer fontBuffer = null;
+        try {
+            try (InputStream inputStream = byoPath != null
+                    ? Files.newInputStream(byoPath)
+                    : resourceManager.open(BUNDLED_FONT)) {
+                fontBuffer = TextureUtil.readResource(inputStream);
+            }
+            // Ownership transfers to the provider (it frees the buffer in close(), or itself on a
+            // failed construction), so null the local before handing it over.
+            ByteBuffer owned = fontBuffer;
+            fontBuffer = null;
+            MsdfGlyphProvider provider = new MsdfGlyphProvider(
+                    owned, metrics.size(), metrics.oversample(),
+                    metrics.shift().x(), metrics.shift().y(), metrics.skip());
+            lastMsdfMetrics = metrics;
+            lastMsdfByoPath = byoPath;
+            // D11(d): the ASCII prebake daemon starts only after construction completed, so the
+            // thread never observes a half-built provider. CPU bitmaps + cache writes only.
+            provider.startPrebake();
+            return provider;
+        } finally {
+            MemoryUtil.memFree(fontBuffer);
+        }
     }
 
     private static GlyphProviderDefinition.Conditional byoConditional(

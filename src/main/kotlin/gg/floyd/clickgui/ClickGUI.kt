@@ -68,12 +68,24 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
             val draggedPanel = panels.firstOrNull { it.dragging }
             for (panel in panels) {
-                if (panel != draggedPanel) panel.draw(scaledMouseX, scaledMouseY)
+                if (panel == draggedPanel) continue
+                // Per-panel text layer (D7 step 6 CORRECTION): bake everything queued so far —
+                // the GUI-level text above (layer 0) and lower panels' text — into the PIP slot
+                // BELOW this panel's shapes, so panels overlapping at rest occlude correctly.
+                NVGRenderer.nextTextLayer()
+                panel.draw(scaledMouseX, scaledMouseY)
             }
 
+            // Topmost layers: dragged panel, then the tooltip — each behind its own boundary so
+            // the dragged panel's replayed text bakes BELOW the tooltip's box (otherwise it would
+            // composite over a live tooltip, the same bleed the per-panel boundaries fix at rest).
+            // Empty layers skip their boundary, so this is free when nothing is dragged.
+            NVGRenderer.nextTextLayer()
             draggedPanel?.draw(scaledMouseX, scaledMouseY)
 
+            NVGRenderer.nextTextLayer()
             desc.render()
+            NVGRenderer.resetTextLayers()
         }
         super.render(context, mouseX, mouseY, deltaTicks)
     }

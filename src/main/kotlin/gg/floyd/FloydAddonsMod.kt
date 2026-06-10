@@ -7,6 +7,7 @@ import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.misc.FloydDiscordPresence
 import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.utils.IrisCompatability
+import gg.floyd.utils.font.MsdfPipelines
 import gg.floyd.utils.handlers.TickTasks
 import gg.floyd.utils.render.ItemStateRenderer
 import gg.floyd.utils.render.RenderBatchManager
@@ -49,11 +50,16 @@ object FloydAddonsMod : ClientModInitializer {
 
     const val MOD_ID = "floydaddons"
     const val MOD_NAME = "Floyd Addons"
-    const val MOD_VERSION = "0.1.0"
+    const val MOD_VERSION = "2.2.0"
 
     val scope = CoroutineScope(SupervisorJob() + EmptyCoroutineContext)
 
     override fun onInitializeClient() {
+        // Register the MSDF text pipelines before the boot resource reload so ShaderManager's
+        // eager compile check covers them from the FIRST reload (a broken shader hard-fails the
+        // reload instead of silently skipping draws). Map-put only — no GL is touched here.
+        MsdfPipelines.bootstrap()
+
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             arrayOf(
                 mainCommand,

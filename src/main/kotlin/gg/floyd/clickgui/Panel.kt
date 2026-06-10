@@ -6,6 +6,7 @@ import gg.floyd.features.Category
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Colors
+import gg.floyd.utils.font.FontEpochCache
 import gg.floyd.utils.ui.isAreaHovered
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.CharacterEvent
@@ -25,13 +26,19 @@ import kotlin.math.floor
 class Panel(private val category: Category) {
 
     val panelSetting = ClickGUIModule.panelSetting[category.name] ?: throw IllegalStateException("Panel setting for category $category is not initialized")
-    val moduleButtons = ModuleManager.modulesByCategory[category]
+    private val unsortedModuleButtons = ModuleManager.modulesByCategory[category]
         ?.filter { it.visibleInGui }
-        ?.sortedByDescending { NVGRenderer.textWidth(it.name, 16f, NVGRenderer.defaultFont) }
         ?.map { ModuleButton(it, this@Panel) } ?: listOf()
-    private val lastModuleButton by lazy { moduleButtons.lastOrNull() }
 
-    private val textWidth = NVGRenderer.textWidth(category.name, 22f, NVGRenderer.defaultFont)
+    // Width-derived state re-measures when the font epoch changes (mid-session font reloads move
+    // every advance); the buttons themselves stay session-lived, only the order is recomputed.
+    private val sortedModuleButtons = FontEpochCache {
+        unsortedModuleButtons.sortedByDescending { NVGRenderer.textWidth(it.module.name, 16f, NVGRenderer.defaultFont) }
+    }
+    val moduleButtons: List<ModuleButton> get() = sortedModuleButtons.get()
+    private val lastModuleButton get() = moduleButtons.lastOrNull()
+
+    private val textWidth = FontEpochCache { NVGRenderer.textWidth(category.name, 22f, NVGRenderer.defaultFont) }
     private var previousHeight = 0f
     private var scrollOffset = 0f
     var dragging = false
@@ -58,7 +65,7 @@ class Panel(private val category: Category) {
         NVGRenderer.drawHalfRoundedRect(panelSetting.x, panelSetting.y, WIDTH, HEIGHT, gray26.rgba, 5f, true)
         NVGRenderer.text(
             category.name,
-            panelSetting.x + WIDTH / 2f - textWidth / 2,
+            panelSetting.x + WIDTH / 2f - textWidth.get() / 2,
             panelSetting.y + HEIGHT / 2f - 11,
             22f,
             Colors.WHITE.rgba,

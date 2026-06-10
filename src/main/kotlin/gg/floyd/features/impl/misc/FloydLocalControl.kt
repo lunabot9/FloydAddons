@@ -20,6 +20,7 @@ import gg.floyd.features.Module
 import gg.floyd.features.impl.camera.FloydCamera
 import gg.floyd.features.impl.hiders.FloydHiders
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydMobEsp
@@ -32,7 +33,12 @@ import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydXray
+import gg.floyd.utils.FloydFontProviders
+import gg.floyd.utils.font.MsdfAtlas
+import gg.floyd.utils.font.MsdfGlyphProvider
+import gg.floyd.utils.font.MsdfNative
 import gg.floyd.utils.render.BlockIconCache
+import gg.floyd.utils.render.NvgTextReplay
 import gg.floyd.utils.render.RenderBatchManager
 import gg.floyd.utils.ui.clearMouseOverride
 import gg.floyd.utils.ui.setMouseOverride
@@ -53,9 +59,17 @@ import net.minecraft.client.multiplayer.ServerData
 import net.minecraft.client.multiplayer.resolver.ServerAddress
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
+import net.minecraft.world.Difficulty
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.player.Inventory
+import net.minecraft.world.flag.FeatureFlags
+import net.minecraft.world.level.GameType
+import net.minecraft.world.level.gamerules.GameRules
+import net.minecraft.world.level.LevelSettings
+import net.minecraft.world.level.WorldDataConfiguration
+import net.minecraft.world.level.levelgen.WorldOptions
+import net.minecraft.world.level.levelgen.presets.WorldPresets
 import net.minecraft.world.phys.BlockHitResult
 import net.minecraft.world.phys.EntityHitResult
 import java.io.IOException
@@ -109,6 +123,23 @@ internal object FloydLocalControlJson {
     }
 }
 
+internal object FloydLocalControlWorlds {
+    /**
+     * Game type for the world-creation actions: an explicit "gamemode" always wins; with none,
+     * the alias name is the contract — "createFreshSurvivalWorld" defaults to SURVIVAL (the
+     * test-harness flows judge block drops, which creative suppresses), "createFreshWorld" to
+     * CREATIVE.
+     */
+    fun resolveGameType(action: String, gamemode: String?): GameType = when (gamemode?.lowercase()) {
+        null, "" -> if (action == "createFreshSurvivalWorld") GameType.SURVIVAL else GameType.CREATIVE
+        "creative" -> GameType.CREATIVE
+        "survival" -> GameType.SURVIVAL
+        "adventure" -> GameType.ADVENTURE
+        "spectator" -> GameType.SPECTATOR
+        else -> throw IllegalArgumentException("unknown_gamemode")
+    }
+}
+
 object FloydLocalControl : Module(
     name = "Local Control",
     category = Category.MISC,
@@ -118,7 +149,7 @@ object FloydLocalControl : Module(
     private val gson = GsonBuilder().serializeNulls().setPrettyPrinting().create()
     private val settingsPath: Path = FloydAddonsMod.configFile.toPath().resolve("control-bridge.json")
     private const val maxBodyBytes = 8192
-    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck", "/entities")
+    private val advertisedEndpoints = listOf("/state", "/chat", "/look", "/hotbar", "/key", "/action", "/screen", "/mouse", "/type", "/replace-text", "/screenshot", "/iconcheck", "/entities", "/fontdebug")
 
     private val port by NumberSetting("Port", FloydLocalControlSettings.DEFAULT_PORT, 1024, 65535, 1, desc = "Local control bridge port.")
 
@@ -242,6 +273,7 @@ object FloydLocalControl : Module(
                 "/screenshot" -> requireMethod(exchange, "POST") { handleScreenshot(exchange) }
                 "/iconcheck" -> requireMethod(exchange, "GET") { send(exchange, 200, iconCheckPayload()) }
                 "/entities" -> requireMethod(exchange, "GET") { send(exchange, 200, entitiesPayload()) }
+                "/fontdebug" -> requireMethod(exchange, "GET") { send(exchange, 200, fontDebugPayload(queryParams(exchange)["ab"] == "1")) }
                 else -> send(exchange, 404, mapOf("ok" to false, "error" to "not_found"))
             }
         } catch (e: IllegalArgumentException) {
@@ -280,6 +312,82 @@ object FloydLocalControl : Module(
             "missingCount" to missing.size,
             "missing" to missing
         )
+    }
+
+    /**
+     * MSDF font-path debug check: reports the msdfgen natives probe status, live MSDF provider /
+     * atlas / glyph / cache counters (incl. per-page occupancy), and a sample Font.width so the
+     * active font path can be verified positively (screenshots alone can show the TTF fallback).
+     * With [includeAb] (GET /fontdebug?ab=1) it additionally builds a throwaway vanilla
+     * TrueTypeGlyphProvider over the same font bytes/metrics and reports per-codepoint advance
+     * deltas over the provider cmap ∩ ASCII+Latin-1 — the numeric metrics-parity gate (risk R2).
+     */
+    private fun fontDebugPayload(includeAb: Boolean = false): Map<String, Any?> = callClient {
+        val font = mc.font
+        val sample = "Floyd Addons 0123456789"
+        val payload = linkedMapOf<String, Any?>(
+            "ok" to true,
+            "msdfNative" to MsdfNative.statusString(),
+            "msdfActiveProviders" to MsdfGlyphProvider.activeInstanceCount(),
+            "msdfGeneratedGlyphs" to MsdfGlyphProvider.generatedGlyphCount(),
+            "msdfCacheHits" to MsdfGlyphProvider.cacheHitCount(),
+            "msdfBakedGlyphs" to MsdfGlyphProvider.bakedGlyphCount(),
+            "msdfAtlasPages" to MsdfAtlas.livePageCount(),
+            "msdfDisabledUntilReload" to FloydFontProviders.isMsdfDisabledUntilReload(),
+            "msdfProviders" to MsdfGlyphProvider.instances().map { it.debugState() },
+            "sampleText" to sample,
+            "sampleWidth" to font.width(sample),
+            "lineHeight" to font.lineHeight,
+            "floydFont" to FloydFont.state()
+        )
+        if (includeAb) payload["abWidthParity"] = abWidthParityPayload()
+        payload
+    }
+
+    /**
+     * Font.width A/B (client thread): vanilla hinted TTF advances vs the live MSDF provider's,
+     * per codepoint over ASCII (0x20..0x7E) + printable Latin-1 (0xA0..0xFF) intersected with the
+     * provider cmap. Zero deltas = D2 metric parity holds. The comparison provider is closed
+     * before returning.
+     */
+    private fun abWidthParityPayload(): Map<String, Any?> {
+        val msdf = MsdfGlyphProvider.instances().lastOrNull()
+            ?: return mapOf("ok" to false, "error" to "no_active_msdf_provider")
+        val ttf = try {
+            FloydFontProviders.buildAbComparisonProvider()
+        } catch (t: Throwable) {
+            return mapOf("ok" to false, "error" to (t.message ?: t.javaClass.simpleName))
+        }
+        try {
+            var total = 0
+            var nonZeroCount = 0
+            var maxDelta = 0f
+            val deltas = ArrayList<Triple<Int, Float, Float>>()
+            for (cp in (0x20..0x7E) + (0xA0..0xFF)) {
+                val ttfAdvance = ttf.getGlyph(cp)?.info()?.getAdvance(false) ?: continue
+                val msdfAdvance = msdf.getGlyph(cp)?.info()?.getAdvance(false) ?: continue
+                total++
+                val delta = kotlin.math.abs(ttfAdvance - msdfAdvance)
+                if (delta > 0f) {
+                    nonZeroCount++
+                    deltas.add(Triple(cp, ttfAdvance, msdfAdvance))
+                }
+                if (delta > maxDelta) maxDelta = delta
+            }
+            val worst = deltas
+                .sortedByDescending { kotlin.math.abs(it.second - it.third) }
+                .take(10)
+                .map { mapOf("cp" to it.first, "ttf" to it.second, "msdf" to it.third) }
+            return mapOf(
+                "ok" to true,
+                "maxDelta" to maxDelta,
+                "nonZeroCount" to nonZeroCount,
+                "total" to total,
+                "worst" to worst
+            )
+        } finally {
+            runCatching { ttf.close() }
+        }
     }
 
     /**
@@ -375,6 +483,9 @@ object FloydLocalControl : Module(
             "clickGui" to ClickGUIModule.state()
         )
         root["legacyGui"] = LegacyFloydClickGUI.debugState()
+        // ClickGUI deferred-text replay counts (P4): per-layer mc.font runs baked into the NVG PIP
+        // last frame; deferralActive=false means FLOYD_NVG_TEXT=1 legacy, null = NVG not yet inited.
+        root["nvgText"] = NvgTextReplay.debugState()
 
         val player = mc.player ?: return@callClient root
         val level = mc.level ?: return@callClient root
@@ -388,7 +499,8 @@ object FloydLocalControl : Module(
             "health" to player.health,
             "maxHealth" to player.maxHealth,
             "food" to player.foodData.foodLevel,
-            "onGround" to player.onGround()
+            "onGround" to player.onGround(),
+            "gameMode" to mc.gameMode?.playerMode?.name
         )
         root["world"] = mapOf(
             "dimension" to level.dimension().identifier().toString(),
@@ -410,7 +522,10 @@ object FloydLocalControl : Module(
         return mapOf(
             "modId" to FloydAddonsMod.MOD_ID,
             "modName" to FloydAddonsMod.MOD_NAME,
-            "version" to FloydAddonsMod.MOD_VERSION,
+            // The loaded jar's metadata, not the compile-time constant: this field is the
+            // stale-client detector, so it must report what is actually running.
+            "version" to (loader.getModContainer(FloydAddonsMod.MOD_ID).orElse(null)?.metadata?.version?.friendlyString
+                ?: FloydAddonsMod.MOD_VERSION),
             "minecraftVersion" to minecraftMetadata?.version?.friendlyString,
             "entrypoint" to "gg.floyd.FloydAddonsMod",
             "mixinConfig" to "floydaddons.mixins.json",
@@ -549,6 +664,51 @@ object FloydLocalControl : Module(
                     }
                     if (!mc.levelSource.levelExists(levelId)) throw IllegalArgumentException("world_not_found")
                     mc.createWorldOpenFlows().openWorld(levelId) {}
+                }
+                "createFreshWorld", "createFreshSurvivalWorld" -> {
+                    val levelId = body["world"]?.takeIf { !it.isJsonNull }?.asString
+                        ?: body["level"]?.takeIf { !it.isJsonNull }?.asString
+                        ?: body["name"]?.takeIf { !it.isJsonNull }?.asString
+                        ?: "floyd-test-${System.currentTimeMillis()}"
+                    if (levelId.isBlank() || levelId.contains("/") || levelId.contains("\\") || levelId.contains("..")) {
+                        throw IllegalArgumentException("invalid_world")
+                    }
+                    if (mc.player != null || mc.level != null) throw IllegalArgumentException("disconnect_before_create_world")
+                    if (mc.levelSource.levelExists(levelId)) throw IllegalArgumentException("world_already_exists")
+                    val seed = body["seed"]?.takeIf { !it.isJsonNull }?.asLong ?: System.currentTimeMillis()
+                    val cheats = body["cheats"]?.takeIf { !it.isJsonNull }?.asBoolean ?: true
+                    val flat = body["flat"]?.takeIf { !it.isJsonNull }?.asBoolean ?: true
+                    val gameType = FloydLocalControlWorlds.resolveGameType(
+                        action,
+                        body["gamemode"]?.takeIf { !it.isJsonNull }?.asString,
+                    )
+                    val settings = LevelSettings(
+                        levelId,
+                        gameType,
+                        false,
+                        Difficulty.PEACEFUL,
+                        cheats,
+                        GameRules(FeatureFlags.DEFAULT_FLAGS),
+                        WorldDataConfiguration.DEFAULT
+                    )
+                    // Queue instead of running inline: createFreshLevel blocks the client
+                    // thread through level load, which would trip callClient's timeout.
+                    mc.execute {
+                        runCatching {
+                            mc.createWorldOpenFlows().createFreshLevel(
+                                levelId,
+                                settings,
+                                WorldOptions(seed, false, false),
+                                { provider ->
+                                    if (flat) WorldPresets.createFlatWorldDimensions(provider)
+                                    else WorldPresets.createNormalWorldDimensions(provider)
+                                },
+                                TitleScreen()
+                            )
+                        }.onFailure {
+                            FloydAddonsMod.logger.warn("Failed to create fresh world {}", levelId, it)
+                        }
+                    }
                 }
                 "windowedFullscreen", "borderlessWindowed" -> {
                     val enabled = body["enabled"]?.takeIf { !it.isJsonNull }?.asBoolean ?: true

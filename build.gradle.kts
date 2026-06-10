@@ -52,6 +52,27 @@ dependencies {
         }
     }
 
+    "3.3.4".let { msdfgenVersion ->
+        modImplementation("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion") {
+            exclude(group = "org.lwjgl", module = "lwjgl")
+        }
+        include("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion")
+
+        listOf(
+            "natives-macos-arm64",
+            "natives-macos",
+            "natives-windows",
+            "natives-windows-arm64",
+            "natives-linux",
+            "natives-linux-arm64",
+        ).forEach { natives ->
+            modImplementation("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion:$natives") {
+                exclude(group = "org.lwjgl", module = "lwjgl")
+            }
+            include("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion:$natives")
+        }
+    }
+
     modCompileOnly("maven.modrinth:iris:${property("iris")}")
     if (System.getenv("FLOYDADDONS_SODIUM_RUNTIME") == "true") {
         modRuntimeOnly("maven.modrinth:sodium:${property("sodium")}")

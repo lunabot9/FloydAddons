@@ -32,6 +32,7 @@
     "mixins.FloydTimeUpdateMixin",
     "mixins.FloydWatchdogMessageMixin",
     "mixins.GameRendererMixin",
+    "mixins.GlyphRenderStateMixin",
     "mixins.GuiMixin",
     "mixins.HubMapRendererMixin",
     "mixins.HiderArrowLayerMixin",

@@ -11,6 +11,7 @@ import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Color
 import gg.floyd.utils.Color.Companion.brighter
 import gg.floyd.utils.Colors
+import gg.floyd.utils.font.FontEpochCache
 import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.animations.EaseInOutAnimation
 import gg.floyd.utils.ui.isAreaHovered
@@ -43,7 +44,7 @@ class SelectorSetting(
             index = optionIndex(value)
         }
 
-    private val elementWidths by lazy { options.map { NVGRenderer.textWidth(it, 16f, NVGRenderer.defaultFont) } }
+    private val elementWidths = FontEpochCache { options.map { NVGRenderer.textWidth(it, 16f, NVGRenderer.defaultFont) } }
     private val settingAnim = EaseInOutAnimation(200)
     private val hover = HoverHandler(150)
     private val defaultHeight = Panel.HEIGHT
@@ -57,7 +58,8 @@ class SelectorSetting(
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
 
-        val currentWidth = elementWidths[index]
+        val widths = elementWidths.get()
+        val currentWidth = widths[index]
 
         hover.handle(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 22f, true)
         NVGRenderer.rect(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 20f, color.rgba, 5f)
@@ -76,7 +78,7 @@ class SelectorSetting(
         for (i in options.indices) {
             val optionY = y + 38 + 32 * i
             if (i != options.size - 1) NVGRenderer.line(x + 18f, optionY + 32, x + width - 12f, optionY + 32, 1.5f, Colors.MINECRAFT_DARK_GRAY.rgba)
-            NVGRenderer.text(options[i], x + width / 2f - elementWidths[i] / 2, optionY + 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+            NVGRenderer.text(options[i], x + width / 2f - widths[i] / 2, optionY + 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
             if (isSettingHovered(i)) NVGRenderer.hollowRect(x + 6, optionY, width - 12f, 32f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
         }
         if (settingAnim.isAnimating()) NVGRenderer.popScissor()

@@ -1,13 +1,14 @@
 package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.clickgui.HudSizeRegistry
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.render.HudPanel
+import gg.floyd.utils.render.HudTextRenderer
 import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
-import gg.floyd.utils.ui.rendering.NVGRenderer
-import gg.floyd.utils.ui.rendering.PanelPhase
 import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.GuiGraphics
 import kotlin.math.ceil
@@ -38,8 +39,16 @@ object FloydDayTrackerModule : Module(
         drawDayTrackerHud(it)
     }
 
-    // NanoVG font size for the label — matches the scoreboard's vector text for a consistent, crisp look.
+    // mc.font size for the label (vanilla's 9-unit line) — matches the scoreboard text 1:1.
     private const val DAY_TRACKER_FONT_SIZE = 9f
+
+    init {
+        // The editor drag box must match the rendered panel, so the estimate comes from the same
+        // layout (and therefore the same MsdfFontMetrics widths) the world-end render draws with.
+        HudSizeRegistry.register("Day Tracker") {
+            dayTrackerLayout(example = true)?.let { it.width to it.height } ?: (120 to 40)
+        }
+    }
 
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
@@ -69,11 +78,9 @@ object FloydDayTrackerModule : Module(
     private fun dayTrackerLayout(example: Boolean): DayTrackerLayout? {
         val label = currentServerDayLabel() ?: if (example) "Day 1" else return null
         val padding = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.DAY_TRACKER).coerceAtLeast(0)
-        // Size to the NanoVG font (the same crisp vector renderer the scoreboard uses) since the label is
-        // drawn with NanoVG in the TEXT phase. textWidth is safe outside a frame (the scoreboard measures
-        // the same way during layout).
-        val font = NVGRenderer.activeFont()
-        val width = ceil(NVGRenderer.textWidth(label, DAY_TRACKER_FONT_SIZE, font)).toInt() + padding * 2
+        // Size with the same live-FontSet float advances the mc.font draw renders with
+        // (MsdfFontMetrics), so the box always fits the label exactly.
+        val width = ceil(MsdfFontMetrics.width(label, DAY_TRACKER_FONT_SIZE)).toInt() + padding * 2
         val height = ceil(DAY_TRACKER_FONT_SIZE).toInt() + padding * 2
         return DayTrackerLayout(label, width, height)
     }
@@ -92,63 +99,51 @@ object FloydDayTrackerModule : Module(
      * pass ([PostHudOverlay]), both in game AND while the HUD editor is open (the editor just drags it).
      * Uses the HUD element's framebuffer-pixel position/scale, so it shows regardless of any open screen.
      */
-    fun renderAtWorldEnd(phase: PanelPhase) {
+    fun renderAtWorldEnd() {
         if (!enabled || !dayTrackerHud.enabled) return
         val editor = mc.screen === gg.floyd.clickgui.HudManager
         val layout = dayTrackerLayout(editor) ?: return
-        drawDayTrackerInline(layout, phase)
+        drawDayTrackerInline(layout)
     }
 
     /**
      * In-game render, drawn DIRECTLY to the main framebuffer from the world-end pass (no PIP, no
      * GuiGraphics). Geometry comes from the HUD element's own framebuffer-pixel x/y/scale, so it is
-     * screen-independent (renders with any screen open). SDF bg/border draw in framebuffer space; the
-     * mc.font label draws in logical (/dpr) space — the FBO is re-bound between them because the SDF
-     * blaze3d render pass can retarget. Mirrors [FloydCustomScoreboard.drawScoreboardInline].
+     * screen-independent (renders with any screen open). Background and the mc.font label both draw
+     * in framebuffer-pixel space. Mirrors [FloydCustomScoreboard.drawScoreboardInline].
      */
-    private fun drawDayTrackerInline(layout: DayTrackerLayout, phase: PanelPhase) {
+    private fun drawDayTrackerInline(layout: DayTrackerLayout) {
         val target = FloydPanelStyle.PanelTarget.DAY_TRACKER
-        val dpr = NVGRenderer.devicePixelRatio()
         val scale = dayTrackerHud.scale
         val fx = dayTrackerHud.x.toFloat()
         val fy = dayTrackerHud.y.toFloat()
         val fw = layout.width * scale
         val fh = layout.height * scale
 
-        if (phase == PanelPhase.BACKGROUND) {
-            val fill = FloydPanelStyle.backgroundColorFor(target).rgba
-            val border = HudPanel.panelBorderColors(target, dayTrackerHud.x, dayTrackerHud.y)
-            val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
-            val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
+        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val border = HudPanel.panelBorderColors(target, dayTrackerHud.x, dayTrackerHud.y)
+        val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
+        val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
-            // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
-            if (FloydPanelStyle.blurFor(target)) {
-                val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
-                if (blurRadius >= 0.5f && fw * fh >= 2000f) {
-                    PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
-                    PostHudOverlay.bindMainFbo()
-                }
+        // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
+        if (FloydPanelStyle.blurFor(target)) {
+            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+                PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
+                PostHudOverlay.bindMainFbo()
             }
-            RoundRectPIPRenderer.drawInline(
-                fx, fy, fw, fh,
-                fill, fill, fill, fill,
-                radius, radius, radius, radius,
-                border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
-                outline
-            )
-            return
         }
+        RoundRectPIPRenderer.drawInline(
+            fx, fy, fw, fh,
+            fill, fill, fill, fill,
+            radius, radius, radius, radius,
+            border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
+            outline
+        )
 
-        // TEXT phase: the label via NanoVG (crisp vector text, same renderer as the scoreboard), logical
-        // (/dpr) space. Safe now because ALL panel backgrounds were already drawn — see PostHudOverlay.
+        // Label via the shared mc.font helper (the global MSDF font), framebuffer px. The 9px font
+        // size means one font unit = one local panel unit, so the px-per-unit factor is [scale].
         val padding = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
-        val originX = fx / dpr
-        val originY = fy / dpr
-        val textScale = scale / dpr
-        NVGRenderer.beginFrame(mc.window.width.toFloat(), mc.window.height.toFloat())
-        NVGRenderer.translate(originX, originY)
-        NVGRenderer.scale(textScale, textScale)
-        NVGRenderer.text(layout.label, padding.toFloat(), padding.toFloat(), DAY_TRACKER_FONT_SIZE, 0xFFFFFFFF.toInt(), NVGRenderer.activeFont())
-        NVGRenderer.endFrame()
+        HudTextRenderer.drawText(layout.label, fx + padding * scale, fy + padding * scale, scale, 0xFFFFFFFF.toInt())
     }
 }

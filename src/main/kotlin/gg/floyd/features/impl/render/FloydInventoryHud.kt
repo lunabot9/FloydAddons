@@ -1,17 +1,16 @@
 package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod.mc
-import gg.floyd.clickgui.HudManager
 import gg.floyd.clickgui.HudSizeRegistry
 import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.render.HudPanel
+import gg.floyd.utils.render.HudTextRenderer
 import gg.floyd.utils.render.ItemStateRenderer
 import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
-import gg.floyd.utils.ui.rendering.NVGRenderer
-import gg.floyd.utils.ui.rendering.PanelPhase
 import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.world.entity.player.Inventory
@@ -99,21 +98,20 @@ object FloydInventoryHud : Module(
     private const val COUNT_FONT_RATIO = 0.45f
 
     /**
-     * Two-phase render from the world-end post-HUD pass ([PostHudOverlay]). BACKGROUND draws the blaze3d
-     * SDF fill/border, frosted blur, and the 3D item models (framebuffer space); TEXT draws the stack
-     * counts via NanoVG (crisp vector text, in logical /dpr space). The split lets every panel use NanoVG
-     * without the multi-NanoVG black-box bug — see [PostHudOverlay.render]. Geometry comes from the HUD
-     * element's framebuffer-pixel x/y/scale, so it is screen-independent. Mirrors [FloydCustomScoreboard].
+     * Single-pass render from the world-end post-HUD pass ([PostHudOverlay]): the blaze3d SDF
+     * fill/border, frosted blur and the 3D item models first, then the stack counts via the shared
+     * mc.font helper ([HudTextRenderer]) — everything in framebuffer-pixel space, all pure blaze3d.
+     * Geometry comes from the HUD element's framebuffer-pixel x/y/scale, so it is screen-independent.
+     * Mirrors [FloydCustomScoreboard].
      */
-    fun renderAtWorldEnd(phase: PanelPhase) {
+    fun renderAtWorldEnd() {
         if (!enabled || !inventoryHud.enabled) return
         val inventory = mc.player?.inventory ?: return
-        drawInventoryHudInline(inventory, phase)
+        drawInventoryHudInline(inventory)
     }
 
-    private fun drawInventoryHudInline(inventory: Inventory, phase: PanelPhase) {
+    private fun drawInventoryHudInline(inventory: Inventory) {
         val target = FloydPanelStyle.PanelTarget.INVENTORY
-        val dpr = NVGRenderer.devicePixelRatio()
         val scale = inventoryHud.scale
         val fx = inventoryHud.x.toFloat()
         val fy = inventoryHud.y.toFloat()
@@ -127,59 +125,50 @@ object FloydInventoryHud : Module(
         val fh = boxHeight * scale
         val itemScale = slotSize / 18f
 
-        if (phase == PanelPhase.BACKGROUND) {
-            val fill = FloydPanelStyle.backgroundColorFor(target).rgba
-            val border = HudPanel.panelBorderColors(target, inventoryHud.x, inventoryHud.y)
-            val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
-            val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
+        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val border = HudPanel.panelBorderColors(target, inventoryHud.x, inventoryHud.y)
+        val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
+        val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
-            // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
-            if (FloydPanelStyle.blurFor(target)) {
-                val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
-                if (blurRadius >= 0.5f && fw * fh >= 2000f) {
-                    PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
-                    PostHudOverlay.bindMainFbo()
-                }
-            }
-            RoundRectPIPRenderer.drawInline(
-                fx, fy, fw, fh,
-                fill, fill, fill, fill,
-                radius, radius, radius, radius,
-                border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
-                outline
-            )
-            PostHudOverlay.bindMainFbo()
-
-            // Item icons (drawn DIRECTLY, no PIP — fixes the old single-texture black-icon clobber). Each
-            // item's local slot position/size (slot-grid px) maps to FRAMEBUFFER px (the same space the SDF
-            // rect uses, so they co-locate): framebuffer = fx + local*scale, size = 16*itemScale*scale.
-            val itemSizePx = 16f * itemScale * scale
-            for (slot in 0 until 27) {
-                val col = slot % 9
-                val row = slot / 9
-                val stack = inventory.getItem(slot + 9)
-                if (stack.isEmpty) continue
-
-                val localX = pad + col * slotSize + (slotSize - 16 * itemScale) / 2f
-                val localY = pad + row * slotSize + (slotSize - 16 * itemScale) / 2f
-                ItemStateRenderer.drawItemInline(stack, fx + localX * scale, fy + localY * scale, itemSizePx)
+        // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
+        if (FloydPanelStyle.blurFor(target)) {
+            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+                PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
                 PostHudOverlay.bindMainFbo()
             }
-            return
+        }
+        RoundRectPIPRenderer.drawInline(
+            fx, fy, fw, fh,
+            fill, fill, fill, fill,
+            radius, radius, radius, radius,
+            border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
+            outline
+        )
+        PostHudOverlay.bindMainFbo()
+
+        // Item icons (drawn DIRECTLY, no PIP — fixes the old single-texture black-icon clobber). Each
+        // item's local slot position/size (slot-grid px) maps to FRAMEBUFFER px (the same space the SDF
+        // rect uses, so they co-locate): framebuffer = fx + local*scale, size = 16*itemScale*scale.
+        val itemSizePx = 16f * itemScale * scale
+        val itemPx = 16f * itemScale
+        for (slot in 0 until 27) {
+            val col = slot % 9
+            val row = slot / 9
+            val stack = inventory.getItem(slot + 9)
+            if (stack.isEmpty) continue
+
+            val localX = pad + col * slotSize + (slotSize - itemPx) / 2f
+            val localY = pad + row * slotSize + (slotSize - itemPx) / 2f
+            ItemStateRenderer.drawItemInline(stack, fx + localX * scale, fy + localY * scale, itemSizePx)
+            PostHudOverlay.bindMainFbo()
         }
 
-        // TEXT phase: stack counts via NanoVG (crisp vector text, same renderer as the scoreboard), in
-        // logical (/dpr) space via the same translate(fx/dpr)+scale(scale/dpr) the scoreboard uses.
-        val font = NVGRenderer.activeFont()
-        val originX = fx / dpr
-        val originY = fy / dpr
-        val textScale = scale / dpr
+        // Stack counts via the shared mc.font helper (the global MSDF font) — drawn AFTER the item
+        // models so the counts composite on top, in the same framebuffer-pixel space.
         // Count height tracks the slot so it stays proportional at any guiScale (see COUNT_FONT_RATIO).
         val countFontSize = slotSize * COUNT_FONT_RATIO
-        val itemPx = 16f * itemScale
-        NVGRenderer.beginFrame(mc.window.width.toFloat(), mc.window.height.toFloat())
-        NVGRenderer.translate(originX, originY)
-        NVGRenderer.scale(textScale, textScale)
+        val countScale = scale * countFontSize / MsdfFontMetrics.LINE_HEIGHT
         for (slot in 0 until 27) {
             val col = slot % 9
             val row = slot / 9
@@ -188,14 +177,12 @@ object FloydInventoryHud : Module(
 
             val localX = pad + col * slotSize + (slotSize - itemPx) / 2f
             val localY = pad + row * slotSize + (slotSize - itemPx) / 2f
-            val count = stack.count.toString()
-            // RIGHT-aligned to the item's bottom-right (vanilla placement), so the ones digit sits in a fixed
-            // column — a 1-digit count and the ones digit of a 2-digit count line up instead of drifting with
-            // the old centered placement.
-            val tx = localX + itemPx - NVGRenderer.textWidth(count, countFontSize, font) - 1f
-            val ty = localY + itemPx - countFontSize - 1f
-            NVGRenderer.text(count, tx, ty, countFontSize, 0xFFFFFFFF.toInt(), font)
+            // RIGHT-aligned to the item's bottom-right (vanilla placement), so the ones digit sits in a
+            // fixed column — a 1-digit count and the ones digit of a 2-digit count line up instead of
+            // drifting. The helper measures with the same MsdfFontMetrics floats the glyphs render with.
+            val tx = fx + (localX + itemPx - 1f) * scale
+            val ty = fy + (localY + itemPx - countFontSize - 1f) * scale
+            HudTextRenderer.drawText(stack.count.toString(), tx, ty, countScale, 0xFFFFFFFF.toInt(), HudTextRenderer.Alignment.RIGHT)
         }
-        NVGRenderer.endFrame()
     }
 }

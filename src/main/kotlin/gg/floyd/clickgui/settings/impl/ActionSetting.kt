@@ -5,6 +5,7 @@ import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Color.Companion.darker
 import gg.floyd.utils.Colors
+import gg.floyd.utils.font.FontEpochCache
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.MouseButtonEvent
 
@@ -18,7 +19,7 @@ class ActionSetting(
 
     var action: () -> Unit by this::value
 
-    private val textWidth by lazy { NVGRenderer.textWidth(name, 16f, NVGRenderer.defaultFont) }
+    private val textWidth = FontEpochCache { NVGRenderer.textWidth(name, 16f, NVGRenderer.defaultFont) }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
@@ -26,7 +27,7 @@ class ActionSetting(
 
         NVGRenderer.rect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, gray38.rgba, 6f)
         NVGRenderer.hollowRect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, 2f, ClickGUIModule.clickGUIColor.rgba, 6f)
-        NVGRenderer.text(name, x + width / 2f - textWidth / 2, y + height / 2f - 8f, 16f, if (isHovered) Colors.WHITE.darker().rgba else Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + width / 2f - textWidth.get() / 2, y + height / 2f - 8f, 16f, if (isHovered) Colors.WHITE.darker().rgba else Colors.WHITE.rgba, NVGRenderer.defaultFont)
         return height
     }
 

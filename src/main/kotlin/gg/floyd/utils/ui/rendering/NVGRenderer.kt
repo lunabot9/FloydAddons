@@ -1,5 +1,6 @@
 package gg.floyd.utils.ui.rendering
 
+import com.mojang.blaze3d.opengl.GlStateManager
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.features.impl.render.FloydFont
@@ -7,12 +8,16 @@ import gg.floyd.utils.Color.Companion.alpha
 import gg.floyd.utils.Color.Companion.blue
 import gg.floyd.utils.Color.Companion.green
 import gg.floyd.utils.Color.Companion.red
+import gg.floyd.utils.font.MsdfFontMetrics
+import gg.floyd.utils.render.DeferredNvgText
+import gg.floyd.utils.render.NvgTextReplay
 import net.minecraft.resources.Identifier
 import org.lwjgl.nanovg.NVGColor
 import org.lwjgl.nanovg.NVGPaint
 import org.lwjgl.nanovg.NanoSVG.*
 import org.lwjgl.nanovg.NanoVG.*
 import org.lwjgl.nanovg.NanoVGGL3.*
+import org.lwjgl.opengl.GL13C
 import org.lwjgl.opengl.GL33C
 import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.system.MemoryUtil.memAlloc
@@ -52,9 +57,48 @@ object NVGRenderer {
     private var drawing: Boolean = false
     private var vg = -1L
 
+    /**
+     * Escape hatch (design D7 step 5): `FLOYD_NVG_TEXT=1` restores the legacy NanoVG text path —
+     * rendering (`text`/`textShadow`/`drawWrappedString`) AND measurement
+     * (`textWidth`/`wrappedTextBounds`) flip as ONE unit, or layouts would shear against the
+     * renderer (the D6 invariant). Read once here; deleted with the NVG text code in step 7.
+     */
+    private val legacyNvgText: Boolean = System.getenv("FLOYD_NVG_TEXT") == "1"
+
+    /** True when text calls are deferred for mc.font replay (the default; see [DeferredNvgText]). */
+    val deferringText: Boolean get() = !legacyNvgText
+
+    /** Deferred text queue for the current PIP frame, drained per layer by NVGPIPRenderer. */
+    private val deferredText = ArrayList<DeferredNvgText>()
+
+    /**
+     * Current text layer: 0 = GUI-level text drawn before any panel (title/search bar/community),
+     * each base panel gets the next index via [nextTextLayer], dragged panel + tooltip = topmost.
+     */
+    private var textLayer = 0
+
+    /**
+     * Sub-frame split hook installed by NVGPIPRenderer while its frame is live: invoked at every
+     * layer boundary ([nextTextLayer]), it ends the current NVG sub-frame, replays the closed
+     * layer's text into the PIP slot, and opens the next sub-frame (restoring the caller's live
+     * transform — guiScale + open-anim — and scissor stack).
+     */
+    internal var layerBoundary: (() -> Unit)? = null
+
     init {
-        vg = nvgCreate(NVG_ANTIALIAS or NVG_STENCIL_STROKES)
+        // nvgCreate builds the fontstash atlas texture with RAW binds (bind new tex -> upload ->
+        // bind 0) on whatever unit is raw-active — run it unit-pinned + cache-resynced or the
+        // stale cache false-skips the next bind of whatever it still claims (the MSDF glyph-atlas
+        // page during the first ClickGUI frame: every glyph first-measured that frame uploaded
+        // into nothing and stayed a permanently black cell).
+        vg = withCoherentTextureUnit { nvgCreate(NVG_ANTIALIAS or NVG_STENCIL_STROKES) }
         require(vg != -1L) { "Failed to initialize NanoVG" }
+        NvgTextReplay.deferralActive = !legacyNvgText
+        if (legacyNvgText) {
+            FloydAddonsMod.logger.warn(
+                "[NVGRenderer] FLOYD_NVG_TEXT=1 — legacy NanoVG text rendering AND measurement active (MSDF deferral bypassed)"
+            )
+        }
     }
 
     fun devicePixelRatio(): Float =
@@ -77,6 +121,48 @@ object NVGRenderer {
         drawing = false
     }
 
+    /**
+     * Closes the current text layer and opens the next (design D7 step 6 + its per-panel
+     * CORRECTION). With deferral live this triggers NVGPIPRenderer's sub-frame split via
+     * [layerBoundary]: everything queued so far bakes into the PIP slot BELOW any shapes drawn
+     * after this call, and the new layer's own text replays above them. ClickGUI brackets each
+     * base panel with this (so a panel overlapping another at rest occludes the lower panel's
+     * replayed text) and calls it once more for the topmost layer (dragged panel + tooltip).
+     * A no-op on the legacy NVG-text path (immediate draws layer naturally by paint order).
+     */
+    fun nextTextLayer() {
+        if (legacyNvgText) return
+        textLayer++
+        layerBoundary?.invoke()
+    }
+
+    /** Resets the layer counter — end of the ClickGUI pass, or re-arming an aborted PIP frame. */
+    fun resetTextLayers() {
+        textLayer = 0
+    }
+
+    /** True when text runs are queued awaiting replay (an empty layer's boundary is skippable). */
+    internal val hasDeferredText: Boolean get() = deferredText.isNotEmpty()
+
+    /** Removes and returns everything queued so far (capture order preserved). */
+    internal fun drainDeferredText(): List<DeferredNvgText> {
+        if (deferredText.isEmpty()) return emptyList()
+        val drained = ArrayList(deferredText)
+        deferredText.clear()
+        return drained
+    }
+
+    /** The live NVG 2x3 transform (for NVGPIPRenderer's sub-frame transform save/restore). */
+    internal fun currentTransform(): FloatArray = FloatArray(6).also { nvgCurrentTransform(vg, it) }
+
+    /** Premultiplies [t] onto the current transform — after `beginFrame` (identity) this SETS it. */
+    internal fun applyTransform(t: FloatArray) = nvgTransform(vg, t[0], t[1], t[2], t[3], t[4], t[5])
+
+    /** Re-asserts the Kotlin scissor stack on a fresh NVG sub-frame (normally empty at the split). */
+    internal fun reapplyScissor() {
+        scissor?.applyScissor()
+    }
+
     fun push() = nvgSave(vg)
 
     fun pop() = nvgRestore(vg)
@@ -90,8 +176,31 @@ object NVGRenderer {
     fun globalAlpha(amount: Float) = nvgGlobalAlpha(vg, amount.coerceIn(0f, 1f))
 
     fun pushScissor(x: Float, y: Float, w: Float, h: Float) {
-        scissor = Scissor(scissor, x, y, w + x, h + y)
+        scissor = Scissor(scissor, x, y, w + x, h + y, scissorFrameRect(x, y, x + w, y + h))
         scissor?.applyScissor()
+    }
+
+    /**
+     * The pushed rect in NVG FRAME space — transformed by the CURRENT transform exactly as
+     * `nvgScissor` transforms it — intersected with the enclosing scissor's frame rect. Every
+     * ClickGUI transform is translate/scale-only (axis-aligned), so a rect maps to a rect and the
+     * nested intersection is lossless; deferred text captures this for the GL-scissor replay.
+     */
+    private fun scissorFrameRect(x0: Float, y0: Float, x1: Float, y1: Float): FloatArray {
+        val t = FloatArray(6)
+        nvgCurrentTransform(vg, t)
+        val ax = t[0] * x0 + t[2] * y0 + t[4]
+        val ay = t[1] * x0 + t[3] * y0 + t[5]
+        val bx = t[0] * x1 + t[2] * y1 + t[4]
+        val by = t[1] * x1 + t[3] * y1 + t[5]
+        val rect = floatArrayOf(min(ax, bx), min(ay, by), max(ax, bx), max(ay, by))
+        scissor?.frameRect?.let { outer ->
+            rect[0] = max(rect[0], outer[0])
+            rect[1] = max(rect[1], outer[1])
+            rect[2] = min(rect[2], outer[2])
+            rect[3] = min(rect[3], outer[3])
+        }
+        return rect
     }
 
     fun popScissor() {
@@ -220,29 +329,43 @@ object NVGRenderer {
     }
 
     fun text(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
-        nvgFontSize(vg, size)
-        nvgFontFaceId(vg, getFontID(font))
-        color(color)
-        nvgFillColor(vg, nvgColor)
-        nvgText(vg, x, y + .5f, text)
+        if (legacyNvgText) {
+            nvgFontSize(vg, size)
+            nvgFontFaceId(vg, getFontID(font))
+            color(color)
+            nvgFillColor(vg, nvgColor)
+            nvgText(vg, x, y + .5f, text)
+            return
+        }
+        // Legacy parity: the NVG path drew the em-box top at y + .5f — bake the same anchor in.
+        deferText(text, x, y + .5f, size, color)
     }
 
     fun textShadow(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
-        nvgFontFaceId(vg, getFontID(font))
-        nvgFontSize(vg, size)
-        color(-16777216)
-        nvgFillColor(vg, nvgColor)
-        nvgText(vg, round(x + 2f), round(y + 2f), text)
+        if (legacyNvgText) {
+            nvgFontFaceId(vg, getFontID(font))
+            nvgFontSize(vg, size)
+            color(-16777216)
+            nvgFillColor(vg, nvgColor)
+            nvgText(vg, round(x + 2f), round(y + 2f), text)
 
-        color(color)
-        nvgFillColor(vg, nvgColor)
-        nvgText(vg, round(x), round(y), text)
+            color(color)
+            nvgFillColor(vg, nvgColor)
+            nvgText(vg, round(x), round(y), text)
+            return
+        }
+        deferText(text, round(x + 2f), round(y + 2f), size, -16777216)
+        deferText(text, round(x), round(y), size, color)
     }
 
     fun textWidth(text: String, size: Float, font: Font): Float {
-        nvgFontSize(vg, size)
-        nvgFontFaceId(vg, getFontID(font))
-        return nvgTextBounds(vg, 0f, 0f, text, fontBounds)
+        if (legacyNvgText) {
+            nvgFontSize(vg, size)
+            nvgFontFaceId(vg, getFontID(font))
+            return nvgTextBounds(vg, 0f, 0f, text, fontBounds)
+        }
+        // Float widths from the live FontSet (design D6) at the replay's exact size/9 mapping.
+        return MsdfFontMetrics.width(text, size)
     }
 
     fun drawWrappedString(
@@ -255,12 +378,16 @@ object NVGRenderer {
         font: Font,
         lineHeight: Float = 1f
     ) {
-        nvgFontSize(vg, size)
-        nvgFontFaceId(vg, getFontID(font))
-        nvgTextLineHeight(vg, lineHeight)
-        color(color)
-        nvgFillColor(vg, nvgColor)
-        nvgTextBox(vg, x, y, w, text)
+        if (legacyNvgText) {
+            nvgFontSize(vg, size)
+            nvgFontFaceId(vg, getFontID(font))
+            nvgTextLineHeight(vg, lineHeight)
+            color(color)
+            nvgFillColor(vg, nvgColor)
+            nvgTextBox(vg, x, y, w, text)
+            return
+        }
+        deferText(text, x, y, size, color, wrapWidth = w, lineHeight = lineHeight)
     }
 
     fun wrappedTextBounds(
@@ -270,19 +397,62 @@ object NVGRenderer {
         font: Font,
         lineHeight: Float = 1f
     ): FloatArray {
-        val bounds = FloatArray(4)
-        nvgFontSize(vg, size)
-        nvgFontFaceId(vg, getFontID(font))
-        nvgTextLineHeight(vg, lineHeight)
-        nvgTextBoxBounds(vg, 0f, 0f, w, text, bounds)
-        return bounds // [minX, minY, maxX, maxY]
+        if (legacyNvgText) {
+            val bounds = FloatArray(4)
+            nvgFontSize(vg, size)
+            nvgFontFaceId(vg, getFontID(font))
+            nvgTextLineHeight(vg, lineHeight)
+            nvgTextBoxBounds(vg, 0f, 0f, w, text, bounds)
+            return bounds // [minX, minY, maxX, maxY]
+        }
+        // Same Font.split wrapping the replay draws with, so the sized box always contains the
+        // drawn text; lines advance size·lineHeight px (the replay's 9·lineHeight font units).
+        val bounds = MsdfFontMetrics.wrappedBounds(text, w, size)
+        val height = if (bounds.lineCount == 0) 0f else (bounds.lineCount - 1) * size * lineHeight + size
+        return floatArrayOf(0f, 0f, bounds.width, height)
     }
 
-    fun createNVGImage(textureId: Int, textureWidth: Int, textureHeight: Int): Int {
+    /** Queues one text run for the in-PIP mc.font replay; see [DeferredNvgText] for the spaces. */
+    private fun deferText(
+        text: String,
+        x: Float,
+        y: Float,
+        size: Float,
+        color: Int,
+        wrapWidth: Float = 0f,
+        lineHeight: Float = 1f
+    ) {
+        val transform = FloatArray(6)
+        nvgCurrentTransform(vg, transform)
+        deferredText.add(
+            DeferredNvgText(text, x, y, size, color, transform, scissor?.frameRect, textLayer, wrapWidth, lineHeight)
+        )
+    }
+
+    /**
+     * Runs [block] (raw NVG/GL texture binds — image/font creation binds on whatever unit is
+     * RAW-active, invisible to GlStateManager) pinned to unit 0, then re-zeros unit 0's raw
+     * binding AND GlStateManager's cache so they agree again. Without this, the stale cache
+     * false-skips a later bind of the same texture — glyph draws then sample the wrong texture
+     * and glyph-atlas uploads write into whatever stayed raw-bound (permanent atlas corruption).
+     */
+    private inline fun <T> withCoherentTextureUnit(block: () -> T): T {
+        // Toggle defeats the cached no-op: ends with active unit 0 in BOTH raw GL and the cache.
+        GlStateManager._activeTexture(GL13C.GL_TEXTURE1)
+        GlStateManager._activeTexture(GL13C.GL_TEXTURE0)
+        try {
+            return block()
+        } finally {
+            GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, 0) // raw zero (cache-skip-proof)
+            GlStateManager._bindTexture(0) // cache zero (no-ops if already 0 — raw is 0 either way)
+        }
+    }
+
+    fun createNVGImage(textureId: Int, textureWidth: Int, textureHeight: Int): Int = withCoherentTextureUnit {
         GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, textureId)
         GL33C.glTexParameteri(GL33C.GL_TEXTURE_2D, GL33C.GL_TEXTURE_MIN_FILTER, GL33C.GL_NEAREST)
         GL33C.glTexParameteri(GL33C.GL_TEXTURE_2D, GL33C.GL_TEXTURE_MAG_FILTER, GL33C.GL_NEAREST)
-        return nvglCreateImageFromHandle(vg, textureId, textureWidth, textureHeight, NVG_IMAGE_NEAREST or NVG_IMAGE_NODELETE)
+        nvglCreateImageFromHandle(vg, textureId, textureWidth, textureHeight, NVG_IMAGE_NEAREST or NVG_IMAGE_NODELETE)
     }
 
     fun image(image: Int, textureWidth: Int, textureHeight: Int, subX: Int, subY: Int, subW: Int, subH: Int, x: Float, y: Float, w: Float, h: Float, radius: Float) {
@@ -353,7 +523,7 @@ object NVGRenderer {
             channels,
             4
         ) ?: throw NullPointerException("Failed to load image: ${image.identifier}")
-        return nvgCreateImageRGBA(vg, w[0], h[0], 0, buffer)
+        return withCoherentTextureUnit { nvgCreateImageRGBA(vg, w[0], h[0], 0, buffer) }
     }
 
     private fun loadSVG(image: Image): Int {
@@ -367,7 +537,7 @@ object NVGRenderer {
         try {
             val rasterizer = nsvgCreateRasterizer()
             nsvgRasterize(rasterizer, svg, 0f, 0f, 1f, buffer, width, height, width * 4)
-            val nvgImage = nvgCreateImageRGBA(vg, width, height, 0, buffer)
+            val nvgImage = withCoherentTextureUnit { nvgCreateImageRGBA(vg, width, height, 0, buffer) }
             nsvgDeleteRasterizer(rasterizer)
             return nvgImage
         } finally {
@@ -400,7 +570,15 @@ object NVGRenderer {
         }.id
     }
 
-    private class Scissor(val previous: Scissor?, val x: Float, val y: Float, val maxX: Float, val maxY: Float) {
+    private class Scissor(
+        val previous: Scissor?,
+        val x: Float,
+        val y: Float,
+        val maxX: Float,
+        val maxY: Float,
+        /** Pre-intersected frame-space rect `[x0, y0, x1, y1]` captured at push time. */
+        val frameRect: FloatArray
+    ) {
         fun applyScissor() {
             if (previous == null) nvgScissor(vg, x, y, maxX - x, maxY - y)
             else {
