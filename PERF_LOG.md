@@ -79,7 +79,59 @@ Backlog order: Block Search → Inventory HUD → ClickGUI → Custom Scoreboard
 
 ## Per-feature log
 
-_(pending)_
+### 1. Block Search (2026-06-10) — FIXED
+
+Scene: perfarena-ores (32768 indexed diamond_ore, 10k render cap), config as user runs
+it (Tracers ON — discovered mid-fix: the persisted config had `"Tracers": true`, so the
+baseline numbers included ~10k tracers/frame; the A/B kept it on for parity).
+
+Root causes (each measured before fixing):
+1. Over-cap path re-sorted the whole 32k index EVERY FRAME (`sortedBy{distSqr}` —
+   comparator Double-boxing) + 10k fresh AABB/BoxData per frame → Extract section
+   5243 µs + 4.07 MB **per frame**.
+2. `drawTracer` per block per frame: `tracerOrigin()` recomputed two Matrix4f
+   inversions per call (frame-constant value!) + Vec3/Vector4f/LineData churn —
+   ~1.93 MB/frame + 524 µs on its own after fix 1.
+3. `renderLineBox` allocated a `floatArrayOf(24)` per box per frame (~120 MB/s);
+   10k per-box BoxData records (~62 MB/s).
+
+Fixes (design survived a 4-lens adversarial review; 6 blockers folded in):
+- Selection cache keyed on a mutation-conditional `indexEpoch` (no-op removeChunk calls
+  from chunk churn deliberately do NOT bump it) + 2-block eye-movement hysteresis (only
+  when distance-capped). Rebuild = primitive tandem quickselect (median-of-three Hoare,
+  Long distances, zero boxing) into FRESH AABB+center lists (a queued batch record may
+  outlive a flush-skip frame — never mutated in place). 8 JVM unit tests.
+- One `BoxBatchData` record per frame instead of 10k BoxData ('Both' = two records,
+  fill alpha halved as a float — chroma parity); one `TracerFanData` per frame instead
+  of 10k LineData — flush computes the origin once (`tracerOrigin` now frame-memoized
+  by matrix identity) and re-aims each target with scratch math, allocation-free.
+- `renderLineBox` corners hoisted to a reusable scratch (render-thread-only,
+  non-reentrant — documented).
+- Bonus correctness: dimension-switch ghost highlights fixed (level-identity check);
+  bridge `/state` now reports batch queue counts.
+
+| Metric (ON-delta vs OFF, 30s × 3, spread in parens) | BEFORE | AFTER |
+|---|---|---|
+| alloc MB/s | **+655.6** (14.2) | **+0.42** (0.04) — ~1500× less |
+| frame p99 ms | **+2.23** (1.07) | **−0.84** (0.05) |
+| frame p50 ms | −0.57 (0.20) | −0.27 (0.07) |
+| fps | +1.8 | +4.6 (0.65) |
+| Extract section /frame | 5243 µs / 4.07 MB | **1.3 µs / 104 B** |
+| GC collections /30s (ON) | ~1–3 + pressure | 0–1 |
+
+Moving case (review's thrash scenario): walking through chunk churn → 14 reselects in
+763 frames (~2/s), 393 µs each, alloc 10.2 MB/s total. ON now measures FASTER than OFF
+on every metric (the residual systematic offset exceeds the feature's remaining cost).
+
+Known remaining floor (documented, not a regression): `RenderBatchManager.Last` CPU
+~3.7 ms/frame at the 10k cap = 240k immediate-mode line-vertex emissions. Allocation is
+now ~2.6 KB/frame there; killing the CPU needs retained geometry (camera-relative VBO)
+— a candidate follow-up if p99 at the cap matters in practice.
+
+Cross-platform gate: diff audited — no platform/dpr/guiScale/window/native coupling
+(pure world-space math + collections; tracer math is matrix-derived, resolution-
+independent). New scratches documented render-thread-only. guiScale/window-size matrix
+run deferred to the end-of-mission batch (world-space feature, no screen coupling).
 
 ## Cross-platform audit notes
 

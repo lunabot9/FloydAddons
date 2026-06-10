@@ -16,8 +16,9 @@ import gg.floyd.utils.modMessage
 import gg.floyd.utils.perf.FloydPerf
 import gg.floyd.utils.perf.FloydPerfCounters
 import gg.floyd.utils.render.BlockIconCache
-import gg.floyd.utils.render.drawStyledBox
-import gg.floyd.utils.render.drawTracer
+import gg.floyd.utils.render.drawStyledBoxBatch
+import gg.floyd.utils.render.drawTracerFan
+import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents
 import net.minecraft.core.BlockPos
 import net.minecraft.core.SectionPos
@@ -30,6 +31,46 @@ import net.minecraft.world.level.chunk.status.ChunkStatus
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import java.util.Locale
+
+/**
+ * Pure selection math for [FloydBlockSearch], split out for JVM-only unit tests
+ * (the repo pattern: see FloydXrayAlpha / FloydLocalControlSettings).
+ */
+internal object FloydBlockSearchSelection {
+
+    /**
+     * Partial selection: after return, dist/pos[0, k) hold the k smallest distances (unordered).
+     * Iterative Hoare quickselect with median-of-three pivots — the fill order is chunk-major
+     * (long near-sorted runs), which degrades first-element pivots toward O(n²).
+     */
+    fun quickselectK(dist: LongArray, pos: LongArray, len: Int, k: Int) {
+        if (k >= len) return
+        var lo = 0
+        var hi = len - 1
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (dist[mid] < dist[lo]) swapAt(dist, pos, mid, lo)
+            if (dist[hi] < dist[lo]) swapAt(dist, pos, hi, lo)
+            if (dist[hi] < dist[mid]) swapAt(dist, pos, hi, mid)
+            val pivot = dist[mid]
+            var i = lo - 1
+            var j = hi + 1
+            while (true) {
+                do i++ while (dist[i] < pivot)
+                do j-- while (dist[j] > pivot)
+                if (i >= j) break
+                swapAt(dist, pos, i, j)
+            }
+            // Hoare invariant: [lo..j] <= pivot <= [j+1..hi].
+            if (k <= j) hi = j else lo = j + 1
+        }
+    }
+
+    private fun swapAt(dist: LongArray, pos: LongArray, a: Int, b: Int) {
+        val d = dist[a]; dist[a] = dist[b]; dist[b] = d
+        val p = pos[a]; pos[a] = pos[b]; pos[b] = p
+    }
+}
 
 /**
  * Highlights every nearby block whose id is in the search list with a (chroma) outline.
@@ -84,6 +125,38 @@ object FloydBlockSearch : Module(
     private var capped = false
     private var lastCapWarningMs = 0L
 
+    // ---- Selection cache ----------------------------------------------------------------------
+    // The drawn selection (pre-inflated AABBs) is rebuilt ONLY when the index actually mutates
+    // (indexEpoch, bumped exclusively on real add/remove — no-op removeChunk calls from chunk
+    // churn must NOT bump it or the cache thrashes while travelling) or, when the selection is
+    // distance-capped at MAX_RENDERED, when the player has moved >= 2 blocks since the last
+    // rebuild. Baseline measured the old per-frame re-sort at 5.2ms + 4.07MB allocated PER FRAME
+    // (32k indexed diamond_ore); the cache amortizes that to a handful of rebuilds per second
+    // worst-case. Each rebuild produces a FRESH list: a queued BoxBatchData may outlive a frame
+    // when the flush skips, so a previously queued list is never mutated in place.
+    private var indexEpoch = 0L
+    private var cachedEpoch = -1L
+    private var cachedSelection: ObjectArrayList<AABB> = ObjectArrayList()
+    // Block centers parallel to [cachedSelection], for the tracer fan (built per rebuild, not per frame).
+    private var cachedCenters: ObjectArrayList<Vec3> = ObjectArrayList()
+    private var cachedSelectionCapped = false
+    private var lastSelEyeX = 0
+    private var lastSelEyeY = 0
+    private var lastSelEyeZ = 0
+    // ClientLevel identity of the indexed content — a dimension switch swaps mc.level without a
+    // per-chunk CHUNK_UNLOAD, which used to leave ghost highlights at old-dimension coordinates.
+    private var indexedLevel: Any? = null
+    private const val RESELECT_DIST_SQ = 4L // 2 blocks of eye movement re-sorts a capped selection
+
+    // Rebuild scratch (distances + packed BlockPos), retained between rebuilds, dropped by
+    // clearIndex so a one-off common-block search doesn't pin ~1.6MB for the session.
+    private var scratchDist = LongArray(0)
+    private var scratchPos = LongArray(0)
+
+    private fun bumpEpoch() {
+        indexEpoch++
+    }
+
     // Pull the highlight faces a hair off the block surface so they never sit exactly coplanar
     // with the chunk geometry (which otherwise causes the highlight to half-clip / vanish).
     private const val HIGHLIGHT_INFLATE = 0.002
@@ -101,58 +174,127 @@ object FloydBlockSearch : Module(
     init {
         on<RenderEvent.Extract> {
             if (!enabled) return@on
-            if (mc.level == null) { clearIndex(); return@on }
+            val level = mc.level ?: run { clearIndex(); return@on }
+            // Dimension switch / reconnect: the index belongs to another level — drop it. New-level
+            // chunks re-index via CHUNK_LOAD (which also updates indexedLevel, usually before the
+            // first frame renders, so this guard is the late-arrival fallback).
+            if (indexedLevel !== level) {
+                clearIndex()
+                indexedLevel = level
+                return@on
+            }
             if (matchedByChunk.isEmpty()) return@on
+            val player = mc.player ?: return@on
+            val eye = player.blockPosition()
+
+            // Rebuild the cached selection only on real index mutation, or on >=2 blocks of eye
+            // movement while distance-capped (under the cap the selection is the whole index and
+            // is eye-independent).
+            val moved = cachedSelectionCapped && run {
+                val dx = (eye.x - lastSelEyeX).toLong()
+                val dy = (eye.y - lastSelEyeY).toLong()
+                val dz = (eye.z - lastSelEyeZ).toLong()
+                dx * dx + dy * dy + dz * dz >= RESELECT_DIST_SQ
+            }
+            if (cachedEpoch != indexEpoch || moved) {
+                FloydPerf.section("BlockSearch.reselect") { rebuildSelection(eye) }
+            }
+            if (cachedSelection.isEmpty) return@on
+
             val drawStyle = when (boxStyle) {
                 1 -> 0 // Filled
                 2 -> 2 // Both
                 else -> 1 // Outline (wireframe)
             }
-            val player = mc.player ?: return@on
-            val eye = player.blockPosition()
-            // The whole index draws when it is within the per-frame cap; only when it exceeds the cap do
-            // we collect, sort by squared distance to the player, and draw the nearest MAX_RENDERED. This
-            // keeps the vertex buffer from overflowing while leaving normal/rare searches untouched.
-            val nearest: Collection<BlockPos> = if (indexedCount <= MAX_RENDERED) {
-                matchedByChunk.values.flatten()
-            } else {
-                matchedByChunk.values.asSequence().flatten()
-                    .sortedBy { it.distSqr(eye) }
-                    .take(MAX_RENDERED)
-                    .toList()
-            }
             // depth = false renders the highlight through occlusion (no depth test), like X-Ray's
-            // through-walls pass; the tiny inflate keeps every face off the exact block surface so the
-            // highlight never z-fights / half-clips with the chunk geometry it is sitting on.
-            // Build the inflated AABB directly (one allocation) instead of AABB(pos).inflate(...) (two)
-            // — identical bounds, but it runs once per matched block every frame.
-            for (pos in nearest) {
-                val x = pos.x.toDouble()
-                val y = pos.y.toDouble()
-                val z = pos.z.toDouble()
-                val box = AABB(
-                    x - HIGHLIGHT_INFLATE, y - HIGHLIGHT_INFLATE, z - HIGHLIGHT_INFLATE,
-                    x + 1.0 + HIGHLIGHT_INFLATE, y + 1.0 + HIGHLIGHT_INFLATE, z + 1.0 + HIGHLIGHT_INFLATE
-                )
-                drawStyledBox(box, color, drawStyle, depth = false)
-                if (tracers) drawTracer(Vec3(x + 0.5, y + 0.5, z + 0.5), color, depth = false, thickness = 2f)
-            }
+            // through-walls pass. Color/style are read here per frame, so chroma keeps animating
+            // and style switches apply instantly even while the cached AABBs are reused.
+            drawStyledBoxBatch(cachedSelection, color, drawStyle, depth = false)
+            if (tracers) drawTracerFan(cachedCenters, color, thickness = 2f, depth = false)
 
             // Warn once per interval that we are capped, so the user knows the highlight is partial.
             if (capped) {
                 val now = System.currentTimeMillis()
                 if (now - lastCapWarningMs >= CAP_WARNING_INTERVAL_MS) {
                     lastCapWarningMs = now
-                    modMessage("Block Search: too many matches — showing nearest ${nearest.size}")
+                    modMessage("Block Search: too many matches — showing nearest ${cachedSelection.size}")
                 }
             }
         }
 
         // Incremental index: scan a chunk once when it loads, drop it when it unloads. Block edits are
         // patched in O(1) by BlockSearchChunkMixin -> handleClientBlockChange.
-        ClientChunkEvents.CHUNK_LOAD.register { _, chunk -> if (enabled && activeIds().isNotEmpty()) indexChunk(chunk) }
+        ClientChunkEvents.CHUNK_LOAD.register { level, chunk ->
+            if (indexedLevel !== level) {
+                clearIndex()
+                indexedLevel = level
+            }
+            if (enabled && activeIds().isNotEmpty()) indexChunk(chunk)
+        }
         ClientChunkEvents.CHUNK_UNLOAD.register { _, chunk -> removeChunk(ChunkPos.asLong(chunk.pos.x, chunk.pos.z)) }
     }
+
+    /**
+     * Rebuilds [cachedSelection] (fresh list — never mutates a possibly-still-queued one). Over
+     * the cap: nearest [MAX_RENDERED] via tandem quickselect on primitive arrays — no comparator,
+     * no boxing, distances in integer math. Selection order is irrelevant (same-color translucent
+     * lines blend commutatively).
+     */
+    private fun rebuildSelection(eye: BlockPos) {
+        FloydPerfCounters.blockSearchReselects.increment()
+        cachedEpoch = indexEpoch
+        lastSelEyeX = eye.x
+        lastSelEyeY = eye.y
+        lastSelEyeZ = eye.z
+        val total = indexedCount
+        val out = ObjectArrayList<AABB>(minOf(total, MAX_RENDERED))
+        val centers = ObjectArrayList<Vec3>(minOf(total, MAX_RENDERED))
+        if (total <= MAX_RENDERED) {
+            cachedSelectionCapped = false
+            for (set in matchedByChunk.values) for (pos in set) {
+                out.add(inflatedBox(pos.x, pos.y, pos.z))
+                centers.add(Vec3(pos.x + 0.5, pos.y + 0.5, pos.z + 0.5))
+            }
+        } else {
+            cachedSelectionCapped = true
+            if (scratchDist.size < total) {
+                scratchDist = LongArray(total + total / 4)
+                scratchPos = LongArray(total + total / 4)
+            }
+            val ex = eye.x; val ey = eye.y; val ez = eye.z
+            var n = 0
+            for (set in matchedByChunk.values) for (pos in set) {
+                val dx = (pos.x - ex).toLong()
+                val dy = (pos.y - ey).toLong()
+                val dz = (pos.z - ez).toLong()
+                scratchDist[n] = dx * dx + dy * dy + dz * dz
+                scratchPos[n] = pos.asLong()
+                n++
+            }
+            FloydBlockSearchSelection.quickselectK(scratchDist, scratchPos, n, MAX_RENDERED)
+            for (i in 0 until MAX_RENDERED) {
+                val packed = scratchPos[i]
+                val x = BlockPos.getX(packed)
+                val y = BlockPos.getY(packed)
+                val z = BlockPos.getZ(packed)
+                out.add(inflatedBox(x, y, z))
+                centers.add(Vec3(x + 0.5, y + 0.5, z + 0.5))
+            }
+        }
+        cachedSelection = out
+        cachedCenters = centers
+    }
+
+    private fun inflatedBox(x: Int, y: Int, z: Int): AABB {
+        val xd = x.toDouble()
+        val yd = y.toDouble()
+        val zd = z.toDouble()
+        return AABB(
+            xd - HIGHLIGHT_INFLATE, yd - HIGHLIGHT_INFLATE, zd - HIGHLIGHT_INFLATE,
+            xd + 1.0 + HIGHLIGHT_INFLATE, yd + 1.0 + HIGHLIGHT_INFLATE, zd + 1.0 + HIGHLIGHT_INFLATE
+        )
+    }
+
 
     override fun onEnable() {
         super.onEnable()
@@ -234,10 +376,16 @@ object FloydBlockSearch : Module(
         val id = BuiltInRegistries.BLOCK.getKey(state.block).toString()
         if (!state.isAir && id in ids) {
             if (indexedCount >= MAX_INDEXED) { capped = true; return }
-            if (matchedByChunk.getOrPut(key) { LinkedHashSet() }.add(pos.immutable())) indexedCount++
+            if (matchedByChunk.getOrPut(key) { LinkedHashSet() }.add(pos.immutable())) {
+                indexedCount++
+                bumpEpoch()
+            }
         } else {
             val set = matchedByChunk[key] ?: return
-            if (set.remove(pos)) indexedCount--
+            if (set.remove(pos)) {
+                indexedCount--
+                bumpEpoch()
+            }
             if (set.isEmpty()) matchedByChunk.remove(key)
         }
     }
@@ -245,18 +393,33 @@ object FloydBlockSearch : Module(
     /** Stores a chunk's matched positions, keeping [indexedCount] in sync (replaces any old entry). */
     private fun putChunk(key: Long, found: MutableSet<BlockPos>) {
         indexedCount += found.size - (matchedByChunk.put(key, found)?.size ?: 0)
+        bumpEpoch()
     }
 
-    /** Drops a chunk's matched positions, keeping [indexedCount] in sync. */
+    /**
+     * Drops a chunk's matched positions, keeping [indexedCount] in sync. Bumps the selection epoch
+     * ONLY on a real removal — this is called for EVERY unloading chunk and every loaded chunk
+     * with zero matches, and an unconditional bump would invalidate the cache continuously while
+     * the player travels.
+     */
     private fun removeChunk(key: Long) {
-        indexedCount -= matchedByChunk.remove(key)?.size ?: 0
+        val removed = matchedByChunk.remove(key) ?: return
+        indexedCount -= removed.size
+        bumpEpoch()
     }
 
-    /** Clears the entire index and resets the cap bookkeeping. */
+    /** Clears the entire index, the cached selection, and the cap bookkeeping. */
     private fun clearIndex() {
+        if (matchedByChunk.isNotEmpty()) bumpEpoch()
         matchedByChunk.clear()
         indexedCount = 0
         capped = false
+        cachedEpoch = -1L
+        cachedSelection = ObjectArrayList()
+        cachedCenters = ObjectArrayList()
+        cachedSelectionCapped = false
+        scratchDist = LongArray(0)
+        scratchPos = LongArray(0)
     }
 
     private fun activeIds(): Set<String> = searchBlocks.filterValues { it }.keys

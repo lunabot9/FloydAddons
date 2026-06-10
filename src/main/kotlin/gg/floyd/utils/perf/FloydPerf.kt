@@ -313,11 +313,13 @@ object FloydPerfCounters {
     @JvmField val xrayIsOpaqueCalls = LongAdder()
     @JvmField val blockSearchBlockChanges = LongAdder()
     @JvmField val blockSearchChunkScans = LongAdder()
+    @JvmField val blockSearchReselects = LongAdder()
 
     fun snapshot(): Map<String, Long> = mapOf(
         "xrayIsOpaqueCalls" to xrayIsOpaqueCalls.sum(),
         "blockSearchBlockChanges" to blockSearchBlockChanges.sum(),
-        "blockSearchChunkScans" to blockSearchChunkScans.sum()
+        "blockSearchChunkScans" to blockSearchChunkScans.sum(),
+        "blockSearchReselects" to blockSearchReselects.sum()
     )
 
     fun deltas(before: Map<String, Long>, after: Map<String, Long>): Map<String, Long> =

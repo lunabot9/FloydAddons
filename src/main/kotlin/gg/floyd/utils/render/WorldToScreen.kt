@@ -133,17 +133,36 @@ object WorldToScreen {
      * center is `bob^-1 * (0,0,-distance)`. Transforming that back through the inverse
      * modelview and adding the camera position yields the stable world-space origin.
      */
+    // Per-frame memo for the default-distance origin: capture()/captureBob() assign FRESH Matrix4f
+    // instances each frame, so instance identity doubles as the frame stamp. Render-thread-only.
+    // Block Search used to recompute this (two Matrix4f copies + inversions) per tracer per frame —
+    // 10k times for one identical result.
+    private var originMemoView: Matrix4f? = null
+    private var originMemoBob: Matrix4f? = null
+    private var originMemo: Vec3? = null
+
     fun tracerOrigin(distance: Float = 1f): Vec3? {
         val view = modelView ?: return null
         val bobMatrix = bob ?: return null
+        if (distance == 1f && view === originMemoView && bobMatrix === originMemoBob) return originMemo
         val cam = cameraPos
 
         val eyePoint = Vector3f(0f, 0f, -distance)
         Matrix4f(bobMatrix).invert().transformPosition(eyePoint)
         Matrix4f(view).invert().transformPosition(eyePoint)
 
-        return Vec3(cam.x + eyePoint.x, cam.y + eyePoint.y, cam.z + eyePoint.z)
+        val origin = Vec3(cam.x + eyePoint.x, cam.y + eyePoint.y, cam.z + eyePoint.z)
+        if (distance == 1f) {
+            originMemoView = view
+            originMemoBob = bobMatrix
+            originMemo = origin
+        }
+        return origin
     }
+
+    /** The captured frame view matrix + camera for allocation-free batch math (tracer fans). */
+    internal fun batchViewMatrix(): Matrix4f? = modelView
+    internal fun batchCameraPos(): Vec3 = cameraPos
 
     /**
      * Re-aims a tracer's FAR endpoint onto the same camera-depth plane as [tracerOrigin] while keeping it

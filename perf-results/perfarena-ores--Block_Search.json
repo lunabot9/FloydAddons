@@ -15,588 +15,583 @@
     "activeScaffold": "Floyd Fabric module/config/event/ClickGUI",
     "vendoredBehaviorSource": "vendor/floydaddons-fabric"
   },
-  "startedAt": "2026-06-10T10:31:04",
+  "startedAt": "2026-06-10T11:34:09",
   "sectionsOn": {
     "ok": true,
-    "durationMs": 15006.959083,
-    "frames": 1665,
-    "fps": 110.94852666628012,
+    "durationMs": 15007.372833,
+    "frames": 1633,
+    "fps": 108.81318257177999,
     "frameMs": {
-      "p50": 8.76875,
-      "p95": 10.628167,
-      "p99": 11.734667,
-      "max": 12.801792,
-      "min": 8.26625,
-      "avg": 9.01318863843844
+      "p50": 9.338125,
+      "p95": 9.506625,
+      "p99": 9.537208,
+      "max": 9.597,
+      "min": 8.377833,
+      "avg": 9.190062971830987
     },
     "alloc": {
       "supported": true,
-      "renderThreadBytesPerSecond": 652651149,
-      "renderThreadTotalMB": 9794.309096,
+      "renderThreadBytesPerSecond": 6724661,
+      "renderThreadTotalMB": 100.919504,
       "bytesPerFrame": {
-        "p50": 5873472,
-        "p95": 5922896,
-        "p99": 5927224,
-        "max": 5937440
+        "p50": 44344,
+        "p95": 139336,
+        "p99": 142504,
+        "max": 167488
       }
     },
     "gc": {
-      "collections": 94,
-      "timeMs": 91
+      "collections": 1,
+      "timeMs": 3
     },
     "counters": {
       "xrayIsOpaqueCalls": 0,
       "blockSearchBlockChanges": 0,
-      "blockSearchChunkScans": 0
+      "blockSearchChunkScans": 0,
+      "blockSearchReselects": 0
     },
     "sectionsNote": "Inclusive times \u2014 PostHud.* nests under PostHud.total, ClickGUI.textReplay under ClickGUI.nvgPip; do not sum parents with children. p50/p95/p99 are log-bucket upper bounds (<= ~9% high); max is exact.",
     "sections": {
-      "FloydBlockSearch.Extract": {
-        "p50us": 5242.88,
-        "p95us": 6291.456,
-        "p99us": 6291.456,
-        "maxUs": 7365.208,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 4065464,
-        "totalMs": 7693.998632,
-        "msPerSecond": 512.6953828184833
-      },
       "RenderBatchManager.Last": {
         "p50us": 3670.016,
         "p95us": 3670.016,
-        "p99us": 5242.88,
-        "maxUs": 5409.0,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
+        "p99us": 4194.304,
+        "maxUs": 3932.166,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
-        "bytesPerFrame": 1762408,
-        "totalMs": 5357.430915,
-        "msPerSecond": 356.99643647785643
+        "bytesPerFrame": 2632,
+        "totalMs": 5503.693078,
+        "msPerSecond": 366.73261464510455
       },
       "PostHud.total": {
-        "p50us": 114.688,
-        "p95us": 163.84,
-        "p99us": 196.608,
-        "maxUs": 1396.459,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
+        "p50us": 57.344,
+        "p95us": 81.92,
+        "p99us": 98.304,
+        "maxUs": 127.958,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
-        "bytesPerFrame": 3832,
-        "totalMs": 185.817261,
-        "msPerSecond": 12.382072875143322
+        "bytesPerFrame": 1,
+        "totalMs": 92.811313,
+        "msPerSecond": 6.184381106059778
       },
-      "PostHud.InventoryHud": {
-        "p50us": 40.96,
-        "p95us": 65.536,
-        "p99us": 81.92,
-        "maxUs": 95.708,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 3832,
-        "totalMs": 70.810168,
-        "msPerSecond": 4.718488776331396
-      },
-      "HudLayer.elements": {
-        "p50us": 1.536,
-        "p95us": 5.12,
-        "p99us": 14.336,
-        "maxUs": 41.0,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 52,
-        "totalMs": 2.981354,
-        "msPerSecond": 0.19866476502739994
-      },
-      "FloydPlayerEsp.Extract": {
+      "FloydBlockSearch.Extract": {
         "p50us": 1.28,
-        "p95us": 2.048,
+        "p95us": 2.56,
         "p99us": 4.096,
-        "maxUs": 9.791,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
+        "maxUs": 7.208,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 104,
+        "totalMs": 1.996827,
+        "msPerSecond": 0.1330563998256336
+      },
+      "FloydWindowModule.ClientEnd": {
+        "p50us": 4.096,
+        "p95us": 6.144,
+        "p99us": 8.192,
+        "maxUs": 14.875,
+        "framesSeen": 301,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 1.918336,
-        "msPerSecond": 0.1278297614720031
+        "totalMs": 1.27096,
+        "msPerSecond": 0.08468904012334935
       },
       "FloydMobEsp.Extract": {
         "p50us": 1.28,
-        "p95us": 1.792,
-        "p99us": 3.072,
-        "maxUs": 7.916,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 0,
-        "totalMs": 1.683157,
-        "msPerSecond": 0.11215843201083245
-      },
-      "PostHud.Scoreboard": {
-        "p50us": 1.28,
         "p95us": 1.536,
-        "p99us": 3.072,
-        "maxUs": 7.25,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
+        "p99us": 2.048,
+        "maxUs": 7.833,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 1.325633,
-        "msPerSecond": 0.08833455150162217
+        "totalMs": 1.064266,
+        "msPerSecond": 0.07091620977522228
       },
       "FloydUpdateCheckerModule.ClientEnd": {
         "p50us": 2.56,
         "p95us": 4.096,
-        "p99us": 10.24,
-        "maxUs": 12.625,
-        "framesSeen": 300,
-        "totalFrames": 1665,
+        "p99us": 6.144,
+        "maxUs": 10.541,
+        "framesSeen": 301,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.752374,
-        "msPerSecond": 0.050135007088297795
+        "totalMs": 0.812171,
+        "msPerSecond": 0.054118133069507114
       },
-      "TickTasks.End": {
-        "p50us": 1.792,
-        "p95us": 3.584,
-        "p99us": 8.192,
-        "maxUs": 10.333,
-        "framesSeen": 300,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 24,
-        "totalMs": 0.60591,
-        "msPerSecond": 0.04037526834376323
-      },
-      "FloydWindowModule.ClientEnd": {
-        "p50us": 1.792,
+      "FloydDiscordPresence.ClientEnd": {
+        "p50us": 2.56,
         "p95us": 4.096,
         "p99us": 7.168,
-        "maxUs": 8.542,
-        "framesSeen": 300,
-        "totalFrames": 1665,
+        "maxUs": 80.083,
+        "framesSeen": 301,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.579961,
-        "msPerSecond": 0.03864613722156305
+        "totalMs": 0.687666,
+        "msPerSecond": 0.04582187752994835
       },
-      "FloydNickHider.End": {
-        "p50us": 1.536,
-        "p95us": 3.072,
-        "p99us": 7.168,
-        "maxUs": 12.708,
-        "framesSeen": 300,
-        "totalFrames": 1665,
+      "PostHud.Scoreboard": {
+        "p50us": 1.28,
+        "p95us": 1.28,
+        "p99us": 1.28,
+        "maxUs": 5.708,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.524652,
-        "msPerSecond": 0.03496058042793825
+        "totalMs": 0.627459,
+        "msPerSecond": 0.04181004943252082
       },
-      "FloydMobEsp.End": {
-        "p50us": 1.536,
-        "p95us": 3.072,
-        "p99us": 5.12,
-        "maxUs": 7.792,
-        "framesSeen": 300,
-        "totalFrames": 1665,
+      "PostHud.InventoryHud": {
+        "p50us": 1.28,
+        "p95us": 1.28,
+        "p99us": 1.28,
+        "maxUs": 23.083,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.519628,
-        "msPerSecond": 0.03462580241113862
+        "totalMs": 0.508629,
+        "msPerSecond": 0.03389194135842124
+      },
+      "FloydFocusLossPrevention.ClientEnd": {
+        "p50us": 1.536,
+        "p95us": 2.56,
+        "p99us": 3.584,
+        "maxUs": 6.292,
+        "framesSeen": 301,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.481805,
+        "msPerSecond": 0.03210455323269838
       },
       "FloydAutoTotem.ClientEnd": {
-        "p50us": 1.28,
-        "p95us": 3.584,
-        "p99us": 8.192,
-        "maxUs": 21.334,
-        "framesSeen": 300,
-        "totalFrames": 1665,
+        "p50us": 1.536,
+        "p95us": 2.56,
+        "p99us": 5.12,
+        "maxUs": 14.5,
+        "framesSeen": 301,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.505287,
-        "msPerSecond": 0.03367017909527008
+        "totalMs": 0.473294,
+        "msPerSecond": 0.03153743198538153
+      },
+      "HudLayer.elements": {
+        "p50us": 1.28,
+        "p95us": 1.28,
+        "p99us": 1.28,
+        "maxUs": 1.0,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 32,
+        "totalMs": 0.421532,
+        "msPerSecond": 0.02808832729690604
+      },
+      "FloydMobEsp.End": {
+        "p50us": 1.28,
+        "p95us": 2.56,
+        "p99us": 5.12,
+        "maxUs": 17.917,
+        "framesSeen": 301,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.402332,
+        "msPerSecond": 0.02680895613623355
       },
       "FloydLocalControl.ClientEnd": {
         "p50us": 1.536,
-        "p95us": 3.072,
-        "p99us": 3.584,
-        "maxUs": 4.292,
-        "framesSeen": 300,
-        "totalFrames": 1665,
+        "p95us": 2.048,
+        "p99us": 3.072,
+        "maxUs": 7.958,
+        "framesSeen": 301,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.497342,
-        "msPerSecond": 0.03314075804760425
+        "totalMs": 0.401162,
+        "msPerSecond": 0.02673099445613007
       },
       "FloydTaskbarIconModule.ClientEnd": {
         "p50us": 1.536,
-        "p95us": 3.072,
+        "p95us": 2.048,
         "p99us": 3.584,
-        "maxUs": 9.959,
-        "framesSeen": 300,
-        "totalFrames": 1665,
+        "maxUs": 8.792,
+        "framesSeen": 301,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.491046,
-        "msPerSecond": 0.03272121935457668
+        "totalMs": 0.400374,
+        "msPerSecond": 0.026678486931410804
+      },
+      "FloydTimeChanger.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 2.048,
+        "p99us": 3.584,
+        "maxUs": 34.917,
+        "framesSeen": 301,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.396791,
+        "msPerSecond": 0.026439737615333223
+      },
+      "TickTasks.End": {
+        "p50us": 1.28,
+        "p95us": 2.048,
+        "p99us": 6.144,
+        "maxUs": 28.459,
+        "framesSeen": 301,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.371822,
+        "msPerSecond": 0.024775955401227418
+      },
+      "FloydNickHider.End": {
+        "p50us": 1.28,
+        "p95us": 1.792,
+        "p99us": 2.56,
+        "maxUs": 4.459,
+        "framesSeen": 301,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.310158,
+        "msPerSecond": 0.02066704169020094
+      },
+      "FloydMobEsp.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 1.792,
+        "p99us": 3.584,
+        "maxUs": 12.667,
+        "framesSeen": 301,
+        "totalFrames": 1633,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.281246,
+        "msPerSecond": 0.01874052195075495
       },
       "PostHud.DayTracker": {
         "p50us": 1.28,
         "p95us": 1.28,
         "p99us": 1.28,
-        "maxUs": 19.792,
-        "framesSeen": 1665,
-        "totalFrames": 1665,
+        "maxUs": 17.792,
+        "framesSeen": 1633,
+        "totalFrames": 1633,
         "callsPerFrame": 1.0,
         "bytesPerFrame": 0,
-        "totalMs": 0.443759,
-        "msPerSecond": 0.02957021456150258
-      },
-      "FloydFocusLossPrevention.ClientEnd": {
-        "p50us": 1.28,
-        "p95us": 2.56,
-        "p99us": 5.12,
-        "maxUs": 6.458,
-        "framesSeen": 300,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 0,
-        "totalMs": 0.391831,
-        "msPerSecond": 0.02610995324454967
-      },
-      "FloydTimeChanger.ClientEnd": {
-        "p50us": 1.28,
-        "p95us": 1.792,
-        "p99us": 5.12,
-        "maxUs": 19.792,
-        "framesSeen": 300,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 0,
-        "totalMs": 0.37159,
-        "msPerSecond": 0.02476117899334716
-      },
-      "FloydDiscordPresence.ClientEnd": {
-        "p50us": 1.28,
-        "p95us": 1.536,
-        "p99us": 2.048,
-        "maxUs": 6.291,
-        "framesSeen": 300,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 0,
-        "totalMs": 0.27529,
-        "msPerSecond": 0.018344156099675827
-      },
-      "FloydMobEsp.ClientEnd": {
-        "p50us": 1.28,
-        "p95us": 1.28,
-        "p99us": 6.144,
-        "maxUs": 7.167,
-        "framesSeen": 300,
-        "totalFrames": 1665,
-        "callsPerFrame": 1.0,
-        "bytesPerFrame": 0,
-        "totalMs": 0.205507,
-        "msPerSecond": 0.013694113435199535
+        "totalMs": 0.278373,
+        "msPerSecond": 0.018549082714056406
       }
     }
   },
   "offRuns": [
     {
       "ok": true,
-      "durationMs": 30005.606916,
-      "frames": 3328,
-      "fps": 110.9126040781864,
+      "durationMs": 30008.43975,
+      "frames": 3133,
+      "fps": 104.40396188875498,
       "frameMs": {
-        "p50": 9.060125,
-        "p95": 9.374958,
-        "p99": 9.581916,
-        "max": 19.100333,
-        "min": 2.692916,
-        "avg": 9.01610784735577
+        "p50": 9.549916,
+        "p95": 10.297958,
+        "p99": 10.357042,
+        "max": 20.308667,
+        "min": 3.627708,
+        "avg": 9.578180577721033
       },
       "alloc": {
         "supported": true,
-        "renderThreadBytesPerSecond": 6561434,
-        "renderThreadTotalMB": 196.879832,
+        "renderThreadBytesPerSecond": 6422991,
+        "renderThreadTotalMB": 192.74396,
         "bytesPerFrame": {
-          "p50": 49136,
-          "p95": 104944,
-          "p99": 107496,
-          "max": 117112
+          "p50": 42440,
+          "p95": 142488,
+          "p99": 145576,
+          "max": 155688
         }
       },
       "gc": {
         "collections": 4,
-        "timeMs": 6
+        "timeMs": 13
       },
       "counters": {
         "xrayIsOpaqueCalls": 0,
         "blockSearchBlockChanges": 0,
-        "blockSearchChunkScans": 0
+        "blockSearchChunkScans": 0,
+        "blockSearchReselects": 0
       }
     },
     {
       "ok": true,
-      "durationMs": 30003.390666,
-      "frames": 3321,
-      "fps": 110.68748985638395,
+      "durationMs": 30006.08275,
+      "frames": 3135,
+      "fps": 104.47881604938918,
       "frameMs": {
-        "p50": 9.095708,
-        "p95": 9.385833,
-        "p99": 9.684834,
-        "max": 19.059042,
-        "min": 2.469375,
-        "avg": 9.03444464498645
+        "p50": 9.535792,
+        "p95": 10.285791,
+        "p99": 10.397458,
+        "max": 11.087334,
+        "min": 7.975083,
+        "avg": 9.571318261562997
       },
       "alloc": {
         "supported": true,
-        "renderThreadBytesPerSecond": 6175760,
-        "renderThreadTotalMB": 185.29376,
+        "renderThreadBytesPerSecond": 6384204,
+        "renderThreadTotalMB": 191.564968,
         "bytesPerFrame": {
-          "p50": 45984,
-          "p95": 100144,
-          "p99": 103696,
-          "max": 111160
-        }
-      },
-      "gc": {
-        "collections": 3,
-        "timeMs": 3
-      },
-      "counters": {
-        "xrayIsOpaqueCalls": 0,
-        "blockSearchBlockChanges": 0,
-        "blockSearchChunkScans": 0
-      }
-    },
-    {
-      "ok": true,
-      "durationMs": 30003.951584,
-      "frames": 3313,
-      "fps": 110.41878902933242,
-      "frameMs": {
-        "p50": 9.123625,
-        "p95": 9.375584,
-        "p99": 9.451792,
-        "max": 18.77225,
-        "min": 2.747875,
-        "avg": 9.05642969634772
-      },
-      "alloc": {
-        "supported": true,
-        "renderThreadBytesPerSecond": 6141767,
-        "renderThreadTotalMB": 184.27728,
-        "bytesPerFrame": {
-          "p50": 46000,
-          "p95": 99768,
-          "p99": 102872,
-          "max": 111616
+          "p50": 42080,
+          "p95": 141704,
+          "p99": 145008,
+          "max": 154480
         }
       },
       "gc": {
         "collections": 2,
+        "timeMs": 7
+      },
+      "counters": {
+        "xrayIsOpaqueCalls": 0,
+        "blockSearchBlockChanges": 0,
+        "blockSearchChunkScans": 0,
+        "blockSearchReselects": 0
+      }
+    },
+    {
+      "ok": true,
+      "durationMs": 30001.175167,
+      "frames": 3134,
+      "fps": 104.46257463431849,
+      "frameMs": {
+        "p50": 9.5365,
+        "p95": 10.289666,
+        "p99": 10.405333,
+        "max": 19.793833,
+        "min": 6.134,
+        "avg": 9.572806371091257
+      },
+      "alloc": {
+        "supported": true,
+        "renderThreadBytesPerSecond": 6381760,
+        "renderThreadTotalMB": 191.46032,
+        "bytesPerFrame": {
+          "p50": 42080,
+          "p95": 141536,
+          "p99": 145624,
+          "max": 154048
+        }
+      },
+      "gc": {
+        "collections": 1,
         "timeMs": 3
       },
       "counters": {
         "xrayIsOpaqueCalls": 0,
         "blockSearchBlockChanges": 0,
-        "blockSearchChunkScans": 0
+        "blockSearchChunkScans": 0,
+        "blockSearchReselects": 0
       }
     }
   ],
   "onRuns": [
     {
       "ok": true,
-      "durationMs": 30007.691709,
-      "frames": 3342,
-      "fps": 111.37144544169178,
+      "durationMs": 30005.30125,
+      "frames": 3270,
+      "fps": 108.98074219468135,
       "frameMs": {
-        "p50": 8.4965,
-        "p95": 11.204167,
-        "p99": 12.468125,
-        "max": 29.212833,
-        "min": 8.329666,
-        "avg": 8.978962210951526
+        "p50": 9.263291,
+        "p95": 9.49325,
+        "p99": 9.541167,
+        "max": 10.769208,
+        "min": 8.379292,
+        "avg": 9.175933103975535
       },
       "alloc": {
         "supported": true,
-        "renderThreadBytesPerSecond": 655289197,
-        "renderThreadTotalMB": 19663.716208,
+        "renderThreadBytesPerSecond": 6820956,
+        "renderThreadTotalMB": 204.664848,
         "bytesPerFrame": {
-          "p50": 5873792,
-          "p95": 5928568,
-          "p99": 5932616,
-          "max": 5997664
+          "p50": 44312,
+          "p95": 144064,
+          "p99": 147520,
+          "max": 156336
         }
       },
       "gc": {
-        "collections": 186,
-        "timeMs": 173
+        "collections": 4,
+        "timeMs": 8
       },
       "counters": {
         "xrayIsOpaqueCalls": 0,
         "blockSearchBlockChanges": 1,
-        "blockSearchChunkScans": 0
+        "blockSearchChunkScans": 0,
+        "blockSearchReselects": 0
       }
     },
     {
       "ok": true,
-      "durationMs": 30002.306875,
-      "frames": 3371,
-      "fps": 112.358026802564,
+      "durationMs": 30000.2455,
+      "frames": 3283,
+      "fps": 109.43243781121726,
       "frameMs": {
-        "p50": 8.633125,
-        "p95": 10.431958,
-        "p99": 11.400667,
-        "max": 13.540375,
-        "min": 8.321667,
-        "avg": 8.900120698605756
+        "p50": 9.238,
+        "p95": 9.49025,
+        "p99": 9.550625,
+        "max": 18.6385,
+        "min": 7.543792,
+        "avg": 9.138058330795005
       },
       "alloc": {
         "supported": true,
-        "renderThreadBytesPerSecond": 661007614,
-        "renderThreadTotalMB": 19831.753288,
+        "renderThreadBytesPerSecond": 6834655,
+        "renderThreadTotalMB": 205.041352,
         "bytesPerFrame": {
-          "p50": 5873440,
-          "p95": 5927296,
-          "p99": 5929656,
-          "max": 5937920
+          "p50": 44312,
+          "p95": 143776,
+          "p99": 147008,
+          "max": 154472
         }
       },
       "gc": {
-        "collections": 192,
-        "timeMs": 159
+        "collections": 3,
+        "timeMs": 4
       },
       "counters": {
         "xrayIsOpaqueCalls": 0,
         "blockSearchBlockChanges": 0,
-        "blockSearchChunkScans": 0
+        "blockSearchChunkScans": 0,
+        "blockSearchReselects": 0
       }
     },
     {
       "ok": true,
-      "durationMs": 30005.345542,
-      "frames": 3415,
-      "fps": 113.81305358473048,
+      "durationMs": 30004.221209,
+      "frames": 3264,
+      "fps": 108.78469323579502,
       "frameMs": {
-        "p50": 8.434292,
-        "p95": 10.60775,
-        "p99": 11.546709,
-        "max": 12.952375,
-        "min": 8.326583,
-        "avg": 8.786338372474377
+        "p50": 9.311458,
+        "p95": 9.510167,
+        "p99": 9.548375,
+        "max": 9.623459,
+        "min": 8.341625,
+        "avg": 9.19246973314951
       },
       "alloc": {
         "supported": true,
-        "renderThreadBytesPerSecond": 669465021,
-        "renderThreadTotalMB": 20087.529296,
+        "renderThreadBytesPerSecond": 6791896,
+        "renderThreadTotalMB": 203.78556,
         "bytesPerFrame": {
-          "p50": 5873440,
-          "p95": 5922848,
-          "p99": 5925640,
-          "max": 5933328
+          "p50": 44312,
+          "p95": 143640,
+          "p99": 145976,
+          "max": 155384
         }
       },
       "gc": {
-        "collections": 196,
-        "timeMs": 161
+        "collections": 1,
+        "timeMs": 2
       },
       "counters": {
         "xrayIsOpaqueCalls": 0,
         "blockSearchBlockChanges": 0,
-        "blockSearchChunkScans": 0
+        "blockSearchChunkScans": 0,
+        "blockSearchReselects": 0
       }
     }
   ],
   "ab": {
     "p50": {
       "off": [
-        9.060125,
-        9.095708,
-        9.123625
+        9.549916,
+        9.535792,
+        9.5365
       ],
       "on": [
-        8.4965,
-        8.633125,
-        8.434292
+        9.263291,
+        9.238,
+        9.311458
       ],
-      "offMean": 9.0932,
-      "onMean": 8.5213,
-      "delta": -0.5718,
-      "runToRunSpread": 0.1988,
+      "offMean": 9.5407,
+      "onMean": 9.2709,
+      "delta": -0.2698,
+      "runToRunSpread": 0.0735,
       "finding": true
     },
     "p95": {
       "off": [
-        9.374958,
-        9.385833,
-        9.375584
+        10.297958,
+        10.285791,
+        10.289666
       ],
       "on": [
-        11.204167,
-        10.431958,
-        10.60775
+        9.49325,
+        9.49025,
+        9.510167
       ],
-      "offMean": 9.3788,
-      "onMean": 10.748,
-      "delta": 1.3692,
-      "runToRunSpread": 0.7722,
+      "offMean": 10.2911,
+      "onMean": 9.4979,
+      "delta": -0.7932,
+      "runToRunSpread": 0.0199,
       "finding": true
     },
     "p99": {
       "off": [
-        9.581916,
-        9.684834,
-        9.451792
+        10.357042,
+        10.397458,
+        10.405333
       ],
       "on": [
-        12.468125,
-        11.400667,
-        11.546709
+        9.541167,
+        9.550625,
+        9.548375
       ],
-      "offMean": 9.5728,
-      "onMean": 11.8052,
-      "delta": 2.2323,
-      "runToRunSpread": 1.0675,
+      "offMean": 10.3866,
+      "onMean": 9.5467,
+      "delta": -0.8399,
+      "runToRunSpread": 0.0483,
       "finding": true
     },
     "fps": {
       "off": [
-        110.9126040781864,
-        110.68748985638395,
-        110.41878902933242
+        104.40396188875498,
+        104.47881604938918,
+        104.46257463431849
       ],
       "on": [
-        111.37144544169178,
-        112.358026802564,
-        113.81305358473048
+        108.98074219468135,
+        109.43243781121726,
+        108.78469323579502
       ],
-      "offMean": 110.673,
-      "onMean": 112.5142,
-      "delta": 1.8412,
-      "runToRunSpread": 2.4416,
-      "finding": false
+      "offMean": 104.4485,
+      "onMean": 109.066,
+      "delta": 4.6175,
+      "runToRunSpread": 0.6477,
+      "finding": true
     },
     "allocMBps": {
       "off": [
-        6.561434,
-        6.17576,
-        6.141767
+        6.422991,
+        6.384204,
+        6.38176
       ],
       "on": [
-        655.289197,
-        661.007614,
-        669.465021
+        6.820956,
+        6.834655,
+        6.791896
       ],
-      "offMean": 6.293,
-      "onMean": 661.9206,
-      "delta": 655.6276,
-      "runToRunSpread": 14.1758,
+      "offMean": 6.3963,
+      "onMean": 6.8158,
+      "delta": 0.4195,
+      "runToRunSpread": 0.0428,
       "finding": true
     }
   }

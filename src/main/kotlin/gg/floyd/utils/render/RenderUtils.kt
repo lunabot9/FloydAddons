@@ -29,6 +29,7 @@ import net.minecraft.resources.Identifier
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import org.joml.Vector3f
+import org.joml.Vector4f
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
@@ -47,6 +48,22 @@ private fun noFogBuffer(): GpuBufferSlice? = runCatching {
 
 internal data class LineData(val from: Vec3, val to: Vec3, val color1: Int, val color2: Int, val thickness: Float, val depth: Boolean)
 internal data class BoxData(val aabb: AABB, val r: Float, val g: Float, val b: Float, val a: Float, val thickness: Float, val depth: Boolean)
+
+/**
+ * One shared-style batch of boxes queued as a SINGLE record (Block Search queues 10k boxes/frame —
+ * per-box BoxData records were ~62MB/s of garbage). The queuing side must treat [aabbs] as frozen
+ * once queued: a record can survive into the next frame when the Last flush skips (non-BufferSource
+ * consumers), so producers hand over a fresh list per rebuild, never mutate a queued one.
+ */
+internal class BoxBatchData(val aabbs: List<AABB>, val r: Float, val g: Float, val b: Float, val a: Float, val thickness: Float, val depth: Boolean)
+
+/**
+ * One crosshair-anchored tracer fan queued as a single record. The flush computes the shared
+ * origin ONCE and re-aims every target onto the origin's depth plane with scratch math —
+ * allocation-free per line (the per-tracer drawTracer path costs ~5 allocations per line per
+ * frame, ~2MB/frame at Block Search's 10k cap). Same frozen-list contract as [BoxBatchData].
+ */
+internal class TracerFanData(val targets: List<Vec3>, val color: Int, val thickness: Float, val depth: Boolean)
 internal data class BeaconData(val pos: BlockPos, val color: Color, val isScoping: Boolean, val gameTime: Long)
 internal data class TextData(val text: String, val pos: Vec3, val scale: Float, val depth: Boolean, val cameraRotation: org.joml.Quaternionf, val font: Font, val textWidth: Float)
 internal data class TexturedQuadData(val texture: Identifier, val bl: Vec3, val tl: Vec3, val tr: Vec3, val br: Vec3, val nx: Float, val ny: Float, val nz: Float, val color: Int, val depth: Boolean)
@@ -55,6 +72,9 @@ class RenderConsumer {
     internal val lines = ObjectArrayList<LineData>()
     internal val filledBoxes = ObjectArrayList<BoxData>()
     internal val wireBoxes = ObjectArrayList<BoxData>()
+    internal val wireBoxBatches = ObjectArrayList<BoxBatchData>()
+    internal val filledBoxBatches = ObjectArrayList<BoxBatchData>()
+    internal val tracerFans = ObjectArrayList<TracerFanData>()
 
     internal val beaconBeams = ObjectArrayList<BeaconData>()
     internal val texts = ObjectArrayList<TextData>()
@@ -64,6 +84,9 @@ class RenderConsumer {
         lines.clear()
         filledBoxes.clear()
         wireBoxes.clear()
+        wireBoxBatches.clear()
+        filledBoxBatches.clear()
+        tracerFans.clear()
         beaconBeams.clear()
         texts.clear()
         texturedQuads.clear()
@@ -78,6 +101,12 @@ object RenderBatchManager {
             "lines" to renderConsumer.lines.size,
             "filledBoxes" to renderConsumer.filledBoxes.size,
             "wireBoxes" to renderConsumer.wireBoxes.size,
+            "wireBoxBatches" to renderConsumer.wireBoxBatches.size,
+            "wireBoxBatchBoxes" to renderConsumer.wireBoxBatches.sumOf { it.aabbs.size },
+            "filledBoxBatches" to renderConsumer.filledBoxBatches.size,
+            "filledBoxBatchBoxes" to renderConsumer.filledBoxBatches.sumOf { it.aabbs.size },
+            "tracerFans" to renderConsumer.tracerFans.size,
+            "tracerFanTargets" to renderConsumer.tracerFans.sumOf { it.targets.size },
             "beaconBeams" to renderConsumer.beaconBeams.size,
             "texts" to renderConsumer.texts.size,
             "texturedQuads" to renderConsumer.texturedQuads.size
@@ -101,8 +130,9 @@ object RenderBatchManager {
             matrix.pushPose()
             matrix.translate(-camera.x, -camera.y, -camera.z)
 
-            matrix.renderQueuedLinesAndWireBoxes(renderConsumer.lines, renderConsumer.wireBoxes, bufferSource)
-            matrix.renderQueuedFilledBoxes(renderConsumer.filledBoxes, bufferSource)
+            matrix.renderQueuedLinesAndWireBoxes(renderConsumer.lines, renderConsumer.wireBoxes, renderConsumer.wireBoxBatches, bufferSource)
+            matrix.renderQueuedTracerFans(renderConsumer.tracerFans, bufferSource)
+            matrix.renderQueuedFilledBoxes(renderConsumer.filledBoxes, renderConsumer.filledBoxBatches, bufferSource)
             matrix.renderQueuedTexturedQuads(renderConsumer.texturedQuads, bufferSource)
             matrix.popPose()
 
@@ -213,9 +243,10 @@ private fun PoseStack.renderQueuedTexturedQuads(
 private fun PoseStack.renderQueuedLinesAndWireBoxes(
     lines: List<LineData>,
     wireBoxes: List<BoxData>,
+    wireBoxBatches: List<BoxBatchData>,
     bufferSource: MultiBufferSource.BufferSource
 ) {
-    if (lines.isEmpty() && wireBoxes.isEmpty()) return
+    if (lines.isEmpty() && wireBoxes.isEmpty() && wireBoxBatches.isEmpty()) return
     val last = this.last()
 
     for (line in lines) {
@@ -239,10 +270,81 @@ private fun PoseStack.renderQueuedLinesAndWireBoxes(
             box.r, box.g, box.b, box.a, box.thickness
         )
     }
+
+    for (batch in wireBoxBatches) {
+        // Same render-type resolution as single wire boxes; buffer hoisted once per batch.
+        val buffer = bufferSource.getBuffer(resolveLineRenderType(batch.depth, batch.a >= 0.999f))
+        val aabbs = batch.aabbs
+        for (i in aabbs.indices) {
+            PrimitiveRenderer.renderLineBox(last, buffer, aabbs[i], batch.r, batch.g, batch.b, batch.a, batch.thickness)
+        }
+    }
 }
 
-private fun PoseStack.renderQueuedFilledBoxes(consumer: List<BoxData>, bufferSource: MultiBufferSource.BufferSource) {
-    if (consumer.isEmpty()) return
+// Scratch for the tracer-fan flush — render-thread-only, non-reentrant (the sole flush site is
+// RenderBatchManager's RenderEvent.Last pass).
+private val tracerFanScratch = Vector4f()
+
+/**
+ * Flushes queued tracer fans: the shared crosshair origin is resolved once per fan, then every
+ * target is re-aimed onto the origin's depth plane (the exact [WorldToScreen.tracerTarget] math,
+ * inlined against [tracerFanScratch] so the loop is allocation-free) and emitted as one line.
+ * Targets at/behind the camera are skipped — same as the single-tracer path. When the frame
+ * matrices are not captured yet, falls back to the eye-anchored origin with straight lines to the
+ * real targets, mirroring [drawTracer]'s fallback.
+ */
+private fun PoseStack.renderQueuedTracerFans(fans: List<TracerFanData>, bufferSource: MultiBufferSource.BufferSource) {
+    if (fans.isEmpty()) return
+    val last = this.last()
+
+    for (fan in fans) {
+        if (fan.targets.isEmpty()) continue
+        val buffer = bufferSource.getBuffer(resolveLineRenderType(fan.depth, fan.color.isFullyOpaque()))
+        val origin = WorldToScreen.tracerOrigin()
+        val view = WorldToScreen.batchViewMatrix()
+        val targets = fan.targets
+        if (origin != null && view != null) {
+            val cam = WorldToScreen.batchCameraPos()
+            val ox = origin.x.toFloat()
+            val oy = origin.y.toFloat()
+            val oz = origin.z.toFloat()
+            for (i in targets.indices) {
+                val t = targets[i]
+                val relX = t.x - cam.x
+                val relY = t.y - cam.y
+                val relZ = t.z - cam.z
+                tracerFanScratch.set(relX.toFloat(), relY.toFloat(), relZ.toFloat(), 1f)
+                view.transform(tracerFanScratch)
+                val viewZ = tracerFanScratch.z
+                if (viewZ > -1.0e-3f) continue // at/behind the camera — no on-screen point to trace to
+                val s = 1.0 / -viewZ // re-aim onto the depth-1 plane (tracerTarget with distance=1f)
+                PrimitiveRenderer.renderLine(
+                    last, buffer,
+                    ox, oy, oz,
+                    (cam.x + s * relX).toFloat(), (cam.y + s * relY).toFloat(), (cam.z + s * relZ).toFloat(),
+                    fan.color, fan.thickness
+                )
+            }
+        } else {
+            val player = mc.player ?: continue
+            val from = player.renderPos.add(player.forward.add(0.0, player.eyeHeight.toDouble(), 0.0))
+            val fx = from.x.toFloat()
+            val fy = from.y.toFloat()
+            val fz = from.z.toFloat()
+            for (i in targets.indices) {
+                val t = targets[i]
+                PrimitiveRenderer.renderLine(last, buffer, fx, fy, fz, t.x.toFloat(), t.y.toFloat(), t.z.toFloat(), fan.color, fan.thickness)
+            }
+        }
+    }
+}
+
+private fun PoseStack.renderQueuedFilledBoxes(
+    consumer: List<BoxData>,
+    batches: List<BoxBatchData>,
+    bufferSource: MultiBufferSource.BufferSource
+) {
+    if (consumer.isEmpty() && batches.isEmpty()) return
     val last = this.last()
 
     for (box in consumer) {
@@ -253,6 +355,20 @@ private fun PoseStack.renderQueuedFilledBoxes(consumer: List<BoxData>, bufferSou
             box.aabb.maxX.toFloat(), box.aabb.maxY.toFloat(), box.aabb.maxZ.toFloat(),
             box.r, box.g, box.b, box.a
         )
+    }
+
+    for (batch in batches) {
+        val buffer = bufferSource.getBuffer(if (batch.depth) RenderTypes.debugFilledBox() else CustomRenderType.QUADS_ESP)
+        val aabbs = batch.aabbs
+        for (i in aabbs.indices) {
+            val aabb = aabbs[i]
+            PrimitiveRenderer.addChainedFilledBoxVertices(
+                last, buffer,
+                aabb.minX.toFloat(), aabb.minY.toFloat(), aabb.minZ.toFloat(),
+                aabb.maxX.toFloat(), aabb.maxY.toFloat(), aabb.maxZ.toFloat(),
+                batch.r, batch.g, batch.b, batch.a
+            )
+        }
     }
 }
 
@@ -380,6 +496,46 @@ fun RenderEvent.Extract.drawStyledBox(
     }
 }
 
+/**
+ * Batch variant of [drawStyledBox]: queues ALL of [aabbs] as one or two records (style 2 = filled
+ * at half alpha + wire at full alpha, matching the single-box path exactly — the alpha is halved
+ * as a float, not via Color.multiplyAlpha, so the chroma hue keeps animating per frame). The
+ * caller must NOT mutate [aabbs] after queueing (see [BoxBatchData]); hand over a fresh list per
+ * rebuild and reuse it across frames while unchanged.
+ */
+fun RenderEvent.Extract.drawStyledBoxBatch(
+    aabbs: List<AABB>,
+    color: Color,
+    style: Int = 0,
+    depth: Boolean = true,
+    thickness: Float = 3f
+) {
+    if (aabbs.isEmpty()) return
+    val rgba = color.rgba
+    val r = rgba.red / 255f
+    val g = rgba.green / 255f
+    val b = rgba.blue / 255f
+    val a = color.alphaFloat
+    when (style) {
+        0 -> consumer.filledBoxBatches.add(BoxBatchData(aabbs, r, g, b, a, thickness, depth))
+        1 -> consumer.wireBoxBatches.add(BoxBatchData(aabbs, r, g, b, a, thickness, depth))
+        2 -> {
+            consumer.filledBoxBatches.add(BoxBatchData(aabbs, r, g, b, a * 0.5f, thickness, depth))
+            consumer.wireBoxBatches.add(BoxBatchData(aabbs, r, g, b, a, thickness, depth))
+        }
+    }
+}
+
+/**
+ * Batch variant of [drawTracer]: queues ALL of [targets] as one record; the flush resolves the
+ * crosshair origin once and re-aims each target with scratch math (see [TracerFanData]). The
+ * caller must NOT mutate [targets] after queueing — hand over a fresh list per rebuild.
+ */
+fun RenderEvent.Extract.drawTracerFan(targets: List<Vec3>, color: Color, thickness: Float = 3f, depth: Boolean = false) {
+    if (targets.isEmpty()) return
+    consumer.tracerFans.add(TracerFanData(targets, color.rgba, thickness, depth))
+}
+
 fun RenderEvent.Extract.drawBeaconBeam(position: BlockPos, color: Color) {
     val isScoping = mc.player?.isScoping == true
     val gameTime = mc.level?.gameTime ?: 0L
@@ -454,6 +610,11 @@ object PrimitiveRenderer {
         0, 3,  1, 2,  5, 6,  4, 7
     )
 
+    // Scratch corners reused across calls — renderLineBox is render-thread-only and non-reentrant
+    // (sole flush site is RenderBatchManager's RenderEvent.Last pass). Was a floatArrayOf per call:
+    // at Block Search's 10k boxes/frame that alone was ~120MB/s of garbage.
+    private val cornersScratch = FloatArray(24)
+
     fun renderLineBox(
         pose: PoseStack.Pose,
         buffer: VertexConsumer,
@@ -468,16 +629,15 @@ object PrimitiveRenderer {
         val y1 = aabb.maxY.toFloat()
         val z1 = aabb.maxZ.toFloat()
 
-        val corners = floatArrayOf(
-            x0, y0, z0,
-            x1, y0, z0,
-            x1, y1, z0,
-            x0, y1, z0,
-            x0, y0, z1,
-            x1, y0, z1,
-            x1, y1, z1,
-            x0, y1, z1
-        )
+        val corners = cornersScratch
+        corners[0] = x0; corners[1] = y0; corners[2] = z0
+        corners[3] = x1; corners[4] = y0; corners[5] = z0
+        corners[6] = x1; corners[7] = y1; corners[8] = z0
+        corners[9] = x0; corners[10] = y1; corners[11] = z0
+        corners[12] = x0; corners[13] = y0; corners[14] = z1
+        corners[15] = x1; corners[16] = y0; corners[17] = z1
+        corners[18] = x1; corners[19] = y1; corners[20] = z1
+        corners[21] = x0; corners[22] = y1; corners[23] = z1
 
         for (i in edges.indices step 2) {
             val i0 = edges[i] * 3
@@ -541,6 +701,22 @@ object PrimitiveRenderer {
         vertex(maxX, maxY, maxZ)
         vertex(maxX, maxY, minZ)
         vertex(minX, maxY, minZ)
+    }
+
+    /** Allocation-free single-color line — the batch (tracer-fan) emission primitive. */
+    fun renderLine(
+        pose: PoseStack.Pose,
+        buffer: VertexConsumer,
+        x0: Float, y0: Float, z0: Float,
+        x1: Float, y1: Float, z1: Float,
+        color: Int,
+        thickness: Float
+    ) {
+        val nx = x1 - x0
+        val ny = y1 - y0
+        val nz = z1 - z0
+        buffer.addVertex(pose, x0, y0, z0).setColor(color).setNormal(pose, nx, ny, nz).setLineWidth(thickness)
+        buffer.addVertex(pose, x1, y1, z1).setColor(color).setNormal(pose, nx, ny, nz).setLineWidth(thickness)
     }
 
     fun renderVector(
