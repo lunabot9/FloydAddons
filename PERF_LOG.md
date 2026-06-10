@@ -224,6 +224,28 @@ the final re-baseline ranks it top. Live-verified: panels/title chroma/search/co
 links/expanded settings/tooltips all render identically; GUI driving (expand/collapse)
 works.
 
+### 5. Mob ESP (2026-06-10) — FIXED (now below the noise floor)
+
+Scene: perfarena-ents (50 stands + 50 husks, type+name filters). Baseline: +6.8 MB/s
+(spread 3.06). Even with hitboxes/tracers OFF the Extract loop allocated per frame:
+`renderTargets` rebuilt 3 collections + boxed ids; `colorFor` ran per matched entity
+per frame, each call rebuilding the active-filter Sets (filterValues+map+toSet ×2) and
+flattening entity name Components through regex stripping.
+
+Fix: filter Sets cached (invalidated at reparseRawEntries/clearFilters — the unit tests
+caught a stale-cache path in the first cut — plus a scan-cadence safety net); resolved
+colors cached per entity id in an Int2ObjectOpenHashMap refreshed every scan (10
+frames); reusable render-target scratch list with in-place dead-id removal.
+
+| Metric (ON-delta, 30s × 3) | BEFORE | AFTER |
+|---|---|---|
+| alloc MB/s | **+6.8** (3.06) — finding | **+1.4 (6.3)** — below noise floor |
+| frame p50/p95/p99 | noise | noise |
+
+Live-verified: hitboxes + tracers render on the husk crowd with both filter types;
+filters cleaned up after. Note the ents arena's base alloc (~117 MB/s from 100 rendered
+entities + nameplates) makes sub-2 MB/s deltas unmeasurable — recorded as such.
+
 ## Cross-platform audit notes
 
 _(pending — per-feature gate d)_

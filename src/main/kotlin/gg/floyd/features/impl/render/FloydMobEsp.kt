@@ -175,6 +175,10 @@ object FloydMobEsp : Module(
     }
 
     private fun scanTargets() {
+        // Scan-cadence refresh of the per-frame caches: colors re-resolve at most every 10 frames
+        // (covers renames/filter edits), and the filter-set safety net recomputes.
+        colorCache.clear()
+        filterCachesValid = false
         val level = mc.level ?: return clearResolvedTargets()
         if (!hasFilters()) return clearResolvedTargets()
 
@@ -220,11 +224,19 @@ object FloydMobEsp : Module(
     private fun hasFilters(): Boolean =
         activeNameFilters().isNotEmpty() || activeTypeFilters().isNotEmpty() || starMobs
 
+    // Reusable per-frame target list — the old mapNotNull/filterNot/mapTo chain allocated three
+    // collections + boxed ids EVERY frame. Render-thread-only; consumed within the Extract pass.
+    private val renderTargetsScratch = ArrayList<Entity>()
+
     private fun renderTargets(level: net.minecraft.client.multiplayer.ClientLevel): List<Entity> {
-        if (renderTargetIds.isEmpty()) return emptyList()
-        val targets = renderTargetIds.mapNotNull(level::getEntity).filterNot(Entity::isRemoved)
-        renderTargetIds.retainAll(targets.mapTo(mutableSetOf()) { it.id })
-        return targets
+        renderTargetsScratch.clear()
+        if (renderTargetIds.isEmpty()) return renderTargetsScratch
+        val ids = renderTargetIds.iterator()
+        while (ids.hasNext()) {
+            val entity = level.getEntity(ids.next())
+            if (entity == null || entity.isRemoved) ids.remove() else renderTargetsScratch.add(entity)
+        }
+        return renderTargetsScratch
     }
 
     private fun matches(entity: Entity): Boolean {
@@ -255,8 +267,24 @@ object FloydMobEsp : Module(
 
     private fun hasStar(text: String): Boolean = text.contains(STAR_MOB_MARKER)
 
-    private fun activeNameFilters(): Set<String> =
-        nameFilters.filterValues { it }.keys.map { it.lowercase(Locale.ROOT) }.toSet()
+    // Filter sets cached — the rebuild (filterValues + map + toSet = three allocations) used to run
+    // per matched entity per frame inside colorFor. Invalidated at the single mutation choke point
+    // (reparseRawEntries) and recomputed at scan cadence as a safety net for any missed path.
+    private var cachedActiveNameFilters: Set<String> = emptySet()
+    private var cachedActiveTypeFilters: Set<String> = emptySet()
+    private var filterCachesValid = false
+
+    private fun ensureFilterCaches() {
+        if (filterCachesValid) return
+        cachedActiveNameFilters = nameFilters.filterValues { it }.keys.map { it.lowercase(Locale.ROOT) }.toSet()
+        cachedActiveTypeFilters = typeFilters.filterValues { it }.keys.map { it.lowercase(Locale.ROOT) }.toSet()
+        filterCachesValid = true
+    }
+
+    private fun activeNameFilters(): Set<String> {
+        ensureFilterCaches()
+        return cachedActiveNameFilters
+    }
 
     private fun findNameFilterKey(name: String): String? =
         nameFilters.keys.firstOrNull { it.equals(name, ignoreCase = true) }
@@ -264,8 +292,10 @@ object FloydMobEsp : Module(
     private fun nameFilterColorKey(name: String): String =
         name.lowercase(Locale.ROOT)
 
-    private fun activeTypeFilters(): Set<String> =
-        typeFilters.filterValues { it }.keys.map { it.lowercase(Locale.ROOT) }.toSet()
+    private fun activeTypeFilters(): Set<String> {
+        ensureFilterCaches()
+        return cachedActiveTypeFilters
+    }
 
     fun nameFilterIds(): Set<String> =
         nameFilters.filterValues { it }.keys.toSortedSet(String.CASE_INSENSITIVE_ORDER)
@@ -327,6 +357,8 @@ object FloydMobEsp : Module(
         removeTypeFilter(validTypeFilterId(id))
 
     fun clearFilters() {
+        filterCachesValid = false
+        colorCache.clear()
         rawEntries.clear()
         nameFilters.clear()
         typeFilters.clear()
@@ -338,11 +370,15 @@ object FloydMobEsp : Module(
         npcArmorStandIds.clear()
     }
 
-    private fun colorFor(entity: Entity): Color {
-        val colorData = filterColorFor(entity)
-        if (colorData != null) return colorData.toColor()
+    // Resolved color per entity id, refreshed at scan cadence (10 frames) — filterColorFor walks
+    // Component-flattened names + regex stripping and used to run per matched entity per FRAME.
+    private val colorCache = it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap<Color>()
 
-        return defaultColor
+    private fun colorFor(entity: Entity): Color {
+        colorCache.get(entity.id)?.let { return it }
+        val resolved = filterColorFor(entity)?.toColor() ?: defaultColor
+        colorCache.put(entity.id, resolved)
+        return resolved
     }
 
     fun setNameFilterColor(name: String, hexColor: String, chroma: Boolean): Boolean {
@@ -487,6 +523,8 @@ object FloydMobEsp : Module(
         rawEntries.map { LinkedHashMap(it) }
 
     private fun reparseRawEntries() {
+        filterCachesValid = false
+        colorCache.clear()
         nameFilters.clear()
         typeFilters.clear()
         nameFilterColors.clear()
