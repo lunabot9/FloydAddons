@@ -26,21 +26,28 @@ _spec.loader.exec_module(_mod)
 Bridge = _mod.Bridge
 frame_metrics = _mod.frame_metrics
 
+# NOTE: no "minecraft:" prefixes in prepare commands — the Brigadier word-arg parser rejects
+# the colon ("Expected whitespace to end one argument"); bare ids normalize via Identifier.
 ARENAS: list[dict] = [
     {
         "world": "perfarena-ores",
         # blocksearch command also force-enables the module; the runner disables it below.
-        "prepare": ["/fa blocksearch minecraft:diamond_ore"],
+        "prepare": ["/fa blocksearch diamond_ore"],
+        "cleanup": [],
         "features": ["Block Search", "X-Ray"],
     },
     {
         "world": "perfarena-ents",
-        "prepare": ["/fa mob-esp add type minecraft:husk", "/fa mob-esp add name Stand"],
+        "prepare": ["/fa mob-esp add type husk", "/fa mob-esp add name Stand"],
+        "cleanup": ["/fa mob-esp remove type husk", "/fa mob-esp remove name Stand"],
+        # Player ESP world pass is ~idle here: armor stands/husks are not real players
+        # (RealPlayerFilter is tab-list based). Real Player ESP load needs a live server.
         "features": ["Mob ESP", "Player ESP"],
     },
     {
         "world": "perfarena-hud",
         "prepare": [],
+        "cleanup": [],
         "features": ["Custom Scoreboard", "Inventory HUD", "Day Tracker", "HUD"],
         "clickgui": True,
     },
@@ -164,10 +171,15 @@ def main() -> None:
         for feature in arena["features"]:
             bridge.set_module(feature, False)
         time.sleep(2)
-        for feature in arena["features"]:
-            run_feature(arena["world"], feature, args.seconds, args.warmup, args.repeats)
-        if arena.get("clickgui"):
-            run_clickgui(bridge, arena["world"], args.seconds, args.warmup, args.repeats)
+        try:
+            for feature in arena["features"]:
+                run_feature(arena["world"], feature, args.seconds, args.warmup, args.repeats)
+            if arena.get("clickgui"):
+                run_clickgui(bridge, arena["world"], args.seconds, args.warmup, args.repeats)
+        finally:
+            for cmd in arena["cleanup"]:
+                bridge.request("POST", "/chat", {"message": cmd})
+                time.sleep(0.5)
 
     table = emit_table()
     (RESULTS / "BASELINE.md").write_text(table + "\n")

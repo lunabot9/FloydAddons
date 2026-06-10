@@ -120,3 +120,29 @@ check who holds it first; a stale client on 38765 reporting the wrong
 5. NVG/GL calls from static-init or config-load → `No GLCapabilities` boot crash; defer GL to render time.
 6. Mixin `@At` target moved → with `defaultRequire: 1` it fails loudly at launch; read the crash, don't bisect blind.
 7. `./gradlew test` forks its own JVM — safe to run; never broad-kill java to "clean up".
+8. `disconnectWithSavingScreen()` alone (without `level.disconnect` first) **deadlocks the
+   client on the "Saving world" screen** — use `mc.disconnectFromWorld(ClientLevel.DEFAULT_QUIT_MESSAGE)`
+   (the exact pause-menu quit flow). The bridge's `{"action":"disconnect"}` does this; poll
+   `/state` until `connected=false`.
+9. Brigadier word-args **reject ":"** — `/fa blocksearch minecraft:diamond_ore` fails with
+   "Expected whitespace to end one argument" and the failure is only visible in chat (the
+   bridge /chat returns ok). Use bare ids (`diamond_ore`, `husk`); they normalize via
+   `Identifier.tryParse`. Screenshot after every prepare command to catch this class of bug.
+10. `setModuleEnabled`/`setSetting` look up `ModuleManager.modules` keyed by
+    `name.lowercase()` — `"X-Ray"` → `module_not_found`; send `"x-ray"`.
+
+## Perf measurement (GET /perf)
+
+`GET /perf?seconds=N` (1-120) samples N s of frame times at the Minecraft.runTick boundary:
+`{frames, fps, frameMs{p50,p95,p99,max,min,avg}, alloc{renderThreadBytesPerSecond, bytesPerFrame},
+gc, counters}`. Add `&sections=1` for per-feature inclusive sections (EventBus listeners +
+PostHud/ClickGUI/BlockSearch wraps; **parents nest children — never sum PostHud.total with
+PostHud.\*, or ClickGUI.nvgPip with ClickGUI.textReplay**). Section p50/p95/p99 are log-bucket
+upper bounds (≤~9% high); max/totals exact. Blocking call (up to seconds+15); one window at a
+time (`perf_busy`). **Do not hit other client-thread endpoints (e.g. /state) during a window**
+— they steal render-thread time and perturb the numbers. Headline A/B numbers must come from
+NO-sections windows (probes add overhead). Tooling: `scripts/perf-protocol.py` (A/B toggle
+protocol, 3 repeats, delta vs spread), `scripts/perf-arenas.py` (saved stress worlds
+perfarena-ores/ents/hud), `scripts/perf-baseline.py` (full table). Keep the client window
+focus state constant across A/B (unfocused throttles); options.txt for measurement:
+`enableVsync:false`, `maxFps:260` (key is `maxFps`, not `framerateLimit`).
