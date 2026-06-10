@@ -146,3 +146,14 @@ protocol, 3 repeats, delta vs spread), `scripts/perf-arenas.py` (saved stress wo
 perfarena-ores/ents/hud), `scripts/perf-baseline.py` (full table). Keep the client window
 focus state constant across A/B (unfocused throttles); options.txt for measurement:
 `enableVsync:false`, `maxFps:260` (key is `maxFps`, not `framerateLimit`).
+11. **Time Changer module overrides client time** — clock-dial/daylight visual tests are
+    invalid while it's enabled (`setModuleEnabled "time changer" false` first). The /state
+    `world.time` reflects the override, while `/time query daytime` in chat shows server truth.
+12. ClickGUI driving: right-click on a panel HEADER collapses the whole panel; right-click on
+    a module ROW expands its settings. Module-settings expansion is runtime-only (relaunch
+    resets); panel positions persist. The header hitbox extends over the first ~module-row.
+13. Long measurement sessions (~1h) make HUD-arena tail percentiles noisy (GC debt/thermal,
+    p95 spreads 5-10ms in BOTH A and B windows) — clean per-feature A/Bs right after a fresh
+    relaunch are the canonical numbers; treat marathon re-baselines as ranking confirmation.
+14. `/state` render.batch "queued" counts read 0 between frames (callClient lands after the
+    per-frame clear) — assert on `render.batch.lastFlushed` instead (published at flush time).
