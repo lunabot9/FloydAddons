@@ -87,6 +87,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
 
         resyncBlazeStateAfterNvg()
         NvgTextReplay.replay(NVGRenderer.drainDeferredText(), slot.width, slot.height, bufferSource)
+        NvgTextReplay.publishFrameCounts()
     }
 
     private class SlotTarget(val width: Int, val height: Int)

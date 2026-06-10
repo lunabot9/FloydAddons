@@ -68,8 +68,15 @@ object NVGRenderer {
     /** True when text calls are deferred for mc.font replay (the default; see [DeferredNvgText]). */
     val deferringText: Boolean get() = !legacyNvgText
 
-    /** Deferred text queue for the current PIP frame, drained per layer by NVGPIPRenderer. */
-    private val deferredText = ArrayList<DeferredNvgText>()
+    /**
+     * Deferred text queue for the current PIP frame, drained per layer by NVGPIPRenderer.
+     * Records are POOLED: [drainDeferredText] ping-pongs two lists and recycles the previously
+     * drained batch (the replay consumes a batch synchronously before the next drain can happen),
+     * so steady-state text capture allocates nothing.
+     */
+    private var deferredText = ArrayList<DeferredNvgText>()
+    private var consumedText = ArrayList<DeferredNvgText>()
+    private val deferredPool = ArrayList<DeferredNvgText>()
 
     /**
      * Current text layer: 0 = GUI-level text drawn before any panel (title/search bar/community),
@@ -144,16 +151,30 @@ object NVGRenderer {
     /** True when text runs are queued awaiting replay (an empty layer's boundary is skippable). */
     internal val hasDeferredText: Boolean get() = deferredText.isNotEmpty()
 
-    /** Removes and returns everything queued so far (capture order preserved). */
+    /**
+     * Removes and returns everything queued so far (capture order preserved). The returned list
+     * is only valid until the NEXT drain — it is recycled into the record pool then (the replay
+     * consumes a drained batch synchronously, so nothing can still hold it).
+     */
     internal fun drainDeferredText(): List<DeferredNvgText> {
+        if (consumedText.isNotEmpty()) {
+            deferredPool.addAll(consumedText)
+            consumedText.clear()
+        }
         if (deferredText.isEmpty()) return emptyList()
-        val drained = ArrayList(deferredText)
-        deferredText.clear()
+        val drained = deferredText
+        deferredText = consumedText
+        consumedText = drained
         return drained
     }
 
-    /** The live NVG 2x3 transform (for NVGPIPRenderer's sub-frame transform save/restore). */
-    internal fun currentTransform(): FloatArray = FloatArray(6).also { nvgCurrentTransform(vg, it) }
+    private val transformScratch = FloatArray(6)
+
+    /**
+     * The live NVG 2x3 transform (for NVGPIPRenderer's sub-frame transform save/restore). Returns
+     * a SHARED scratch array — consume it before the next call (the boundary lambda does).
+     */
+    internal fun currentTransform(): FloatArray = transformScratch.also { nvgCurrentTransform(vg, it) }
 
     /** Premultiplies [t] onto the current transform — after `beginFrame` (identity) this SETS it. */
     internal fun applyTransform(t: FloatArray) = nvgTransform(vg, t[0], t[1], t[2], t[3], t[4], t[5])
@@ -422,11 +443,10 @@ object NVGRenderer {
         wrapWidth: Float = 0f,
         lineHeight: Float = 1f
     ) {
-        val transform = FloatArray(6)
-        nvgCurrentTransform(vg, transform)
-        deferredText.add(
-            DeferredNvgText(text, x, y, size, color, transform, scissor?.frameRect, textLayer, wrapWidth, lineHeight)
-        )
+        val record = if (deferredPool.isNotEmpty()) deferredPool.removeAt(deferredPool.size - 1) else DeferredNvgText()
+        nvgCurrentTransform(vg, record.transform)
+        record.set(text, x, y, size, color, scissor?.frameRect, textLayer, wrapWidth, lineHeight)
+        deferredText.add(record)
     }
 
     /**

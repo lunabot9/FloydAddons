@@ -26,18 +26,44 @@ import kotlin.math.round
  *    same splitter `wrappedTextBounds` now sizes boxes with) and draws line by line, advancing
  *    9·[lineHeight] font units per line (= size·lineHeight px).
  */
-class DeferredNvgText(
-    val text: String,
-    val x: Float,
-    val y: Float,
-    val size: Float,
-    val color: Int,
-    val transform: FloatArray,
-    val scissor: FloatArray?,
-    val layer: Int,
-    val wrapWidth: Float = 0f,
-    val lineHeight: Float = 1f,
-)
+/**
+ * POOLED by NVGRenderer (a ClickGUI frame queues 50-150 runs; fresh records + transform arrays
+ * were ~15KB/frame of garbage): fields are reset via [set] on reuse, and the embedded [transform]
+ * array is filled in place. Consumers must not retain a record past the replay that consumes it.
+ */
+class DeferredNvgText {
+    var text: String = ""
+        private set
+    var x = 0f
+        private set
+    var y = 0f
+        private set
+    var size = 0f
+        private set
+    var color = 0
+        private set
+    val transform = FloatArray(6)
+    var scissor: FloatArray? = null
+        private set
+    var layer = 0
+        private set
+    var wrapWidth = 0f
+        private set
+    var lineHeight = 1f
+        private set
+
+    fun set(text: String, x: Float, y: Float, size: Float, color: Int, scissor: FloatArray?, layer: Int, wrapWidth: Float, lineHeight: Float) {
+        this.text = text
+        this.x = x
+        this.y = y
+        this.size = size
+        this.color = color
+        this.scissor = scissor
+        this.layer = layer
+        this.wrapWidth = wrapWidth
+        this.lineHeight = lineHeight
+    }
+}
 
 /**
  * Replays the ClickGUI's deferred NanoVG text into the live PIP slot texture via
@@ -153,14 +179,25 @@ object NvgTextReplay {
         } finally {
             RenderSystem.disableScissorForRenderTypeDraws()
             modelView.popMatrix()
-            publishedCounts = LinkedHashMap(frameCounts)
         }
     }
+
+    /**
+     * Publishes the frame's replay counts for the bridge thread — called ONCE per PIP frame by
+     * NVGPIPRenderer (used to rebuild a LinkedHashMap on every replay, ~9×/frame).
+     */
+    fun publishFrameCounts() {
+        publishedCounts = LinkedHashMap(frameCounts)
+    }
+
+    // Scratch pose — drawInBatch bakes glyph vertices eagerly (multiple runs with distinct
+    // matrices share one deferred endBatch and render correctly), so reuse across runs is safe.
+    private val poseScratch = Matrix4f()
 
     private fun draw(run: DeferredNvgText, dpr: Float, bufferSource: MultiBufferSource.BufferSource) {
         val t = run.transform
         // Column-major: col0 = (a, b), col1 = (c, d), col3 = (e, f) — the NVG 2x3 affine.
-        val pose = Matrix4f(
+        val pose = poseScratch.set(
             t[0], t[1], 0f, 0f,
             t[2], t[3], 0f, 0f,
             0f, 0f, 1f, 0f,

@@ -129,6 +129,13 @@ class ModuleButton(val module: Module, val panel: Panel) {
         return false
     }
 
-    private fun getSettingHeight(): Float =
-        representableSettings.filter { it.isVisible }.sumOf { it.getHeight().toDouble() }.toFloat()
+    private fun getSettingHeight(): Float {
+        // Manual loop: this runs per extended button per frame, and filter+sumOf allocated an
+        // intermediate list + boxed Doubles each call.
+        var height = 0f
+        for (setting in representableSettings) {
+            if (setting.isVisible) height += setting.getHeight()
+        }
+        return height
+    }
 }

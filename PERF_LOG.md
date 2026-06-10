@@ -196,6 +196,34 @@ Live-verified: full 15-line panel + centered title + brand render identically fr
 cache; `ZZ_NewLine` added via /scoreboard appears in correct sort position < 0.6 s
 (packet invalidation), disappears on reset; brand chroma animates across screenshots.
 
+### 4. ClickGUI (2026-06-10) — PARTIALLY FIXED (remaining cost is structural)
+
+Scene: perfarena-hud, GUI closed vs open, 3 × 30s. Baseline: +20.0 MB/s while open.
+
+Fixes (capture-side machinery):
+- `DeferredNvgText` records POOLED (ping-pong drain lists + record pool — a frame queues
+  50–150 runs; fresh records + FloatArray(6) each were pure garbage); `currentTransform`
+  scratch; replay pose scratch Matrix4f (eager-bake proven); `publishedCounts` rebuilt
+  once per frame instead of ~9× (per replay).
+- `drawTitle` per-char strings + widths cached per font epoch (was ~23 toString+
+  FontSet-walk calls per frame for a constant word); `drawCommunity` constant widths
+  cached per font epoch; link bounds arrays refreshed in place.
+- `ModuleButton.getSettingHeight`: manual loop (was filter+sumOf list+boxing per
+  extended button per frame).
+
+| Metric (open-delta, 30s × 3) | BEFORE | AFTER |
+|---|---|---|
+| alloc MB/s | **+20.0** (0.47) | **+17.4** (0.35) |
+| p95 / p99 ms | −0.24 / −0.37 | −0.24 / −0.26 (unchanged, open is cheaper at tail) |
+
+Honest assessment: the −2.6 MB/s is real (> spread) but the dominant remaining cost is
+per-glyph `drawInBatch` submission internals (~120 KB/frame in textReplay — the same
+vanilla-parity glyph path all text shares) plus NVG shape building. Reducing that means
+glyph-state caching surgery in the shared font path — deliberately out of scope unless
+the final re-baseline ranks it top. Live-verified: panels/title chroma/search/community
+links/expanded settings/tooltips all render identically; GUI driving (expand/collapse)
+works.
+
 ## Cross-platform audit notes
 
 _(pending — per-feature gate d)_

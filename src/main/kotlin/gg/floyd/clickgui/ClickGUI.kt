@@ -39,9 +39,13 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
     private const val githubUrl = "https://github.com/lunabot9/FloydAddons"
     private const val discordUrl = "https://discord.gg/FLOYD"
-    // Clickable-link bounds (x, y, w, h) in the scaled GUI space, refreshed every frame by drawCommunity.
-    private var communityGithubBounds = floatArrayOf(0f, 0f, 0f, 0f)
-    private var communityDiscordBounds = floatArrayOf(0f, 0f, 0f, 0f)
+    // Clickable-link bounds (x, y, w, h) in the scaled GUI space, refreshed in place every frame.
+    private val communityGithubBounds = floatArrayOf(0f, 0f, 0f, 0f)
+    private val communityDiscordBounds = floatArrayOf(0f, 0f, 0f, 0f)
+
+    private fun setBounds(b: FloatArray, x: Float, y: Float, w: Float, h: Float) {
+        b[0] = x; b[1] = y; b[2] = w; b[3] = h
+    }
 
     override fun render(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
@@ -205,23 +209,36 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
      * links — "github" and ".gg/FLOYD" — that open the repo / Discord. Link bounds are refreshed each
      * frame for [hitCommunityLink] to hit-test in [mouseClicked].
      */
+    // Constant-string widths cached per font epoch (these textWidth calls walk the live FontSet
+    // floats and used to run 4×/frame for never-changing strings).
+    private val communityWidths = gg.floyd.utils.font.FontEpochCache {
+        floatArrayOf(
+            NVGRenderer.textWidth("Join the Floyd Addons Community", 15f, NVGRenderer.defaultFont),
+            NVGRenderer.textWidth("    ", 15f, NVGRenderer.defaultFont),
+            NVGRenderer.textWidth("github", 15f, NVGRenderer.defaultFont),
+            NVGRenderer.textWidth(".gg/FLOYD", 15f, NVGRenderer.defaultFont),
+        )
+    }
+
     private fun drawCommunity(searchBarX: Float, searchBarY: Float, mouseX: Float, mouseY: Float) {
         val centerX = searchBarX + 175f
         val size = 15f
         val header = "Join the Floyd Addons Community"
-        val headerWidth = NVGRenderer.textWidth(header, size, NVGRenderer.defaultFont)
+        val widths = communityWidths.get()
+        val headerWidth = widths[0]
         val headerY = searchBarY + 40f + 8f
         NVGRenderer.text(header, centerX - headerWidth / 2f, headerY, size, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
-        val gap = NVGRenderer.textWidth("    ", size, NVGRenderer.defaultFont)
-        val githubWidth = NVGRenderer.textWidth("github", size, NVGRenderer.defaultFont)
-        val discordWidth = NVGRenderer.textWidth(".gg/FLOYD", size, NVGRenderer.defaultFont)
+        val gap = widths[1]
+        val githubWidth = widths[2]
+        val discordWidth = widths[3]
         val rowY = headerY + size + 3f
         val githubX = centerX - (githubWidth + gap + discordWidth) / 2f
         val discordX = githubX + githubWidth + gap
 
-        communityGithubBounds = floatArrayOf(githubX, rowY, githubWidth, size)
-        communityDiscordBounds = floatArrayOf(discordX, rowY, discordWidth, size)
+        // Refresh the bounds arrays IN PLACE each frame for hit-testing (no per-frame arrays).
+        setBounds(communityGithubBounds, githubX, rowY, githubWidth, size)
+        setBounds(communityDiscordBounds, discordX, rowY, discordWidth, size)
 
         val githubColor = if (inBounds(communityGithubBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor(0f)
         val discordColor = if (inBounds(communityDiscordBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor(0.5f)
@@ -243,17 +260,27 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         return true
     }
 
+    // Per-letter strings + widths of the static title, cached per font epoch — the per-char
+    // toString + textWidth loop used to allocate/walk ~23×/frame for a constant word.
+    private val titleChars = "FloydAddons".map { it.toString() }
+    private val titleWidths = gg.floyd.utils.font.FontEpochCache {
+        FloatArray(titleChars.size + 1).also { widths ->
+            widths[0] = NVGRenderer.textWidth("FloydAddons", 22f, NVGRenderer.defaultFont)
+            for (i in titleChars.indices) widths[i + 1] = NVGRenderer.textWidth(titleChars[i], 22f, NVGRenderer.defaultFont)
+        }
+    }
+
     /** Renders the "FloydAddons" title above the search bar, tinted with the GUI accent (chroma-cycling per character). */
     private fun drawTitle(x: Float, searchBarY: Float, size: Float) {
-        val title = "FloydAddons"
-        val titleWidth = NVGRenderer.textWidth(title, size, NVGRenderer.defaultFont)
-        var cursorX = x + 175f - titleWidth / 2f
+        val widths = titleWidths.get()
+        val titleWidth = widths[0]
+        val startX = x + 175f - titleWidth / 2f
+        var cursorX = startX
         val titleY = searchBarY - size - 4f
-        for (char in title) {
-            val text = char.toString()
-            val offset = 1f - ((cursorX - (x + 175f - titleWidth / 2f)) / titleWidth)
-            NVGRenderer.text(text, cursorX, titleY, size, ClickGUIModule.guiAccentColor(offset), NVGRenderer.defaultFont)
-            cursorX += NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont)
+        for (i in titleChars.indices) {
+            val offset = 1f - ((cursorX - startX) / titleWidth)
+            NVGRenderer.text(titleChars[i], cursorX, titleY, size, ClickGUIModule.guiAccentColor(offset), NVGRenderer.defaultFont)
+            cursorX += widths[i + 1]
         }
     }
 
