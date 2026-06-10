@@ -96,7 +96,7 @@ class MsdfDiskCache private constructor(
          * binding version (build.gradle.kts pins 3.3.4), edge-coloring angle (3.0), PX_RANGE (4),
          * EM_NORMALIZED scaling, and the top-down row flip applied at encode.
          */
-        const val CACHE_VERSION = "msdfgen3.3.4-ec3.0-pxr4-emnorm-yflip"
+        const val CACHE_VERSION = "msdfgen3.3.4-ec3.0-pxr4-emnorm-yflip-scc1"
 
         const val DEFAULT_MAX_CACHE_BYTES: Long = 64L * 1024L * 1024L
 

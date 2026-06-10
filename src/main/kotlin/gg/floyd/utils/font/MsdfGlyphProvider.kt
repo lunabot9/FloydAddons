@@ -15,7 +15,9 @@ import net.minecraft.client.gui.font.glyphs.EmptyGlyph
 import net.minecraft.client.gui.font.providers.FreeTypeUtil
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil
+import org.lwjgl.util.freetype.FT_Bitmap
 import org.lwjgl.util.freetype.FT_Face
+import org.lwjgl.util.freetype.FT_Matrix
 import org.lwjgl.util.freetype.FT_Vector
 import org.lwjgl.util.freetype.FreeType
 import org.lwjgl.util.msdfgen.MSDFGen
@@ -99,6 +101,9 @@ class MsdfGlyphProvider(
     private var fontMemory: ByteBuffer? = fontBuffer
     private var face: FT_Face? = null
     private var msdfFont = 0L
+    private val shiftDeltaX = shiftX * oversample
+    private val shiftDeltaY = -shiftY * oversample
+    private var unitsPerEm = 0
     private val glyphs = Int2ObjectOpenHashMap<GlyphEntry>()
     private var atlas: MsdfAtlas? = null
 
@@ -169,6 +174,7 @@ class MsdfGlyphProvider(
                 )
                 val skipSet = IntArraySet()
                 skip.codePoints().forEach(skipSet::add)
+                unitsPerEm = ftFace.units_per_EM().toInt()
                 FreeType.FT_Set_Pixel_Sizes(ftFace, pixelSize, pixelSize)
                 MemoryStack.stackPush().use { stack ->
                     val delta = FreeTypeUtil.setVector(FT_Vector.malloc(stack), shiftX * oversample, -shiftY * oversample)
@@ -442,6 +448,8 @@ class MsdfGlyphProvider(
                 checkMsdf(MSDFGen.msdf_bitmap_get_pixels(bitmap, pixelsPointer), "msdf_bitmap_get_pixels")
                 val pixels = MemoryUtil.memFloatBuffer(pixelsPointer.get(0), cell * cell * 3)
 
+                correctSignsAgainstCoverage(codepoint, pixels, cell, scale, translateX, translateY, stack)
+
                 // msdfgen bitmaps are bottom-up: flip rows here so cached + uploaded data are
                 // top-down (the y-flip is part of CACHE_VERSION).
                 val rgba = ByteArray(cell * cell * 4)
@@ -463,6 +471,86 @@ class MsdfGlyphProvider(
             }
         } finally {
             MSDFGen.msdf_shape_free(shape)
+        }
+    }
+
+    /**
+     * Sign-corrects the generated field against a FreeType nonzero-winding coverage raster.
+     * Variable-font instancing leaves tiny inverted loops at stroke junctions (the bundled
+     * Inter's 'M'/'u' apexes); the distance-based median reads those as holes inside the ink.
+     * msdf-atlas-gen fixes this with its scanline pass, which the msdfgen C API does not
+     * expose — FreeType's rasterizer (nonzero fill, the same authority vanilla TTF rendering
+     * uses) provides the ground truth instead. Texels with decisive coverage that disagree
+     * with the median are pulled just past the 0.5 threshold; anti-aliased edge texels
+     * (mid-gray coverage) are left untouched so real edges keep their gradients.
+     */
+    private fun correctSignsAgainstCoverage(
+        codepoint: Int,
+        pixels: java.nio.FloatBuffer,
+        cell: Int,
+        scale: Double,
+        translateX: Double,
+        translateY: Double,
+        stack: MemoryStack,
+    ) {
+        val ftFace = face ?: return
+        if (unitsPerEm <= 0) return
+        val coverage = MemoryUtil.memCalloc(cell * cell)
+        try {
+            synchronized(FreeTypeUtil.LIBRARY_LOCK) {
+                FreeType.FT_Set_Transform(ftFace, null, null)
+                try {
+                    val loadError = FreeType.FT_Load_Glyph(
+                        ftFace,
+                        glyphs.get(codepoint)?.index ?: return,
+                        FreeType.FT_LOAD_NO_SCALE or FreeType.FT_LOAD_NO_BITMAP,
+                    )
+                    if (loadError != 0) return
+                    val outline = ftFace.glyph()?.outline() ?: return
+                    val matrix = FT_Matrix.calloc(stack)
+                    val fixedScale = Math.round(65536.0 * 64.0 * scale / unitsPerEm)
+                    matrix.xx(fixedScale).yy(fixedScale).xy(0).yx(0)
+                    FreeType.FT_Outline_Transform(outline, matrix)
+                    FreeType.FT_Outline_Translate(
+                        outline,
+                        Math.round(translateX * scale * 64.0),
+                        Math.round(translateY * scale * 64.0),
+                    )
+                    val ftBitmap = FT_Bitmap.calloc(stack)
+                    val address = ftBitmap.address()
+                    MemoryUtil.memPutInt(address + FT_Bitmap.ROWS, cell)
+                    MemoryUtil.memPutInt(address + FT_Bitmap.WIDTH, cell)
+                    MemoryUtil.memPutInt(address + FT_Bitmap.PITCH, cell)
+                    MemoryUtil.memPutAddress(address + FT_Bitmap.BUFFER, MemoryUtil.memAddress(coverage))
+                    MemoryUtil.memPutShort(address + FT_Bitmap.NUM_GRAYS, 256.toShort())
+                    MemoryUtil.memPutByte(address + FT_Bitmap.PIXEL_MODE, FreeType.FT_PIXEL_MODE_GRAY.toByte())
+                    if (FreeType.FT_Outline_Get_Bitmap(FreeTypeUtil.getLibrary(), outline, ftBitmap) != 0) return
+                } finally {
+                    // Restore the metrics transform (vanilla shift parity, D2).
+                    val delta = FreeTypeUtil.setVector(FT_Vector.malloc(stack), shiftDeltaX, shiftDeltaY)
+                    FreeType.FT_Set_Transform(ftFace, null, delta)
+                }
+            }
+            for (index in 0 until cell * cell) {
+                // msdfgen rows are bottom-up; FT_Outline_Get_Bitmap with positive pitch is top-down.
+                val coverageIndex = (cell - 1 - index / cell) * cell + index % cell
+                val cov = coverage.get(coverageIndex).toInt() and 0xFF
+                if (cov in 64..191) continue
+                val inside = cov >= 192
+                val base = index * 3
+                val r = pixels.get(base)
+                val g = pixels.get(base + 1)
+                val b = pixels.get(base + 2)
+                val median = max(min(r, g), min(max(r, g), b))
+                if (inside != median > 0.5f) {
+                    val corrected = if (inside) 0.75f else 0.25f
+                    pixels.put(base, corrected)
+                    pixels.put(base + 1, corrected)
+                    pixels.put(base + 2, corrected)
+                }
+            }
+        } finally {
+            MemoryUtil.memFree(coverage)
         }
     }
 

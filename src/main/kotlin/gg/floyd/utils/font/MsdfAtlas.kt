@@ -27,7 +27,10 @@ import java.util.function.Supplier
 class MsdfAtlas {
     companion object {
         const val PAGE_SIZE = 1024
-        const val CELL_SIZE = 32
+
+        // 48px cells: 32px left too few texels per thin stroke (visible glyph notching /
+        // pixel dropout on title-screen buttons at guiScale 3); ~1.7ms/glyph to generate.
+        const val CELL_SIZE = 48
         const val GUTTER = 2
         const val MAX_PAGES = 8
         const val PX_RANGE = 4.0

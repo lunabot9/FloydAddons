@@ -89,15 +89,17 @@ class MsdfShelfPackerTest {
     }
 
     @Test
-    fun `production atlas constants pack 30x30 cells with gutters inside 1024`() {
+    fun `production atlas constants pack 20x20 cells with gutters inside 1024`() {
         val packer = MsdfShelfPacker(
             pageSize = MsdfAtlas.PAGE_SIZE,
             cellSize = MsdfAtlas.CELL_SIZE,
             gutter = MsdfAtlas.GUTTER,
             maxPages = MsdfAtlas.MAX_PAGES,
         )
-        assertEquals(30, packer.cellsPerAxis)
-        assertEquals(900, packer.cellsPerPage)
+        val expectedPerAxis = MsdfAtlas.PAGE_SIZE / (MsdfAtlas.CELL_SIZE + MsdfAtlas.GUTTER)
+        assertEquals(20, expectedPerAxis)
+        assertEquals(expectedPerAxis, packer.cellsPerAxis)
+        assertEquals(400, packer.cellsPerPage)
         var count = 0
         var last: MsdfShelfPacker.Placement? = null
         while (true) {
@@ -107,7 +109,7 @@ class MsdfShelfPackerTest {
             last = placement
             count++
         }
-        assertEquals(900 * MsdfAtlas.MAX_PAGES, count)
+        assertEquals(400 * MsdfAtlas.MAX_PAGES, count)
         assertEquals(MsdfAtlas.MAX_PAGES - 1, assertNotNull(last).page)
     }
 }
