@@ -44,6 +44,8 @@ object FloydRender {
     private var savedWindowedY = 0
     private var savedWindowedWidth = 1280
     private var savedWindowedHeight = 720
+    /** The window was maximized when borderless engaged; restore re-maximizes instead of losing it. */
+    private var savedWindowedMaximized = false
 
     /**
      * Per-tick driver invoked from [FloydWindowModule]'s client-tick handler. Safe to touch GLFW
@@ -130,9 +132,17 @@ object FloydRender {
     private fun snapshotWindowedBounds() {
         val window = mc.window
         if (window.isFullscreen || !isWindowDecorated()) return
+        val handle = window.handle()
+        // A maximized window's geometry is the MONITOR's, not the user's windowed bounds —
+        // snapshotting it would both lose the real pre-maximize size and (since restoreWindowed
+        // re-applies plain bounds) silently drop the maximized state on the way back. Keep the
+        // last true windowed bounds and re-maximize on restore instead.
+        if (GLFW.glfwGetWindowAttrib(handle, GLFW.GLFW_MAXIMIZED) == GLFW.GLFW_TRUE) {
+            savedWindowedMaximized = true
+            return
+        }
         // GLFW SCREEN coordinates — NOT mc.window.width/height, which are FRAMEBUFFER pixels and
         // 2x the screen size on retina/HiDPI displays (restoring those doubled the window).
-        val handle = window.handle()
         val x = IntArray(1)
         val y = IntArray(1)
         val w = IntArray(1)
@@ -144,6 +154,7 @@ object FloydRender {
         savedWindowedY = y[0]
         savedWindowedWidth = w[0].coerceAtLeast(640)
         savedWindowedHeight = h[0].coerceAtLeast(480)
+        savedWindowedMaximized = false
         hasSavedWindowedBounds = true
     }
 
@@ -239,6 +250,10 @@ object FloydRender {
 
         GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE)
         GLFW.glfwSetWindowMonitor(handle, 0L, targetX, targetY, targetW, targetH, GLFW.GLFW_DONT_CARE)
+        if (savedWindowedMaximized) {
+            GLFW.glfwMaximizeWindow(handle)
+            savedWindowedMaximized = false
+        }
     }
 
     private fun isWindowDecorated(): Boolean =

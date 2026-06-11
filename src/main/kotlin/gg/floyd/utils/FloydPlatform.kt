@@ -16,8 +16,9 @@ object FloydPlatform {
     @JvmStatic
     val os: OS = System.getProperty("os.name", "").lowercase().let { name ->
         when {
-            name.contains("win") -> OS.WINDOWS
+            // macOS first: "darWINdows-trap" — a "Darwin" os.name contains "win".
             name.contains("mac") || name.contains("darwin") -> OS.MACOS
+            name.contains("win") -> OS.WINDOWS
             // Everything else (Linux, BSDs, unknowns) takes the POSIX/X11 defaults.
             else -> OS.LINUX
         }

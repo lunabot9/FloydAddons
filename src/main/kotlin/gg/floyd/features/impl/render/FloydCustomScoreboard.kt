@@ -375,7 +375,10 @@ object FloydCustomScoreboard : Module(
         val fy = scoreboardHud.y.toFloat().coerceAtMost(mc.window.height - fh).coerceAtLeast(0f)
 
         val fill = FloydPanelStyle.backgroundColorFor(target).rgba
-        val border = HudPanel.panelBorderColors(target, fx.toInt(), fy.toInt())
+        // STORED position, not the clamped fx/fy: the brand line's per-letter chroma
+        // (scoreboardAccentColor) phases off the stored position too, and the two must stay
+        // locked or the border and brand sweep out of sync while the panel is edge-clamped.
+        val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
         val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 

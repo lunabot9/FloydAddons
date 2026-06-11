@@ -36,10 +36,14 @@ object DiscordIpcClient {
     private const val MAX_FRAME = 1 shl 20
 
     private val gson = GsonBuilder().create()
+
+    @Volatile
     private var conduit: IpcConduit? = null
 
+    // Volatile read, NO monitor: connect/setActivity hold the object monitor across BLOCKING
+    // reads, so a synchronized getter could hang a caller for as long as Discord stays silent.
     val isConnected: Boolean
-        @Synchronized get() = conduit?.isOpen == true
+        get() = conduit?.isOpen == true
 
     /** Opens the IPC transport and performs the handshake. Returns false (and stays closed) on any failure. */
     @Synchronized
@@ -74,9 +78,16 @@ object DiscordIpcClient {
         }
     }
 
-    @Synchronized
+    /**
+     * NOT synchronized, by design: the IPC thread may be parked in a blocking read under the
+     * object monitor (Windows pipe reads are not even interruptible), so a synchronized close()
+     * could hang its caller (module disable runs on the client thread) forever. Closing the
+     * transport out from under the reader unblocks it with an IOException, which the
+     * connect/setActivity catch paths already treat as a clean teardown. The polite OP_CLOSE
+     * frame is intentionally skipped — writing while another thread may be mid-read is racier
+     * than an abrupt close, which Discord handles fine.
+     */
     fun close() {
-        if (conduit?.isOpen == true) runCatching { send(OP_CLOSE, emptyMap<String, Any?>()) }
         closeQuietly()
     }
 
@@ -88,15 +99,21 @@ object DiscordIpcClient {
         ch.writeFully(buf)
     }
 
-    /** Reads and discards exactly one response frame so the receive buffer stays balanced. */
+    /**
+     * Reads and discards exactly one response frame so the receive buffer stays balanced. Throws
+     * on EOF (a connection Discord already closed must not report success) and on an out-of-range
+     * frame length (anything else would leave the payload unread — a permanent stream desync);
+     * the connect/setActivity catch paths turn the throw into a clean close + false.
+     */
     private fun readFrame() {
-        val ch = conduit ?: return
+        val ch = conduit ?: throw IllegalStateException("not_connected")
         val header = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
-        if (!ch.readFully(header)) return
+        if (!ch.readFully(header)) throw java.io.EOFException("ipc_closed")
         header.flip()
         header.int // opcode (ignored)
         val len = header.int
-        if (len in 1..MAX_FRAME) ch.readFully(ByteBuffer.allocate(len))
+        if (len !in 0..MAX_FRAME) throw java.io.IOException("ipc_bad_frame_length_$len")
+        if (len > 0 && !ch.readFully(ByteBuffer.allocate(len))) throw java.io.EOFException("ipc_closed_mid_frame")
     }
 
     private fun closeQuietly() {
