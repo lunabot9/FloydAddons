@@ -153,6 +153,9 @@ object FloydCustomScoreboard : Module(
     private val layoutEpoch = java.util.concurrent.atomic.AtomicLong()
     private var cachedLayoutEpoch = -1L
     private var cachedLayout: ScoreboardRender? = null
+    // The Font the cached layout was measured with: a per-panel font toggle swaps the instance
+    // (FloydFont.panelFont), and the cached widths must never be drawn with a different font.
+    private var cachedLayoutFont: net.minecraft.client.gui.Font? = null
     private var lastLayoutMs = 0L
     private var rebuildWindowEndMs = 0L
     // 500ms: the Netty-thread epoch bump precedes the main-thread packet apply; on a laggy
@@ -315,13 +318,16 @@ object FloydCustomScoreboard : Module(
         if (!enabled) {
             cachedLayout = null
             cachedLayoutEpoch = -1L
+            cachedLayoutFont = null
             return
         }
         val now = System.currentTimeMillis()
         val epoch = layoutEpoch.get()
-        if (epoch != cachedLayoutEpoch || now < rebuildWindowEndMs || now - lastLayoutMs > FALLBACK_REBUILD_MS) {
+        val font = panelFont()
+        if (epoch != cachedLayoutEpoch || font !== cachedLayoutFont || now < rebuildWindowEndMs || now - lastLayoutMs > FALLBACK_REBUILD_MS) {
             if (epoch != cachedLayoutEpoch) rebuildWindowEndMs = now + REBUILD_WINDOW_MS
             cachedLayoutEpoch = epoch
+            cachedLayoutFont = font
             lastLayoutMs = now
             cachedLayout = scoreboardRender(example = false, requireVanillaSignal = false)
         }
@@ -333,11 +339,14 @@ object FloydCustomScoreboard : Module(
         return ScoreLine(text, StyledScoreboardText.EMPTY, textWidth(text), 0f)
     }
 
-    private fun textWidth(text: String): Float = MsdfFontMetrics.width(text, SCOREBOARD_FONT_SIZE)
+    /** The per-toggle font selection (custom vs pinned vanilla); layout and draw must agree. */
+    private fun panelFont() = FloydFont.panelFont(FloydFont.PanelFont.SCOREBOARD)
+
+    private fun textWidth(text: String): Float = MsdfFontMetrics.width(text, SCOREBOARD_FONT_SIZE, panelFont())
 
     private fun textWidth(text: StyledScoreboardText): Float {
         var width = 0f
-        for (segment in text.segments) width += MsdfFontMetrics.width(segment.text, SCOREBOARD_FONT_SIZE)
+        for (segment in text.segments) width += MsdfFontMetrics.width(segment.text, SCOREBOARD_FONT_SIZE, panelFont())
         return width
     }
 
@@ -353,13 +362,20 @@ object FloydCustomScoreboard : Module(
         val texts = r.texts
         val target = FloydPanelStyle.PanelTarget.SCOREBOARD
         val scale = scoreboardHud.scale
-        val fx = scoreboardHud.x.toFloat()
-        val fy = scoreboardHud.y.toFloat()
         val fw = r.boxWidth * scale
         val fh = r.boxHeight * scale
+        // Keep the panel inside the visible framebuffer: sidebar content changes width per line
+        // (locations, growing scores), and a panel parked near the right/bottom edge used to grow
+        // straight off-screen. Clamping the DRAW position pins the on-screen edge so the panel
+        // expands toward the free space instead; the stored position is untouched, so it returns
+        // to where the user dragged it once the content shrinks back. (The HUD editor's drag box
+        // keeps the stored position — only the rendered panel shifts, and only while it would
+        // otherwise overflow.)
+        val fx = scoreboardHud.x.toFloat().coerceAtMost(mc.window.width - fw).coerceAtLeast(0f)
+        val fy = scoreboardHud.y.toFloat().coerceAtMost(mc.window.height - fh).coerceAtLeast(0f)
 
         val fill = FloydPanelStyle.backgroundColorFor(target).rgba
-        val border = HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y)
+        val border = HudPanel.panelBorderColors(target, fx.toInt(), fy.toInt())
         val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
@@ -384,12 +400,13 @@ object FloydCustomScoreboard : Module(
         // (= 9px font units, SCOREBOARD_FONT_SIZE = 9), so one font unit maps to [scale] framebuffer
         // px. The brand line (always last) is recolored per frame from the cached glyphs so its
         // letter-by-letter chroma keeps animating while the layout itself stays cached.
+        val font = panelFont()
         for (i in 0 until texts.size - 1) {
             val text = texts[i]
-            HudTextRenderer.drawSegmentsDeferred(text.value.segments, fx + text.x * scale, fy + text.y * scale, scale)
+            HudTextRenderer.drawSegmentsDeferred(text.value.segments, fx + text.x * scale, fy + text.y * scale, scale, font = font)
         }
         val brand = texts.last()
-        HudTextRenderer.drawSegmentsDeferred(brandSegments(r.brandGlyphs).segments, fx + brand.x * scale, fy + brand.y * scale, scale)
+        HudTextRenderer.drawSegmentsDeferred(brandSegments(r.brandGlyphs).segments, fx + brand.x * scale, fy + brand.y * scale, scale, font = font)
         HudTextRenderer.flushDeferred()
     }
 
