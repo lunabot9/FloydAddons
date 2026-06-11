@@ -8,8 +8,10 @@ import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
+import gg.floyd.utils.font.FloydFonts
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.openDirectory
+import net.minecraft.client.gui.Font
 import net.minecraft.resources.Identifier
 import java.nio.file.Files
 import java.nio.file.Path
@@ -29,10 +31,14 @@ import java.nio.file.Path
 object FloydFont : Module(
     name = "Font",
     category = Category.RENDER,
-    description = "Global custom font: toggle the bundled font override and pick a .ttf from config/floydaddons/fonts.",
+    description = "Custom font: per-surface toggles (vanilla text, scoreboard, day tracker, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
     toggled = true,
 ) {
-    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Overrides the vanilla game font with Floyd's bundled font. Reload resources (F3+T) to apply.")
+    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = vanilla font everywhere (the ClickGUI keeps its own pinned font).")
+    private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the custom font to the vanilla game text (chat, hotbar, F3, menus). Reload resources (F3+T) to apply.")
+    private val scoreboardFont by BooleanSetting("Scoreboard Font", true, desc = "Custom Scoreboard panel uses the custom font. Applies instantly.")
+    private val dayTrackerFont by BooleanSetting("Day Tracker Font", true, desc = "Day Tracker panel uses the custom font. Applies instantly.")
+    private val inventoryHudFont by BooleanSetting("Inventory HUD Font", true, desc = "Inventory HUD stack counts use the custom font. Applies instantly.")
     private val disableTextShadow by BooleanSetting("Disable Text Shadow", false, desc = "Removes the 1px drop shadow under ALL rendered text (vanilla HUD + every Floyd panel) for a cleaner, sharper look. Applies instantly, no reload needed.")
     private val fontDisplaySize by NumberSetting("Font Size", 25.0, 6.0, 50.0, 0.5, desc = "Display size for the global TTF provider. 25 matches the Font mod default. Reload resources (F3+T) to apply.")
     var selectedFont by StringSetting("Font", "", 96, desc = "Optional .ttf in config/floydaddons/fonts to use instead of the bundled font. Reload resources (F3+T) to apply.")
@@ -61,9 +67,33 @@ object FloydFont : Module(
     private val bundledFont: Identifier by lazy { Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "font.ttf") }
     private var defaultExtracted = false
 
-    /** Whether the bundled font should override the vanilla game font. OFF renders with the vanilla font. */
+    /**
+     * Whether the custom font should override the vanilla `minecraft:default` font (chat, hotbar,
+     * F3, menus): master switch AND the "Minecraft Font" surface toggle. OFF renders the vanilla
+     * game text with the vanilla font; the Floyd panels are selected separately via [panelFont].
+     */
     @JvmStatic
-    fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont
+    fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont && minecraftFont
+
+    /** A Floyd HUD panel surface with its own custom-font toggle (see [panelFont]). */
+    enum class PanelFont { SCOREBOARD, DAY_TRACKER, INVENTORY }
+
+    /**
+     * The [Font] a HUD panel should draw AND measure with this frame: the panel custom font
+     * ([FloydFonts.panelCustom] — runtime-metrics/BYO/MSDF, same look as the enabled default
+     * override) when the master switch and the panel's own toggle are both on, else the pinned
+     * vanilla font ([FloydFonts.vanilla] — vanilla even while `minecraft:default` is overridden).
+     * Pure instance selection over two always-built FontSets, so toggles apply INSTANTLY (no
+     * resource reload). Render-thread only.
+     */
+    fun panelFont(panel: PanelFont): Font {
+        val custom = enabled && globalCustomFont && when (panel) {
+            PanelFont.SCOREBOARD -> scoreboardFont
+            PanelFont.DAY_TRACKER -> dayTrackerFont
+            PanelFont.INVENTORY -> inventoryHudFont
+        }
+        return if (custom) FloydFonts.panelCustom else FloydFonts.vanilla
+    }
 
     /** Whether all text drop shadows should be suppressed (drives [gg.floyd.mixin.mixins.FontMixin]). */
     @JvmStatic
@@ -128,6 +158,10 @@ object FloydFont : Module(
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "globalCustomFont" to globalCustomFont,
+        "minecraftFont" to minecraftFont,
+        "scoreboardFont" to scoreboardFont,
+        "dayTrackerFont" to dayTrackerFont,
+        "inventoryHudFont" to inventoryHudFont,
         "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
         "fontDisplaySize" to fontDisplaySize,
         "runtimeFontSize" to runtimeFontSize(),

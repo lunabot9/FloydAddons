@@ -31,6 +31,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -58,22 +60,27 @@ public final class FloydFontProviders {
      */
     private static final Identifier CLICKGUI_FONT = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "clickgui");
 
+    /**
+     * The HUD panels' custom font ({@code assets/floydaddons/font/panel.json}): gets the SAME
+     * runtime-metrics/BYO/MSDF treatment as the enabled {@code minecraft:default} override, but is
+     * never dropped — so a panel whose Font-module toggle is ON keeps the custom font even while
+     * the vanilla game font is toggled off. Mirrors
+     * {@code gg.floyd.utils.font.FloydFonts.PANEL_FONT_ID}.
+     */
+    private static final Identifier PANEL_FONT = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "panel");
+
     private static volatile boolean msdfSetupWarned = false;
 
     /**
-     * D1(c) latch: set by a mid-session MSDF glyph-generation failure and consumed by the next
-     * {@link #adjustDefaultFont} pass over {@code minecraft:default}, which then emits the vanilla
-     * TTF definition instead of the MSDF one. Consuming (rather than sticking) means a later
-     * user-initiated reload retries MSDF; if it fails again, another one-shot reload re-forces the
-     * TTF fallback. One latch PER FLOYD FONT ({@code minecraft:default} and the ClickGUI font),
-     * armed together: a failure can come from either font's provider, and if only the default
-     * consumed the latch a failing ClickGUI provider would rebuild as MSDF again, re-fail, and
-     * re-schedule reloads forever.
+     * D1(c) latch: a mid-session MSDF glyph-generation failure arms one entry PER FLOYD-REWRITTEN
+     * FONT ({@code minecraft:default}, the ClickGUI font, the panel font); each font's adjust pass
+     * consumes its own entry on the next reload and emits the TTF definition instead of the MSDF
+     * one. Consuming (rather than sticking) means a later user-initiated reload retries MSDF; if it
+     * fails again, another one-shot reload re-forces the TTF fallback. Armed together because the
+     * failure can come from any font's provider — if only the default consumed the latch, a failing
+     * ClickGUI/panel provider would rebuild as MSDF again, re-fail, and re-schedule reloads forever.
      */
-    private static final AtomicBoolean MSDF_DISABLED_UNTIL_RELOAD = new AtomicBoolean(false);
-
-    /** ClickGUI-font half of the D1(c) latch; see {@link #MSDF_DISABLED_UNTIL_RELOAD}. */
-    private static final AtomicBoolean MSDF_DISABLED_UNTIL_RELOAD_CLICKGUI = new AtomicBoolean(false);
+    private static final Set<Identifier> MSDF_DISABLED_UNTIL_RELOAD = ConcurrentHashMap.newKeySet();
 
     /** Debounce for the one-shot failure reload; reset when the latch is consumed. */
     private static final AtomicBoolean MSDF_FAILURE_RELOAD_SCHEDULED = new AtomicBoolean(false);
@@ -105,8 +112,9 @@ public final class FloydFontProviders {
      */
     public static void onMsdfGenerationFailure() {
         try {
-            MSDF_DISABLED_UNTIL_RELOAD.set(true);
-            MSDF_DISABLED_UNTIL_RELOAD_CLICKGUI.set(true);
+            MSDF_DISABLED_UNTIL_RELOAD.add(Minecraft.DEFAULT_FONT);
+            MSDF_DISABLED_UNTIL_RELOAD.add(CLICKGUI_FONT);
+            MSDF_DISABLED_UNTIL_RELOAD.add(PANEL_FONT);
             if (MSDF_FAILURE_RELOAD_SCHEDULED.compareAndSet(false, true)) {
                 Minecraft minecraft = Minecraft.getInstance();
                 minecraft.execute(minecraft::reloadResourcePacks);
@@ -118,7 +126,7 @@ public final class FloydFontProviders {
 
     /** Whether the D1(c) latch is currently armed (surfaced by /fontdebug). */
     public static boolean isMsdfDisabledUntilReload() {
-        return MSDF_DISABLED_UNTIL_RELOAD.get() || MSDF_DISABLED_UNTIL_RELOAD_CLICKGUI.get();
+        return !MSDF_DISABLED_UNTIL_RELOAD.isEmpty();
     }
 
     /** Current font epoch; changes whenever the default-font provider list is rebuilt. */
@@ -154,20 +162,19 @@ public final class FloydFontProviders {
             Identifier fontId, List<Pair<?, GlyphProviderDefinition.Conditional>> loaded) {
         if (loaded == null || loaded.isEmpty()) return loaded;
         if (fontId.equals(CLICKGUI_FONT)) return adjustClickGuiFont(loaded);
+        if (fontId.equals(PANEL_FONT)) return adjustPanelFont(loaded);
         if (!fontId.equals(Minecraft.DEFAULT_FONT)) return loaded;
         // The default font's providers are being rebuilt: advances may change, invalidate caches.
         FONT_EPOCH.incrementAndGet();
 
         boolean enabled = FloydFont.isGlobalCustomFontEnabled();
-        Path byoPath = FloydFont.customFontPath();
         // Consume the D1(c) failure latch: this reload forces the vanilla TTF fallback, and the
         // debounce resets so a later failure can schedule another one-shot reload.
-        boolean latched = MSDF_DISABLED_UNTIL_RELOAD.getAndSet(false);
+        boolean latched = MSDF_DISABLED_UNTIL_RELOAD.remove(Minecraft.DEFAULT_FONT);
         if (latched) {
             MSDF_FAILURE_RELOAD_SCHEDULED.set(false);
             LOGGER.warn("Floyd MSDF disabled for this font reload after a mid-session generation failure; using the TTF provider");
         }
-        boolean msdf = enabled && !latched && msdfAvailable();
 
         List<Pair<?, GlyphProviderDefinition.Conditional>> result = new ArrayList<>(loaded.size());
         for (Pair<?, GlyphProviderDefinition.Conditional> entry : loaded) {
@@ -182,24 +189,56 @@ public final class FloydFontProviders {
                 continue;
             }
 
-            TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
-            if (msdf) {
-                GlyphProviderDefinition.Conditional msdfReplacement = msdfConditional(entry.getSecond(), runtimeMetrics, byoPath);
-                if (msdfReplacement != null) {
-                    result.add(entry.mapSecond(ignored -> msdfReplacement));
-                    continue;
-                }
-                // MSDF definition could not be built; fall through to the TTF paths.
+            result.add(entry.mapSecond(ignored -> customOverrideConditional(entry.getSecond(), bundled, latched)));
+        }
+        return result;
+    }
+
+    /**
+     * The custom-override chain for one bundled-TTF entry, at the module's runtime metrics:
+     * MSDF(BYO-or-bundled) → BYO TTF → bundled TTF. Shared by the {@code minecraft:default}
+     * override and the never-dropped panel font so the two surfaces always render identically.
+     */
+    private static GlyphProviderDefinition.Conditional customOverrideConditional(
+            GlyphProviderDefinition.Conditional original,
+            TrueTypeGlyphProviderDefinition bundled,
+            boolean latched) {
+        Path byoPath = FloydFont.customFontPath();
+        TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
+        if (!latched && msdfAvailable()) {
+            GlyphProviderDefinition.Conditional msdfReplacement = msdfConditional(original, runtimeMetrics, byoPath);
+            if (msdfReplacement != null) return msdfReplacement;
+            // MSDF definition could not be built; fall through to the TTF paths.
+        }
+        if (byoPath != null) {
+            GlyphProviderDefinition.Conditional replacement = byoConditional(original, runtimeMetrics, byoPath);
+            if (replacement != null) return replacement;
+            // Replacement could not be built; fall through and keep the bundled provider.
+        }
+        return new GlyphProviderDefinition.Conditional(runtimeMetrics, original.filter());
+    }
+
+    /**
+     * The HUD panels' custom font ({@code floydaddons:panel}) follows the Font module's custom
+     * selection (runtime metrics + BYO + MSDF, exactly like the enabled default override) but is
+     * NEVER dropped: whether a panel actually shows it is decided per-frame by the per-panel
+     * toggles in {@code FloydFont.panelFont}, not at provider-load time — so panel toggles apply
+     * instantly, without a resource reload.
+     */
+    private static List<Pair<?, GlyphProviderDefinition.Conditional>> adjustPanelFont(
+            List<Pair<?, GlyphProviderDefinition.Conditional>> loaded) {
+        boolean latched = MSDF_DISABLED_UNTIL_RELOAD.remove(PANEL_FONT);
+        if (latched) {
+            LOGGER.warn("Floyd MSDF disabled for this panel-font reload after a mid-session generation failure; using the TTF provider");
+        }
+        List<Pair<?, GlyphProviderDefinition.Conditional>> result = new ArrayList<>(loaded.size());
+        for (Pair<?, GlyphProviderDefinition.Conditional> entry : loaded) {
+            TrueTypeGlyphProviderDefinition bundled = asBundledTtf(entry.getSecond());
+            if (bundled == null) {
+                result.add(entry);
+                continue;
             }
-            if (byoPath != null) {
-                GlyphProviderDefinition.Conditional replacement = byoConditional(entry.getSecond(), runtimeMetrics, byoPath);
-                if (replacement != null) {
-                    result.add(entry.mapSecond(ignored -> replacement));
-                    continue;
-                }
-                // Replacement could not be built; fall through and keep the bundled provider.
-            }
-            result.add(entry.mapSecond(ignored -> new GlyphProviderDefinition.Conditional(runtimeMetrics, entry.getSecond().filter())));
+            result.add(entry.mapSecond(ignored -> customOverrideConditional(entry.getSecond(), bundled, latched)));
         }
         return result;
     }
@@ -212,7 +251,7 @@ public final class FloydFontProviders {
      */
     private static List<Pair<?, GlyphProviderDefinition.Conditional>> adjustClickGuiFont(
             List<Pair<?, GlyphProviderDefinition.Conditional>> loaded) {
-        boolean latched = MSDF_DISABLED_UNTIL_RELOAD_CLICKGUI.getAndSet(false);
+        boolean latched = MSDF_DISABLED_UNTIL_RELOAD.remove(CLICKGUI_FONT);
         if (latched) {
             LOGGER.warn("Floyd MSDF disabled for this ClickGUI-font reload after a mid-session generation failure; using the TTF provider");
         }

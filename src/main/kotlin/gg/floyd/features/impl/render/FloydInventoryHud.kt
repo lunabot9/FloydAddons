@@ -172,10 +172,11 @@ object FloydInventoryHud : Module(
         }
         ItemStateRenderer.flushInlineBatch()
 
-        // Stack counts via the shared mc.font helper (the global MSDF font) — drawn AFTER the item
-        // models so the counts composite on top, in the same framebuffer-pixel space; queued with the
-        // deferred path so all counts share ONE batch flush.
+        // Stack counts via the shared HUD text helper using this panel's toggled font — drawn AFTER
+        // the item models so the counts composite on top, in the same framebuffer-pixel space; queued
+        // with the deferred path so all counts share ONE batch flush.
         // Count height tracks the slot so it stays proportional at any guiScale (see COUNT_FONT_RATIO).
+        val countFont = FloydFont.panelFont(FloydFont.PanelFont.INVENTORY)
         val countFontSize = slotSize * COUNT_FONT_RATIO
         val countScale = scale * countFontSize / MsdfFontMetrics.LINE_HEIGHT
         var anyCount = false
@@ -197,7 +198,7 @@ object FloydInventoryHud : Module(
             // height, which floated the digits (2/9)·countFontSize+1 px high, a gap that grew with
             // guiScale because countFontSize tracks the slot size.
             val ty = fy + (localY + itemPx - countFontSize * COUNT_BASELINE_RATIO) * scale
-            HudTextRenderer.drawTextDeferred(countText(slot, stack.count), tx, ty, countScale, 0xFFFFFFFF.toInt(), HudTextRenderer.Alignment.RIGHT)
+            HudTextRenderer.drawTextDeferred(countText(slot, stack.count), tx, ty, countScale, 0xFFFFFFFF.toInt(), HudTextRenderer.Alignment.RIGHT, font = countFont)
             anyCount = true
         }
         if (anyCount) HudTextRenderer.flushDeferred()

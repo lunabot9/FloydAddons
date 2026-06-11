@@ -8,11 +8,13 @@ import net.minecraft.client.renderer.LightTexture
 import org.joml.Matrix4f
 
 /**
- * Shared mc.font text path for the Floyd HUD panels, generalized from the custom scoreboard's
+ * Shared Font text path for the Floyd HUD panels, generalized from the custom scoreboard's
  * Minecraft-font TEXT mode: [PostHudOverlay.applyScreenProjection] + a translate/scale [Matrix4f]
- * pose + `mc.font.drawInBatch` + one `endBatch` per call, then [PostHudOverlay.bindMainFbo] so the
- * next inline draw of the world-end pass starts from the main framebuffer again. With the global
- * MSDF provider live, mc.font IS the smooth custom font, so this replaces the panels' NanoVG text.
+ * pose + `Font.drawInBatch` + one `endBatch` per call, then [PostHudOverlay.bindMainFbo] so the
+ * next inline draw of the world-end pass starts from the main framebuffer again. Each call takes
+ * the [Font] to draw AND measure with (default `mc.font`): panels pass their per-toggle selection
+ * from [gg.floyd.features.impl.render.FloydFont.panelFont], so a panel renders the custom MSDF
+ * font or the pinned vanilla font independently of the `minecraft:default` override.
  *
  * Coordinates are FRAMEBUFFER pixels — the same space [RoundRectPIPRenderer.drawInline] /
  * [ItemStateRenderer.drawItemInline] draw in and [PostHudOverlay.applyScreenProjection] projects —
@@ -44,8 +46,9 @@ object HudTextRenderer {
         color: Int,
         alignment: Alignment = Alignment.LEFT,
         displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
-        light: Int = LightTexture.FULL_BRIGHT
-    ) = drawSegments(listOf(Segment(text, color)), x, y, scale, alignment, displayMode, light)
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font
+    ) = drawSegments(listOf(Segment(text, color)), x, y, scale, alignment, displayMode, light, font)
 
     // Scratch pose for the deferred path — drawInBatch bakes glyph vertices EAGERLY (proven by
     // NvgTextReplay, which reuses one buffer across distinct per-run matrices), so reusing one
@@ -65,16 +68,17 @@ object HudTextRenderer {
         color: Int,
         alignment: Alignment = Alignment.LEFT,
         displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
-        light: Int = LightTexture.FULL_BRIGHT
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font
     ) {
         if (text.isEmpty() || scale <= 0f) return
         PostHudOverlay.applyScreenProjection()
         deferredPose.translation(x, y, 0f).scale(scale, scale, 1f)
         val segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -MsdfFontMetrics.unitWidth(text)
+            Alignment.RIGHT -> -MsdfFontMetrics.unitWidth(text, font)
         }
-        mc.font.drawInBatch(text, segX, 0f, color, false, deferredPose, mc.renderBuffers().bufferSource(), displayMode, 0, light)
+        font.drawInBatch(text, segX, 0f, color, false, deferredPose, mc.renderBuffers().bufferSource(), displayMode, 0, light)
     }
 
     /** Segment variant of [drawTextDeferred] — one line, no flush; pair with [flushDeferred]. */
@@ -85,7 +89,8 @@ object HudTextRenderer {
         scale: Float,
         alignment: Alignment = Alignment.LEFT,
         displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
-        light: Int = LightTexture.FULL_BRIGHT
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font
     ) {
         if (segments.isEmpty() || scale <= 0f) return
         PostHudOverlay.applyScreenProjection()
@@ -93,11 +98,11 @@ object HudTextRenderer {
         val buffer = mc.renderBuffers().bufferSource()
         var segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.text) }
+            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.text, font) }
         }
         for (segment in segments) {
-            mc.font.drawInBatch(segment.text, segX, 0f, segment.color, false, deferredPose, buffer, displayMode, 0, light)
-            segX += MsdfFontMetrics.unitWidth(segment.text)
+            font.drawInBatch(segment.text, segX, 0f, segment.color, false, deferredPose, buffer, displayMode, 0, light)
+            segX += MsdfFontMetrics.unitWidth(segment.text, font)
         }
     }
 
@@ -115,7 +120,8 @@ object HudTextRenderer {
         scale: Float,
         alignment: Alignment = Alignment.LEFT,
         displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
-        light: Int = LightTexture.FULL_BRIGHT
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font
     ) {
         if (segments.isEmpty() || scale <= 0f) return
         PostHudOverlay.applyScreenProjection()
@@ -123,11 +129,11 @@ object HudTextRenderer {
         val buffer = mc.renderBuffers().bufferSource()
         var segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.text) }
+            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.text, font) }
         }
         for (segment in segments) {
-            mc.font.drawInBatch(segment.text, segX, 0f, segment.color, false, pose, buffer, displayMode, 0, light)
-            segX += MsdfFontMetrics.unitWidth(segment.text)
+            font.drawInBatch(segment.text, segX, 0f, segment.color, false, pose, buffer, displayMode, 0, light)
+            segX += MsdfFontMetrics.unitWidth(segment.text, font)
         }
         buffer.endBatch()
         PostHudOverlay.bindMainFbo()

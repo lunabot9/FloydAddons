@@ -78,12 +78,15 @@ object FloydDayTrackerModule : Module(
     private fun dayTrackerLayout(example: Boolean): DayTrackerLayout? {
         val label = currentServerDayLabel() ?: if (example) "Day 1" else return null
         val padding = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.DAY_TRACKER).coerceAtLeast(0)
-        // Size with the same live-FontSet float advances the mc.font draw renders with
-        // (MsdfFontMetrics), so the box always fits the label exactly.
-        val width = ceil(MsdfFontMetrics.width(label, DAY_TRACKER_FONT_SIZE)).toInt() + padding * 2
+        // Size with the same live-FontSet float advances the draw renders with (MsdfFontMetrics
+        // over the panel's selected font), so the box always fits the label exactly.
+        val width = ceil(MsdfFontMetrics.width(label, DAY_TRACKER_FONT_SIZE, panelFont())).toInt() + padding * 2
         val height = ceil(DAY_TRACKER_FONT_SIZE).toInt() + padding * 2
         return DayTrackerLayout(label, width, height)
     }
+
+    /** The per-toggle font selection (custom vs pinned vanilla); layout and draw must agree. */
+    private fun panelFont() = FloydFont.panelFont(FloydFont.PanelFont.DAY_TRACKER)
 
     // HUD element callback: this NEVER draws — it only reports the panel's size for the HUD editor's drag
     // box. The actual panel (in game AND in the editor) is drawn by the single inline pass
@@ -141,9 +144,9 @@ object FloydDayTrackerModule : Module(
             outline
         )
 
-        // Label via the shared mc.font helper (the global MSDF font), framebuffer px. The 9px font
-        // size means one font unit = one local panel unit, so the px-per-unit factor is [scale].
+        // Label via the shared HUD text helper using this panel's toggled font, framebuffer px. The
+        // 9px font size means one font unit = one local panel unit, so the px-per-unit factor is [scale].
         val padding = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
-        HudTextRenderer.drawText(layout.label, fx + padding * scale, fy + padding * scale, scale, 0xFFFFFFFF.toInt())
+        HudTextRenderer.drawText(layout.label, fx + padding * scale, fy + padding * scale, scale, 0xFFFFFFFF.toInt(), font = panelFont())
     }
 }

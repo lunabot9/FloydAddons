@@ -1,12 +1,7 @@
 package gg.floyd.utils.font
 
 import gg.floyd.FloydAddonsMod
-import gg.floyd.FloydAddonsMod.mc
-import gg.floyd.mixin.accessors.FontProviderAccessor
 import net.minecraft.client.gui.Font
-import net.minecraft.client.gui.GlyphSource
-import net.minecraft.client.gui.font.glyphs.EffectGlyph
-import net.minecraft.network.chat.FontDescription
 import net.minecraft.resources.Identifier
 
 /**
@@ -16,14 +11,9 @@ import net.minecraft.resources.Identifier
  * Floyd custom font no matter what the global Font module does to `minecraft:default` (toggled
  * off → vanilla bitmap, or a BYO .ttf — both used to restyle the ClickGUI too).
  *
- * Implementation: wraps `mc.font`'s [Font.Provider] (FontManager's session-lived cached provider —
- * the same instance across resource reloads, so this wrapper never goes stale) and remaps the
- * DEFAULT font description to `floydaddons:clickgui`. Plain-string draw/measure calls resolve
- * through `Style.EMPTY` → [FontDescription.DEFAULT], so every ClickGUI text run lands in the
- * pinned FontSet while explicit style fonts (none in the ClickGUI today) pass through untouched.
- * Both rendering ([gg.floyd.utils.render.NvgTextReplay]) and measurement
- * ([MsdfFontMetrics] via NVGRenderer) use this same instance, preserving the D6 invariant that
- * layout widths come from the exact FontSet the glyphs render with.
+ * Unlike the per-panel surfaces ([FloydFonts.panelCustom], toggleable and BYO-following), this is
+ * unconditional and bundled-only: the ClickGUI has no font toggle by design. The remap mechanics
+ * (and the D6 measurement invariant) are documented on [FloydFonts.remapped].
  */
 object ClickGuiFont {
 
@@ -31,16 +21,6 @@ object ClickGuiFont {
     @JvmField
     val FONT_ID: Identifier = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "clickgui")
 
-    private val DESCRIPTION = FontDescription.Resource(FONT_ID)
-
     // Lazy because mc.font must exist (client init); render-thread only, like every caller.
-    val font: Font by lazy(LazyThreadSafetyMode.NONE) {
-        val base = (mc.font as FontProviderAccessor).`floydaddons$getProvider`()
-        Font(object : Font.Provider {
-            override fun glyphs(description: FontDescription): GlyphSource =
-                base.glyphs(if (description == FontDescription.DEFAULT) DESCRIPTION else description)
-
-            override fun effect(): EffectGlyph = base.effect()
-        })
-    }
+    val font: Font by lazy(LazyThreadSafetyMode.NONE) { FloydFonts.remapped(FONT_ID) }
 }
