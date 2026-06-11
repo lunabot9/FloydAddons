@@ -1,6 +1,5 @@
 package gg.floyd.features.impl.player
 
-import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.features.Module
 import gg.floyd.features.impl.hiders.FloydProfileIdHider
 import gg.floyd.features.impl.hiders.FloydServerIdHider
@@ -30,7 +29,7 @@ class FloydNickHiderTest {
     fun `replacement gate follows Floyd toggles instead of nickname blankness`() {
         withNickHiderState {
             FloydNickHider.nickname = "   "
-            bool("Enabled").enabled = true
+            if (!FloydNickHider.enabled) FloydNickHider.toggle()
             setHider("Server ID Hider", false)
             setHider("Profile ID Hider", false)
 
@@ -85,9 +84,6 @@ class FloydNickHiderTest {
         }
     }
 
-    private fun bool(name: String): BooleanSetting =
-        FloydNickHider.settings[name] as? BooleanSetting ?: error("Missing BooleanSetting: $name")
-
     private fun hiderModule(name: String): Module = when (name) {
         "Server ID Hider" -> FloydServerIdHider
         "Profile ID Hider" -> FloydProfileIdHider
@@ -101,7 +97,7 @@ class FloydNickHiderTest {
 
     private fun withNickHiderState(block: () -> Unit) {
         val nickname = FloydNickHider.nickname
-        val enabled = bool("Enabled").enabled
+        val enabled = FloydNickHider.enabled
         val serverId = FloydServerIdHider.enabled
         val profileId = FloydProfileIdHider.enabled
         val mappings = FloydNickHider.nameMappings.toMap()
@@ -110,7 +106,7 @@ class FloydNickHiderTest {
             block()
         } finally {
             FloydNickHider.nickname = nickname
-            bool("Enabled").enabled = enabled
+            if (FloydNickHider.enabled != enabled) FloydNickHider.toggle()
             setHider("Server ID Hider", serverId)
             setHider("Profile ID Hider", profileId)
             FloydNickHider.clearNameMappings()

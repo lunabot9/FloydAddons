@@ -3,8 +3,6 @@ package gg.floyd.features.impl.player
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.MapSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
-import gg.floyd.events.TickEvent
-import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.impl.hiders.FloydHiders
@@ -22,9 +20,11 @@ object FloydNickHider : Module(
     name = "Neck Hider",
     category = Category.PLAYER,
     description = "Floyd nickname replacement and per-player name mappings.",
-    toggled = true,
+    // Default OFF: the module toggle IS the nick-replacement switch now (the redundant inner
+    // "Enabled" setting was collapsed into it, see ModuleConfig.collapsedEnabledModules), and
+    // replacement was off by default before the collapse.
+    toggled = false,
 ) {
-    val nickHiderEnabled by BooleanSetting("Enabled", false, desc = "Enables nickname and name-mapping replacement.")
     var nickname by StringSetting("Default Nick", "George Floyd", 32, desc = "Replacement name used by nick hider.")
     val selfNameChroma by BooleanSetting("Self Name Chroma", false, desc = "Cycles your own replaced nickname through chroma.")
     val nameMappings by MapSetting("Name Mappings", mutableMapOf<String, String>()).hide()
@@ -48,21 +48,15 @@ object FloydNickHider : Module(
     private var scoreboardSidebarObjective: String? = null
     private var scoreboardTeamSlotObjective: String? = null
 
-    init {
-        on<TickEvent.End> {
-            tickServerIdTracker()
-        }
-    }
-
     @JvmStatic
     fun hasReplacements(): Boolean =
-        nickHiderEnabled || FloydHiders.serverIdHider || FloydHiders.profileIdHider
+        enabled || FloydHiders.serverIdHider || FloydHiders.profileIdHider
 
     @JvmStatic
     fun replaceString(text: String): String {
         if (!hasReplacements() || text.isEmpty()) return text
         var result = text
-        if (nickHiderEnabled) {
+        if (enabled) {
             mc.user.name.takeIf { it.isNotBlank() }?.let {
                 result = replaceIgnoreCase(result, it, nickname)
             }
@@ -89,7 +83,7 @@ object FloydNickHider : Module(
         var result = component
         var changed = false
 
-        if (nickHiderEnabled) {
+        if (enabled) {
             mc.user.name.takeIf { it.isNotBlank() }?.let {
                 replaceLiteralComponentIgnoreCase(result, it, nickname).also { replacement ->
                     result = replacement.component
@@ -137,7 +131,7 @@ object FloydNickHider : Module(
         val styled = StyledText.from(text) ?: return text
         var changed = false
 
-        if (nickHiderEnabled) {
+        if (enabled) {
             mc.user.name.takeIf { it.isNotBlank() }?.let {
                 changed = styled.replaceIgnoreCase(
                     it,
@@ -172,7 +166,7 @@ object FloydNickHider : Module(
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "settings" to mapOf(
-            "nickHider" to nickHiderEnabled,
+            "nickHider" to enabled,
             "serverIdHider" to FloydHiders.serverIdHider,
             "profileIdHider" to FloydHiders.profileIdHider,
             "nickname" to nickname,
@@ -272,7 +266,12 @@ object FloydNickHider : Module(
 
     fun mappingIds(): Set<String> = nameMappings.keys.toSortedSet()
 
-    private fun tickServerIdTracker() {
+    /**
+     * The Hypixel server-ID scanner that feeds [FloydHiders.serverIdHider]. Registered by
+     * [gg.floyd.features.impl.hiders.FloydServerIdHider] (its rightful lifecycle owner) — this
+     * module's own toggle gates ONLY nick replacement and must not stop the tracker.
+     */
+    internal fun tickServerIdTracker() {
         if (!FloydHiders.serverIdHider) return
         val level = mc.level
         val player = mc.player

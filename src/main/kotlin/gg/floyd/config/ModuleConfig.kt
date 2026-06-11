@@ -336,10 +336,10 @@ class ModuleConfig internal constructor(file: File) {
         }
 
         // Modules whose redundant inner "Enabled" BooleanSetting was collapsed into the module's own
-        // on/off switch (canonical lowercase names). Neck Hider is intentionally NOT here: its inner
-        // toggle gates only nick replacement while the module also powers the Hiders server-ID tracker.
+        // on/off switch (canonical lowercase names). Neck Hider joined once the server-ID tracker's
+        // lifecycle moved to the Server ID Hider module — its toggle now gates only nick replacement.
         private val collapsedEnabledModules =
-            setOf("custom cape", "cone hat", "x-ray", "discord presence", "local control")
+            setOf("custom cape", "cone hat", "x-ray", "discord presence", "local control", "neck hider")
 
         /**
          * Collapses the removed inner "Enabled" toggle into the module's own on/off, preserving each

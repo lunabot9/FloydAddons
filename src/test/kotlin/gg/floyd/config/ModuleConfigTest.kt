@@ -23,8 +23,11 @@ class ModuleConfigTest {
         val module = LegacyNamedModule(name = "Neck Hider")
         loadLegacyConfigEntry("Nick Hider", module)
 
+        // Neck Hider's inner "Enabled" was collapsed into the module toggle (the module IS the
+        // nick-replacement switch now): the legacy "Enabled" folds into module.enabled via
+        // migrateCollapsedEnabledToggles instead of landing on a separate setting.
         assertTrue(module.enabled)
-        assertTrue(module.featureEnabled)
+        assertFalse(module.featureEnabled)
         assertEquals("Neck Hider", module.name)
     }
 

@@ -1,6 +1,8 @@
 package gg.floyd.features.impl.hiders
 
 import gg.floyd.clickgui.settings.impl.SelectorSetting
+import gg.floyd.events.TickEvent
+import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 
@@ -76,7 +78,16 @@ object FloydServerIdHider : Module(
     name = "Server ID Hider",
     category = Category.HIDERS,
     description = "Replaces Hypixel server IDs in rendered text.",
-)
+) {
+    init {
+        // The scanner that accumulates server IDs lives on FloydNickHider (it shares that
+        // module's tab/scoreboard plumbing) but its LIFECYCLE belongs here: it only does work
+        // for this hider, and Neck Hider's own toggle now gates nick replacement alone.
+        on<TickEvent.End> {
+            gg.floyd.features.impl.player.FloydNickHider.tickServerIdTracker()
+        }
+    }
+}
 
 object FloydProfileIdHider : Module(
     name = "Profile ID Hider",
