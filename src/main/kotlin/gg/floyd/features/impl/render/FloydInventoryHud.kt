@@ -99,6 +99,9 @@ object FloydInventoryHud : Module(
     // an 18-unit slot ≈ 8px, matching vanilla's count proportion.
     private const val COUNT_FONT_RATIO = 0.45f
 
+    /** Baseline row of mc.font's 9-unit line (row 7) as a fraction of the line height. */
+    private const val COUNT_BASELINE_RATIO = 7f / MsdfFontMetrics.LINE_HEIGHT
+
     /**
      * Single-pass render from the world-end post-HUD pass ([PostHudOverlay]): the blaze3d SDF
      * fill/border, frosted blur and the 3D item models first, then the stack counts via the shared
@@ -188,7 +191,12 @@ object FloydInventoryHud : Module(
             // fixed column — a 1-digit count and the ones digit of a 2-digit count line up instead of
             // drifting. The helper measures with the same MsdfFontMetrics floats the glyphs render with.
             val tx = fx + (localX + itemPx - 1f) * scale
-            val ty = fy + (localY + itemPx - countFontSize - 1f) * scale
+            // Vanilla anchors the count's BASELINE at the item's bottom edge (drawString at slot
+            // y+9, baseline 7 rows into the 9-unit line → y+16). HudTextRenderer's y is the line
+            // TOP, so subtract the baseline offset (7/9 of the line height) — not the full line
+            // height, which floated the digits (2/9)·countFontSize+1 px high, a gap that grew with
+            // guiScale because countFontSize tracks the slot size.
+            val ty = fy + (localY + itemPx - countFontSize * COUNT_BASELINE_RATIO) * scale
             HudTextRenderer.drawTextDeferred(countText(slot, stack.count), tx, ty, countScale, 0xFFFFFFFF.toInt(), HudTextRenderer.Alignment.RIGHT)
             anyCount = true
         }
