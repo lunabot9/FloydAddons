@@ -37,8 +37,11 @@ object FloydRender {
 
     private var lastAppliedTitle: String? = null
     private var lastAppliedBorderless = false
-    private var savedWindowedX = -1
-    private var savedWindowedY = -1
+    // A flag, not a >=0 coordinate sentinel: monitors left/above the primary have NEGATIVE screen
+    // coordinates (Windows/X11 multi-monitor), which are perfectly valid saved positions.
+    private var hasSavedWindowedBounds = false
+    private var savedWindowedX = 0
+    private var savedWindowedY = 0
     private var savedWindowedWidth = 1280
     private var savedWindowedHeight = 720
 
@@ -127,16 +130,62 @@ object FloydRender {
     private fun snapshotWindowedBounds() {
         val window = mc.window
         if (window.isFullscreen || !isWindowDecorated()) return
-        savedWindowedX = window.x
-        savedWindowedY = window.y
-        savedWindowedWidth = window.width.coerceAtLeast(640)
-        savedWindowedHeight = window.height.coerceAtLeast(480)
+        // GLFW SCREEN coordinates — NOT mc.window.width/height, which are FRAMEBUFFER pixels and
+        // 2x the screen size on retina/HiDPI displays (restoring those doubled the window).
+        val handle = window.handle()
+        val x = IntArray(1)
+        val y = IntArray(1)
+        val w = IntArray(1)
+        val h = IntArray(1)
+        GLFW.glfwGetWindowPos(handle, x, y)
+        GLFW.glfwGetWindowSize(handle, w, h)
+        if (w[0] <= 0 || h[0] <= 0) return
+        savedWindowedX = x[0]
+        savedWindowedY = y[0]
+        savedWindowedWidth = w[0].coerceAtLeast(640)
+        savedWindowedHeight = h[0].coerceAtLeast(480)
+        hasSavedWindowedBounds = true
+    }
+
+    /**
+     * The monitor the window currently overlaps most (windowed-mode geometry, screen coordinates),
+     * falling back to the primary. Borderless targets THIS monitor — the old primary-only path
+     * yanked a window living on a secondary display across to the primary, and mishandled the
+     * negative origins of monitors left/above the primary.
+     */
+    private fun monitorUnderWindow(handle: Long): Long {
+        val primary = GLFW.glfwGetPrimaryMonitor()
+        val monitors = GLFW.glfwGetMonitors() ?: return primary
+        if (monitors.limit() <= 1) return primary
+        val wx = IntArray(1)
+        val wy = IntArray(1)
+        val ww = IntArray(1)
+        val wh = IntArray(1)
+        GLFW.glfwGetWindowPos(handle, wx, wy)
+        GLFW.glfwGetWindowSize(handle, ww, wh)
+        var best = 0L
+        var bestArea = 0L
+        val mx = IntArray(1)
+        val my = IntArray(1)
+        for (i in 0 until monitors.limit()) {
+            val monitor = monitors.get(i)
+            val mode = GLFW.glfwGetVideoMode(monitor) ?: continue
+            GLFW.glfwGetMonitorPos(monitor, mx, my)
+            val overlapW = (minOf(wx[0] + ww[0], mx[0] + mode.width()) - maxOf(wx[0], mx[0])).coerceAtLeast(0)
+            val overlapH = (minOf(wy[0] + wh[0], my[0] + mode.height()) - maxOf(wy[0], my[0])).coerceAtLeast(0)
+            val area = overlapW.toLong() * overlapH
+            if (area > bestArea) {
+                bestArea = area
+                best = monitor
+            }
+        }
+        return if (best != 0L) best else primary
     }
 
     private fun applyBorderless() {
         val window = mc.window
         val handle = window.handle()
-        val monitor = GLFW.glfwGetPrimaryMonitor()
+        val monitor = monitorUnderWindow(handle)
         val mode = monitor.takeIf { it != 0L }?.let(GLFW::glfwGetVideoMode)
 
         val targetX: Int
@@ -152,6 +201,11 @@ object FloydRender {
             targetY = 0
         }
 
+        // A maximized window carries its maximized frame state through attrib/geometry changes on
+        // Windows, leaving a mis-sized client area — restore first so the resize lands cleanly.
+        if (GLFW.glfwGetWindowAttrib(handle, GLFW.GLFW_MAXIMIZED) == GLFW.GLFW_TRUE) {
+            GLFW.glfwRestoreWindow(handle)
+        }
         GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE)
         GLFW.glfwSetWindowMonitor(
             handle,
@@ -166,13 +220,22 @@ object FloydRender {
 
     private fun restoreWindowed() {
         val handle = mc.window.handle()
-        val mode = GLFW.glfwGetPrimaryMonitor().takeIf { it != 0L }?.let(GLFW::glfwGetVideoMode)
-        val maxW = (mode?.width() ?: 1920) - 64
-        val maxH = (mode?.height() ?: 1080) - 64
+        val monitor = monitorUnderWindow(handle)
+        val mode = monitor.takeIf { it != 0L }?.let(GLFW::glfwGetVideoMode)
+        // Clamp to the FULL monitor size: the saved bounds were a real windowed geometry, so any
+        // size that fit before fits now — the old 64px safety margin silently shrank a
+        // maximized-fit window (e.g. 1920-wide on a 1920 monitor) on every borderless round-trip.
+        val maxW = mode?.width() ?: Int.MAX_VALUE
+        val maxH = mode?.height() ?: Int.MAX_VALUE
         val targetW = savedWindowedWidth.coerceIn(640, maxW.coerceAtLeast(640))
         val targetH = savedWindowedHeight.coerceIn(480, maxH.coerceAtLeast(480))
-        val targetX = savedWindowedX.takeIf { it >= 0 } ?: 50
-        val targetY = savedWindowedY.takeIf { it >= 0 } ?: 50
+        // No saved bounds -> a spot ON THE CURRENT MONITOR (origin + 50): monitor origins are
+        // negative left/above the primary, so a fixed (50,50) could land on another display.
+        val mx = IntArray(1)
+        val my = IntArray(1)
+        if (monitor != 0L) GLFW.glfwGetMonitorPos(monitor, mx, my)
+        val targetX = if (hasSavedWindowedBounds) savedWindowedX else mx[0] + 50
+        val targetY = if (hasSavedWindowedBounds) savedWindowedY else my[0] + 50
 
         GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE)
         GLFW.glfwSetWindowMonitor(handle, 0L, targetX, targetY, targetW, targetH, GLFW.GLFW_DONT_CARE)
@@ -183,7 +246,8 @@ object FloydRender {
 
     private fun isBorderlessApplied(): Boolean {
         if (isWindowDecorated()) return false
-        val monitor = GLFW.glfwGetPrimaryMonitor()
+        val handle = mc.window.handle()
+        val monitor = monitorUnderWindow(handle)
         val mode: GLFWVidMode = monitor.takeIf { it != 0L }?.let(GLFW::glfwGetVideoMode) ?: return true
 
         val wx = IntArray(1)
@@ -192,8 +256,8 @@ object FloydRender {
         val wh = IntArray(1)
         val mx = IntArray(1)
         val my = IntArray(1)
-        GLFW.glfwGetWindowPos(mc.window.handle(), wx, wy)
-        GLFW.glfwGetWindowSize(mc.window.handle(), ww, wh)
+        GLFW.glfwGetWindowPos(handle, wx, wy)
+        GLFW.glfwGetWindowSize(handle, ww, wh)
         GLFW.glfwGetMonitorPos(monitor, mx, my)
 
         return wx[0] == mx[0] && wy[0] == my[0] && ww[0] == mode.width() && wh[0] == mode.height()

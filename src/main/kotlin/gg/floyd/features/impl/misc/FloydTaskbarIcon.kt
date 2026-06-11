@@ -2,10 +2,13 @@ package gg.floyd.features.impl.misc
 
 import com.mojang.blaze3d.platform.NativeImage
 import gg.floyd.FloydAddonsMod
+import gg.floyd.utils.FloydPlatform
 import net.minecraft.resources.Identifier
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFWImage
+import org.lwjgl.system.JNI
 import org.lwjgl.system.MemoryUtil
+import org.lwjgl.system.macosx.ObjCRuntime
 import java.nio.ByteBuffer
 
 object FloydTaskbarIcon {
@@ -21,46 +24,75 @@ object FloydTaskbarIcon {
     fun applyOnce() {
         if (applied || !FloydCompatibility.shouldApplyTaskbarIcon()) return
         applied = true
-        // macOS: GLFW window icons are a documented no-op (the dock icon is used instead), so the
-        // FloydAddons icon has to go through java.awt.Taskbar. Everything else uses the GLFW path.
-        if (System.getProperty("os.name").contains("mac", ignoreCase = true)) {
-            applyDockIconViaAwt()
+        // macOS: GLFW window icons are a documented no-op (the dock icon is used instead), and
+        // java.awt.Taskbar is ALSO a dead end — MC boots headless and AWT refuses to start under
+        // -XstartOnFirstThread, so Taskbar always reports unsupported. The dock icon goes through
+        // Cocoa directly instead. Everything else uses the GLFW window-icon path.
+        if (FloydPlatform.isMac) {
+            applyDockIconViaCocoa()
         } else {
             applyWindowIconViaGlfw()
         }
     }
 
     /**
-     * Sets the dock icon on macOS via [java.awt.Taskbar]. Runs on its own daemon thread (never the
-     * render/main thread, which GLFW owns under -XstartOnFirstThread) and swallows every Throwable so
-     * an AWT/headless quirk can never destabilise the client. The image is read with headless-safe
-     * ImageIO so loading it touches no display subsystem.
+     * Sets the dock tile icon by handing the 128px PNG to `NSApplication.applicationIconImage`
+     * through LWJGL's Objective-C bridge. Runs via [net.minecraft.client.Minecraft.execute] on the
+     * render thread, which under -XstartOnFirstThread IS the first/AppKit thread, so the AppKit
+     * call is legal. The PNG goes through a temp FILE + `NSImage initWithContentsOfFile:` because
+     * every call then fits LWJGL's shipped objc_msgSend invoke overloads (`initWithBytes:length:`
+     * would need a 4-arg combo JNI does not generate). Allocation is alloc/init + explicit release
+     * (no autorelease pool needed); setApplicationIconImage retains what it keeps. Crash-proofed:
+     * any failure logs and leaves the default icon.
      */
-    private fun applyDockIconViaAwt() {
-        val image = loadAwtImage() ?: return
-        Thread({
-            try {
-                if (!java.awt.Taskbar.isTaskbarSupported()) return@Thread
-                val taskbar = java.awt.Taskbar.getTaskbar()
-                if (!taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) return@Thread
-                taskbar.iconImage = image
-                FloydAddonsMod.logger.info("Applied dock icon via java.awt.Taskbar")
-            } catch (t: Throwable) {
-                FloydAddonsMod.logger.debug("Dock icon via java.awt.Taskbar unavailable: {}", t.message)
+    private fun applyDockIconViaCocoa() {
+        val resource = FloydAddonsMod.mc.resourceManager.getResource(iconIds.last()).orElse(null) ?: return
+        val iconFile = try {
+            val png = resource.open().use { it.readBytes() }
+            java.nio.file.Files.createTempFile("floydaddons-dock-icon", ".png").also {
+                java.nio.file.Files.write(it, png)
+                it.toFile().deleteOnExit()
             }
-        }, "FloydAddons-DockIcon").apply {
-            isDaemon = true
-            start()
-        }
-    }
-
-    /** Reads the largest icon (128x128) as a headless-safe AWT image, or null if unreadable. */
-    private fun loadAwtImage(): java.awt.image.BufferedImage? {
-        val resource = FloydAddonsMod.mc.resourceManager.getResource(iconIds.last()).orElse(null) ?: return null
-        return try {
-            resource.open().use { javax.imageio.ImageIO.read(it) }
         } catch (_: Throwable) {
-            null
+            return
+        }
+        FloydAddonsMod.mc.execute {
+            var pathUtf8: ByteBuffer? = null
+            try {
+                val msgSend = ObjCRuntime.getLibrary().getFunctionAddress("objc_msgSend")
+                fun sel(name: String) = ObjCRuntime.sel_getUid(name)
+                fun cls(name: String) = ObjCRuntime.objc_getClass(name)
+                fun alloc(className: String) = JNI.invokePPP(cls(className), sel("alloc"), msgSend)
+                fun release(obj: Long) = JNI.invokePPV(obj, sel("release"), msgSend)
+
+                val nsApp = JNI.invokePPP(cls("NSApplication"), sel("sharedApplication"), msgSend)
+                if (nsApp == 0L) {
+                    FloydAddonsMod.logger.info("Dock icon skipped: no NSApplication")
+                    return@execute
+                }
+                pathUtf8 = MemoryUtil.memUTF8(iconFile.toAbsolutePath().toString())
+                val nsPath = JNI.invokePPPP(
+                    alloc("NSString"), sel("initWithUTF8String:"), MemoryUtil.memAddress(pathUtf8), msgSend
+                )
+                if (nsPath == 0L) {
+                    FloydAddonsMod.logger.info("Dock icon skipped: NSString init failed")
+                    return@execute
+                }
+                val nsImage = JNI.invokePPPP(alloc("NSImage"), sel("initWithContentsOfFile:"), nsPath, msgSend)
+                if (nsImage != 0L) {
+                    JNI.invokePPPV(nsApp, sel("setApplicationIconImage:"), nsImage, msgSend)
+                    release(nsImage)
+                    FloydAddonsMod.logger.info("Applied dock icon via NSApplication.applicationIconImage")
+                } else {
+                    FloydAddonsMod.logger.info("Dock icon skipped: NSImage could not read the PNG")
+                }
+                release(nsPath)
+            } catch (t: Throwable) {
+                FloydAddonsMod.logger.info("Dock icon via Cocoa unavailable: {}", t.toString())
+            } finally {
+                pathUtf8?.let(MemoryUtil::memFree)
+                runCatching { java.nio.file.Files.deleteIfExists(iconFile) }
+            }
         }
     }
 
