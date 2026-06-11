@@ -9,6 +9,7 @@ import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
+import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import org.lwjgl.glfw.GLFW
 import kotlin.math.max
@@ -116,13 +117,23 @@ object ClickGUIModule : Module(
     private const val MODULE_ROW_HEIGHT = 16f
 
     /**
-     * The Click GUI accent color. When [clickGUIColor] has chroma enabled (inside the color picker) it
-     * chroma-cycles (reusing the memoized [ChromaCache] so the rainbow hue is computed at most once per
-     * frame per [offset]); otherwise it is the static [clickGUIColor]. Chroma/fade now live in the
-     * picker, so there is no separate "GUI Chroma" toggle.
+     * The Click GUI accent color, honoring EVERY picker mode at [offset]: chroma cycles (the
+     * memoized [ChromaCache] computes the rainbow hue at most once per frame per [offset]), fade
+     * blends base↔fadeColor on the same 2500ms sine every other Floyd surface uses
+     * ([HudPanel.fadeProgress]), otherwise the static color. Fade used to be dropped here (only
+     * [Color.rgba]'s phase-0 fade leaked through the else-branch), so offset consumers like the
+     * title letters never followed the picker's fade mode. Chroma/fade live in the picker, so
+     * there is no separate "GUI Chroma" toggle.
      */
-    fun guiAccentColor(offset: Float = 0f): Int =
-        if (clickGUIColor.chroma) 0xFF000000.toInt() or ChromaCache.rgbFor(offset) else clickGUIColor.rgba
+    fun guiAccentColor(offset: Float = 0f): Int = when {
+        clickGUIColor.chroma -> 0xFF000000.toInt() or ChromaCache.rgbFor(offset)
+        clickGUIColor.fade -> HudPanel.blendColors(
+            clickGUIColor.baseRgba,
+            clickGUIColor.fadeColor.baseRgba,
+            HudPanel.fadeProgress(offset)
+        )
+        else -> clickGUIColor.rgba
+    }
 
     fun getStandardGuiScale(): Float {
         val verticalScale = (mc.window.screenHeight.toFloat() / 1080f) / NVGRenderer.devicePixelRatio()

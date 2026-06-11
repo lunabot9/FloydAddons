@@ -240,8 +240,11 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         setBounds(communityGithubBounds, githubX, rowY, githubWidth, size)
         setBounds(communityDiscordBounds, discordX, rowY, discordWidth, size)
 
-        val githubColor = if (inBounds(communityGithubBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor(0f)
-        val discordColor = if (inBounds(communityDiscordBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor(0.5f)
+        // Phase 0 = the GUI's live accent (the same color the toggle pills/description borders
+        // show this frame). The old 0f/0.5f stagger put the discord link a half-cycle out — the
+        // OPPOSITE hue under chroma — instead of matching the GUI's actual current color.
+        val githubColor = if (inBounds(communityGithubBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor()
+        val discordColor = if (inBounds(communityDiscordBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor()
         NVGRenderer.text("github", githubX, rowY, size, githubColor, NVGRenderer.defaultFont)
         NVGRenderer.text(".gg/FLOYD", discordX, rowY, size, discordColor, NVGRenderer.defaultFont)
     }
