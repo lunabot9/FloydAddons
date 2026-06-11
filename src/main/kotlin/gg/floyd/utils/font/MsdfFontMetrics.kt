@@ -2,6 +2,7 @@ package gg.floyd.utils.font
 
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.utils.FloydFontProviders
+import net.minecraft.client.gui.Font
 import net.minecraft.network.chat.Component
 import kotlin.math.floor
 
@@ -26,11 +27,15 @@ object MsdfFontMetrics {
     /** Vanilla's 9-unit text line height (`Font.lineHeight`); the font-unit space all advances live in. */
     const val LINE_HEIGHT = 9f
 
-    /** Width of [text] in FONT UNITS — the un-ceiled float `Font.width` rounds up, from the live FontSet. */
-    fun unitWidth(text: String): Float = mc.font.splitter.stringWidth(text)
+    /**
+     * Width of [text] in FONT UNITS — the un-ceiled float `Font.width` rounds up, from the live
+     * FontSet. [font] picks the measuring surface: `mc.font` (the global font) for the HUD panels,
+     * [ClickGuiFont.font] for the ClickGUI — always the SAME Font the caller renders with (D6).
+     */
+    fun unitWidth(text: String, font: Font = mc.font): Float = font.splitter.stringWidth(text)
 
     /** Width in pixels of [text] rendered at [sizePx] (a 9-unit line scaled by `sizePx / 9`). */
-    fun width(text: String, sizePx: Float): Float = unitWidth(text) * scaleFor(sizePx)
+    fun width(text: String, sizePx: Float, font: Font = mc.font): Float = unitWidth(text, font) * scaleFor(sizePx)
 
     data class WrappedBounds(val width: Float, val height: Float, val lineCount: Int)
 
@@ -39,11 +44,11 @@ object MsdfFontMetrics {
      * `Font.split` splitter that wraps drawn text, with vanilla's 9-unit line height — so a box
      * sized by this always contains the text the renderer wraps into it.
      */
-    fun wrappedBounds(text: String, maxWidth: Float, sizePx: Float): WrappedBounds {
-        val lines = mc.font.split(Component.literal(text), wrapUnitsFor(maxWidth, sizePx))
+    fun wrappedBounds(text: String, maxWidth: Float, sizePx: Float, font: Font = mc.font): WrappedBounds {
+        val lines = font.split(Component.literal(text), wrapUnitsFor(maxWidth, sizePx))
         val scale = scaleFor(sizePx)
         var widest = 0f
-        for (line in lines) widest = maxOf(widest, mc.font.splitter.stringWidth(line))
+        for (line in lines) widest = maxOf(widest, font.splitter.stringWidth(line))
         return WrappedBounds(widest * scale, lineHeightPx(lines.size, sizePx), lines.size)
     }
 

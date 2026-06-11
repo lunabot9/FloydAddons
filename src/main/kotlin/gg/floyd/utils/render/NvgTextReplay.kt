@@ -1,7 +1,7 @@
 package gg.floyd.utils.render
 
 import com.mojang.blaze3d.systems.RenderSystem
-import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.utils.font.ClickGuiFont
 import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.perf.FloydPerf
 import gg.floyd.utils.ui.rendering.NVGRenderer
@@ -67,7 +67,9 @@ class DeferredNvgText {
 
 /**
  * Replays the ClickGUI's deferred NanoVG text into the live PIP slot texture via
- * `mc.font.drawInBatch` — the in-PIP replay venue of design D7 step 5 (the PRIMARY venue per the
+ * `Font.drawInBatch` over the PINNED ClickGUI font ([ClickGuiFont.font], always the bundled
+ * Floyd font regardless of the global Font module) — the in-PIP replay venue of design D7
+ * step 5 (the PRIMARY venue per the
  * adversarial review: NanoVG buffers every shape until `nvgEndFrame`, so text must be drawn after
  * the shape flush of its layer yet below the next layer's shapes, which only baking into the PIP
  * texture between NVG sub-frames can express. GuiGraphics-submitted replay is z-broken for
@@ -90,9 +92,9 @@ class DeferredNvgText {
  * call's size (the same `MsdfFontMetrics.scaleFor` mapping the flipped `textWidth` measures with,
  * so measurement cannot shear from rendering), the captured 2x3 maps to frame space, and ×dpr
  * converts to the slot's physical px. This resolves D10's open item the way P3 resolved it for the
- * HUD panels: NO size normalization — ClickGUI text inherits the global font (vanilla bitmap when
- * `globalCustomFont` is OFF) and its `fontDisplaySize` coupling, with widths and rendering moving
- * together by construction.
+ * HUD panels: NO size normalization — widths and rendering move together by construction because
+ * both go through the same pinned FontSet (which, unlike `minecraft:default`, never changes with
+ * the Font module's toggle/BYO/`fontDisplaySize` settings).
  */
 object NvgTextReplay {
 
@@ -105,8 +107,8 @@ object NvgTextReplay {
      * −494 → 1984/2478 ≈ 0.80065. mc.font draws the baseline at row 7 of its 9-unit line, i.e.
      * `(7/9)·size` below the draw origin. Matching baselines:
      * `y_mc = y_nvg + (1984/2478 − 7/9)·size` ≈ `y_nvg + 0.0229·size` (≈0.37px at size 16).
-     * Calibrated for the bundled font; a custom global TTF shifts the *rendered* ascent but the
-     * old NVG anchor it is measured against also used the bundled font, so the constant stays.
+     * Calibrated for the bundled font — exact for every replay now that the ClickGUI font is
+     * pinned to it.
      */
     const val VERTICAL_ANCHOR: Float = 1984f / 2478f - 7f / 9f
 
@@ -207,16 +209,19 @@ object NvgTextReplay {
             .translate(run.x, run.y + VERTICAL_ANCHOR * run.size, 0f)
             .scale(MsdfFontMetrics.scaleFor(run.size), MsdfFontMetrics.scaleFor(run.size), 1f)
 
+        // The PINNED ClickGUI font, not mc.font: the global Font module restyles minecraft:default
+        // (off → vanilla bitmap, BYO → user .ttf) but the ClickGUI must keep the bundled font.
+        val font = ClickGuiFont.font
         if (run.wrapWidth <= 0f) {
-            mc.font.drawInBatch(
+            font.drawInBatch(
                 run.text, 0f, 0f, run.color, false, pose, bufferSource,
                 Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT
             )
         } else {
-            val lines = mc.font.split(Component.literal(run.text), MsdfFontMetrics.wrapUnitsFor(run.wrapWidth, run.size))
+            val lines = font.split(Component.literal(run.text), MsdfFontMetrics.wrapUnitsFor(run.wrapWidth, run.size))
             var lineY = 0f
             for (line in lines) {
-                mc.font.drawInBatch(
+                font.drawInBatch(
                     line, 0f, lineY, run.color, false, pose, bufferSource,
                     Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT
                 )

@@ -3,11 +3,11 @@ package gg.floyd.utils.ui.rendering
 import com.mojang.blaze3d.opengl.GlStateManager
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
-import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.utils.Color.Companion.alpha
 import gg.floyd.utils.Color.Companion.blue
 import gg.floyd.utils.Color.Companion.green
 import gg.floyd.utils.Color.Companion.red
+import gg.floyd.utils.font.ClickGuiFont
 import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.render.DeferredNvgText
 import gg.floyd.utils.render.NvgTextReplay
@@ -23,7 +23,6 @@ import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.system.MemoryUtil.memAlloc
 import org.lwjgl.system.MemoryUtil.memFree
 import java.nio.ByteBuffer
-import java.nio.file.Files
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
@@ -36,16 +35,6 @@ object NVGRenderer {
 
     val defaultFont by lazy(LazyThreadSafetyMode.NONE) {
         Font("Default", mc.resourceManager.getResource(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "font.ttf")).get().open())
-    }
-
-    fun activeFont(): Font {
-        val path = FloydFont.customFontPath()
-        if (FloydFont.isGlobalCustomFontEnabled() && path != null) {
-            return runCatching {
-                Font("Custom:${path.toAbsolutePath()}:${Files.getLastModifiedTime(path).toMillis()}", Files.newInputStream(path))
-            }.getOrDefault(defaultFont)
-        }
-        return defaultFont
     }
 
     private val fontMap = HashMap<Font, NVGFont>()
@@ -385,8 +374,9 @@ object NVGRenderer {
             nvgFontFaceId(vg, getFontID(font))
             return nvgTextBounds(vg, 0f, 0f, text, fontBounds)
         }
-        // Float widths from the live FontSet (design D6) at the replay's exact size/9 mapping.
-        return MsdfFontMetrics.width(text, size)
+        // Float widths from the live FontSet (design D6) at the replay's exact size/9 mapping —
+        // the pinned ClickGUI FontSet, the same one NvgTextReplay draws with.
+        return MsdfFontMetrics.width(text, size, ClickGuiFont.font)
     }
 
     fun drawWrappedString(
@@ -426,9 +416,9 @@ object NVGRenderer {
             nvgTextBoxBounds(vg, 0f, 0f, w, text, bounds)
             return bounds // [minX, minY, maxX, maxY]
         }
-        // Same Font.split wrapping the replay draws with, so the sized box always contains the
-        // drawn text; lines advance size·lineHeight px (the replay's 9·lineHeight font units).
-        val bounds = MsdfFontMetrics.wrappedBounds(text, w, size)
+        // Same Font.split wrapping the replay draws with (the pinned ClickGUI font), so the sized
+        // box always contains the drawn text; lines advance size·lineHeight px (9·lineHeight units).
+        val bounds = MsdfFontMetrics.wrappedBounds(text, w, size, ClickGuiFont.font)
         val height = if (bounds.lineCount == 0) 0f else (bounds.lineCount - 1) * size * lineHeight + size
         return floatArrayOf(0f, 0f, bounds.width, height)
     }
