@@ -1,6 +1,7 @@
 package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.misc.FloydWindowModule
 import org.lwjgl.glfw.GLFW
 import org.lwjgl.glfw.GLFWVidMode
@@ -46,6 +47,8 @@ object FloydRender {
     private var savedWindowedHeight = 720
     /** The window was maximized when borderless engaged; restore re-maximizes instead of losing it. */
     private var savedWindowedMaximized = false
+    private var lastKnownFullscreen: Boolean? = null
+    private var suppressNextWindowedDisable = false
 
     /**
      * Per-tick driver invoked from [FloydWindowModule]'s client-tick handler. Safe to touch GLFW
@@ -54,6 +57,7 @@ object FloydRender {
     @JvmStatic
     fun tickWindowState() {
         applyWindowTitle()
+        reconcileFullscreenTransitions()
         ensureBorderlessState()
     }
 
@@ -105,7 +109,10 @@ object FloydRender {
 
     private fun ensureBorderlessState() {
         val window = mc.window
-        if (window.isFullscreen) return
+        if (window.isFullscreen) {
+            if (borderlessWindowed) requestWindowedBorderlessResume()
+            return
+        }
 
         if (borderlessWindowed) {
             if (lastAppliedBorderless && isBorderlessApplied()) return
@@ -123,10 +130,46 @@ object FloydRender {
     @JvmStatic
     fun setBorderlessWindowed(enabled: Boolean, force: Boolean = false) {
         borderlessWindowed = enabled
+        if (enabled && mc.window.isFullscreen) requestWindowedBorderlessResume()
         if (force) {
             lastAppliedBorderless = false
             ensureBorderlessState()
         }
+    }
+
+    @JvmStatic
+    fun clearBorderlessWindowed(save: Boolean = true) {
+        if (!borderlessWindowed && isWindowDecorated()) return
+        borderlessWindowed = false
+        suppressNextWindowedDisable = false
+        lastAppliedBorderless = false
+        if (!mc.window.isFullscreen && !isWindowDecorated()) {
+            restoreWindowed()
+        }
+        if (save) ModuleManager.saveConfigurations()
+    }
+
+    private fun reconcileFullscreenTransitions() {
+        val fullscreen = mc.window.isFullscreen
+        val previous = lastKnownFullscreen
+        lastKnownFullscreen = fullscreen
+
+        if (previous == null || previous == fullscreen) return
+
+        if (!fullscreen && previous && borderlessWindowed) {
+            if (suppressNextWindowedDisable) {
+                suppressNextWindowedDisable = false
+                lastAppliedBorderless = false
+                return
+            }
+            clearBorderlessWindowed(save = true)
+        }
+    }
+
+    private fun requestWindowedBorderlessResume() {
+        if (suppressNextWindowedDisable) return
+        suppressNextWindowedDisable = true
+        mc.window.toggleFullScreen()
     }
 
     private fun snapshotWindowedBounds() {
