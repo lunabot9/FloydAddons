@@ -301,3 +301,33 @@ Per-feature audits recorded in each entry above. Summary for the cumulative diff
   than claimed verified.
 
 _(pending — per-feature gate d)_
+
+## Spot check (2026-06-11, commit 108e7d2 — fonts/clamp/platform/links session)
+
+Post-session regression sweep over all three arenas (`perf-results/check-20260611/`).
+Environment caveat: machine in active use (window minimized mid-run once — MC's
+10fps minimized limiter produced flat 9.9fps probes until restored via AXMinimized);
+measured borderless 1920x1080, uncapped fps (~500-1200 in-arena vs the baseline's
+~110), so per-SECOND deltas are not comparable to the 2026-06-10 table — per-FRAME
+alloc (MB/s ÷ fps) is, and its run-to-run spreads were tight (0.1-7 KB/f).
+
+| Feature | Δ KB/frame (2026-06-10 final) | Δ KB/frame (today) | verdict |
+|---|---|---|---|
+| Custom Scoreboard | −186.0 | −127.9 | still far cheaper than vanilla; ON-side absolute ~139 vs ~129 KB/f — cross-regime noise scale |
+| Inventory HUD | +38.6 | +40.4 | unchanged |
+| Day Tracker | +8.1 | +7.3 | unchanged |
+| HUD | +0.1 | +0.0 | unchanged |
+| ClickGUI (open) | +169.1 | +135 | IMPROVED ~34 KB/f (deferred-text pooling + pinned single-font replay) |
+| Block Search | +0.5 | +30.8 | regime artifact, see below |
+| X-Ray | +0.2 | +0.7 | unchanged |
+| Mob ESP | +26.5 | +31.2 | unchanged (ents-arena noise floor) |
+
+Block Search at uncapped fps: ON drops 742→155 fps (Δp50 +5.2ms). Sections
+attribution (20s, ON): the entire cost is `RenderBatchManager.Last` (the 10k-box
+geometry flush) p50 5243µs, 3.4KB/frame; `FloydBlockSearch.Extract` is 2µs/104B per
+frame — the arena/pooling fix is intact. At the baseline's GPU-bound ~110fps this
+draw cost hid inside GPU wait (hence "+0.5 KB/f, ON faster"); uncapped it is simply
+exposed. Not a regression — no Block Search code changed this session.
+
+Conclusion: no regressions from the per-surface fonts / scoreboard clamp / platform
+layer / ClickGUI accent work; ClickGUI open-state improved.

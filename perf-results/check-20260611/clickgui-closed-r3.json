@@ -1,0 +1,320 @@
+{
+  "feature": null,
+  "world": null,
+  "seconds": 30.0,
+  "warmup": 10.0,
+  "repeats": 3,
+  "scaffold": {
+    "modId": "floydaddons",
+    "modName": "Floyd Addons",
+    "version": "2.2.0",
+    "minecraftVersion": "1.21.11",
+    "entrypoint": "gg.floyd.FloydAddonsMod",
+    "mixinConfig": "floydaddons.mixins.json",
+    "resourceNamespace": "floydaddons",
+    "activeScaffold": "Floyd Fabric module/config/event/ClickGUI",
+    "vendoredBehaviorSource": "vendor/floydaddons-fabric"
+  },
+  "startedAt": "2026-06-11T18:01:18",
+  "ambient": {
+    "ok": true,
+    "durationMs": 30000.200833,
+    "frames": 27310,
+    "fps": 910.3272392083189,
+    "frameMs": {
+      "p50": 0.856542,
+      "p95": 2.3305,
+      "p99": 2.955375,
+      "max": 8.277959,
+      "min": 0.59725,
+      "avg": 1.098506072244599
+    },
+    "alloc": {
+      "supported": true,
+      "renderThreadBytesPerSecond": 130548971,
+      "renderThreadTotalMB": 3916.495368,
+      "bytesPerFrame": {
+        "p50": 142312,
+        "p95": 142312,
+        "p99": 191152,
+        "max": 307136
+      }
+    },
+    "gc": {
+      "collections": 32,
+      "timeMs": 32
+    },
+    "counters": {
+      "xrayIsOpaqueCalls": 0,
+      "blockSearchBlockChanges": 0,
+      "blockSearchChunkScans": 0,
+      "blockSearchReselects": 0
+    }
+  },
+  "ambientSections": {
+    "ok": true,
+    "durationMs": 15000.46925,
+    "frames": 13270,
+    "fps": 884.6389922101937,
+    "frameMs": {
+      "p50": 0.873417,
+      "p95": 2.398167,
+      "p99": 3.074541,
+      "max": 8.113083,
+      "min": 0.601959,
+      "avg": 1.1304046156744536
+    },
+    "alloc": {
+      "supported": true,
+      "renderThreadBytesPerSecond": 126896461,
+      "renderThreadTotalMB": 1903.506464,
+      "bytesPerFrame": {
+        "p50": 142312,
+        "p95": 142312,
+        "p99": 191200,
+        "max": 307568
+      }
+    },
+    "gc": {
+      "collections": 14,
+      "timeMs": 14
+    },
+    "counters": {
+      "xrayIsOpaqueCalls": 0,
+      "blockSearchBlockChanges": 0,
+      "blockSearchChunkScans": 0,
+      "blockSearchReselects": 0
+    },
+    "sectionsNote": "Inclusive times \u2014 PostHud.* nests under PostHud.total, ClickGUI.textReplay under ClickGUI.nvgPip, BlockSearch.reselect under FloydBlockSearch.Extract; do not sum parents with children. RenderBatchManager.Last is SHARED: it flushes every feature's queued world geometry (ESP boxes/tracers, Block Search batches), so its cost is not attributable to one feature. p50/p95/p99 are log-bucket upper bounds (<= ~9% high); max is exact.",
+    "sections": {
+      "PostHud.total": {
+        "p50us": 327.68,
+        "p95us": 393.216,
+        "p99us": 458.752,
+        "maxUs": 1769.792,
+        "framesSeen": 13270,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 68418,
+        "totalMs": 3707.269418,
+        "msPerSecond": 247.14356305886898
+      },
+      "PostHud.InventoryHud": {
+        "p50us": 196.608,
+        "p95us": 229.376,
+        "p99us": 262.144,
+        "maxUs": 1499.75,
+        "framesSeen": 13270,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 39376,
+        "totalMs": 2404.279301,
+        "msPerSecond": 160.28027263213784
+      },
+      "PostHud.Scoreboard": {
+        "p50us": 40.96,
+        "p95us": 57.344,
+        "p99us": 81.92,
+        "maxUs": 1525.25,
+        "framesSeen": 13270,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 29042,
+        "totalMs": 545.606835,
+        "msPerSecond": 36.372651142230104
+      },
+      "RenderBatchManager.Last": {
+        "p50us": 1.536,
+        "p95us": 3.584,
+        "p99us": 7.168,
+        "maxUs": 17.583,
+        "framesSeen": 13270,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 176,
+        "totalMs": 21.043112,
+        "msPerSecond": 1.4028302481270711
+      },
+      "HudLayer.elements": {
+        "p50us": 1.28,
+        "p95us": 1.536,
+        "p99us": 3.584,
+        "maxUs": 10.458,
+        "framesSeen": 13270,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 80,
+        "totalMs": 8.624023,
+        "msPerSecond": 0.5749168813502283
+      },
+      "FloydMobEsp.Extract": {
+        "p50us": 1.28,
+        "p95us": 1.28,
+        "p99us": 1.28,
+        "maxUs": 9.25,
+        "framesSeen": 13270,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 4.543698,
+        "msPerSecond": 0.30290372416182915
+      },
+      "FloydWindowModule.ClientEnd": {
+        "p50us": 14.336,
+        "p95us": 24.576,
+        "p99us": 32.768,
+        "maxUs": 32.333,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 144,
+        "totalMs": 4.477538,
+        "msPerSecond": 0.2984931954712017
+      },
+      "PostHud.DayTracker": {
+        "p50us": 1.28,
+        "p95us": 1.28,
+        "p99us": 1.28,
+        "maxUs": 8.375,
+        "framesSeen": 13270,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 1.753925,
+        "msPerSecond": 0.11692467553973353
+      },
+      "FloydAutoTotem.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 3.072,
+        "p99us": 6.144,
+        "maxUs": 6.458,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.401963,
+        "msPerSecond": 0.02679669504339006
+      },
+      "FloydTimeChanger.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 2.56,
+        "p99us": 3.584,
+        "maxUs": 4.167,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.348655,
+        "msPerSecond": 0.023242939550041076
+      },
+      "TickTasks.End": {
+        "p50us": 1.28,
+        "p95us": 2.56,
+        "p99us": 5.12,
+        "maxUs": 6.5,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.324469,
+        "msPerSecond": 0.021630589989709823
+      },
+      "FloydSkin.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 2.56,
+        "p99us": 5.12,
+        "maxUs": 5.792,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.321964,
+        "msPerSecond": 0.021463595213863058
+      },
+      "FloydDiscordPresence.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 2.56,
+        "p99us": 3.584,
+        "maxUs": 5.542,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.309999,
+        "msPerSecond": 0.020665953500088007
+      },
+      "FloydLocalControl.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 2.048,
+        "p99us": 5.12,
+        "maxUs": 12.125,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.28799,
+        "msPerSecond": 0.01919873273297767
+      },
+      "FloydUpdateCheckerModule.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 1.792,
+        "p99us": 3.584,
+        "maxUs": 5.792,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.268584,
+        "msPerSecond": 0.017905039870669378
+      },
+      "FloydMobEsp.End": {
+        "p50us": 1.28,
+        "p95us": 2.048,
+        "p99us": 5.12,
+        "maxUs": 5.416,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.257956,
+        "msPerSecond": 0.01719652870192711
+      },
+      "FloydMobEsp.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 2.56,
+        "p99us": 5.12,
+        "maxUs": 5.333,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.252387,
+        "msPerSecond": 0.016825273649356
+      },
+      "FloydFocusLossPrevention.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 2.048,
+        "p99us": 3.072,
+        "maxUs": 5.0,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.24704,
+        "msPerSecond": 0.01646881813380605
+      },
+      "FloydTaskbarIconModule.ClientEnd": {
+        "p50us": 1.28,
+        "p95us": 1.536,
+        "p99us": 3.072,
+        "maxUs": 4.291,
+        "framesSeen": 300,
+        "totalFrames": 13270,
+        "callsPerFrame": 1.0,
+        "bytesPerFrame": 0,
+        "totalMs": 0.238587,
+        "msPerSecond": 0.01590530242912234
+      }
+    }
+  }
+}
