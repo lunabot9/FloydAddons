@@ -2,6 +2,7 @@ package gg.floyd.features.impl.camera
 
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.features.ModuleManager
+import gg.floyd.features.impl.render.FloydXray
 import net.minecraft.client.CameraType
 import kotlin.math.cos
 import kotlin.math.pow
@@ -88,6 +89,11 @@ object FloydCamera {
     fun endFreecam() {
         freecam = false
         resetFreecamVelocity()
+        // Flying the detached camera through terrain leaves stale culling state behind: section
+        // occlusion graph computed at the freecam vantage, faces dropped while the camera was inside
+        // blocks, particles drawn through walls. Snapping the camera back does not recompute it, so
+        // force a full chunk rebuild on the render thread (same flush X-Ray uses on toggle).
+        FloydXray.rebuildChunks()
     }
 
     /** Invoked by [FloydFreelook.onEnable]: set third-person-back view. */
