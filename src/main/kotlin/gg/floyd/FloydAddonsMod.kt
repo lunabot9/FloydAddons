@@ -6,7 +6,9 @@ import gg.floyd.events.core.EventBus
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.misc.FloydDiscordPresence
 import gg.floyd.features.impl.misc.FloydLocalControl
+import gg.floyd.mixin.FloydMixinErrorHandler
 import gg.floyd.utils.IrisCompatability
+import gg.floyd.utils.errorMessage
 import gg.floyd.utils.font.MsdfPipelines
 import gg.floyd.utils.handlers.TickTasks
 import gg.floyd.utils.render.ItemStateRenderer
@@ -20,6 +22,7 @@ import kotlinx.coroutines.launch
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry
 import net.minecraft.client.Minecraft
 import org.apache.logging.log4j.LogManager
@@ -53,6 +56,9 @@ object FloydAddonsMod : ClientModInitializer {
     const val MOD_VERSION = "2.2.0"
 
     val scope = CoroutineScope(SupervisorJob() + EmptyCoroutineContext)
+
+    /** Guards the one-shot in-game notice about features a mod conflict disabled (see below). */
+    private var mixinConflictNoticeShown = false
 
     override fun onInitializeClient() {
         // Register the MSDF text pipelines before the boot resource reload so ShaderManager's
@@ -92,6 +98,18 @@ object FloydAddonsMod : ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register {
             onClientStopping()
         }
+
+        // If a mod/launcher conflict forced FloydMixinErrorHandler to skip a mixin (instead of
+        // crashing), tell the player which feature is unavailable once chat exists.
+        ClientPlayConnectionEvents.JOIN.register { _, _, _ -> announceMixinConflictsOnce() }
+    }
+
+    private fun announceMixinConflictsOnce() {
+        if (mixinConflictNoticeShown) return
+        val disabled = FloydMixinErrorHandler.disabledFeatures()
+        if (disabled.isEmpty()) return
+        mixinConflictNoticeShown = true
+        errorMessage("Disabled due to a conflict with another mod: ${disabled.joinToString(", ")}.")
     }
 
     internal fun onClientStopping() {

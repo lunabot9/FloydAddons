@@ -20,7 +20,8 @@
     ]
   },
   "mixins": [
-    "floydaddons.mixins.json"
+    "floydaddons.mixins.json",
+    "floydaddons.loader.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",

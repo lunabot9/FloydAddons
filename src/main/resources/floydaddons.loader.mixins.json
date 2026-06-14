@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "gg.floyd.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 0
+  },
+  "errorHandlers": [
+    "gg.floyd.mixin.FloydMixinErrorHandler"
+  ],
+  "client": [
+    "mixins.FloydFabricLoaderMixin"
+  ]
+}
