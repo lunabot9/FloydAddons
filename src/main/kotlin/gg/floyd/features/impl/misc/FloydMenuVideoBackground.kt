@@ -12,69 +12,73 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.resources.Identifier
-import org.jcodec.api.awt.AWTFrameGrab
+import org.jcodec.api.FrameGrab
 import org.jcodec.common.io.NIOUtils
+import org.jcodec.scale.AWTUtil
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicReference
-import java.util.zip.ZipFile
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.ImageWriteParam
 import kotlin.io.path.extension
 import kotlin.io.path.nameWithoutExtension
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 /**
  * Renders the configured media (MP4 / frame-sequence zip / still image) as a looping fullscreen
  * background behind Floyd's custom menus and the vanilla default-background screens.
  *
- * Memory model (the perf-critical part — the previous impl held every decoded frame as a NativeImage
- * forever, ~360 MB resident that was never freed once decoded):
- *  - Frames live in RAM only as their COMPRESSED JPEG/PNG bytes (~20 MB for a 40 s loop), decoded
- *    once from the MP4 into an on-disk cache so re-launches skip the slow jcodec pass.
- *  - A single background coroutine JIT-decodes only the *currently visible* frame into a
- *    double-buffered NativeImage; the render thread uploads it to one [DynamicTexture].
- *  - When no menu is on screen the decoder idles, and the GPU texture + decoded NativeImage are
- *    freed ([tick]) so an in-game session pays nothing but the small resident byte cache.
+ * Decode model:
+ *  - The MP4 is decoded ONCE into an on-disk JPEG frame cache, sampled to [TARGET_FPS] using the
+ *    source's real frame rate so playback speed is correct (a fixed every-2nd-frame guess made a
+ *    60 fps source play at half speed). The per-frame duration is stored alongside the cache.
+ *  - At runtime nothing but the frame *file list* is held; a background coroutine streams the single
+ *    currently-visible frame off disk, decodes it into a double-buffered NativeImage, and the render
+ *    thread uploads one [DynamicTexture]. Resident memory is ~2 decoded frames, not the whole clip.
+ *  - When no menu is on screen the decoder stops and the GPU texture + decoded image are freed, so an
+ *    in-game session pays nothing (the OS keeps the JPEG cache warm for an instant re-open).
  */
 object FloydMenuVideoBackground {
-    private const val TARGET_FPS = 15
-    private const val FRAME_DURATION_MS = 1000L / TARGET_FPS
-    /** Cap the loop length so the resident compressed-byte cache stays bounded (~20-25 MB). */
-    private const val MAX_FRAMES = 600
-    /** Max decoded frame size; upscaled with LINEAR filtering to fill the screen. */
-    private const val MAX_WIDTH = 960
-    private const val MAX_HEIGHT = 540
-    /** Bump when the decode parameters change so stale on-disk caches are re-decoded. */
-    private const val CACHE_VERSION = "v2"
+    private const val TARGET_FPS = 30
+    /** ~30 s loop at 30 fps; bounds the on-disk cache. */
+    private const val MAX_FRAMES = 900
+    /** Decoded/cached frame size; upscaled with LINEAR filtering to fill the screen. */
+    private const val MAX_WIDTH = 1280
+    private const val MAX_HEIGHT = 720
+    private const val JPEG_QUALITY = 0.92f
+    /** Bump when decode params change so stale caches are rebuilt. */
+    private const val CACHE_VERSION = "v3"
+    private const val META_FILE = "meta.txt"
     /** How long after the last [render] before we treat the menu as gone and free GPU state. */
     private const val IDLE_GRACE_MS = 400L
 
     private val textureId = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "menu/background")
 
-    // --- resident compressed frames (published by the loader coroutine, read everywhere) ---
     @Volatile private var loaded: Loaded? = null
     /** Path+mtime key of the media currently loaded OR being loaded; set on the render thread. */
     @Volatile private var currentKey: String? = null
 
-    // --- decoded double-buffer (guarded by decodeLock) ---
+    // decoded double-buffer (guarded by decodeLock)
     private val decodeLock = Any()
     private var readyImage: NativeImage? = null
     private var readyIndex = -1
     private var decoderJob: Job? = null
 
-    // --- GPU texture (render thread only) ---
+    // GPU texture (render thread only)
     private var texture: LinearMenuTexture? = null
     private var uploadedIndex = -1
 
     @Volatile private var lastRenderMs = 0L
 
-    private class Loaded(val frames: List<ByteArray>, val frameDurationMs: Long) {
-        val loopMs: Long = (frames.size * frameDurationMs).coerceAtLeast(frameDurationMs)
+    private class Loaded(val frameCount: Int, val frameDurationMs: Long, val loader: (Int) -> ByteArray?) {
+        val loopMs: Long = (frameCount * frameDurationMs).coerceAtLeast(frameDurationMs)
     }
 
     /** @return true if a media frame was drawn (caller may fall back to vanilla if false). */
@@ -101,18 +105,28 @@ object FloydMenuVideoBackground {
     fun hasMedia(): Boolean = resolveMediaPath() != null
 
     /**
-     * Runs every client tick. When no replaced-background menu has rendered recently, free the GPU
-     * texture and the decoded frame (the decoder coroutine idles itself off [lastRenderMs]). The
-     * compressed byte cache stays resident so re-opening a menu is instant.
+     * Runs every client tick while the module is enabled. When no replaced-background menu has
+     * rendered recently, stop the decoder and free GPU/decoded state. [render] restarts the decoder
+     * via [ensureDecoder] when a menu returns.
      */
     @JvmStatic
     fun tick() {
         if (System.currentTimeMillis() - lastRenderMs < IDLE_GRACE_MS) return
-        // No menu on screen: stop the decoder coroutine and free GPU/decoded state so an in-game
-        // session pays nothing. render() restarts the decoder via ensureDecoder when a menu returns.
         decoderJob?.cancel()
         decoderJob = null
         if (texture == null && readyImage == null) return
+        releaseGpuState()
+    }
+
+    /**
+     * Disable path: stop the decoder and free GPU/decoded state immediately (the per-tick freer is
+     * unsubscribed with the module, so it can't do this). Keeps the warm frame-list cache + key so
+     * re-enabling resumes from disk in a frame or two instead of re-listing the whole clip.
+     */
+    @JvmStatic
+    fun shutdown() {
+        decoderJob?.cancel()
+        decoderJob = null
         releaseGpuState()
     }
 
@@ -133,7 +147,6 @@ object FloydMenuVideoBackground {
         val key = mediaKey(path)
         if (key == currentKey) return
         currentKey = key
-        // New media selected: drop the old resident frames + GPU state and load fresh.
         loaded = null
         releaseGpuState()
         FloydAddonsMod.scope.launch { loadMedia(path, key) }
@@ -150,61 +163,63 @@ object FloydMenuVideoBackground {
             FloydAddonsMod.logger.warn("[FloydMenuVideoBackground] Failed to load menu media: $path", it)
             null
         }
-        // A newer selection superseded us while decoding — discard.
         if (currentKey != key) return
-        if (result != null && result.frames.isNotEmpty()) loaded = result
+        if (result != null && result.frameCount > 0) loaded = result
     }
 
     private fun loadMp4(path: Path): Loaded {
         val cacheDir = mp4CacheDirectory(path)
         Files.createDirectories(cacheDir)
-        if (!directoryHasFrames(cacheDir)) decodeMp4ToCache(path, cacheDir)
-        return Loaded(readFrameBytes(cacheDir), FRAME_DURATION_MS)
+        val frameDurationMs = if (!directoryHasFrames(cacheDir)) decodeMp4ToCache(path, cacheDir)
+        else readCachedFrameDuration(cacheDir)
+        val framePaths = listFramePaths(cacheDir)
+        // Stream frames off disk so the whole clip never sits in RAM.
+        return Loaded(framePaths.size, frameDurationMs) { i -> framePaths.getOrNull(i)?.let(Files::readAllBytes) }
     }
 
-    private fun decodeMp4ToCache(path: Path, cacheDir: Path) {
+    /** @return the per-frame duration (ms) for correct-speed playback. */
+    private fun decodeMp4ToCache(path: Path, cacheDir: Path): Long {
         NIOUtils.readableChannel(path.toFile()).use { channel ->
-            val grab = AWTFrameGrab.createAWTFrameGrab(channel)
-            var sampled = 0
+            val grab = FrameGrab.createFrameGrab(channel)
+            val meta = grab.videoTrack.meta
+            val sourceFps = if (meta.totalFrames > 0 && meta.totalDuration > 0.0) meta.totalFrames / meta.totalDuration else 30.0
+            val sampleEvery = max(1, (sourceFps / TARGET_FPS).roundToInt())
+            val frameDurationMs = (1000.0 * sampleEvery / sourceFps).roundToLong().coerceAtLeast(1L)
+            var source = 0
             var written = 0
             while (written < MAX_FRAMES) {
-                val frame = runCatching { grab.getFrame() }.getOrNull() ?: break
-                // jcodec gives ~source-fps frames; keep every other one (~30 fps source -> ~15 fps).
-                if (sampled++ % 2 != 0) continue
-                val jpg = toJpegCompatible(scaleFrame(frame))
-                val out = cacheDir.resolve("frame_${(written + 1).toString().padStart(4, '0')}.jpg").toFile()
-                ImageIO.write(jpg, "jpg", out)
+                val picture = runCatching { grab.nativeFrame }.getOrNull() ?: break
+                if (source++ % sampleEvery != 0) continue
+                val jpg = toJpegCompatible(scaleFrame(AWTUtil.toBufferedImage(picture)))
+                writeJpeg(jpg, cacheDir.resolve("frame_${(written + 1).toString().padStart(4, '0')}.jpg").toFile())
                 written++
             }
+            Files.writeString(cacheDir.resolve(META_FILE), frameDurationMs.toString())
+            return frameDurationMs
         }
     }
 
+    private fun readCachedFrameDuration(cacheDir: Path): Long =
+        runCatching { Files.readString(cacheDir.resolve(META_FILE)).trim().toLong() }
+            .getOrDefault((1000L / TARGET_FPS))
+
     private fun loadZip(path: Path): Loaded {
-        ZipFile(path.toFile()).use { zip ->
-            val frames = zip.entries().asSequence()
+        val frames = java.util.zip.ZipFile(path.toFile()).use { zip ->
+            zip.entries().asSequence()
                 .filter { !it.isDirectory }
                 .filter { it.name.lowercase().let { n -> n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".png") } }
                 .sortedBy { it.name }
                 .take(MAX_FRAMES)
                 .map { entry -> zip.getInputStream(entry).use { it.readBytes() } }
                 .toList()
-            return Loaded(frames, FRAME_DURATION_MS)
         }
+        return Loaded(frames.size, 1000L / TARGET_FPS) { i -> frames.getOrNull(i) }
     }
 
-    private fun loadStill(path: Path): Loaded =
-        Loaded(listOf(Files.readAllBytes(path)), FRAME_DURATION_MS)
-
-    private fun readFrameBytes(cacheDir: Path): List<ByteArray> =
-        Files.list(cacheDir).use { stream ->
-            stream
-                .filter { Files.isRegularFile(it) }
-                .filter { it.fileName.toString().lowercase().let { n -> n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".png") } }
-                .sorted()
-                .limit(MAX_FRAMES.toLong())
-                .map { Files.readAllBytes(it) }
-                .toList()
-        }
+    private fun loadStill(path: Path): Loaded {
+        val bytes = Files.readAllBytes(path)
+        return Loaded(1, 1000L / TARGET_FPS) { bytes }
+    }
 
     // ---------------------------------------------------------------- decoding ----
 
@@ -216,14 +231,14 @@ object FloydMenuVideoBackground {
             while (isActive) {
                 val set = loaded
                 val visible = System.currentTimeMillis() - lastRenderMs < IDLE_GRACE_MS
-                if (set == null || set.frames.isEmpty() || !visible) {
+                if (set == null || set.frameCount == 0 || !visible) {
                     lastDecoded = -1
                     delay(120)
                     continue
                 }
                 val idx = indexForNow(set)
                 if (idx != lastDecoded) {
-                    val image = runCatching { decodeFrame(set.frames[idx]) }.getOrNull()
+                    val image = runCatching { set.loader(idx)?.let(::decodeFrame) }.getOrNull()
                     if (image != null) {
                         synchronized(decodeLock) {
                             readyImage?.close()
@@ -233,15 +248,14 @@ object FloydMenuVideoBackground {
                         lastDecoded = idx
                     }
                 }
-                // Single-frame stills need no further work; otherwise pace to the frame rate.
-                if (set.frames.size <= 1) delay(250) else delay(8)
+                if (set.frameCount <= 1) delay(250) else delay(4)
             }
         }
     }
 
     private fun indexForNow(set: Loaded): Int {
         val elapsed = (System.currentTimeMillis() % set.loopMs).coerceAtLeast(0L)
-        return min(set.frames.size - 1, (elapsed / set.frameDurationMs).toInt())
+        return min(set.frameCount - 1, (elapsed / set.frameDurationMs).toInt())
     }
 
     private fun decodeFrame(bytes: ByteArray): NativeImage =
@@ -253,13 +267,12 @@ object FloydMenuVideoBackground {
         synchronized(decodeLock) {
             val image = readyImage ?: return
             if (readyIndex == uploadedIndex && texture != null) return
-            val tex = texture ?: createTexture(image.width, image.height).also { texture = it }
-            if (tex.pixels?.width != image.width || tex.pixels?.height != image.height) {
+            if (texture != null && (texture?.pixels?.width != image.width || texture?.pixels?.height != image.height)) {
                 releaseGpuState()
-                texture = createTexture(image.width, image.height)
             }
-            texture?.pixels?.copyFrom(image)
-            texture?.upload()
+            val tex = texture ?: createTexture(image.width, image.height).also { texture = it }
+            tex.pixels?.copyFrom(image)
+            tex.upload()
             uploadedIndex = readyIndex
         }
     }
@@ -292,12 +305,16 @@ object FloydMenuVideoBackground {
             .resolve("${CACHE_VERSION}_${path.nameWithoutExtension.replace(Regex("[^A-Za-z0-9._-]"), "_")}")
 
     private fun directoryHasFrames(path: Path): Boolean =
-        Files.list(path).use { stream ->
-            stream.anyMatch {
-                Files.isRegularFile(it) &&
-                    it.fileName.toString().lowercase().let { n -> n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".png") }
-            }
+        Files.list(path).use { stream -> stream.anyMatch(::isFrameFile) }
+
+    private fun listFramePaths(cacheDir: Path): List<Path> =
+        Files.list(cacheDir).use { stream ->
+            stream.filter(::isFrameFile).sorted().limit(MAX_FRAMES.toLong()).toList()
         }
+
+    private fun isFrameFile(p: Path): Boolean =
+        Files.isRegularFile(p) &&
+            p.fileName.toString().lowercase().let { n -> n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".png") }
 
     // ---------------------------------------------------------------- image utils ----
 
@@ -312,6 +329,23 @@ object FloydMenuVideoBackground {
         graphics.drawImage(image, 0, 0, width, height, null)
         graphics.dispose()
         return scaled
+    }
+
+    private fun writeJpeg(image: BufferedImage, file: java.io.File) {
+        val writer = ImageIO.getImageWritersByFormatName("jpg").next()
+        try {
+            javax.imageio.stream.FileImageOutputStream(file).use { out ->
+                writer.output = out
+                val params = writer.defaultWriteParam
+                if (params.canWriteCompressed()) {
+                    params.compressionMode = ImageWriteParam.MODE_EXPLICIT
+                    params.compressionQuality = JPEG_QUALITY
+                }
+                writer.write(null, IIOImage(image, null, null), params)
+            }
+        } finally {
+            writer.dispose()
+        }
     }
 
     private fun toJpegCompatible(image: BufferedImage): BufferedImage {

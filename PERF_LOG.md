@@ -365,3 +365,36 @@ decode is off the render thread, so it adds no per-frame churn.
 Default media: bundled a 960×540 re-encode of the source MP4 as a 4.4 MB jar resource
 (`assets/floydaddons/menu/default-background.mp4`), seeded to `config/floydaddons/mainmenu.mp4`
 on first run when no media exists.
+
+### 2026-06-14 (round 2) — correct speed/fps/quality + disk-streaming + rigorous A/B
+
+Round 1 shipped wrong: the source MP4 is **60 fps**, but decode kept "every 2nd frame"
+and played at 15 fps → **half speed** and choppy, at 960x540 (soft). Fixed:
+- Read the source fps from jcodec and sample to 30 fps; store per-frame duration
+  (meta.txt=33 ms) so playback speed is correct.
+- Cache/display at 1280x720, JPEG q0.92 (sharp).
+- **Disk-stream** frames: hold only the file list, a background coroutine reads+decodes
+  the single visible frame off the JPEG cache → resident RAM is ~2 decoded frames, not
+  the clip (no resident byte cache at all). Cache on disk ~102 MB for the 30 s/900-frame
+  720p loop (reclaimable; OS keeps it warm).
+- Toggle without restart: module onEnable swaps TitleScreen→FloydMainMenuScreen,
+  onDisable reverts + frees GPU/decoder but keeps the warm frame-list so re-enable
+  resumes in a frame or two.
+
+A/B via scripts/perf-protocol.py, perfarena-hud, borderless 1920x1080, vsync off,
+maxFps 260. **POST same-build on/off** (Custom Main Menu), 3 repeats — the clean feature
+isolation:
+
+| metric | OFF | ON | delta | cross-repeat spread | finding? |
+|---|---|---|---|---|---|
+| p50 ms   | 0.739 | 0.736 | -0.003 | 0.018 | no |
+| p95 ms   | 3.673 | 3.674 | +0.001 | 0.043 | no |
+| p99 ms   | 4.211 | 4.175 | -0.036 | 0.084 | no |
+| alloc MB/s | 115.19 | 115.86 | +0.67 | 2.80 | no |
+
+Every delta < spread → the menu module has **no measurable in-game cost**. PRE (e2306e0,
+feature absent) ambient in the same arena: p50 ~0.90 ms, alloc ~100 MB/s — same ballpark;
+the ~15 MB/s alloc difference vs POST is cross-session noise (separate launches/JIT/thermal),
+not the feature (the same-build on/off pins the feature's alloc at +0.67 MB/s). Menu screen
+itself is capped to ~60 fps by MC's vanilla OUT_OF_LEVEL_MENU limiter — fine for 30 fps video
+(2 render frames per video frame, no judder).

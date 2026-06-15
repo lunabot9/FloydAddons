@@ -75,6 +75,22 @@ object FloydCustomMainMenu : Module(
         FloydAddonsMod.scope.launch { runCatching { seedDefaultMediaIfMissing() } }
     }
 
+    // Live toggle without a restart: swap the visible title screen to match the new state.
+    override fun onEnable() {
+        super.onEnable()
+        runCatching {
+            if (mc.screen is TitleScreen) mc.setScreen(FloydMainMenuScreen())
+        }
+    }
+
+    override fun onDisable() {
+        super.onDisable()
+        runCatching {
+            FloydMenuVideoBackground.shutdown()
+            if (mc.screen is FloydMainMenuScreen) mc.setScreen(TitleScreen())
+        }
+    }
+
     /**
      * Copies the bundled default video into the config folder as `mainmenu.mp4` when the user has no
      * media configured and none of the convention files exist yet — i.e. a fresh install or an empty
