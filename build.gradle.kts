@@ -40,6 +40,11 @@ dependencies {
     include("club.minnced:java-discord-rpc:v2.0.1")
     include("club.minnced:discord-rpc-release:v3.3.0")
 
+    implementation("org.jcodec:jcodec:0.2.5")
+    include("org.jcodec:jcodec:0.2.5")
+    implementation("org.jcodec:jcodec-javase:0.2.5")
+    include("org.jcodec:jcodec-javase:0.2.5")
+
     modCompileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
 
     property("minecraft_lwjgl_version").let { lwjglVersion ->

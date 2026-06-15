@@ -4,6 +4,7 @@ import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
+import gg.floyd.events.ScreenEvent
 import gg.floyd.events.TickEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
@@ -11,6 +12,7 @@ import gg.floyd.features.Module
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.openDirectory
+import net.minecraft.client.gui.screens.TitleScreen
 import java.nio.file.Path
 
 /**
@@ -31,18 +33,44 @@ object FloydSpoofClientBrand : Module(
 object FloydCustomMainMenu : Module(
     name = "Custom Main Menu",
     category = Category.MISC,
-    description = "Uses config/floydaddons/mainmenu.png as the title background.",
+    description = "Replaces the vanilla title flow with Floyd's NVG-driven menu and custom media background.",
     toggled = true,
 ) {
-    private val openFile by ActionSetting("Open File", desc = "Opens the folder holding mainmenu.png.") {
+    var mediaPath by StringSetting(
+        "Media Path",
+        "C:\\Users\\gobsi\\AppData\\Roaming\\ModrinthApp\\profiles\\67\\resourcepacks\\Azusa Swimsuit 1.20.0-1.zip",
+        260,
+        desc = "Absolute path to the frame-sequence zip, MP4, or image used behind Floyd's custom menus."
+    )
+
+    private val openFile by ActionSetting("Open File", desc = "Opens the folder holding the configured main-menu media.") {
         modMessage(
-            if (openDirectory(FloydAddonsMod.configFile.toPath())) "Opened FloydAddons config folder."
-            else "Could not open config folder."
+            if (openDirectory(mediaDirectory())) "Opened main-menu media folder."
+            else "Could not open main-menu media folder."
         )
+    }
+
+    init {
+        on<ScreenEvent.Open> {
+            if (!enabled) return@on
+            if (screen is FloydMainMenuScreen) return@on
+            if (screen is TitleScreen && mc.screen === screen) mc.setScreen(FloydMainMenuScreen())
+        }
+        on<TickEvent.ClientEnd> {
+            FloydMenuVideoBackground.tick()
+        }
     }
 
     @JvmStatic
     fun mainMenuPath(): Path = FloydAddonsMod.configFile.toPath().resolve("mainmenu.png")
+
+    @JvmStatic
+    fun configuredMediaPath(): Path? = runCatching {
+        mediaPath.takeIf { it.isNotBlank() }?.let(Path::of)
+    }.getOrNull()
+
+    private fun mediaDirectory(): Path =
+        configuredMediaPath()?.parent ?: FloydAddonsMod.configFile.toPath()
 }
 
 object FloydTaskbarIconModule : Module(
