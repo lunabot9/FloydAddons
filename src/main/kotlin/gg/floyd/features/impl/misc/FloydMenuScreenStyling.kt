@@ -1,31 +1,45 @@
 package gg.floyd.features.impl.misc
 
-import gg.floyd.FloydAddonsMod
-import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.screens.ChatScreen
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+
 object FloydMenuScreenStyling {
-    @JvmStatic
-    fun shouldReplaceBackground(screen: Screen): Boolean = false
 
+    /**
+     * Whether Floyd should paint its media background behind [screen] instead of the vanilla
+     * panorama / blurred world. Targets every "default background" screen — the whole title flow
+     * out of game and the pause/options/settings flow in game.
+     *
+     * Uses only `is` type checks (NOT class-name strings): the shipped jar runs on intermediary
+     * mappings where e.g. OptionsScreen is `net.minecraft.class_429`, so a package-name string match
+     * silently fails at runtime — the bug that left the in-game options screen unstyled.
+     *
+     * Excluded: container/inventory and chat screens (they intentionally show the live world), and
+     * Floyd's own screens (they draw their own background). The hook fires from
+     * `Screen.renderBackground`, so screens that fully override it are unaffected regardless.
+     */
     @JvmStatic
-    fun renderBackground(context: GuiGraphics, partialTick: Float) = Unit
-
-    @JvmStatic
-    fun renderOverlay(screen: Screen, context: GuiGraphics, partialTick: Float) {
-        return
+    fun shouldReplaceBackground(screen: Screen): Boolean {
+        if (!FloydCustomMainMenu.enabled || !FloydMenuVideoBackground.hasMedia()) return false
+        if (screen is FloydMainMenuScreen) return false
+        if (screen is AbstractContainerScreen<*>) return false
+        if (screen is ChatScreen) return false
+        if (isFloydScreen(screen)) return false
+        return true
     }
 
-    internal fun drawBrandBlock(title: String, width: Float, height: Float, alpha: Float) {
-        val headerX = width * 0.065f
-        val headerY = height * 0.07f
-        drawWord("FloydAddons", headerX, headerY, 34f, alpha)
-        val headerWidth = NVGRenderer.textWidth("FloydAddons", 34f, NVGRenderer.defaultFont)
-        val version = "v${FloydAddonsMod.MOD_VERSION}"
-        NVGRenderer.text(version, headerX + headerWidth + 10f, headerY + 18f, 12f, colorGray(210, alpha * 0.92f), NVGRenderer.defaultFont)
-        NVGRenderer.text(title, headerX, headerY + 38f, 18f, colorGray(210, alpha), NVGRenderer.defaultFont)
-    }
+    /** @return true if the media background was drawn (so the caller cancels the vanilla one). */
+    @JvmStatic
+    fun renderBackground(context: GuiGraphics): Boolean = FloydMenuVideoBackground.render(context)
+
+    @JvmStatic
+    fun renderOverlay(screen: Screen, context: GuiGraphics, partialTick: Float) = Unit
+
+    private fun isFloydScreen(screen: Screen): Boolean =
+        screen.javaClass.name.startsWith("gg.floyd.")
 
     internal fun drawWord(text: String, x: Float, y: Float, size: Float, alpha: Float) {
         NVGRenderer.text(text, x, y, size, colorGray(210, alpha), NVGRenderer.defaultFont)

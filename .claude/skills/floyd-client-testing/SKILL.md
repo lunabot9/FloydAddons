@@ -123,7 +123,7 @@ Auth, three equivalent forms: `Authorization: Bearer <token>` header,
 - `POST /chat {message}` — leading `/` runs a command; **`§` in chat on servers = kick**
 - `POST /look {yaw,pitch | deltaYaw,deltaPitch}` · `POST /hotbar {slot}`
 - `POST /key {key:forward|back|left|right|jump|sneak|sprint|attack|use|tab, pressed|durationMs}`
-- `POST /screen {screen:"clickgui"|"legacy"|"hud"|"close"}`
+- `POST /screen {screen:"clickgui"|"legacy"|"hud"|"pause"|"options"|"close"}` (`pause`/`options` open the vanilla in-game Game Menu / Options — the only way to drive in-game menu screens, since ESC is not a `/key` keybind)
 - `POST /mouse {event:move|click|down|up|drag|scroll, x,y,...}` — **default coord space = raw screenshot px** (auto-converted); pass `coordinateSpace:"gui"` for gui-scaled coords (= screenshot px ÷ `local:devicePixelRatio`)
 - `POST /type {text, clear?, submit?}` · `POST /replace-text {...}`
 - `POST /screenshot {fileName}` — must end `.png`, no path separators/`..`; saved to `<gameDir>/screenshots/<fileName>`; response includes the absolute `path` (never compute it yourself); 5 s timeout → `screenshot_timeout`

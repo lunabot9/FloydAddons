@@ -331,3 +331,37 @@ exposed. Not a regression — no Block Search code changed this session.
 
 Conclusion: no regressions from the per-surface fonts / scoreboard clamp / platform
 layer / ClickGUI accent work; ClickGUI open-state improved.
+
+---
+
+## 2026-06-14 — MP4 menu background (wire-up + memory rewrite)
+
+Fixed the upstream "Test" menu-video feature (it never rendered, buttons were dead)
+and rewrote its frame model. **Old design held every decoded frame as a resident
+NativeImage forever** (up to 180×960×540×4 ≈ 360 MB, never freed — `tick()`'s reset
+was dead code), which is the "heavy while in-game" hit reported. **New design**: keep
+frames only as compressed JPEG bytes (~24 MB for the 600-frame/40s cap), JIT-decode the
+single visible frame on a background coroutine into a double buffer, upload one
+DynamicTexture on the render thread; on leaving a menu, cancel the decoder and free the
+GPU texture + decoded image (compressed bytes stay resident for instant re-open).
+
+Measurement: 'floyd pvp' instance, dirt world, borderless 1920×1080, vsync off,
+maxFps 260, focus constant. Same-build A/B (cleanest feature isolation — `setModuleEnabled
+"custom main menu"` on/off), 3 repeats each, in-game with no menu open (video already
+visited+freed):
+
+| state | p50 ms | p95 ms | p99 ms | alloc MB/s |
+|---|---|---|---|---|
+| feature ON  | 1.19 / 1.19 / 1.51 | ~3.4–3.8 | ~4.3–4.6 | 100 / 99 / 66 |
+| feature OFF | 1.05 / 1.28 / 1.19 | ~3.3–3.8 | ~4.2–4.6 | 97 / 87 / 93 |
+
+ON vs OFF deltas are smaller than the run-to-run spread → **no measurable in-game cost**
+(the alloc is the world itself, identical both ways). The decoder is stopped and all
+GPU/decoded state freed when no menu is on screen, so in-game gameplay pays nothing but
+the ~24 MB resident byte cache. Menu screen (video actively playing): stable ~57 fps
+(MC's menu framerate throttle; p99 17.83 ms, no hitches) at **1.2 MB/s** alloc — JPEG
+decode is off the render thread, so it adds no per-frame churn.
+
+Default media: bundled a 960×540 re-encode of the source MP4 as a 4.4 MB jar resource
+(`assets/floydaddons/menu/default-background.mp4`), seeded to `config/floydaddons/mainmenu.mp4`
+on first run when no media exists.

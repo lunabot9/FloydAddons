@@ -15,12 +15,8 @@ public abstract class FloydMenuScreenMixin {
     private void floydaddons$renderMenuBackground(GuiGraphics context, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         Screen screen = (Screen) (Object) this;
         if (!FloydMenuScreenStyling.shouldReplaceBackground(screen)) return;
-        FloydMenuScreenStyling.renderBackground(context, partialTick);
-        ci.cancel();
-    }
-
-    @Inject(method = "renderWithTooltipAndSubtitles", at = @At("TAIL"))
-    private void floydaddons$renderMenuOverlay(GuiGraphics context, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-        FloydMenuScreenStyling.renderOverlay((Screen) (Object) this, context, partialTick);
+        // Only cancel the vanilla background once the media frame is actually on screen; while the
+        // first frames are still decoding, let vanilla draw so there is no black flash.
+        if (FloydMenuScreenStyling.renderBackground(context)) ci.cancel();
     }
 }

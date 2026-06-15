@@ -770,6 +770,8 @@ object FloydLocalControl : Module(
                 "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(LegacyFloydClickGUI.openHub())
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
+                "pause", "pausemenu", "gamemenu" -> mc.setScreen(net.minecraft.client.gui.screens.PauseScreen(true))
+                "options", "settings" -> mc.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(mc.screen ?: net.minecraft.client.gui.screens.PauseScreen(true), mc.options))
                 "close", "none" -> mc.setScreen(null)
                 else -> throw IllegalArgumentException("unknown_screen")
             }

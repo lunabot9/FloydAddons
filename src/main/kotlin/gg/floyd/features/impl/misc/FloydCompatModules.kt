@@ -12,7 +12,9 @@ import gg.floyd.features.Module
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.openDirectory
+import kotlinx.coroutines.launch
 import net.minecraft.client.gui.screens.TitleScreen
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -38,9 +40,9 @@ object FloydCustomMainMenu : Module(
 ) {
     var mediaPath by StringSetting(
         "Media Path",
-        "C:\\Users\\gobsi\\AppData\\Roaming\\ModrinthApp\\profiles\\67\\resourcepacks\\Azusa Swimsuit 1.20.0-1.zip",
+        "",
         260,
-        desc = "Absolute path to the frame-sequence zip, MP4, or image used behind Floyd's custom menus."
+        desc = "Absolute path to the MP4, frame-sequence zip, or image behind Floyd's custom menus. Leave blank to use the seeded mainmenu.mp4 in the config folder."
     )
 
     private val openFile by ActionSetting("Open File", desc = "Opens the folder holding the configured main-menu media.") {
@@ -50,6 +52,9 @@ object FloydCustomMainMenu : Module(
         )
     }
 
+    @Volatile
+    private var seedAttempted = false
+
     init {
         on<ScreenEvent.Open> {
             if (!enabled) return@on
@@ -57,8 +62,30 @@ object FloydCustomMainMenu : Module(
             if (screen is TitleScreen && mc.screen === screen) mc.setScreen(FloydMainMenuScreen())
         }
         on<TickEvent.ClientEnd> {
+            ensureDefaultMediaSeeded()
             FloydMenuVideoBackground.tick()
         }
+    }
+
+    /** First-tick (real client) hook so object init never touches [FloydAddonsMod] (keeps unit tests JVM-safe). */
+    private fun ensureDefaultMediaSeeded() {
+        if (seedAttempted) return
+        seedAttempted = true
+        // Ship a default background on first run so the custom menu is never blank out of the box.
+        FloydAddonsMod.scope.launch { runCatching { seedDefaultMediaIfMissing() } }
+    }
+
+    /**
+     * Copies the bundled default video into the config folder as `mainmenu.mp4` when the user has no
+     * media configured and none of the convention files exist yet — i.e. a fresh install or an empty
+     * media folder. Never overwrites a user file.
+     */
+    private fun seedDefaultMediaIfMissing() {
+        if (FloydMenuVideoBackground.hasMedia()) return
+        val target = FloydAddonsMod.configFile.toPath().resolve("mainmenu.mp4")
+        if (Files.exists(target)) return
+        val resource = javaClass.getResourceAsStream("/assets/floydaddons/menu/default-background.mp4") ?: return
+        resource.use { input -> Files.copy(input, target) }
     }
 
     @JvmStatic
