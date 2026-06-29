@@ -2,7 +2,10 @@ package gg.floyd.mixin.mixins;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gg.floyd.events.InputEvent;
+import gg.floyd.features.impl.render.FloydRender;
 import gg.floyd.keybind.KeybindSync;
+import gg.floyd.mixin.accessors.KeyMappingAccessor;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,6 +17,13 @@ public class KeyBindingMixin {
 
     @Inject(method = "click", at = @At("HEAD"), cancellable = true)
     private static void onKeyPressed(InputConstants.Key key, CallbackInfo ci) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft != null && minecraft.options != null) {
+            KeyMapping fullscreen = minecraft.options.keyFullscreen;
+            if (fullscreen != null && key.equals(((KeyMappingAccessor) fullscreen).getBoundKey())) {
+                FloydRender.clearBorderlessWindowed(true);
+            }
+        }
         if (new InputEvent(key).postAndCatch()) ci.cancel();
     }
 

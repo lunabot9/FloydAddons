@@ -5,6 +5,7 @@ import gg.floyd.clickgui.HudSizeRegistry
 import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.render.HudTextRenderer
@@ -79,14 +80,17 @@ object FloydInventoryHud : Module(
         "cornerRadius" to FloydPanelStyle.cornerRadiusFor(FloydPanelStyle.PanelTarget.INVENTORY)
     )
 
-    // HUD element callback: this NEVER draws — it only reports the panel's size for the HUD editor's drag
-    // box. The actual panel (in game AND in the editor) is drawn by the single inline pass
-    // [renderAtWorldEnd], so the editor and in-game use ONE rendering system (identical fonts/blur/border,
-    // no overlap clobber).
+    // HUD element callback: in the default path it only reports the panel's size for the HUD editor's
+    // drag box, because the real draw happens from the world-end inline pass. In safe HUD-layer mode
+    // (used for SkyHanni compatibility), it draws the panel here instead so Floyd stays off the shared
+    // post-world framebuffer override path.
     private fun GuiGraphics.drawInventoryHud(example: Boolean): Pair<Int, Int> {
         val slotSize = slotSizePx()
         val pad = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.INVENTORY).coerceAtLeast(0)
-        return (9 * slotSize + 2 * pad) to (3 * slotSize + 2 * pad)
+        if (FloydCompatibility.shouldUseSafeHudLayer()) {
+            mc.player?.inventory?.let { drawInventoryHudInline(it, allowBlur = false) }
+        }
+        return  (9 * slotSize + 2 * pad) to (3 * slotSize + 2 * pad)
     }
 
     /**
@@ -112,10 +116,10 @@ object FloydInventoryHud : Module(
     fun renderAtWorldEnd() {
         if (!enabled || !inventoryHud.enabled) return
         val inventory = mc.player?.inventory ?: return
-        drawInventoryHudInline(inventory)
+        drawInventoryHudInline(inventory, allowBlur = true)
     }
 
-    private fun drawInventoryHudInline(inventory: Inventory) {
+    private fun drawInventoryHudInline(inventory: Inventory, allowBlur: Boolean) {
         val target = FloydPanelStyle.PanelTarget.INVENTORY
         val scale = inventoryHud.scale
         val fx = inventoryHud.x.toFloat()
@@ -136,7 +140,7 @@ object FloydInventoryHud : Module(
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
-        if (FloydPanelStyle.blurFor(target)) {
+        if (allowBlur && FloydPanelStyle.blurFor(target)) {
             val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
             if (blurRadius >= 0.5f && fw * fh >= 2000f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))

@@ -4,6 +4,7 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.HudSizeRegistry
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.utils.font.MsdfFontMetrics
 import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.render.HudTextRenderer
@@ -88,12 +89,12 @@ object FloydDayTrackerModule : Module(
     /** The per-toggle font selection (custom vs pinned vanilla); layout and draw must agree. */
     private fun panelFont() = FloydFont.panelFont(FloydFont.PanelFont.DAY_TRACKER)
 
-    // HUD element callback: this NEVER draws — it only reports the panel's size for the HUD editor's drag
-    // box. The actual panel (in game AND in the editor) is drawn by the single inline pass
-    // [renderAtWorldEnd], so the editor and in-game share ONE rendering system. Mirrors
-    // [FloydCustomScoreboard.drawScoreboardHud].
+    // HUD element callback: in the default path it only reports size because the real draw happens
+    // from the world-end inline pass. In safe HUD-layer mode (used for SkyHanni compatibility), it
+    // draws here instead so Floyd avoids the shared post-world framebuffer override path.
     private fun GuiGraphics.drawDayTrackerHud(example: Boolean): Pair<Int, Int> {
         val layout = dayTrackerLayout(example) ?: return 0 to 0
+        if (FloydCompatibility.shouldUseSafeHudLayer()) drawDayTrackerInline(layout, allowBlur = false)
         return layout.width to layout.height
     }
 
@@ -106,7 +107,7 @@ object FloydDayTrackerModule : Module(
         if (!enabled || !dayTrackerHud.enabled) return
         val editor = mc.screen === gg.floyd.clickgui.HudManager
         val layout = dayTrackerLayout(editor) ?: return
-        drawDayTrackerInline(layout)
+        drawDayTrackerInline(layout, allowBlur = true)
     }
 
     /**
@@ -115,7 +116,7 @@ object FloydDayTrackerModule : Module(
      * screen-independent (renders with any screen open). Background and the mc.font label both draw
      * in framebuffer-pixel space. Mirrors [FloydCustomScoreboard.drawScoreboardInline].
      */
-    private fun drawDayTrackerInline(layout: DayTrackerLayout) {
+    private fun drawDayTrackerInline(layout: DayTrackerLayout, allowBlur: Boolean) {
         val target = FloydPanelStyle.PanelTarget.DAY_TRACKER
         val scale = dayTrackerHud.scale
         val fx = dayTrackerHud.x.toFloat()
@@ -129,7 +130,7 @@ object FloydDayTrackerModule : Module(
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
-        if (FloydPanelStyle.blurFor(target)) {
+        if (allowBlur && FloydPanelStyle.blurFor(target)) {
             val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
             if (blurRadius >= 0.5f && fw * fh >= 2000f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))

@@ -6,9 +6,6 @@
   "injectors": {
     "defaultRequire": 1
   },
-  "errorHandlers": [
-    "gg.floyd.mixin.FloydMixinErrorHandler"
-  ],
   "client": [
     "accessors.BeaconBeamAccessor",
     "accessors.CameraAccessor",

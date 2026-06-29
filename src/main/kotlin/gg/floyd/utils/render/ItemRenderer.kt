@@ -42,12 +42,16 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
         lastState = state
         poseStack.scale(1f, -1f, -1f)
 
-        if (state.state.itemStackRenderState().usesBlockLight()) mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_3D)
-        else mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_FLAT)
+        try {
+            if (state.state.itemStackRenderState().usesBlockLight()) mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_3D)
+            else mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_FLAT)
 
-        val dispatcher = mc.gameRenderer.featureRenderDispatcher
-        state.state.itemStackRenderState().submit(poseStack, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
-        dispatcher.renderAllFeatures()
+            val dispatcher = mc.gameRenderer.featureRenderDispatcher
+            state.state.itemStackRenderState().submit(poseStack, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
+            dispatcher.renderAllFeatures()
+        } finally {
+            mc.gameRenderer.lighting.setupFor(Lighting.Entry.ENTITY_IN_UI)
+        }
     }
 
     override fun blitTexture(element: State, state: GuiRenderState) {
@@ -191,6 +195,7 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
                 drawInlineGroup(inlineLit, inlineLitCount, Lighting.Entry.ITEMS_3D)
             } finally {
                 savedFog?.let { RenderSystem.setShaderFog(it) }
+                mc.gameRenderer.lighting.setupFor(Lighting.Entry.ENTITY_IN_UI)
                 PostHudOverlay.bindMainFbo()
                 // Drop tracking refs even if a group draw threw, so cached states aren't pinned.
                 for (entry in inlineFlat) entry.tracking = null
@@ -276,6 +281,7 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
             } finally {
                 mvStack.popMatrix()
                 savedFog?.let { RenderSystem.setShaderFog(it) }
+                mc.gameRenderer.lighting.setupFor(Lighting.Entry.LEVEL)
             }
         }
     }

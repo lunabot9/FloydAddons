@@ -65,21 +65,28 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
         if (w <= 0 || h <= 0) return
 
         val slot = acquire(w, h)
+        val savedColorOverride = RenderSystem.outputColorTextureOverride
+        val savedDepthOverride = RenderSystem.outputDepthTextureOverride
+        val savedProjection = RenderSystem.getProjectionMatrixBuffer()
+        val savedProjectionType = RenderSystem.getProjectionType()
 
-        RenderSystem.outputColorTextureOverride = slot.colorView
-        RenderSystem.outputDepthTextureOverride = slot.depthView
-        RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(slot.color, 0, slot.depth, 1.0)
-        RenderSystem.setProjectionMatrix(projection.getBuffer(w.toFloat(), h.toFloat()), ProjectionType.ORTHOGRAPHIC)
+        try {
+            RenderSystem.outputColorTextureOverride = slot.colorView
+            RenderSystem.outputDepthTextureOverride = slot.depthView
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(slot.color, 0, slot.depth, 1.0)
+            RenderSystem.setProjectionMatrix(projection.getBuffer(w.toFloat(), h.toFloat()), ProjectionType.ORTHOGRAPHIC)
 
-        val pose = PoseStack()
-        pose.translate(w / 2.0f, getTranslateY(h, windowScale), 0.0f)
-        val f = windowScale * state.scale()
-        pose.scale(f, f, -f)
-        renderContent(state, pose)
-        bufferSource.endBatch()
-
-        RenderSystem.outputColorTextureOverride = null
-        RenderSystem.outputDepthTextureOverride = null
+            val pose = PoseStack()
+            pose.translate(w / 2.0f, getTranslateY(h, windowScale), 0.0f)
+            val f = windowScale * state.scale()
+            pose.scale(f, f, -f)
+            renderContent(state, pose)
+            bufferSource.endBatch()
+        } finally {
+            RenderSystem.outputColorTextureOverride = savedColorOverride
+            RenderSystem.outputDepthTextureOverride = savedDepthOverride
+            if (savedProjection != null) RenderSystem.setProjectionMatrix(savedProjection, savedProjectionType)
+        }
 
         guiRenderState.submitBlitToCurrentLayer(
             BlitRenderState(

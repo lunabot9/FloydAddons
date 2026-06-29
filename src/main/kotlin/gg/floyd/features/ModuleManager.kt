@@ -41,6 +41,7 @@ import gg.floyd.features.impl.misc.FloydTaskbarIconModule
 import gg.floyd.features.impl.misc.FloydUpdateCheckerModule
 import gg.floyd.features.impl.misc.FloydWindowModule
 import gg.floyd.features.impl.misc.FloydDiscordPresence
+import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
@@ -238,15 +239,32 @@ object ModuleManager {
 
         // The overhead ESP nameplates now render from the world-end post-HUD pass (PostHudOverlay), like
         // the other Floyd panels, so they stay visible with any screen open and composite under GUIs.
+        val safeHudLayer = FloydCompatibility.shouldUseSafeHudLayer()
+        val savedProjectionMatrix = if (safeHudLayer) com.mojang.blaze3d.systems.RenderSystem.getProjectionMatrixBuffer() else null
+        val savedProjectionType = if (safeHudLayer) com.mojang.blaze3d.systems.RenderSystem.getProjectionType() else null
+        val savedFog = if (safeHudLayer) com.mojang.blaze3d.systems.RenderSystem.getShaderFog() else null
 
-        guiGraphics.pose().pushMatrix()
-        val sf = mc.window.guiScale
-        guiGraphics.pose().scale(1f / sf, 1f / sf)
-        FloydPerf.section("HudLayer.elements") {
-            for (hudSettings in hudSettingsCache) {
-                if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
+        try {
+            guiGraphics.pose().pushMatrix()
+            try {
+                val sf = mc.window.guiScale
+                guiGraphics.pose().scale(1f / sf, 1f / sf)
+                FloydPerf.section("HudLayer.elements") {
+                    for (hudSettings in hudSettingsCache) {
+                        if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
+                    }
+                }
+            } finally {
+                guiGraphics.pose().popMatrix()
+            }
+        } finally {
+            if (safeHudLayer) {
+                if (savedProjectionMatrix != null && savedProjectionType != null) {
+                    com.mojang.blaze3d.systems.RenderSystem.setProjectionMatrix(savedProjectionMatrix, savedProjectionType)
+                }
+                if (savedFog != null) com.mojang.blaze3d.systems.RenderSystem.setShaderFog(savedFog)
+                mc.gameRenderer.lighting.setupFor(com.mojang.blaze3d.platform.Lighting.Entry.ENTITY_IN_UI)
             }
         }
-        guiGraphics.pose().popMatrix()
     }
 }

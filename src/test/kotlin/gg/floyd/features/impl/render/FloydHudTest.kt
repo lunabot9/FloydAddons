@@ -6,6 +6,12 @@ import kotlin.test.assertTrue
 
 class FloydHudTest {
     @Test
+    fun `custom scoreboard follows the module toggle`() {
+        assertTrue(FloydCustomScoreboard.shouldUseCustomScoreboard(moduleEnabled = true))
+        assertFalse(FloydCustomScoreboard.shouldUseCustomScoreboard(moduleEnabled = false))
+    }
+
+    @Test
     fun `custom scoreboard keeps drawing after vanilla sidebar signal`() {
         FloydCustomScoreboard.resetVanillaScoreboardWouldRender()
 

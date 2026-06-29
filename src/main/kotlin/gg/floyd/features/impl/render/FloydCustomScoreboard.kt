@@ -5,6 +5,7 @@ import gg.floyd.clickgui.HudSizeRegistry
 import gg.floyd.events.core.onReceive
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.impl.misc.FloydCompatibility
 import net.minecraft.network.protocol.game.ClientboundResetScorePacket
 import net.minecraft.network.protocol.game.ClientboundSetDisplayObjectivePacket
 import net.minecraft.network.protocol.game.ClientboundSetObjectivePacket
@@ -84,7 +85,8 @@ object FloydCustomScoreboard : Module(
     }
 
     @JvmStatic
-    fun shouldUseCustomScoreboard(): Boolean = enabled
+    @JvmOverloads
+    fun shouldUseCustomScoreboard(moduleEnabled: Boolean = enabled): Boolean = moduleEnabled
 
     fun state(): Map<String, Any?> {
         val objective = sidebarObjective()
@@ -92,7 +94,7 @@ object FloydCustomScoreboard : Module(
             "enabled" to enabled,
             "shouldUseCustomScoreboard" to shouldUseCustomScoreboard(),
             "scoreboardHud" to mapOf(
-                "enabled" to (enabled && scoreboardHud.enabled),
+                "enabled" to (shouldUseCustomScoreboard() && scoreboardHud.enabled),
                 "sidebarObjective" to objective?.name,
                 "vanillaWouldRender" to vanillaScoreboardWouldRender.get(),
                 "wouldRender" to shouldDrawScoreboardHud(
@@ -180,7 +182,7 @@ object FloydCustomScoreboard : Module(
         // scoreboard stays visible with chat / inventory / the ClickGUI open.
         val show = if (example) true
             else if (requireVanillaSignal) shouldDrawScoreboardHud(false, shouldUseCustomScoreboard(), objectivePresent = true)
-            else enabled
+            else shouldUseCustomScoreboard()
         if (!show) return null
         val scoreboard = mc.level?.scoreboard ?: return if (example) exampleScoreboardRender() else null
         val lines = mc.level?.scoreboard?.listPlayerScores(objective)
@@ -283,18 +285,16 @@ object FloydCustomScoreboard : Module(
         return StyledScoreboardText(segments)
     }
 
-    // HUD element callback: this NEVER draws — it only reports the panel's size so the HUD editor can size
-    // its drag box. Both in game AND in the editor the actual panel is drawn by the single inline pass
-    // [renderAtWorldEnd] (one rendering system everywhere, so fonts/blur/borders are identical and
-    // overlapping editor panels never clobber — the old deferred GuiGraphics/PIP preview is gone).
+    // HUD element callback: the default path only reports the panel's size because the real draw happens
+    // from the world-end inline pass. In safe HUD-layer mode (used for SkyHanni compatibility), it
+    // draws the scoreboard here instead so Floyd stays off the shared post-world override path.
     private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
-        // In game, serve the size from the layout cache (renderAtWorldEnd keeps it fresh and runs
-        // earlier in the frame) — this callback used to run the FULL layout a second time per frame.
-        if (!example) {
-            cachedLayout?.let { return it.boxWidth to it.boxHeight }
-            return 0 to 0
-        }
-        val r = scoreboardRender(example) ?: return 0 to 0
+        val r = when {
+            example -> scoreboardRender(example = true, requireVanillaSignal = false)
+            FloydCompatibility.shouldUseSafeHudLayer() -> cachedLayout ?: scoreboardRender(example = false, requireVanillaSignal = false)
+            else -> cachedLayout
+        } ?: return 0 to 0
+        if (FloydCompatibility.shouldUseSafeHudLayer()) drawScoreboardInline(r, allowBlur = false)
         return r.boxWidth to r.boxHeight
     }
 
@@ -309,13 +309,13 @@ object FloydCustomScoreboard : Module(
         if (editor) {
             // Editor preview (example layout when no live sidebar): uncached — transient screen.
             val r = scoreboardRender(example = true, requireVanillaSignal = false) ?: return
-            drawScoreboardInline(r)
+            drawScoreboardInline(r, allowBlur = true)
             return
         }
         // The enabled gate used to live inside the per-frame scoreboardRender; with the cache it
         // must be HERE or a disable keeps ghost-drawing the stale layout (alongside the returning
         // vanilla sidebar) until the 1 Hz fallback. Also releases the cached layout on disable.
-        if (!enabled) {
+        if (!shouldUseCustomScoreboard()) {
             cachedLayout = null
             cachedLayoutEpoch = -1L
             cachedLayoutFont = null
@@ -331,7 +331,7 @@ object FloydCustomScoreboard : Module(
             lastLayoutMs = now
             cachedLayout = scoreboardRender(example = false, requireVanillaSignal = false)
         }
-        drawScoreboardInline(cachedLayout ?: return)
+        drawScoreboardInline(cachedLayout ?: return, allowBlur = true)
     }
 
     private fun scoreLine(name: String): ScoreLine {
@@ -358,7 +358,7 @@ object FloydCustomScoreboard : Module(
      * screen projection and re-binds the FBO around its batch because a blaze3d render pass can
      * retarget.
      */
-    private fun drawScoreboardInline(r: ScoreboardRender) {
+    private fun drawScoreboardInline(r: ScoreboardRender, allowBlur: Boolean) {
         val texts = r.texts
         val target = FloydPanelStyle.PanelTarget.SCOREBOARD
         val scale = scoreboardHud.scale
@@ -383,7 +383,7 @@ object FloydCustomScoreboard : Module(
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
-        if (FloydPanelStyle.blurFor(target)) {
+        if (allowBlur && FloydPanelStyle.blurFor(target)) {
             val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
             if (blurRadius >= 0.5f && fw * fh >= 2000f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))

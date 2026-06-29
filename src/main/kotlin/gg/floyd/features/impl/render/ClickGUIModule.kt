@@ -10,7 +10,6 @@ import gg.floyd.features.ModuleManager
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
 import gg.floyd.utils.render.HudPanel
-import gg.floyd.utils.ui.rendering.NVGRenderer
 import org.lwjgl.glfw.GLFW
 import kotlin.math.max
 import kotlin.math.round
@@ -20,6 +19,10 @@ object ClickGUIModule : Module(
     name = "Click GUI",
     description = "Allows you to customize the UI."
 ) {
+    private const val BOOTSTRAP_SCREEN_WIDTH = 1920f
+    private const val BOOTSTRAP_SCREEN_HEIGHT = 1080f
+    private const val BOOTSTRAP_DEVICE_PIXEL_RATIO = 1f
+
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
     val clickGUIColor by ColorSetting("Color", Color(50, 150, 220).also { it.chroma = true }, desc = "The color of the Click GUI — toggle chroma/fade inside the picker.")
 
@@ -59,7 +62,7 @@ object ClickGUIModule : Module(
 
     fun ensurePanelPositionsFit() {
         val activeCategories = Category.categories.values.toList()
-        val availableWidth = mc.window.screenWidth / getStandardGuiScale()
+        val availableWidth = currentAvailableWidth()
         val hasMissing = activeCategories.any { panelSetting[it.name] == null }
         // Any panel whose right edge falls past the window means the layout no longer fits (e.g. the
         // window shrank, or categories changed) — re-flow. Wrapped rows (y > 10) are NOT a trigger;
@@ -86,7 +89,7 @@ object ClickGUIModule : Module(
 
     fun defaultPanelLayout(): Map<String, PanelData> {
         val activeCategories = Category.categories.values.toList()
-        val availableWidth = mc.window.screenWidth / getStandardGuiScale()
+        val availableWidth = currentAvailableWidth()
         val gap = 20f
         val rowGap = 14f
         var x = 10f
@@ -135,9 +138,48 @@ object ClickGUIModule : Module(
         else -> clickGUIColor.rgba
     }
 
+    private fun currentAvailableWidth(): Float {
+        val screenWidth = currentScreenWidth()
+        val screenHeight = currentScreenHeight()
+        val devicePixelRatio = currentDevicePixelRatio(screenWidth)
+        return availableWidthForLayout(screenWidth, screenHeight, devicePixelRatio)
+    }
+
     fun getStandardGuiScale(): Float {
-        val verticalScale = (mc.window.screenHeight.toFloat() / 1080f) / NVGRenderer.devicePixelRatio()
-        val horizontalScale = (mc.window.screenWidth.toFloat() / 1920f) / NVGRenderer.devicePixelRatio()
+        val screenWidth = currentScreenWidth()
+        val screenHeight = currentScreenHeight()
+        val devicePixelRatio = currentDevicePixelRatio(screenWidth)
+        return standardGuiScaleFor(screenWidth, screenHeight, devicePixelRatio)
+    }
+
+    private fun currentScreenWidth(): Float =
+        runCatching { mc.window.screenWidth.toFloat() }
+            .getOrNull()
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?: BOOTSTRAP_SCREEN_WIDTH
+
+    private fun currentScreenHeight(): Float =
+        runCatching { mc.window.screenHeight.toFloat() }
+            .getOrNull()
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?: BOOTSTRAP_SCREEN_HEIGHT
+
+    private fun currentDevicePixelRatio(screenWidth: Float): Float {
+        val windowWidth = runCatching { mc.window.width.toFloat() }
+            .getOrNull()
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?: return BOOTSTRAP_DEVICE_PIXEL_RATIO
+        return (windowWidth / screenWidth)
+            .takeUnless { !it.isFinite() || it <= 0f }
+            ?: BOOTSTRAP_DEVICE_PIXEL_RATIO
+    }
+
+    internal fun standardGuiScaleFor(screenWidth: Float, screenHeight: Float, devicePixelRatio: Float): Float {
+        val verticalScale = (screenHeight / BOOTSTRAP_SCREEN_HEIGHT) / devicePixelRatio
+        val horizontalScale = (screenWidth / BOOTSTRAP_SCREEN_WIDTH) / devicePixelRatio
         return round(max(verticalScale, horizontalScale).coerceIn(1f, 1.5f) * 10f) / 10f
     }
+
+    internal fun availableWidthForLayout(screenWidth: Float, screenHeight: Float, devicePixelRatio: Float): Float =
+        screenWidth / standardGuiScaleFor(screenWidth, screenHeight, devicePixelRatio)
 }

@@ -39,14 +39,12 @@ class FloydCompatibilityTest {
         assertEquals(true, state["taskbarIcon"])
         assertEquals(true, state["updateChecker"])
         assertEquals(true, state["hideLoaderEntry"])
-        assertEquals(true, state["hideModChannels"])
         assertEquals(true, state["shouldSpoofClientBrand"])
         assertEquals(true, state["shouldHideWatchdogMessages"])
         assertEquals(true, state["shouldUseCustomMainMenu"])
         assertEquals(true, state["shouldApplyTaskbarIcon"])
         assertEquals(true, state["shouldCheckUpdates"])
         assertEquals(true, state["shouldHideLoaderEntry"])
-        assertEquals(true, state["shouldHideModChannels"])
 
         val updateCheckerState = state["updateCheckerState"]
         assertTrue(updateCheckerState is Map<*, *>)
@@ -65,7 +63,6 @@ class FloydCompatibilityTest {
             FloydTaskbarIconModule to FloydCompatibility::shouldApplyTaskbarIcon,
             FloydUpdateCheckerModule to FloydCompatibility::shouldCheckUpdates,
             FloydModHider to FloydCompatibility::shouldHideLoaderEntry,
-            FloydModHider to FloydCompatibility::shouldHideModChannels,
         )
 
         for ((module, gate) in gates) {
@@ -79,6 +76,13 @@ class FloydCompatibilityTest {
                 assertTrue(gate(), "Expected ${module.name} gate restored after toggle back")
             }
         }
+    }
+
+    @Test
+    fun `safe hud layer routes around SkyHanni specifically`() {
+        assertTrue(FloydCompatibility.shouldUseSafeHudLayer(setOf("fabricloader", "skyhanni")))
+        assertFalse(FloydCompatibility.shouldUseSafeHudLayer(setOf("fabricloader", "skyblocker")))
+        assertFalse(FloydCompatibility.shouldUseSafeHudLayer(emptySet()))
     }
 
     private fun withModuleEnabled(module: Module, block: () -> Unit) {

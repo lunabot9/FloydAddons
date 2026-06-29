@@ -5,11 +5,13 @@ import com.mojang.blaze3d.opengl.GlConst
 import com.mojang.blaze3d.opengl.GlDevice
 import com.mojang.blaze3d.opengl.GlStateManager
 import com.mojang.blaze3d.opengl.GlTexture
+import com.mojang.blaze3d.platform.Lighting
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.GpuTexture
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.textures.TextureFormat
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydDayTrackerModule
 import gg.floyd.features.impl.render.FloydInventoryHud
@@ -87,6 +89,7 @@ object PostHudOverlay {
     @JvmStatic
     fun render() {
         if (mc.level == null || mc.player == null || mc.options.hideGui) return
+        if (FloydCompatibility.shouldUseSafeHudLayer()) return
         FloydPerf.section("PostHud.total") { renderPass() }
     }
 
@@ -97,6 +100,9 @@ object PostHudOverlay {
         val dsa = (RenderSystem.getDevice() as? GlDevice)?.directStateAccess() ?: return
         val colorTex = target.colorTexture as? GlTexture ?: return
         boundFbo = colorTex.getFbo(dsa, target.depthTexture as? GlTexture)
+        val savedProjection = RenderSystem.getProjectionMatrixBuffer()
+        val savedProjectionType = RenderSystem.getProjectionType()
+        val savedFog = RenderSystem.getShaderFog()
 
         // Retarget vanilla blaze3d draws (mc.font glyphs, item models) to the main framebuffer — the same
         // override PictureInPictureRenderer uses. Our inline SDF pass targets the main FB directly.
@@ -146,6 +152,11 @@ object PostHudOverlay {
         RenderSystem.outputColorTextureOverride = null
         RenderSystem.outputDepthTextureOverride = null
         boundFbo = 0
+        if (savedProjection != null) RenderSystem.setProjectionMatrix(savedProjection, savedProjectionType)
+        if (savedFog != null) RenderSystem.setShaderFog(savedFog)
+        // Floyd's inline item pass flips lighting between flat and 3D item modes; return to the normal
+        // GUI/entity lighting baseline so later mod HUD elements, items, and player heads don't inherit it.
+        mc.gameRenderer.lighting.setupFor(Lighting.Entry.ENTITY_IN_UI)
 
         // Restore the GL state this pass leaves dirty so MC's next draw is clean.
         GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, 0)
