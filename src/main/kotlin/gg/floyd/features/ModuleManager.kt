@@ -254,6 +254,11 @@ object ModuleManager {
                         if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
                     }
                 }
+                if (safeHudLayer) {
+                    FloydPerf.section("HudLayer.playerEspOverhead") {
+                        FloydPlayerEsp.renderOverheadOnHudLayer()
+                    }
+                }
             } finally {
                 guiGraphics.pose().popMatrix()
             }

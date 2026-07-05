@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.fog.FogRenderer
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.events.RenderEvent
 import gg.floyd.events.core.on
+import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.utils.Color
 import gg.floyd.utils.Color.Companion.blue
 import gg.floyd.utils.Color.Companion.green
@@ -102,7 +103,10 @@ object RenderBatchManager {
     // verification should assert on.
     @Volatile private var lastFlushedCounts: Map<String, Int> = emptyMap()
 
+    internal fun shouldRenderWorldOverlayPass(safeHudLayer: Boolean): Boolean = !safeHudLayer
+
     fun state(): Map<String, Any?> = mapOf(
+        "worldOverlayPassEnabled" to shouldRenderWorldOverlayPass(FloydCompatibility.shouldUseSafeHudLayer()),
         "queued" to mapOf(
             "lines" to renderConsumer.lines.size,
             "filledBoxes" to renderConsumer.filledBoxes.size,
@@ -117,6 +121,14 @@ object RenderBatchManager {
 
     init {
         on<RenderEvent.Last> {
+            if (!shouldRenderWorldOverlayPass(FloydCompatibility.shouldUseSafeHudLayer())) {
+                if (lastFlushedCounts.isNotEmpty()) lastFlushedCounts = emptyMap()
+                renderConsumer.clear()
+                RoundRectPIPRenderer.clear()
+                PanelBlurPIPRenderer.clear()
+                PooledPicturePIPRenderer.recycleAll()
+                return@on
+            }
             val matrix = context.matrices()
             val bufferSource = context.consumers() as? MultiBufferSource.BufferSource ?: return@on
             val camera = mc.gameRenderer.mainCamera.position()

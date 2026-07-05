@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.utils.render.RenderBatchManager
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -80,5 +81,11 @@ class FloydHudTest {
                 hudEnabled = true
             )
         )
+    }
+
+    @Test
+    fun `safe hud layer disables the shared world overlay pass`() {
+        assertFalse(RenderBatchManager.shouldRenderWorldOverlayPass(safeHudLayer = true))
+        assertTrue(RenderBatchManager.shouldRenderWorldOverlayPass(safeHudLayer = false))
     }
 }

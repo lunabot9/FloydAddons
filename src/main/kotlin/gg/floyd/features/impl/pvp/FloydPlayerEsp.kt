@@ -9,6 +9,7 @@ import gg.floyd.events.RenderEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.utils.Colors
 import gg.floyd.utils.RealPlayerFilter
@@ -16,9 +17,12 @@ import gg.floyd.utils.modMessage
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import gg.floyd.utils.render.HudPanel
+import gg.floyd.utils.render.HudTextRenderer
 import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemStack
 import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemWorld
+import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemInline
 import gg.floyd.utils.render.RoundRectPIPRenderer
+import gg.floyd.utils.render.WorldToScreen
 import gg.floyd.utils.render.drawTracer
 import gg.floyd.utils.render.drawWireFrameBox
 import gg.floyd.utils.renderBoundingBox
@@ -134,6 +138,7 @@ object FloydPlayerEsp : Module(
      */
     fun renderOverheadBillboard(pose: PoseStack, camera: Vec3, cameraRotation: Quaternionf, bufferSource: MultiBufferSource.BufferSource) {
         if (!enabled) return
+        if (FloydCompatibility.shouldUseSafeHudLayer()) return
         if (display != 0 && display != 2) return
         if (!showHealth && !showEquipment) return
         val self = mc.player ?: return
@@ -154,6 +159,29 @@ object FloydPlayerEsp : Module(
             if (player.distanceToSqr(self) > 64.0 * 64.0) continue
             val anchor = player.renderPos.add(0.0, player.bbHeight + OVERHEAD_ANCHOR_OFFSET, 0.0)
             drawOverheadBillboard(pose, player, anchor, camera, cameraRotation, bufferSource)
+        }
+    }
+
+    /**
+     * Safe-HUD compatibility path for mods like SkyHanni: project the overhead plate into screen space and
+     * draw it on the normal HUD layer instead of the shared END_MAIN world-overlay pass.
+     */
+    fun renderOverheadOnHudLayer() {
+        if (!enabled) return
+        if (!FloydCompatibility.shouldUseSafeHudLayer()) return
+        if (display != 0 && display != 2) return
+        if (!showHealth && !showEquipment) return
+        val self = mc.player ?: return
+        val guiScale = mc.window.guiScale.toFloat()
+
+        for (player in otherPlayers().sortedByDescending { it.distanceToSqr(self) }) {
+            if (player.distanceToSqr(self) > 64.0 * 64.0) continue
+            val anchor = player.renderPos.add(0.0, player.bbHeight + OVERHEAD_ANCHOR_OFFSET, 0.0)
+            val screen = WorldToScreen.project(anchor) ?: continue
+            val worldBlockScale = WorldToScreen.screenScale(anchor) ?: continue
+            val localPx = worldBlockScale * OVERHEAD_WORLD_PX * overheadScale * guiScale
+            if (!localPx.isFinite() || localPx <= 0f) continue
+            drawOverheadProjected(player, anchor, screen.x * guiScale, screen.y * guiScale, localPx)
         }
     }
 
@@ -240,6 +268,65 @@ object FloydPlayerEsp : Module(
                     .translate(cxLocal + ICON_SIZE / 2f, iconTopLocal + ICON_SIZE / 2f, 0f)
                     .scale(ICON_SIZE.toFloat(), -ICON_SIZE.toFloat(), ICON_SIZE.toFloat())
                 drawItemWorld(stack, iconMv)
+                cxLocal += ICON_SIZE + OVERHEAD_ICON_GAP
+            }
+        }
+    }
+
+    private fun drawOverheadProjected(player: AbstractClientPlayer, anchor: Vec3, anchorX: Float, anchorY: Float, localPx: Float) {
+        val target = FloydPanelStyle.PanelTarget.ESP_OVERHEAD
+        val pad = (FloydPanelStyle.paddingFor(target) / 2).coerceAtLeast(1)
+        val hpText = if (showHealth) "$HEART ${player.health.toInt()}" else null
+        val hpWidth = hpText?.let { mc.font.width(it) } ?: 0
+        val items = if (showEquipment) equipmentOf(player).filter { !it.isEmpty } else emptyList()
+
+        val dims = overheadDimensions(hpWidth, items.size, pad, mc.font.lineHeight)
+        if (dims.panelWidth <= 0) return
+
+        val widthPx = dims.panelWidth * localPx
+        val heightPx = dims.panelHeight * localPx
+        val leftPx = anchorX - widthPx / 2f
+        val topPx = anchorY - heightPx
+
+        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val border = if (borderIsEspColor) HudPanel.monochrome(color.rgba)
+        else HudPanel.panelBorderColors(target, anchor.x.toInt(), anchor.z.toInt())
+        val radiusPx = (FloydPanelStyle.cornerRadiusFor(target) / 2f).coerceAtLeast(1f) * localPx
+        val outlinePx = (FloydPanelStyle.borderWidthFor(target) / 2f).coerceAtLeast(1f) * localPx
+
+        RoundRectPIPRenderer.drawInline(
+            leftPx, topPx, widthPx, heightPx,
+            fill, fill, fill, fill,
+            radiusPx, radiusPx, radiusPx, radiusPx,
+            border.topLeft, border.topRight, border.bottomRight, border.bottomLeft,
+            outlinePx
+        )
+
+        val rowHeight = if (items.isNotEmpty()) ICON_SIZE else mc.font.lineHeight
+        val rowTop = -dims.panelHeight.toFloat() + pad
+
+        if (hpText != null) {
+            val tyLocal = rowTop + (rowHeight - mc.font.lineHeight) / 2f
+            HudTextRenderer.drawText(
+                hpText,
+                leftPx + pad * localPx,
+                topPx + tyLocal * localPx,
+                localPx,
+                Colors.MINECRAFT_RED.rgba
+            )
+        }
+
+        if (items.isNotEmpty()) {
+            val gapAfterText = if (hpText != null) OVERHEAD_TEXT_ICON_GAP else 0
+            var cxLocal = (-dims.panelWidth / 2f) + pad + hpWidth + gapAfterText
+            val iconTopLocal = rowTop + (rowHeight - ICON_SIZE) / 2f
+            for (stack in items) {
+                drawItemInline(
+                    stack,
+                    anchorX + cxLocal * localPx,
+                    topPx + iconTopLocal * localPx,
+                    ICON_SIZE * localPx
+                )
                 cxLocal += ICON_SIZE + OVERHEAD_ICON_GAP
             }
         }
