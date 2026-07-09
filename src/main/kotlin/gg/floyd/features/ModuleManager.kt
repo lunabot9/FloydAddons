@@ -46,6 +46,7 @@ import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
 import gg.floyd.features.impl.pvp.FloydAutoTotem
+import gg.floyd.features.impl.pvp.FloydLoadoutSwapper
 import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.FloydBlockSearch
@@ -113,7 +114,7 @@ object ModuleManager {
             // Camera (each feature is its own module).
             FloydFreecam, FloydFreelook, FloydF5Customizer,
             FloydSkin, FloydCape, FloydConeHat,
-            FloydAutoTotem, FloydPlayerEsp,
+            FloydLoadoutSwapper, FloydAutoTotem, FloydPlayerEsp,
             FloydDiscordPresence, FloydLocalControl,
             // Misc compatibility (each feature is its own module).
             FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule, FloydFocusLossPrevention,
@@ -228,11 +229,15 @@ object ModuleManager {
         }
         // The Legacy Click GUI's auto-registered module-toggle keybind is the "click gui" key.
         if (setting.name == "Keybind" && module === LegacyClickGUIModule) return "key.floydaddons.click_gui"
-        return "key.floydaddons.module.${moduleSlug(module)}"
+        if (setting.name == "Keybind") return "key.floydaddons.module.${moduleSlug(module)}"
+        return "key.floydaddons.module.${moduleSlug(module)}.${settingSlug(setting.name)}"
     }
 
     private fun moduleSlug(module: Module): String =
         module.name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+
+    private fun settingSlug(name: String): String =
+        name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 
     fun render(guiGraphics: GuiGraphics, tickCounter: DeltaTracker) {
         if (mc.level == null || mc.player == null || mc.screen == HudManager || mc.options.hideGui) return

@@ -5,6 +5,16 @@
   "key.floydaddons.toggle_freecam": "Toggle Freecam",
   "key.floydaddons.toggle_freelook": "Toggle Freelook",
   "key.floydaddons.toggle_mob_esp": "Toggle Mob ESP",
+  "key.floydaddons.module.loadout_swapper": "Toggle Loadout Swapper",
+  "key.floydaddons.module.loadout_swapper.loadout_1_key": "Loadout 1 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_2_key": "Loadout 2 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_3_key": "Loadout 3 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_4_key": "Loadout 4 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_5_key": "Loadout 5 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_6_key": "Loadout 6 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_7_key": "Loadout 7 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_8_key": "Loadout 8 Key",
+  "key.floydaddons.module.loadout_swapper.loadout_9_key": "Loadout 9 Key",
   "key.category.floydaddons.category": "FloydAddons",
   "category.floydaddons": "Floyd Addons"
 }

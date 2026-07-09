@@ -44,6 +44,7 @@ import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
 import gg.floyd.features.impl.pvp.FloydAutoTotem
+import gg.floyd.features.impl.pvp.FloydLoadoutSwapper
 import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.LegacyClickGUIModule
@@ -228,7 +229,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private val nickPresets = listOf("George Floyd", "Floyd", "Dream", "Technoblade", "Steve", "Alex")
 
     private val background = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "textures/gui/floydbg.png")
-    private val labels = listOf("Cosmetic", "Render", "Neck Hider", "Camera", "PvP")
+    private val labels = listOf("Cosmetic", "Render", "Neck Hider", "Camera", "QoL")
     private val labelHover = MutableList(labels.size) { 0f }
 
     private var openStartMs = 0L
@@ -324,6 +325,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private var activeModulePopupSlider: ModulePopupSliderTarget? = null
     private var expandedModulePopupColor: ColorSetting? = null
     private var activeModulePopupColorDrag: ColorPickerDrag? = null
+    private var activeModulePopupKeybind: KeybindSetting? = null
     private var modulePopupEditingFadeColor = false
     private var activeModulePopupString: ModulePopupStringTarget? = null
     private var modulePopupStringBuffer = ""
@@ -1085,6 +1087,15 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
             return true
         }
+        activeModulePopupKeybind?.let { setting ->
+            if (setting.keyPressed(keyEvent)) {
+                if (!setting.listening) {
+                    activeModulePopupKeybind = null
+                    ModuleManager.saveConfigurations()
+                }
+                return true
+            }
+        }
         activeModulePopupActionInput?.let {
             when (keyEvent.key) {
                 GLFW.GLFW_KEY_ESCAPE -> {
@@ -1187,6 +1198,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             modulePopupStringBuffer += characterEvent.codepointAsString()
             return true
         }
+        if (activeModulePopupKeybind != null) return true
         activeModulePopupActionInput?.let {
             if (!characterEvent.isAllowedChatCharacter) return true
             val appended = modulePopupActionInputBuffer + characterEvent.codepointAsString()
@@ -1536,7 +1548,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             "Render" -> Page.RENDER
             "Neck Hider" -> Page.NICK_HIDER
             "Camera" -> Page.CAMERA
-            "PvP" -> Page.PVP
+            "QoL" -> Page.PVP
             else -> Page.HUB
         }
     }
@@ -3749,6 +3761,12 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 val value = mc.font.plainSubstrByWidth(setting.selectedOption(), row.width / 2)
                 context.drawString(mc.font, value, row.right - mc.font.width(value) - 8, row.top + (row.height - mc.font.lineHeight) / 2, applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
             }
+            is KeybindSetting -> {
+                context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
+                val value = if (setting.listening) "Press key..." else setting.value.displayName.string
+                val clipped = mc.font.plainSubstrByWidth(value, row.width / 2)
+                context.drawString(mc.font, clipped, row.right - mc.font.width(clipped) - 8, row.top + (row.height - mc.font.lineHeight) / 2, if (setting.listening) labelColor else applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
+            }
             is StringSetting -> {
                 if (legacyCycleStringOptions(setting) != null) {
                     context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
@@ -3787,6 +3805,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         if (setting !is ActionSetting) {
             val hint = when (setting) {
                 is NumberSetting<*> -> "+/-"
+                is KeybindSetting -> "Bind"
                 is ColorSetting -> "Pick"
                 is StringSetting -> "Edit"
                 is SelectorSetting -> "Cycle"
@@ -3852,8 +3871,14 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun popupVisibleSettings(popup: ModulePopup): List<Setting<*>> =
         popup.entry?.let(::popupVisibleSettings) ?: popupVisibleSettings(popup.module)
 
-    private fun popupVisibleSettings(entry: LegacyModuleBrowserEntry): List<Setting<*>> =
-        when (entry.kind) {
+    private fun popupVisibleSettings(entry: LegacyModuleBrowserEntry): List<Setting<*>> {
+        if (entry.module === FloydLoadoutSwapper) {
+            return listOfNotNull(
+                booleanSetting(FloydLoadoutSwapper, "Auto Close"),
+                numberSetting(FloydLoadoutSwapper, "Delay")
+            ) + FloydLoadoutSwapper.settings.values.filterIsInstance<KeybindSetting>()
+        }
+        return when (entry.kind) {
             LegacyModuleBrowserKind.MODULE ->
                 when (entry.module) {
                     FloydXray ->
@@ -3936,9 +3961,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 )
             else -> popupVisibleSettings(entry.module)
         }
+    }
 
     private fun modulePopupHiddenSetting(module: Module, setting: Setting<*>): Boolean =
-        setting is KeybindSetting ||
+        (setting is KeybindSetting && module !== FloydLoadoutSwapper) ||
             setting is MapSetting<*, *, *> ||
             setting is HUDSetting ||
             setting is SearchableListSetting ||
@@ -4254,6 +4280,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         is BooleanSetting, is RuntimeBooleanSetting -> ModulePopupHitKind.TOGGLE
         is NumberSetting<*> -> ModulePopupHitKind.NUMBER
         is SelectorSetting -> ModulePopupHitKind.SELECTOR
+        is KeybindSetting -> ModulePopupHitKind.KEYBIND
         is StringSetting -> if (legacyCycleStringOptions(setting) != null) ModulePopupHitKind.CYCLE_STRING else ModulePopupHitKind.STRING
         is ColorSetting -> ModulePopupHitKind.COLOR
         is ActionSetting -> ModulePopupHitKind.ACTION
@@ -4346,7 +4373,11 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 legacyClickGuiPanelType
             ) ?: return
             moduleBrowserCategories().forEachIndexed { index, category ->
-                val raw = data[category.name] ?: data[category.name.uppercase()] ?: return@forEachIndexed
+                val rawEntry = data[category.name]
+                    ?: data[category.name.uppercase()]
+                    ?: if (category == Category.PVP) data["PvP"] ?: data["PVP"] else null
+                if (rawEntry == null) return@forEachIndexed
+                val raw: List<Int> = rawEntry
                 if (raw.size < 3) return@forEachIndexed
                 val panelWidth = moduleBrowserPanelWidth(category)
                 moduleBrowserPanelStates[category] = ModuleBrowserPanelState(
@@ -4442,6 +4473,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydF5Customizer, "F5 Customizer", LegacyModuleBrowserKind.CAMERA_F5)
             )
             Category.PVP -> listOf(
+                moduleEntry(FloydLoadoutSwapper),
                 moduleEntry(FloydAutoTotem),
                 moduleEntry(FloydPlayerEsp)
             )
@@ -4513,6 +4545,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.HUB -> emptyList()
         Page.GUI_STYLE -> emptyList()
         Page.PVP -> listOf(
+            headerRow("Loadout Swapper"),
+            toggleModuleRow(FloydLoadoutSwapper, "Loadout Swapper"),
             headerRow("Player ESP"),
             toggleModuleRow(FloydPlayerEsp, "Player ESP"),
             selectorRow(FloydPlayerEsp, "Display", "Display", listOf("Overhead", "HUD List", "Both", "None")),
@@ -5745,6 +5779,12 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 setting.value += if (button == 1) -1 else 1
                 ModuleManager.saveConfigurations()
             }
+            ModulePopupHitKind.KEYBIND -> {
+                val setting = hit.setting as? KeybindSetting ?: return true
+                activeModulePopupKeybind?.takeIf { it !== setting }?.listening = false
+                setting.listening = !setting.listening
+                activeModulePopupKeybind = setting.takeIf { it.listening }
+            }
             ModulePopupHitKind.CYCLE_STRING -> {
                 val setting = hit.setting as? StringSetting ?: return true
                 cycleLegacyStringSetting(setting)
@@ -5819,6 +5859,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         expandedModulePopupExtra = null
         draggingModulePopup = false
         activeModulePopupSlider = null
+        activeModulePopupKeybind?.listening = false
+        activeModulePopupKeybind = null
         expandedModulePopupColor = null
         activeModulePopupColorDrag = null
         modulePopupEditingFadeColor = false
@@ -6282,7 +6324,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         Page.PLAYER_SIZE -> "Player Size"
         Page.NAME_MAPPINGS -> "Name Mappings"
         Page.GUI_STYLE -> "GUI Style"
-        Page.PVP -> "PvP"
+        Page.PVP -> "QoL"
     }
 
     private fun pageParent(page: Page): Page = pageReturnOverrides[page] ?: when (page) {
@@ -6821,6 +6863,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         TOGGLE,
         NUMBER,
         SELECTOR,
+        KEYBIND,
         CYCLE_STRING,
         STRING,
         COLOR,

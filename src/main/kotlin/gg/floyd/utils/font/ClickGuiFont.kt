@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier
  * (`assets/floydaddons/font/clickgui.json` — always the bundled `font.ttf`, MSDF-upgraded by
  * [gg.floyd.utils.FloydFontProviders] when the natives are available), so the ClickGUI keeps the
  * Floyd custom font no matter what the global Font module does to `minecraft:default` (toggled
- * off → vanilla bitmap, or a BYO .ttf — both used to restyle the ClickGUI too).
+ * off → safe bundled fallback, or a BYO .ttf — both used to restyle only the normal text range).
  *
  * Unlike the per-panel surfaces ([FloydFonts.panelCustom], toggleable and BYO-following), this is
  * unconditional and bundled-only: the ClickGUI has no font toggle by design. The remap mechanics

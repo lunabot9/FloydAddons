@@ -22,7 +22,7 @@ data class Category private constructor(val name: String) {
         @JvmField
         val COSMETIC = custom(name = "Cosmetic")
         @JvmField
-        val PVP = custom(name = "PvP")
+        val PVP = custom(name = "QoL")
         @JvmField
         val MISC = custom(name = "Misc")
 

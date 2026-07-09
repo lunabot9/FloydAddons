@@ -14,11 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.List;
 
 /**
- * Lets Floyd's global custom-font override be toggled off (vanilla font) or pointed at a
- * user-supplied .ttf, by rewriting the providers loaded for the {@code minecraft:default} font.
- * Wraps {@code FontManager.loadResourceStack} so the static resource-pack override in
- * {@code assets/minecraft/font/default.json} stays the default behavior while the settings decide
- * the final provider list.
+ * Lets Floyd's global custom-font override be toggled and filtered by rewriting providers loaded
+ * for {@code minecraft:default}, while also adjusting Floyd-owned panel/ClickGUI font ids.
  */
 @Mixin(FontManager.class)
 public class FloydDefaultFontMixin {

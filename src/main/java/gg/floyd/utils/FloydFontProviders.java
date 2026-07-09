@@ -2,12 +2,15 @@ package gg.floyd.utils;
 
 import com.mojang.blaze3d.font.GlyphProvider;
 import com.mojang.blaze3d.font.TrueTypeGlyphProvider;
+import com.mojang.blaze3d.font.UnbakedGlyph;
 import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import gg.floyd.FloydAddonsMod;
 import gg.floyd.features.impl.render.FloydFont;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import gg.floyd.utils.font.MsdfGlyphProvider;
 import gg.floyd.utils.font.MsdfNative;
 import net.minecraft.client.Minecraft;
@@ -41,9 +44,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Floyd ships {@code assets/minecraft/font/default.json} which injects a bundled TTF provider
  * into the vanilla {@code minecraft:default} font. This helper rewrites the provider list as it is
- * loaded so the override can be toggled off (vanilla font) or pointed at a user-supplied .ttf in
- * the Floyd config dir, without editing the resource pack. Everything here is crash-safe: any
- * failure leaves the bundled provider untouched.
+ * loaded so the override can be toggled off (safe bundled fallback) or pointed at a user-supplied
+ * .ttf in the Floyd config dir, without editing the resource pack. Everything here is crash-safe:
+ * any failure leaves the bundled provider untouched.
  */
 public final class FloydFontProviders {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -101,6 +104,18 @@ public final class FloydFontProviders {
      */
     private static volatile TrueTypeGlyphProviderDefinition lastMsdfMetrics = null;
     private static volatile Path lastMsdfByoPath = null;
+
+    /**
+     * The global minecraft font override should cover normal readable text, but special glyph packs
+     * (SkyBlock icons, emoji, legacy symbols) need to fall through to the underlying provider
+     * stack. Keep Floyd on basic Latin + extended Latin/punctuation and let everything else resolve
+     * from the pack stack behind it.
+     */
+    private static boolean shouldUseGlobalCustomGlyph(int codepoint) {
+        return (codepoint >= 0x20 && codepoint <= 0x7E)
+                || (codepoint >= 0x00A0 && codepoint <= 0x024F)
+                || (codepoint >= 0x2000 && codepoint <= 0x206F);
+    }
 
     private FloydFontProviders() {
     }
@@ -184,12 +199,10 @@ public final class FloydFontProviders {
                 continue;
             }
 
-            if (!enabled) {
-                // Drop the bundled provider so the vanilla font is used.
-                continue;
-            }
-
-            result.add(entry.mapSecond(ignored -> customOverrideConditional(entry.getSecond(), bundled, latched)));
+            GlyphProviderDefinition.Conditional replacement = enabled
+                    ? customDefaultConditional(entry.getSecond(), bundled, latched)
+                    : safeDefaultConditional(entry.getSecond(), bundled);
+            result.add(entry.mapSecond(ignored -> replacement));
         }
         return result;
     }
@@ -216,6 +229,37 @@ public final class FloydFontProviders {
             // Replacement could not be built; fall through and keep the bundled provider.
         }
         return new GlyphProviderDefinition.Conditional(runtimeMetrics, original.filter());
+    }
+
+    /**
+     * The minecraft:default override uses the same runtime-metrics/BYO/MSDF stack as the panel
+     * font, but FILTERS it to normal text ranges so server-pack emoji/special glyph providers can
+     * win for their codepoints.
+     */
+    private static GlyphProviderDefinition.Conditional customDefaultConditional(
+            GlyphProviderDefinition.Conditional original,
+            TrueTypeGlyphProviderDefinition bundled,
+            boolean latched) {
+        Path byoPath = FloydFont.customFontPath();
+        TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
+        if (!latched && msdfAvailable()) {
+            GlyphProviderDefinition.Conditional msdfReplacement = selectiveMsdfConditional(original, runtimeMetrics, byoPath);
+            if (msdfReplacement != null) return msdfReplacement;
+        }
+        if (byoPath != null) {
+            return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadFromFile(byoPath, runtimeMetrics)));
+        }
+        return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadBundled(resourceManager, runtimeMetrics)));
+    }
+
+    /**
+     * Safe OFF-state fallback for minecraft:default: keep a readable bundled provider in front of
+     * broken legacy bitmap packs, but still let special glyphs/emoji fall through.
+     */
+    private static GlyphProviderDefinition.Conditional safeDefaultConditional(
+            GlyphProviderDefinition.Conditional original,
+            TrueTypeGlyphProviderDefinition bundled) {
+        return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadBundled(resourceManager, bundled)));
     }
 
     /**
@@ -283,6 +327,52 @@ public final class FloydFontProviders {
                 bundled.skip());
     }
 
+    @FunctionalInterface
+    private interface ProviderFactory {
+        GlyphProvider load(ResourceManager resourceManager) throws IOException;
+    }
+
+    private static GlyphProviderDefinition.Conditional selectiveConditional(
+            GlyphProviderDefinition.Conditional original,
+            ProviderFactory factory) {
+        GlyphProviderDefinition.Loader loader = resourceManager -> factory.load(resourceManager);
+        GlyphProviderDefinition definition = new GlyphProviderDefinition() {
+            @Override
+            public GlyphProviderType type() {
+                return GlyphProviderType.TTF;
+            }
+
+            @Override
+            public Either<Loader, Reference> unpack() {
+                return Either.left(loader);
+            }
+        };
+        return new GlyphProviderDefinition.Conditional(definition, original.filter());
+    }
+
+    private static GlyphProvider wrapGlobalDefaultGlyphs(GlyphProvider delegate) {
+        return new GlyphProvider() {
+            @Override
+            public UnbakedGlyph getGlyph(int codepoint) {
+                return shouldUseGlobalCustomGlyph(codepoint) ? delegate.getGlyph(codepoint) : null;
+            }
+
+            @Override
+            public IntSet getSupportedGlyphs() {
+                IntOpenHashSet filtered = new IntOpenHashSet();
+                for (int codepoint : delegate.getSupportedGlyphs()) {
+                    if (shouldUseGlobalCustomGlyph(codepoint)) filtered.add(codepoint);
+                }
+                return filtered;
+            }
+
+            @Override
+            public void close() {
+                delegate.close();
+            }
+        };
+    }
+
     /**
      * Whether the MSDF font path can be used: the lwjgl-msdfgen natives must link and initialize.
      * Probing (and any unexpected classloading failure around it) is crash-safe — link failures
@@ -341,6 +431,36 @@ public final class FloydFontProviders {
                 }
             };
             return new GlyphProviderDefinition.Conditional(msdfDefinition, original.filter());
+        } catch (Throwable t) {
+            if (!msdfSetupWarned) {
+                msdfSetupWarned = true;
+                LOGGER.warn("Floyd MSDF definition could not be built, keeping the TTF provider", t);
+            }
+            return null;
+        }
+    }
+
+    private static GlyphProviderDefinition.Conditional selectiveMsdfConditional(
+            GlyphProviderDefinition.Conditional original,
+            TrueTypeGlyphProviderDefinition metrics,
+            Path byoPath) {
+        try {
+            return selectiveConditional(original, resourceManager -> {
+                try {
+                    return wrapGlobalDefaultGlyphs(loadMsdfProvider(resourceManager, metrics, byoPath));
+                } catch (Throwable t) {
+                    LOGGER.warn("Floyd MSDF provider failed to load{}", byoPath != null ? " for custom font " + byoPath : "", t);
+                    if (byoPath != null) {
+                        try {
+                            return wrapGlobalDefaultGlyphs(loadMsdfProvider(resourceManager, metrics, null));
+                        } catch (Throwable bundledFailure) {
+                            LOGGER.warn("Floyd bundled MSDF fallback also failed, falling back to the TTF chain", bundledFailure);
+                        }
+                        return wrapGlobalDefaultGlyphs(loadFromFile(byoPath, metrics));
+                    }
+                    return wrapGlobalDefaultGlyphs(loadBundled(resourceManager, metrics));
+                }
+            });
         } catch (Throwable t) {
             if (!msdfSetupWarned) {
                 msdfSetupWarned = true;
@@ -440,12 +560,20 @@ public final class FloydFontProviders {
     }
 
     /** Loads the bundled font through the active resource manager as the BYO fallback. */
-    private static GlyphProvider loadBundled(TrueTypeGlyphProviderDefinition bundled) {
+    private static GlyphProvider loadBundled(ResourceManager resourceManager, TrueTypeGlyphProviderDefinition bundled) {
         try {
-            ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
             return bundled.unpack().left()
                     .orElseThrow(() -> new IllegalStateException("Bundled font has no loader"))
                     .load(resourceManager);
+        } catch (Exception exception) {
+            throw new RuntimeException("Floyd bundled font fallback failed", exception);
+        }
+    }
+
+    private static GlyphProvider loadBundled(TrueTypeGlyphProviderDefinition bundled) {
+        try {
+            ResourceManager resourceManager = Minecraft.getInstance().getResourceManager();
+            return loadBundled(resourceManager, bundled);
         } catch (Exception exception) {
             throw new RuntimeException("Floyd bundled font fallback failed", exception);
         }

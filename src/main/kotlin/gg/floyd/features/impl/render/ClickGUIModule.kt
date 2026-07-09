@@ -61,6 +61,7 @@ object ClickGUIModule : Module(
     )
 
     fun ensurePanelPositionsFit() {
+        migrateLegacyPanelNames()
         val activeCategories = Category.categories.values.toList()
         val availableWidth = currentAvailableWidth()
         val hasMissing = activeCategories.any { panelSetting[it.name] == null }
@@ -76,6 +77,11 @@ object ClickGUIModule : Module(
             .values
             .any { entries -> entries.size > 1 }
         if (hasMissing || hasOffscreen || hasStackedDefaults) resetPositions()
+    }
+
+    private fun migrateLegacyPanelNames() {
+        val legacyPvP = panelSetting.remove("PvP") ?: return
+        panelSetting.putIfAbsent(Category.PVP.name, legacyPvP)
     }
 
     fun resetPositions() {

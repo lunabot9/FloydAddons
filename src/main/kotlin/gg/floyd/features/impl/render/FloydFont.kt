@@ -17,25 +17,28 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Owns the global custom-font toggle and the selected .ttf, mirroring the cosmetic file-browser
+ * Owns Floyd's custom-font surfaces and the selected .ttf, mirroring the cosmetic file-browser
  * modules ([gg.floyd.features.impl.cosmetic.FloydSkin] etc.): a `fonts/` dir under the FloydAddons
  * config dir is scanned for .ttf files, with Previous/Next/List/Open Folder/Reload actions and a
  * selected-file [StringSetting].
  *
  * The actual font application stays in [gg.floyd.utils.FloydFontProviders] /
  * [gg.floyd.mixin.mixins.FloydDefaultFontMixin]; this module just exposes the toggle and the
- * resolved .ttf path they read. Everything here is crash-safe: an invalid/missing selection resolves
- * to null so the provider path falls back to the bundled (and ultimately vanilla) font, and nothing
- * touches GL/NVGRenderer at init or config load.
+ * resolved .ttf path they read. The minecraft font path keeps a safe bundled fallback in front of
+ * broken legacy bitmap packs, while allowing special glyph providers to fall through behind it.
+ * Floyd HUD panels use the live `mc.font` whenever they are meant to follow Minecraft's current
+ * font stack, rather than a separate "looks like vanilla" clone. Everything here is crash-safe: an
+ * invalid/missing selection resolves to null so the provider path falls back to the bundled font,
+ * and nothing touches GL/NVGRenderer at init or config load.
  */
 object FloydFont : Module(
     name = "Font",
     category = Category.RENDER,
-    description = "Custom font: per-surface toggles (vanilla text, scoreboard, day tracker, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
+    description = "Custom font: per-surface toggles (vanilla text with safe fallback, scoreboard, day tracker, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
     toggled = true,
 ) {
-    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = vanilla font everywhere (the ClickGUI keeps its own pinned font).")
-    private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the custom font to the vanilla game text (chat, hotbar, F3, menus). Reload resources (F3+T) to apply.")
+    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = the live Minecraft font on Floyd HUD text and the safe bundled fallback for vanilla text (the ClickGUI keeps its own pinned font).")
+    private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the selected custom font to vanilla game text (chat, hotbar, F3, menus) for normal letters while pack emoji/special glyphs still fall through. OFF keeps a safe bundled fallback so broken legacy font packs do not blank the UI.")
     private val scoreboardFont by BooleanSetting("Scoreboard Font", true, desc = "Custom Scoreboard panel uses the custom font. Applies instantly.")
     private val dayTrackerFont by BooleanSetting("Day Tracker Font", true, desc = "Day Tracker panel uses the custom font. Applies instantly.")
     private val inventoryHudFont by BooleanSetting("Inventory HUD Font", true, desc = "Inventory HUD stack counts use the custom font. Applies instantly.")
@@ -68,9 +71,9 @@ object FloydFont : Module(
     private var defaultExtracted = false
 
     /**
-     * Whether the custom font should override the vanilla `minecraft:default` font (chat, hotbar,
-     * F3, menus): master switch AND the "Minecraft Font" surface toggle. OFF renders the vanilla
-     * game text with the vanilla font; the Floyd panels are selected separately via [panelFont].
+     * Whether the selected custom font should style vanilla `minecraft:default` text for normal
+     * readable characters. OFF keeps a safe bundled fallback provider in front of broken legacy
+     * bitmap packs so menus/chat remain readable.
      */
     @JvmStatic
     fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont && minecraftFont
@@ -79,12 +82,18 @@ object FloydFont : Module(
     enum class PanelFont { SCOREBOARD, DAY_TRACKER, INVENTORY }
 
     /**
-     * The [Font] a HUD panel should draw AND measure with this frame: the panel custom font
-     * ([FloydFonts.panelCustom] — runtime-metrics/BYO/MSDF, same look as the enabled default
-     * override) when the master switch and the panel's own toggle are both on, else the pinned
-     * vanilla font ([FloydFonts.vanilla] — vanilla even while `minecraft:default` is overridden).
-     * Pure instance selection over two always-built FontSets, so toggles apply INSTANTLY (no
-     * resource reload). Render-thread only.
+     * The [Font] a HUD panel should draw AND measure with this frame.
+     *
+     * When the panel custom-font toggle is OFF, panels use the live `mc.font` so the disabled path
+     * is the actual Minecraft font stack, not Floyd's separate `floydaddons:vanilla` clone.
+     *
+     * When the panel custom-font toggle is ON and the live Minecraft font is already running
+     * Floyd's global custom-font override, panels also use the live `mc.font` so server-pack emoji
+     * and special glyph providers still fall through behind the custom letters.
+     *
+     * Only when a panel wants the custom font while the global Minecraft-font override is OFF (for
+     * example, panel custom ON + Minecraft Font OFF) do panels use [FloydFonts.panelCustom].
+     * Render-thread only.
      */
     fun panelFont(panel: PanelFont): Font {
         val custom = enabled && globalCustomFont && when (panel) {
@@ -92,7 +101,8 @@ object FloydFont : Module(
             PanelFont.DAY_TRACKER -> dayTrackerFont
             PanelFont.INVENTORY -> inventoryHudFont
         }
-        return if (custom) FloydFonts.panelCustom else FloydFonts.vanilla
+        if (!custom) return FloydAddonsMod.mc.font
+        return if (isGlobalCustomFontEnabled()) FloydAddonsMod.mc.font else FloydFonts.panelCustom
     }
 
     /** Whether all text drop shadows should be suppressed (drives [gg.floyd.mixin.mixins.FontMixin]). */
