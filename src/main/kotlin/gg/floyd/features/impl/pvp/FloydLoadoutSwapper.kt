@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.inventory.ChestMenu
 import net.minecraft.world.inventory.ClickType
 import org.lwjgl.glfw.GLFW
+import kotlin.random.Random
 
 object FloydLoadoutSwapper : Module(
     name = "Loadout Swapper",
@@ -22,6 +23,7 @@ object FloydLoadoutSwapper : Module(
     private val targetSlots = intArrayOf(14, 15, 16, 23, 24, 25, 32, 33, 34)
     private val autoClose by BooleanSetting("Auto Close", true, desc = "Closes the Loadouts menu after selecting a loadout.")
     private val swapDelay by NumberSetting("Delay", 0.0f, 0.0f, 5.0f, 0.05f, desc = "Seconds to wait before selecting the requested loadout after /loadout opens.", unit = "s")
+    private val randomizationMs by NumberSetting("Randomization", 0.0f, 0.0f, 1000.0f, 10.0f, desc = "Adds 0 to N ms of extra random delay before clicking the loadout.", unit = "ms")
     private val loadoutKeys = listOf(
         loadoutKey(1, GLFW.GLFW_KEY_1),
         loadoutKey(2, GLFW.GLFW_KEY_2),
@@ -36,29 +38,30 @@ object FloydLoadoutSwapper : Module(
 
     private var pendingLoadoutIndex = -1
     private var pendingOpenTicks = -1
-    private var pendingSelectTicks = -1
+    private var pendingSelectAtMs = -1L
     private var pendingCloseTicks = -1
 
     init {
         on<TickEvent.ClientEnd> {
+            val now = System.currentTimeMillis()
             val currentScreen = client.screen as? AbstractContainerScreen<*>
             val currentMenu = currentScreen?.menu as? ChestMenu
 
             if (pendingLoadoutIndex >= 0) {
                 if (currentScreen != null && currentMenu != null && isLoadoutScreen(currentScreen.title.string)) {
-                    if (pendingSelectTicks < 0) pendingSelectTicks = configuredDelayTicks()
-                    if (pendingSelectTicks == 0) {
+                    if (pendingSelectAtMs < 0L) pendingSelectAtMs = now + configuredSelectionDelayMs()
+                    if (now >= pendingSelectAtMs) {
                         if (applyLoadoutSelection(currentMenu, pendingLoadoutIndex)) {
                             clearPendingLoadoutRequest()
                         }
-                    } else {
-                        pendingSelectTicks--
                     }
-                } else if (pendingOpenTicks == 0) {
-                    clearPendingLoadoutRequest()
                 } else {
-                    pendingSelectTicks = -1
-                    pendingOpenTicks--
+                    pendingSelectAtMs = -1L
+                    if (pendingOpenTicks <= 0) {
+                        clearPendingLoadoutRequest()
+                    } else {
+                        pendingOpenTicks--
+                    }
                 }
             }
 
@@ -100,11 +103,20 @@ object FloydLoadoutSwapper : Module(
     internal fun delaySetting(): NumberSetting<*> =
         settings["Delay"] as NumberSetting<*>
 
+    internal fun randomizationSetting(): NumberSetting<*> =
+        settings["Randomization"] as NumberSetting<*>
+
     internal fun autoCloseSetting(): BooleanSetting =
         settings["Auto Close"] as BooleanSetting
 
-    internal fun configuredDelayTicks(): Int =
-        (swapDelay * 20f).toInt().coerceAtLeast(0)
+    internal fun configuredBaseDelayMs(): Long =
+        (swapDelay * 1000f).toLong().coerceAtLeast(0L)
+
+    internal fun configuredRandomizationMs(): Long =
+        randomizationMs.toLong().coerceAtLeast(0L)
+
+    internal fun configuredSelectionDelayMs(sampleRandomization: (Long) -> Long = ::sampleRandomizationMs): Long =
+        configuredBaseDelayMs() + sampleRandomization(configuredRandomizationMs())
 
     private fun activateLoadout(index: Int) {
         val player = mc.player ?: return
@@ -113,13 +125,13 @@ object FloydLoadoutSwapper : Module(
         if (currentScreen != null && currentMenu != null && isLoadoutScreen(currentScreen.title.string)) {
             pendingLoadoutIndex = index
             pendingOpenTicks = -1
-            pendingSelectTicks = configuredDelayTicks()
+            pendingSelectAtMs = System.currentTimeMillis() + configuredSelectionDelayMs()
             return
         }
 
         pendingLoadoutIndex = index
         pendingOpenTicks = 40
-        pendingSelectTicks = -1
+        pendingSelectAtMs = -1L
         player.connection.sendCommand("loadout")
     }
 
@@ -143,7 +155,7 @@ object FloydLoadoutSwapper : Module(
     private fun clearPendingLoadoutRequest() {
         pendingLoadoutIndex = -1
         pendingOpenTicks = -1
-        pendingSelectTicks = -1
+        pendingSelectAtMs = -1L
     }
 
     private fun clearPendingClose() {
@@ -160,4 +172,7 @@ object FloydLoadoutSwapper : Module(
                 activateLoadout(index - 1)
             }
         )
+
+    private fun sampleRandomizationMs(maxRandomizationMs: Long): Long =
+        if (maxRandomizationMs <= 0L) 0L else Random.nextLong(maxRandomizationMs + 1L)
 }

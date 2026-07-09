@@ -1,6 +1,7 @@
 package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod
+import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
@@ -24,8 +25,9 @@ import java.nio.file.Path
  *
  * The actual font application stays in [gg.floyd.utils.FloydFontProviders] /
  * [gg.floyd.mixin.mixins.FloydDefaultFontMixin]; this module just exposes the toggle and the
- * resolved .ttf path they read. The minecraft font path keeps a safe bundled fallback in front of
- * broken legacy bitmap packs, while allowing special glyph providers to fall through behind it.
+ * resolved .ttf path they read. When Minecraft Font is OFF, or when connected to Hypixel where the
+ * live SkyBlock glyph stack needs to win, normal game text renders through the live
+ * Minecraft/resource-pack font stack untouched so server glyph packs and icons stay intact.
  * Floyd HUD panels use the live `mc.font` whenever they are meant to follow Minecraft's current
  * font stack, rather than a separate "looks like vanilla" clone. Everything here is crash-safe: an
  * invalid/missing selection resolves to null so the provider path falls back to the bundled font,
@@ -34,11 +36,11 @@ import java.nio.file.Path
 object FloydFont : Module(
     name = "Font",
     category = Category.RENDER,
-    description = "Custom font: per-surface toggles (vanilla text with safe fallback, scoreboard, day tracker, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
+    description = "Custom font: per-surface toggles (vanilla text, scoreboard, day tracker, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
     toggled = true,
 ) {
-    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = the live Minecraft font on Floyd HUD text and the safe bundled fallback for vanilla text (the ClickGUI keeps its own pinned font).")
-    private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the selected custom font to vanilla game text (chat, hotbar, F3, menus) for normal letters while pack emoji/special glyphs still fall through. OFF keeps a safe bundled fallback so broken legacy font packs do not blank the UI.")
+    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = the live Minecraft font on normal text and per-panel custom-font toggles decide Floyd HUD text (the ClickGUI keeps its own pinned font).")
+    private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the selected custom font to vanilla game text (chat, hotbar, F3, menus) for normal letters while pack emoji/special glyphs still fall through. OFF restores the live Minecraft/resource-pack font stack for normal game text, and Hypixel sessions automatically yield to the live glyph stack to preserve SkyBlock icons.")
     private val scoreboardFont by BooleanSetting("Scoreboard Font", true, desc = "Custom Scoreboard panel uses the custom font. Applies instantly.")
     private val dayTrackerFont by BooleanSetting("Day Tracker Font", true, desc = "Day Tracker panel uses the custom font. Applies instantly.")
     private val inventoryHudFont by BooleanSetting("Inventory HUD Font", true, desc = "Inventory HUD stack counts use the custom font. Applies instantly.")
@@ -72,11 +74,20 @@ object FloydFont : Module(
 
     /**
      * Whether the selected custom font should style vanilla `minecraft:default` text for normal
-     * readable characters. OFF keeps a safe bundled fallback provider in front of broken legacy
-     * bitmap packs so menus/chat remain readable.
+     * readable characters. OFF restores the live Minecraft/resource-pack provider stack, and
+     * Hypixel sessions also yield to that live stack so SkyBlock glyph packs and emoji render
+     * untouched.
      */
     @JvmStatic
-    fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont && minecraftFont
+    fun isGlobalCustomFontEnabled(): Boolean =
+        enabled && globalCustomFont && minecraftFont && !shouldYieldMinecraftFontToServerGlyphs()
+
+    private fun shouldYieldMinecraftFontToServerGlyphs(): Boolean {
+        return runCatching {
+            val server = mc.currentServer ?: mc.connection?.serverData ?: return false
+            server.ip.contains("hypixel.net", ignoreCase = true)
+        }.getOrDefault(false)
+    }
 
     /** A Floyd HUD panel surface with its own custom-font toggle (see [panelFont]). */
     enum class PanelFont { SCOREBOARD, DAY_TRACKER, INVENTORY }

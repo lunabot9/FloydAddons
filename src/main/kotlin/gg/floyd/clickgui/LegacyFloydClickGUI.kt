@@ -3875,7 +3875,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         if (entry.module === FloydLoadoutSwapper) {
             return listOfNotNull(
                 booleanSetting(FloydLoadoutSwapper, "Auto Close"),
-                numberSetting(FloydLoadoutSwapper, "Delay")
+                numberSetting(FloydLoadoutSwapper, "Delay"),
+                numberSetting(FloydLoadoutSwapper, "Randomization")
             ) + FloydLoadoutSwapper.settings.values.filterIsInstance<KeybindSetting>()
         }
         return when (entry.kind) {

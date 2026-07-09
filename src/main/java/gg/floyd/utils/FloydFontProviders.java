@@ -44,9 +44,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Floyd ships {@code assets/minecraft/font/default.json} which injects a bundled TTF provider
  * into the vanilla {@code minecraft:default} font. This helper rewrites the provider list as it is
- * loaded so the override can be toggled off (safe bundled fallback) or pointed at a user-supplied
- * .ttf in the Floyd config dir, without editing the resource pack. Everything here is crash-safe:
- * any failure leaves the bundled provider untouched.
+ * loaded so the override can be toggled off (restoring the live Minecraft/resource-pack font
+ * stack) or pointed at a user-supplied .ttf in the Floyd config dir, without editing the resource
+ * pack. Everything here is crash-safe: any failure leaves the bundled provider untouched.
  */
 public final class FloydFontProviders {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -199,9 +199,16 @@ public final class FloydFontProviders {
                 continue;
             }
 
-            GlyphProviderDefinition.Conditional replacement = enabled
-                    ? customDefaultConditional(entry.getSecond(), bundled, latched)
-                    : safeDefaultConditional(entry.getSecond(), bundled);
+            if (!enabled) {
+                // Minecraft Font OFF means the live vanilla/resource-pack font stack should render
+                // normal game text untouched. Floyd HUD panels still have their own dedicated
+                // panel font path, so dropping only the injected minecraft:default provider keeps
+                // SkyBlock icons / emoji glyphs on the server-pack path without losing panel fonts.
+                continue;
+            }
+
+            GlyphProviderDefinition.Conditional replacement =
+                    customDefaultConditional(entry.getSecond(), bundled, latched);
             result.add(entry.mapSecond(ignored -> replacement));
         }
         return result;
@@ -250,16 +257,6 @@ public final class FloydFontProviders {
             return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadFromFile(byoPath, runtimeMetrics)));
         }
         return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadBundled(resourceManager, runtimeMetrics)));
-    }
-
-    /**
-     * Safe OFF-state fallback for minecraft:default: keep a readable bundled provider in front of
-     * broken legacy bitmap packs, but still let special glyphs/emoji fall through.
-     */
-    private static GlyphProviderDefinition.Conditional safeDefaultConditional(
-            GlyphProviderDefinition.Conditional original,
-            TrueTypeGlyphProviderDefinition bundled) {
-        return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadBundled(resourceManager, bundled)));
     }
 
     /**

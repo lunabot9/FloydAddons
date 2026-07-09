@@ -35,14 +35,34 @@ class FloydLoadoutSwapperTest {
     }
 
     @Test
-    fun `delay setting converts seconds into client ticks`() {
+    fun `delay setting converts seconds into milliseconds`() {
         val setting = FloydLoadoutSwapper.delaySetting()
         val original = setting.numericValue()
         try {
             setting.setNumericValue(0.75)
-            assertEquals(15, FloydLoadoutSwapper.configuredDelayTicks())
+            assertEquals(750L, FloydLoadoutSwapper.configuredBaseDelayMs())
         } finally {
             setting.setNumericValue(original)
+        }
+    }
+
+    @Test
+    fun `randomization is added on top of the base delay`() {
+        val delaySetting = FloydLoadoutSwapper.delaySetting()
+        val randomizationSetting = FloydLoadoutSwapper.randomizationSetting()
+        val originalDelay = delaySetting.numericValue()
+        val originalRandomization = randomizationSetting.numericValue()
+        try {
+            delaySetting.setNumericValue(0.75)
+            randomizationSetting.setNumericValue(120.0)
+            assertEquals(120L, FloydLoadoutSwapper.configuredRandomizationMs())
+            assertEquals(810L, FloydLoadoutSwapper.configuredSelectionDelayMs { maxRandomizationMs ->
+                assertEquals(120L, maxRandomizationMs)
+                60L
+            })
+        } finally {
+            delaySetting.setNumericValue(originalDelay)
+            randomizationSetting.setNumericValue(originalRandomization)
         }
     }
 
