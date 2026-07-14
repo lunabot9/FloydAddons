@@ -18,7 +18,6 @@ repositories {
     mavenCentral()
     maven("https://jitpack.io")
     maven("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1")
-    maven("https://maven.terraformersmc.com/")
     maven("https://api.modrinth.com/maven")
 }
 
@@ -44,7 +43,7 @@ dependencies {
     implementation("org.jcodec:jcodec-javase:0.2.5")
     include("org.jcodec:jcodec-javase:0.2.5")
 
-    compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
+    compileOnly("maven.modrinth:modmenu:${property("modmenu_version")}")
 
     property("minecraft_lwjgl_version").let { lwjglVersion ->
         implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
