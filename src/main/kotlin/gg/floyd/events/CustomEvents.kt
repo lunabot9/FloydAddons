@@ -4,10 +4,10 @@ import com.mojang.blaze3d.platform.InputConstants
 import gg.floyd.events.core.CancellableEvent
 import gg.floyd.events.core.Event
 import gg.floyd.utils.render.RenderConsumer
+import net.fabricmc.fabric.api.client.rendering.v1.level.AbstractLevelRenderContext
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext
 import net.minecraft.client.Minecraft
-import net.fabricmc.fabric.api.client.rendering.v1.world.AbstractWorldRenderContext
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldExtractionContext
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.Packet
@@ -29,9 +29,9 @@ interface WorldEvent : Event {
     object Unload : WorldEvent
 }
 
-abstract class RenderEvent(open val context: AbstractWorldRenderContext) : Event {
-    class Extract(override val context: WorldExtractionContext, val consumer: RenderConsumer) : RenderEvent(context)
-    class Last(override val context: WorldRenderContext) : RenderEvent(context)
+abstract class RenderEvent(open val context: AbstractLevelRenderContext) : Event {
+    class Extract(override val context: LevelExtractionContext, val consumer: RenderConsumer) : RenderEvent(context)
+    class Last(override val context: LevelRenderContext) : RenderEvent(context)
 }
 
 abstract class PartyEvent(val members: List<String>) : Event {

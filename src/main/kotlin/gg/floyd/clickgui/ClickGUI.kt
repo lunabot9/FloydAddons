@@ -11,7 +11,7 @@ import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.animations.EaseOutAnimation
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
@@ -19,6 +19,8 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
 import java.awt.Desktop
 import java.net.URI
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.sign
 import gg.floyd.utils.ui.mouseX as floydMouseX
 import gg.floyd.utils.ui.mouseY as floydMouseY
@@ -47,8 +49,15 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         b[0] = x; b[1] = y; b[2] = w; b[3] = h
     }
 
-    override fun render(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
+    override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
+        val guiScale = ClickGUIModule.getStandardGuiScale()
+        val scaledMouseX = floydMouseX / guiScale
+        val scaledMouseY = floydMouseY / guiScale
+        val searchBarX = mc.window.screenWidth / (2f * guiScale) - 175f
+        val searchBarY = (mc.window.screenHeight - 110f) / guiScale - 20f
+        val bounds = computeRenderBounds(searchBarX, searchBarY, context.guiWidth(), context.guiHeight())
+
+        NVGPIPRenderer.draw(context, bounds.left, bounds.top, bounds.width, bounds.height) {
             val scaledMouseX = floydMouseX / ClickGUIModule.getStandardGuiScale()
             val scaledMouseY = floydMouseY / ClickGUIModule.getStandardGuiScale()
             val searchBarX = mc.window.screenWidth / (2f * ClickGUIModule.getStandardGuiScale()) - 175f
@@ -91,7 +100,29 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
             desc.render()
             NVGRenderer.resetTextLayers()
         }
-        super.render(context, mouseX, mouseY, deltaTicks)
+        super.extractRenderState(context, mouseX, mouseY, deltaTicks)
+    }
+
+    private fun computeRenderBounds(
+        searchBarX: Float,
+        searchBarY: Float,
+        guiWidth: Int,
+        guiHeight: Int
+    ): RenderBounds {
+        val bounds = RenderBounds()
+        bounds.include(searchBarX, searchBarY - 22f - 4f, searchBarX + 350f, searchBarY + 40f + 8f + 15f + 3f + 15f)
+        for (panel in panels) {
+            val panelBounds = panel.predictedBounds(SearchBar.currentSearch)
+            bounds.include(panelBounds[0], panelBounds[1], panelBounds[2], panelBounds[3])
+        }
+        if (desc.text.isNotEmpty() && desc.hoverHandler.percent() >= 100) {
+            val area = NVGRenderer.wrappedTextBounds(desc.text, 300f, 16f, NVGRenderer.defaultFont)
+            bounds.include(desc.x, desc.y, desc.x + area[2] - area[0] + 16f, desc.y + area[3] - area[1] + 16f)
+        }
+        // A small safety margin avoids clipping shadows/borders and preserves hover text near edges.
+        return bounds
+            .inflate(20f)
+            .clampTo(guiWidth.toFloat(), guiHeight.toFloat())
     }
 
     override fun mouseScrolled(
@@ -288,6 +319,41 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
             val offset = 1f - ((cursorX - startX) / titleWidth)
             NVGRenderer.text(titleChars[i], cursorX, titleY, size, ClickGUIModule.guiAccentColor(offset), NVGRenderer.defaultFont)
             cursorX += widths[i + 1]
+        }
+    }
+
+    private class RenderBounds {
+        var minX = Float.POSITIVE_INFINITY
+        var minY = Float.POSITIVE_INFINITY
+        var maxX = Float.NEGATIVE_INFINITY
+        var maxY = Float.NEGATIVE_INFINITY
+
+        val width: Int get() = maxOf(1, ceil(maxX - minX).toInt())
+        val height: Int get() = maxOf(1, ceil(maxY - minY).toInt())
+        val left: Int get() = floor(minX).toInt()
+        val top: Int get() = floor(minY).toInt()
+
+        fun include(x0: Float, y0: Float, x1: Float, y1: Float) {
+            minX = minOf(minX, x0)
+            minY = minOf(minY, y0)
+            maxX = maxOf(maxX, x1)
+            maxY = maxOf(maxY, y1)
+        }
+
+        fun inflate(padding: Float): RenderBounds {
+            minX -= padding
+            minY -= padding
+            maxX += padding
+            maxY += padding
+            return this
+        }
+
+        fun clampTo(maxWidth: Float, maxHeight: Float): RenderBounds {
+            minX = minX.coerceIn(0f, maxWidth)
+            minY = minY.coerceIn(0f, maxHeight)
+            maxX = maxX.coerceIn(minX + 1f, maxWidth)
+            maxY = maxY.coerceIn(minY + 1f, maxHeight)
+            return this
         }
     }
 

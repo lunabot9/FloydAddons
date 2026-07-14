@@ -1,18 +1,19 @@
 package gg.floyd.utils.render
 
 import gg.floyd.FloydAddonsMod.mc
+import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.world.phys.Vec3
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.joml.Vector4f
 
 /**
- * Captures the per-frame world-render matrices (set in [GameRendererMixin] during
- * `renderLevel`) so screen-space overlays and view-bob-stable tracers can be derived
- * from them outside of the world render pass.
+ * Captures the per-frame world-render matrices so screen-space overlays and
+ * view-bob-stable tracers can be derived from them outside of the world render pass.
  *
- * - [projection] is the projection matrix actually used for the frame (it already
- *   includes the view-bob transform baked into it by vanilla).
+ * - [projection] is the projection matrix actually used for the frame. In 26.1.x vanilla
+ *   builds it transiently as `cameraRenderState.projectionMatrix * bobPose`, so we rebuild
+ *   that here from the captured camera state plus [bob].
  * - [bob] is the composed view-bob / hurt-camera transform vanilla multiplied onto the
  *   projection. It is identity-equivalent when bobbing is disabled and no hurt is active.
  *   Captured directly in [gg.floyd.mixin.mixins.GameRendererMixin] from the same
@@ -27,24 +28,17 @@ object WorldToScreen {
     @Volatile private var cameraPos: Vec3 = Vec3.ZERO
 
     /**
-     * Called each frame from [gg.floyd.mixin.mixins.LevelRendererMixin] with the three Matrix4f
-     * parameters of `LevelRenderer.renderLevel` (the exact matrices the GPU renders the world with)
-     * plus the camera position. The projection is identified by its perspective structure (m33 == 0,
-     * the perspective-divide row); the view matrix is the first remaining (affine) matrix. This makes
-     * the identification independent of the renderLevel parameter order.
-     *
-     * The bob transform is captured separately by [captureBob]; until the first frame composes it,
-     * [tracerOrigin] returns null and tracers fall back to the eye-based origin. [project] only needs
-     * projection + view and works without it.
+     * Called each frame from [gg.floyd.mixin.mixins.LevelRendererMixin]. In 26.1.x the world pass
+     * receives the camera rotation matrix directly while the bobbed projection only exists briefly in
+     * `GameRenderer.renderLevel`, so we reconstruct the final projection from [CameraRenderState].
      */
     @JvmStatic
-    fun capture(m1: Matrix4f, m2: Matrix4f, m3: Matrix4f, cameraPos: Vec3) {
-        val mats = arrayOf(m1, m2, m3)
-        val proj = mats.firstOrNull { kotlin.math.abs(it.m33()) < 1.0e-4f } ?: return
-        val view = mats.firstOrNull { it !== proj } ?: return
-        this.projection = Matrix4f(proj)
-        this.modelView = Matrix4f(view)
-        this.cameraPos = cameraPos
+    fun capture(cameraRenderState: CameraRenderState, viewRotationMatrix: org.joml.Matrix4fc) {
+        val proj = Matrix4f(cameraRenderState.projectionMatrix)
+        bob?.let { proj.mul(it) }
+        this.projection = proj
+        this.modelView = Matrix4f(viewRotationMatrix)
+        this.cameraPos = cameraRenderState.pos
     }
 
     /**
@@ -175,9 +169,12 @@ object WorldToScreen {
      * screen-space line expansion produces a line that is thick at the near (crosshair) end and tapers to
      * nothing at the far (player) end. Pinning BOTH endpoints to the same depth plane makes the whole
      * segment constant-`w`, so its on-screen width is uniform — a true single-width 2D-looking line — with
-     * no change to the renderer. Returns null if [worldPos] is at/behind the camera (caller falls back).
+     * no change to the renderer.
+     *
+     * When [mirrorBehindCamera] is true, targets behind the camera are mirrored onto that same front depth
+     * plane instead of being dropped. This keeps ESP tracers visible while you turn away from a target.
      */
-    fun tracerTarget(worldPos: Vec3, distance: Float = 1f): Vec3? {
+    fun tracerTarget(worldPos: Vec3, distance: Float = 1f, mirrorBehindCamera: Boolean = false): Vec3? {
         val view = modelView ?: return null
         val cam = cameraPos
 
@@ -188,10 +185,11 @@ object WorldToScreen {
             1f
         )
         view.transform(rel)
-        val viewZ = rel.z                       // negative in front of the camera
-        if (viewZ > -1.0e-3f) return null       // at/behind the camera
-
-        val t = distance / -viewZ               // scale the camera->target ray to depth `distance`
+        if (rel.z > TRACER_VIEW_EPSILON) {
+            if (!mirrorBehindCamera) return null
+            return behindCameraTracerTarget(distance)
+        }
+        val t = tracerPlaneScale(rel.z, distance, mirrorBehindCamera = false) ?: return null
         return Vec3(
             cam.x + t * (worldPos.x - cam.x),
             cam.y + t * (worldPos.y - cam.y),
@@ -199,5 +197,57 @@ object WorldToScreen {
         )
     }
 
+    /**
+     * Scale factor that moves a camera->target ray onto the tracer depth plane. Negative [viewZ] values are
+     * in front of the camera. When [mirrorBehindCamera] is enabled, positive [viewZ] values are reflected
+     * through the camera so a stable on-screen direction still exists instead of dropping the tracer.
+     */
+    internal fun tracerPlaneScale(viewZ: Float, distance: Float = 1f, mirrorBehindCamera: Boolean = false): Float? {
+        if (viewZ <= -TRACER_VIEW_EPSILON) return distance / -viewZ
+        if (!mirrorBehindCamera || viewZ < TRACER_VIEW_EPSILON) return null
+        return -distance / viewZ
+    }
+
+    /**
+     * Center-bottom fallback for behind-camera tracers. This produces a stable point directly below the
+     * crosshair on the same tracer depth plane so turning away from a target draws downward instead of up.
+     */
+    internal fun behindCameraTracerTarget(distance: Float = 1f): Vec3? =
+        tracerPlaneScreenPoint(0f, TRACER_BEHIND_CAMERA_NDC_Y, distance)
+
+    /**
+     * World-space point on the tracer depth plane that projects to ([ndcX], [ndcY]). Uses the same clip
+     * depth as [tracerOrigin], so the resulting line stays on the stable constant-width tracer plane.
+     */
+    internal fun tracerPlaneScreenPoint(ndcX: Float, ndcY: Float, distance: Float = 1f): Vec3? {
+        val proj = projection ?: return null
+        val view = modelView ?: return null
+        val bobMatrix = bob ?: return null
+        val cam = cameraPos
+
+        val centerEye = Vector4f(0f, 0f, -distance, 1f)
+        Matrix4f(bobMatrix).invert().transform(centerEye)
+
+        val centerClip = Matrix4f(proj).transform(centerEye)
+        if (kotlin.math.abs(centerClip.w) <= TRACER_VIEW_EPSILON) return null
+
+        val desiredEye = Vector4f(
+            ndcX * centerClip.w,
+            ndcY * centerClip.w,
+            centerClip.z,
+            centerClip.w
+        )
+        Matrix4f(proj).invert().transform(desiredEye)
+        if (kotlin.math.abs(desiredEye.w) <= TRACER_VIEW_EPSILON) return null
+        desiredEye.div(desiredEye.w)
+
+        val world = Vector3f(desiredEye.x, desiredEye.y, desiredEye.z)
+        Matrix4f(view).invert().transformPosition(world)
+        return Vec3(cam.x + world.x, cam.y + world.y, cam.z + world.z)
+    }
+
     data class ScreenPos(val x: Float, val y: Float)
+
+    private const val TRACER_VIEW_EPSILON = 1.0e-3f
+    private const val TRACER_BEHIND_CAMERA_NDC_Y = -0.98f
 }

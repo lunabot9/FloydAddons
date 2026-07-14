@@ -3,6 +3,7 @@ package gg.floyd.utils.ui.rendering
 import com.mojang.blaze3d.opengl.GlStateManager
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.utils.Color.Companion.alpha
 import gg.floyd.utils.Color.Companion.blue
 import gg.floyd.utils.Color.Companion.green
@@ -23,6 +24,7 @@ import org.lwjgl.stb.STBImage.stbi_load_from_memory
 import org.lwjgl.system.MemoryUtil.memAlloc
 import org.lwjgl.system.MemoryUtil.memFree
 import java.nio.ByteBuffer
+import java.nio.file.Files
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
@@ -35,6 +37,22 @@ object NVGRenderer {
 
     val defaultFont by lazy(LazyThreadSafetyMode.NONE) {
         Font("Default", mc.resourceManager.getResource(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "font.ttf")).get().open())
+    }
+
+    private var selectedFontKey: String? = null
+    private var selectedFont: Font? = null
+
+    /** The selected Floyd .ttf for legacy NanoVG text, or the bundled font when none is selected. */
+    fun activeFont(): Font {
+        val path = FloydFont.customFontPath() ?: return defaultFont
+        return runCatching {
+            val key = "${path.toAbsolutePath()}:${Files.getLastModifiedTime(path).toMillis()}"
+            if (selectedFontKey != key || selectedFont == null) {
+                selectedFontKey = key
+                selectedFont = Font("Custom:$key", Files.newInputStream(path))
+            }
+            selectedFont!!
+        }.getOrDefault(defaultFont)
     }
 
     private val fontMap = HashMap<Font, NVGFont>()
@@ -52,7 +70,10 @@ object NVGRenderer {
      * (`textWidth`/`wrappedTextBounds`) flip as ONE unit, or layouts would shear against the
      * renderer (the D6 invariant). Read once here; deleted with the NVG text code in step 7.
      */
-    private val legacyNvgText: Boolean = System.getenv("FLOYD_NVG_TEXT") == "1"
+    // 26.1.2 fallback: keep ClickGUI text on the native NVG path by default for now. The newer
+    // mc.font deferred replay path is active behind FLOYD_NVG_TEXT=0 once its PIP replay is
+    // fully revalidated on 26.1.2.
+    private val legacyNvgText: Boolean = System.getenv("FLOYD_NVG_TEXT") != "0"
 
     /** True when text calls are deferred for mc.font replay (the default; see [DeferredNvgText]). */
     val deferringText: Boolean get() = !legacyNvgText
@@ -80,6 +101,7 @@ object NVGRenderer {
      * transform — guiScale + open-anim — and scissor stack).
      */
     internal var layerBoundary: (() -> Unit)? = null
+
 
     init {
         // nvgCreate builds the fontstash atlas texture with RAW binds (bind new tex -> upload ->
@@ -113,7 +135,6 @@ object NVGRenderer {
     fun endFrame() {
         if (!drawing) throw IllegalStateException("[NVGRenderer] Not drawing, but called endFrame")
         nvgEndFrame(vg)
-
         drawing = false
     }
 
@@ -282,6 +303,26 @@ object NVGRenderer {
         nvgStroke(vg)
     }
 
+    /** The ClickGUI rounded-outline primitive with a NanoVG linear-gradient stroke paint. */
+    fun hollowGradientRect(
+        x: Float,
+        y: Float,
+        w: Float,
+        h: Float,
+        thickness: Float,
+        color1: Int,
+        color2: Int,
+        radius: Float,
+        gradient: Gradient = Gradient.LeftToRight,
+    ) {
+        nvgBeginPath(vg)
+        nvgRoundedRect(vg, x, y, w, h, radius)
+        nvgStrokeWidth(vg, thickness)
+        gradient(color1, color2, x, y, w, h, gradient)
+        nvgStrokePaint(vg, nvgPaint)
+        nvgStroke(vg)
+    }
+
     fun gradientRect(
         x: Float,
         y: Float,
@@ -349,6 +390,27 @@ object NVGRenderer {
         }
         // Legacy parity: the NVG path drew the em-box top at y + .5f — bake the same anchor in.
         deferText(text, x, y + .5f, size, color)
+    }
+
+    fun textCentered(
+        text: String,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        size: Float,
+        color: Int,
+        font: Font,
+        measuredWidth: Float = textWidth(text, size, font)
+    ) {
+        text(
+            text,
+            round(x + (width - measuredWidth) / 2f),
+            round(y + (height - size) / 2f),
+            size,
+            color,
+            font
+        )
     }
 
     fun textShadow(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {

@@ -9,18 +9,13 @@ import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.utils.IrisCompatability
 import gg.floyd.utils.font.MsdfPipelines
 import gg.floyd.utils.handlers.TickTasks
-import gg.floyd.utils.render.ItemStateRenderer
 import gg.floyd.utils.render.RenderBatchManager
-import gg.floyd.utils.render.PanelBlurPIPRenderer
-import gg.floyd.utils.render.RoundRectPIPRenderer
-import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
-import net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry
 import net.minecraft.client.Minecraft
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -50,7 +45,7 @@ object FloydAddonsMod : ClientModInitializer {
 
     const val MOD_ID = "floydaddons"
     const val MOD_NAME = "Floyd Addons"
-    const val MOD_VERSION = "2.2.0"
+    const val MOD_VERSION = "2.2.1"
 
     val scope = CoroutineScope(SupervisorJob() + EmptyCoroutineContext)
 
@@ -72,22 +67,6 @@ object FloydAddonsMod : ClientModInitializer {
             IrisCompatability, RenderBatchManager,
             ModuleManager
         ).forEach { EventBus.subscribe(it) }
-
-        SpecialGuiElementRegistry.register { context ->
-            NVGPIPRenderer(context.vertexConsumers())
-        }
-
-        SpecialGuiElementRegistry.register { context ->
-            RoundRectPIPRenderer(context.vertexConsumers())
-        }
-
-        SpecialGuiElementRegistry.register { context ->
-            PanelBlurPIPRenderer(context.vertexConsumers())
-        }
-
-        SpecialGuiElementRegistry.register { context ->
-            ItemStateRenderer(context.vertexConsumers())
-        }
 
         ClientLifecycleEvents.CLIENT_STOPPING.register {
             onClientStopping()

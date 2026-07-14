@@ -79,18 +79,16 @@ object FloydFont : Module(
      * untouched.
      */
     @JvmStatic
-    fun isGlobalCustomFontEnabled(): Boolean =
-        enabled && globalCustomFont && minecraftFont && !shouldYieldMinecraftFontToServerGlyphs()
-
-    private fun shouldYieldMinecraftFontToServerGlyphs(): Boolean {
-        return runCatching {
-            val server = mc.currentServer ?: mc.connection?.serverData ?: return false
-            server.ip.contains("hypixel.net", ignoreCase = true)
-        }.getOrDefault(false)
-    }
+    fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont && minecraftFont
 
     /** A Floyd HUD panel surface with its own custom-font toggle (see [panelFont]). */
     enum class PanelFont { SCOREBOARD, DAY_TRACKER, INVENTORY }
+
+    fun usesCustomFont(panel: PanelFont): Boolean = enabled && globalCustomFont && when (panel) {
+        PanelFont.SCOREBOARD -> scoreboardFont
+        PanelFont.DAY_TRACKER -> dayTrackerFont
+        PanelFont.INVENTORY -> inventoryHudFont
+    }
 
     /**
      * The [Font] a HUD panel should draw AND measure with this frame.
@@ -107,11 +105,7 @@ object FloydFont : Module(
      * Render-thread only.
      */
     fun panelFont(panel: PanelFont): Font {
-        val custom = enabled && globalCustomFont && when (panel) {
-            PanelFont.SCOREBOARD -> scoreboardFont
-            PanelFont.DAY_TRACKER -> dayTrackerFont
-            PanelFont.INVENTORY -> inventoryHudFont
-        }
+        val custom = usesCustomFont(panel)
         if (!custom) return FloydAddonsMod.mc.font
         return if (isGlobalCustomFontEnabled()) FloydAddonsMod.mc.font else FloydFonts.panelCustom
     }

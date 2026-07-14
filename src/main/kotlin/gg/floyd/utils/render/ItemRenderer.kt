@@ -12,14 +12,14 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.renderer.fog.FogRenderer
 import org.lwjgl.system.MemoryStack
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.client.gui.navigation.ScreenRectangle
 import net.minecraft.client.gui.render.TextureSetup
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
-import net.minecraft.client.gui.render.state.BlitRenderState
-import net.minecraft.client.gui.render.state.GuiItemRenderState
-import net.minecraft.client.gui.render.state.GuiRenderState
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
+import net.minecraft.client.renderer.state.gui.BlitRenderState
+import net.minecraft.client.renderer.state.gui.GuiItemRenderState
+import net.minecraft.client.renderer.state.gui.GuiRenderState
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.LightTexture
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderPipelines
@@ -55,7 +55,7 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
     }
 
     override fun blitTexture(element: State, state: GuiRenderState) {
-        state.submitBlitToCurrentLayer(
+        state.addBlitToCurrentLayer(
             BlitRenderState(
                 RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA, TextureSetup.singleTexture(textureView!!, RenderSystem.getSamplerCache().getRepeat(FilterMode.LINEAR)),
                 element.pose(), element.x0(), element.y0(), element.x0() + 16, element.y0() + 16,
@@ -102,13 +102,14 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
 
             val state = State(
                 GuiItemRenderState(
-                    item.item.name.string,
                     Matrix3x2f(pose()),
-                    tracking, x, y,
+                    tracking,
+                    x,
+                    y,
                     scissorStack.peek()
                 )
             )
-            guiRenderState.submitPicturesInPictureState(state)
+            guiRenderState.addPicturesInPictureState(state)
         }
 
         /**

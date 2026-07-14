@@ -1,7 +1,6 @@
 package gg.floyd.utils.ui.rendering
 
 import com.mojang.blaze3d.opengl.GlConst
-import com.mojang.blaze3d.opengl.GlDevice
 import com.mojang.blaze3d.opengl.GlStateManager
 import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
@@ -9,10 +8,12 @@ import com.mojang.blaze3d.vertex.PoseStack
 import gg.floyd.FloydAddonsMod
 import gg.floyd.utils.perf.FloydPerf
 import gg.floyd.utils.render.NvgTextReplay
+import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.PooledPicturePIPRenderer
-import net.minecraft.client.gui.GuiGraphics
+import gg.floyd.utils.render.pipContentOffset
+import net.minecraft.client.gui.*
 import net.minecraft.client.gui.navigation.ScreenRectangle
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import org.joml.Matrix3x2f
@@ -47,6 +48,15 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
     private fun renderContentInner(state: NVGRenderState) {
         val slot = bindSlotTarget() ?: return
 
+        state.backdropBlur?.let { blur ->
+            PanelBlurPIPRenderer.drawIntoCurrentPip(
+                state.x0(), state.y0(), slot.width, slot.height,
+                blur.cornerRadius * state.renderScale * NVGRenderer.devicePixelRatio(),
+                blur.radius, blur.boxKernel,
+            )
+            bindSlotTarget()
+        }
+
         NvgTextReplay.beginFrameCounts()
         NVGRenderer.drainDeferredText() // drop anything stale from an aborted frame
         NVGRenderer.resetTextLayers() // and re-arm the layer counter if that frame died mid-pass
@@ -61,6 +71,14 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
 
         NVGRenderer.beginFrame(slot.width.toFloat(), slot.height.toFloat())
         if (state.renderScale != 1f) NVGRenderer.scale(state.renderScale, state.renderScale)
+        if (!state.localCoordinates) {
+            val guiScale = FloydAddonsMod.mc.window.guiScale.toFloat()
+            val dpr = NVGRenderer.devicePixelRatio()
+            NVGRenderer.translate(
+                pipContentOffset(state.x0().toFloat(), guiScale, dpr) / state.renderScale,
+                pipContentOffset(state.y0().toFloat(), guiScale, dpr) / state.renderScale,
+            )
+        }
 
         NVGRenderer.layerBoundary = boundary@{
             // Sub-frame split: flush the closed layer's shapes, bake its text into the slot, then
@@ -98,9 +116,9 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
      * Re-run before EVERY `nvgBeginFrame`: the interleaved replay's render passes rebind both.
      */
     private fun bindSlotTarget(): SlotTarget? {
-        val colorTex = RenderSystem.outputColorTextureOverride ?: return null
-        val bufferManager = (RenderSystem.getDevice() as? GlDevice)?.directStateAccess() ?: return null
-        val glDepthTex = (RenderSystem.outputDepthTextureOverride?.texture() as? GlTexture) ?: return null
+        val colorTex = RenderSystem.outputColorTextureOverride ?: return logMissingSlot("noColorOverride")
+        val bufferManager = DirectStateAccessCompat.directStateAccess() ?: return logMissingSlot("noDirectStateAccess")
+        val glDepthTex = (RenderSystem.outputDepthTextureOverride?.texture() as? GlTexture) ?: return logMissingSlot("noDepthOverride")
 
         val width = colorTex.getWidth(0)
         val height = colorTex.getHeight(0)
@@ -111,6 +129,13 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
 
         GL33C.glBindSampler(0, 0)
         return SlotTarget(width, height)
+    }
+
+    private fun logMissingSlot(reason: String): SlotTarget? {
+        if (reportedMissingSlotReasons.add(reason)) {
+            FloydAddonsMod.logger.warn("[NVGPIPRenderer] ClickGUI slot bind skipped: {}", reason)
+        }
+        return null
     }
 
     /**
@@ -176,6 +201,8 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
         private val width: Int,
         private val height: Int,
         val renderScale: Float,
+        val localCoordinates: Boolean,
+        val backdropBlur: BackdropBlur?,
         private val poseMatrix: Matrix3x2f,
         private val scissor: ScreenRectangle?,
         private val bounds: ScreenRectangle?,
@@ -192,11 +219,14 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
     }
 
     companion object {
+        data class BackdropBlur(val cornerRadius: Float, val radius: Float, val boxKernel: Boolean)
         /** GUI-relevant texture units to zero in [resyncBlazeStateAfterNvg] (Sampler0..Sampler2 + 1 spare). */
         private const val RESYNC_TEXTURE_UNITS = 4
 
         /** One process-wide soft assert that the ClickGUI's PIP pose stays identity (renderScale 1). */
         private var warnedRenderScale = false
+
+        private val reportedMissingSlotReasons = HashSet<String>()
 
         /**
          * Draw NVG content as a special GUI element.
@@ -215,6 +245,8 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
             width: Int,
             height: Int,
             renderScaleMultiplier: Float = 1f,
+            localCoordinates: Boolean = false,
+            backdropBlur: BackdropBlur? = null,
             renderContent: () -> Unit
         ) {
             val scissor = context.scissorStack.peek()
@@ -233,10 +265,12 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
             val state = NVGRenderState(
                 screenLeft, screenTop, screenWidth, screenHeight,
                 renderScale,
+                localCoordinates,
+                backdropBlur,
                 pose, scissor, bounds,
                 renderContent
             )
-            context.guiRenderState.submitPicturesInPictureState(state)
+            context.guiRenderState.addPicturesInPictureState(state)
         }
 
         private fun createBounds(x0: Int, y0: Int, x1: Int, y1: Int, scissorArea: ScreenRectangle?): ScreenRectangle? {
@@ -245,4 +279,3 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
         }
     }
 }
-

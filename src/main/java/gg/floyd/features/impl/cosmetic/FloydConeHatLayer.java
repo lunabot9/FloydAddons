@@ -33,7 +33,7 @@ public class FloydConeHatLayer extends RenderLayer<AvatarRenderState, PlayerMode
 
         collector.submitCustomGeometry(
             poseStack,
-            RenderTypes.entityCutoutNoCull(FloydConeHat.texture()),
+            RenderTypes.entityCutout(FloydConeHat.texture()),
             (entry, consumer) -> drawCone(entry, consumer, light, FloydConeHat.height(), FloydConeHat.radius())
         );
         poseStack.popPose();

@@ -78,7 +78,7 @@ class SelectorSetting(
         for (i in options.indices) {
             val optionY = y + 38 + 32 * i
             if (i != options.size - 1) NVGRenderer.line(x + 18f, optionY + 32, x + width - 12f, optionY + 32, 1.5f, Colors.MINECRAFT_DARK_GRAY.rgba)
-            NVGRenderer.text(options[i], x + width / 2f - widths[i] / 2, optionY + 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+            NVGRenderer.textCentered(options[i], x + 6f, optionY, width - 12f, 32f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont, widths[i])
             if (isSettingHovered(i)) NVGRenderer.hollowRect(x + 6, optionY, width - 12f, 32f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
         }
         if (settingAnim.isAnimating()) NVGRenderer.popScissor()

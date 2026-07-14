@@ -66,6 +66,8 @@ object FloydXray : Module(
     description = "Floyd x-ray opacity and opaque block filtering.",
     toggled = false,
 ) {
+    private val renderingBlockState: ThreadLocal<BlockState?> = ThreadLocal()
+
     val opacity by NumberSetting("Opacity", 0.3f, 0.05f, 1f, 0.05f, desc = "Opacity for non-opaque x-ray blocks.")
     private val toggleKey by KeybindSetting("Toggle X-Ray", GLFW.GLFW_KEY_UNKNOWN, desc = "Floyd X-Ray toggle key.").onPress {
         val active = toggleXray()
@@ -126,6 +128,22 @@ object FloydXray : Module(
         FloydPerfCounters.xrayIsOpaqueCalls.increment()
         val id = BuiltInRegistries.BLOCK.getKey(state.block).toString()
         return opaqueBlocks[id] == true
+    }
+
+    @JvmStatic
+    fun beginBlockTessellation(state: BlockState) {
+        renderingBlockState.set(state)
+    }
+
+    @JvmStatic
+    fun endBlockTessellation() {
+        renderingBlockState.remove()
+    }
+
+    @JvmStatic
+    fun shouldForceTranslucentLayer(): Boolean {
+        val state = renderingBlockState.get() ?: return false
+        return isActive() && !isOpaque(state)
     }
 
     fun opaqueBlockIds(): Set<String> = FloydXrayOpaqueLists.activeIds(opaqueBlocks)

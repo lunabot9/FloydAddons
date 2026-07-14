@@ -2,7 +2,7 @@ package gg.floyd.mixin.mixins;
 
 import gg.floyd.utils.ChatChroma;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,13 +16,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ChatComponent.class)
 public class ChatComponentMixin {
 
-    @Inject(method = "render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/gui/Font;IIIZZ)V", at = @At("HEAD"))
-    private void floydaddons$beginChatChroma(GuiGraphics guiGraphics, Font font, int currentTick, int mouseX, int mouseY, boolean focused, boolean drawingIndicator, CallbackInfo ci) {
+    @Inject(method = "extractRenderState", at = @At("HEAD"))
+    private void floydaddons$beginChatChroma(GuiGraphicsExtractor guiGraphics, Font font, int currentTick, int mouseX, int mouseY, ChatComponent.DisplayMode displayMode, boolean focused, CallbackInfo ci) {
         ChatChroma.INSTANCE.beginRender();
     }
 
-    @Inject(method = "render(Lnet/minecraft/client/gui/GuiGraphics;Lnet/minecraft/client/gui/Font;IIIZZ)V", at = @At("RETURN"))
-    private void floydaddons$endChatChroma(GuiGraphics guiGraphics, Font font, int currentTick, int mouseX, int mouseY, boolean focused, boolean drawingIndicator, CallbackInfo ci) {
+    @Inject(method = "extractRenderState", at = @At("RETURN"))
+    private void floydaddons$endChatChroma(GuiGraphicsExtractor guiGraphics, Font font, int currentTick, int mouseX, int mouseY, ChatComponent.DisplayMode displayMode, boolean focused, CallbackInfo ci) {
         ChatChroma.INSTANCE.endRender();
     }
 }

@@ -8,7 +8,7 @@ jobs:
       contents: write
     strategy:
       matrix:
-        java: [ 21 ]
+        java: [ 25 ]
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -74,6 +74,6 @@ jobs:
             echo "Creating release ${tag}."
             gh release create "$tag" "$jar" \
               --target "$GITHUB_SHA" \
-              --title "FloydAddons ${version} (MC 1.21.11)" \
-              --notes "Odin-based FloydAddons for Minecraft 1.21.11. Built from ${GITHUB_SHA}."
+              --title "FloydAddons ${version} (MC 26.1.2)" \
+              --notes "FloydAddons for Minecraft 26.1.2. Built from ${GITHUB_SHA}."
           fi

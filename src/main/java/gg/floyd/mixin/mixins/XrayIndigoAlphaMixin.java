@@ -1,22 +1,23 @@
 package gg.floyd.mixin.mixins;
 
 import gg.floyd.features.impl.render.FloydXray;
-import net.fabricmc.fabric.impl.client.indigo.renderer.mesh.MutableQuadViewImpl;
+import net.fabricmc.fabric.api.client.renderer.v1.mesh.MutableQuadView;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Pseudo
-@Mixin(targets = "net.fabricmc.fabric.impl.client.indigo.renderer.render.AbstractTerrainRenderContext", remap = false)
+@Mixin(targets = "net.fabricmc.fabric.impl.client.indigo.renderer.render.AltModelBlockRendererImpl", remap = false)
 public class XrayIndigoAlphaMixin {
     @Inject(
-        method = "bufferQuad(Lnet/fabricmc/fabric/impl/client/indigo/renderer/mesh/MutableQuadViewImpl;)V",
-        at = @At("HEAD"),
+        method = "transform",
+        at = @At("RETURN"),
         require = 0
     )
-    private void floydaddons$modifyIndigoAlpha(MutableQuadViewImpl quad, CallbackInfo ci) {
+    private void floydaddons$modifyIndigoAlpha(MutableQuadView quad, CallbackInfoReturnable<Boolean> cir) {
+        if (!cir.getReturnValueZ()) return;
         if (!FloydXray.isActive()) return;
 
         int alpha = FloydXray.alpha();

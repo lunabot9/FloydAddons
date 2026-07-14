@@ -9,9 +9,9 @@ import com.mojang.blaze3d.textures.TextureFormat
 import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.gui.render.TextureSetup
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer
-import net.minecraft.client.gui.render.state.BlitRenderState
-import net.minecraft.client.gui.render.state.GuiRenderState
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
+import net.minecraft.client.renderer.state.gui.BlitRenderState
+import net.minecraft.client.renderer.state.gui.GuiRenderState
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.RenderPipelines
@@ -88,7 +88,7 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
             if (savedProjection != null) RenderSystem.setProjectionMatrix(savedProjection, savedProjectionType)
         }
 
-        guiRenderState.submitBlitToCurrentLayer(
+        guiRenderState.addBlitToCurrentLayer(
             BlitRenderState(
                 RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
                 TextureSetup.singleTexture(slot.colorView, RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
@@ -112,9 +112,13 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
 
     private fun createSlot(w: Int, h: Int): Slot {
         val device = RenderSystem.getDevice()
-        val color = device.createTexture({ "Floyd PIP ${getTextureLabel()} color" }, 12, TextureFormat.RGBA8, w, h, 1, 1)
+        // Mirror vanilla PictureInPictureRenderer exactly: 26.1.2 validates that the offscreen color
+        // target cleared by CommandEncoder has COPY_DST in addition to TEXTURE_BINDING+RENDER_ATTACHMENT.
+        val colorUsage = GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_TEXTURE_BINDING or GpuTexture.USAGE_RENDER_ATTACHMENT
+        val depthUsage = GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_RENDER_ATTACHMENT
+        val color = device.createTexture({ "Floyd PIP ${getTextureLabel()} color" }, colorUsage, TextureFormat.RGBA8, w, h, 1, 1)
         val colorView = device.createTextureView(color)
-        val depth = device.createTexture({ "Floyd PIP ${getTextureLabel()} depth" }, 8, TextureFormat.DEPTH32, w, h, 1, 1)
+        val depth = device.createTexture({ "Floyd PIP ${getTextureLabel()} depth" }, depthUsage, TextureFormat.DEPTH32, w, h, 1, 1)
         val depthView = device.createTextureView(depth)
         return Slot(w, h, color, colorView, depth, depthView)
     }

@@ -7,7 +7,7 @@ import gg.floyd.clickgui.settings.impl.HUDSetting
 import gg.floyd.events.core.EventBus
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.moduleToggle
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import org.lwjgl.glfw.GLFW
 import kotlin.reflect.full.hasAnnotation
 

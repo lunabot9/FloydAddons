@@ -11,7 +11,12 @@ class FloydFontResourcesTest {
 
     @Test
     fun `floyd ships a global minecraft default font override`() {
-        assertTrue(Files.exists(resourceRoot.resolve("assets/minecraft/font/default.json")))
+        val defaultFont = resourceRoot.resolve("assets/minecraft/font/default.json")
+        assertTrue(Files.exists(defaultFont))
+        assertTrue(
+            Files.readString(defaultFont).contains("\"file\": \"floydaddons:font.ttf\""),
+            "minecraft:default must include the Floyd TTF entry that FloydFontProviders replaces with the selected font",
+        )
     }
 
     @Test

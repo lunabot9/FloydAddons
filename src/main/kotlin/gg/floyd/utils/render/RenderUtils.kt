@@ -11,6 +11,7 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.events.RenderEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.impl.misc.FloydCompatibility
+import gg.floyd.utils.ui.rendering.PostHudOverlay
 import gg.floyd.utils.Color
 import gg.floyd.utils.Color.Companion.blue
 import gg.floyd.utils.Color.Companion.green
@@ -63,8 +64,16 @@ internal class BoxBatchData(val aabbs: List<AABB>, val r: Float, val g: Float, v
  * origin ONCE and re-aims every target onto the origin's depth plane with scratch math —
  * allocation-free per line (the per-tracer drawTracer path costs ~5 allocations per line per
  * frame, ~2MB/frame at Block Search's 10k cap). Same frozen-list contract as [BoxBatchData].
+ * [mirrorBehindCamera] keeps tracers visible for behind-camera targets by mirroring them onto the
+ * front depth plane instead of dropping them.
  */
-internal class TracerFanData(val targets: List<Vec3>, val color: Int, val thickness: Float, val depth: Boolean)
+internal class TracerFanData(
+    val targets: List<Vec3>,
+    val color: Int,
+    val thickness: Float,
+    val depth: Boolean,
+    val mirrorBehindCamera: Boolean
+)
 internal data class BeaconData(val pos: BlockPos, val color: Color, val isScoping: Boolean, val gameTime: Long)
 internal data class TextData(val text: String, val pos: Vec3, val scale: Float, val depth: Boolean, val cameraRotation: org.joml.Quaternionf, val font: Font, val textWidth: Float)
 internal data class TexturedQuadData(val texture: Identifier, val bl: Vec3, val tl: Vec3, val tr: Vec3, val br: Vec3, val nx: Float, val ny: Float, val nz: Float, val color: Int, val depth: Boolean)
@@ -129,8 +138,8 @@ object RenderBatchManager {
                 PooledPicturePIPRenderer.recycleAll()
                 return@on
             }
-            val matrix = context.matrices()
-            val bufferSource = context.consumers() as? MultiBufferSource.BufferSource ?: return@on
+            val matrix = context.poseStack()
+            val bufferSource = context.bufferSource()
             val camera = mc.gameRenderer.mainCamera.position()
 
             // Draw the ESP world geometry (tracers, boxes, nameplate text) with fog DISABLED so
@@ -189,6 +198,13 @@ object RenderBatchManager {
             // every blit, so this frame's panels each get their own live texture (fixes overlapping
             // Floyd panels flickering / going black from the single shared vanilla PIP texture).
             PooledPicturePIPRenderer.recycleAll()
+
+            // Sole owner of the direct Floyd HUD compositor on 26.1.2. The later GameRenderer
+            // GuiRenderState.reset seam no longer exists reliably; keeping this at END_MAIN makes
+            // Inventory HUD, Day Tracker and Custom Scoreboard deterministic without double draws.
+            if (!FloydCompatibility.shouldUseSafeHudLayer()) {
+                PostHudOverlay.render()
+            }
 
             // NOTE: Floyd's no-PIP HUD panels are NOT drawn here. END_MAIN fires before the first-person
             // hand item is rendered (renderItemInHand runs later inside renderLevel/GameRenderer), so drawing
@@ -252,7 +268,7 @@ private fun PoseStack.renderQueuedTexturedQuads(
     val last = this.last()
 
     for (quad in quads) {
-        val buffer = bufferSource.getBuffer(RenderTypes.entityCutoutNoCullZOffset(quad.texture))
+        val buffer = bufferSource.getBuffer(RenderTypes.entityCutoutZOffset(quad.texture))
 
         fun vertex(p: Vec3, u: Float, v: Float) {
             buffer.addVertex(last, p.x.toFloat(), p.y.toFloat(), p.z.toFloat())
@@ -319,9 +335,9 @@ private val tracerFanScratch = Vector4f()
  * Flushes queued tracer fans: the shared crosshair origin is resolved once per fan, then every
  * target is re-aimed onto the origin's depth plane (the exact [WorldToScreen.tracerTarget] math,
  * inlined against [tracerFanScratch] so the loop is allocation-free) and emitted as one line.
- * Targets at/behind the camera are skipped — same as the single-tracer path. When the frame
- * matrices are not captured yet, falls back to the eye-anchored origin with straight lines to the
- * real targets, mirroring [drawTracer]'s fallback.
+ * When [TracerFanData.mirrorBehindCamera] is false, targets at/behind the camera are skipped.
+ * When the frame matrices are not captured yet, falls back to the eye-anchored origin with
+ * straight lines to the real targets, mirroring [drawTracer]'s fallback.
  */
 private fun PoseStack.renderQueuedTracerFans(fans: List<TracerFanData>, bufferSource: MultiBufferSource.BufferSource) {
     if (fans.isEmpty()) return
@@ -338,6 +354,7 @@ private fun PoseStack.renderQueuedTracerFans(fans: List<TracerFanData>, bufferSo
             val ox = origin.x.toFloat()
             val oy = origin.y.toFloat()
             val oz = origin.z.toFloat()
+            val behindCameraTarget = if (fan.mirrorBehindCamera) WorldToScreen.behindCameraTracerTarget() else null
             for (i in targets.indices) {
                 val t = targets[i]
                 val relX = t.x - cam.x
@@ -345,9 +362,17 @@ private fun PoseStack.renderQueuedTracerFans(fans: List<TracerFanData>, bufferSo
                 val relZ = t.z - cam.z
                 tracerFanScratch.set(relX.toFloat(), relY.toFloat(), relZ.toFloat(), 1f)
                 view.transform(tracerFanScratch)
-                val viewZ = tracerFanScratch.z
-                if (viewZ > -1.0e-3f) continue // at/behind the camera — no on-screen point to trace to
-                val s = 1.0 / -viewZ // re-aim onto the depth-1 plane (tracerTarget with distance=1f)
+                if (tracerFanScratch.z > 1.0e-3f) {
+                    val fallback = behindCameraTarget ?: continue
+                    PrimitiveRenderer.renderLine(
+                        last, buffer,
+                        ox, oy, oz,
+                        fallback.x.toFloat(), fallback.y.toFloat(), fallback.z.toFloat(),
+                        fan.color, fan.thickness
+                    )
+                    continue
+                }
+                val s = WorldToScreen.tracerPlaneScale(tracerFanScratch.z) ?: continue
                 PrimitiveRenderer.renderLine(
                     last, buffer,
                     ox, oy, oz,
@@ -454,7 +479,13 @@ private fun PoseStack.renderQueuedTexts(consumer: List<TextData>, bufferSource: 
     }
 }
 
-fun RenderEvent.Extract.drawTracer(to: Vec3, color: Color, depth: Boolean, thickness: Float = 3f) {
+fun RenderEvent.Extract.drawTracer(
+    to: Vec3,
+    color: Color,
+    depth: Boolean,
+    thickness: Float = 3f,
+    mirrorBehindCamera: Boolean = false
+) {
     if (mc.player == null) return
     // Lock the origin to the crosshair / screen-center so the tracer does not wobble with
     // view bobbing. Fall back to the eye position if the render matrices are unavailable.
@@ -463,9 +494,9 @@ fun RenderEvent.Extract.drawTracer(to: Vec3, color: Color, depth: Boolean, thick
         // Matrices ready: aim the far endpoint onto the origin's DEPTH PLANE (same screen direction as
         // `to`). Both endpoints then sit at the same camera depth, so the whole tracer is constant-depth
         // -> uniform on-screen width (no taper) AND it never crosses the camera/near plane (fixing the
-        // "tracer vanishes/glitches as it passes through the camera"). If `to` is at or behind the camera
-        // there is simply no on-screen point to trace to, so we cleanly skip rather than glitch.
-        val target = WorldToScreen.tracerTarget(to) ?: return
+        // "tracer vanishes/glitches as it passes through the camera"). Behind-camera targets can be
+        // optionally mirrored onto the front depth plane so ESP tracers stay visible while turning away.
+        val target = WorldToScreen.tracerTarget(to, mirrorBehindCamera = mirrorBehindCamera) ?: return
         drawLine(listOf(origin, target), color, depth, thickness)
         return
     }
@@ -561,9 +592,15 @@ fun RenderEvent.Extract.drawStyledBoxBatch(
  * crosshair origin once and re-aims each target with scratch math (see [TracerFanData]). The
  * caller must NOT mutate [targets] after queueing — hand over a fresh list per rebuild.
  */
-fun RenderEvent.Extract.drawTracerFan(targets: List<Vec3>, color: Color, thickness: Float = 3f, depth: Boolean = false) {
+fun RenderEvent.Extract.drawTracerFan(
+    targets: List<Vec3>,
+    color: Color,
+    thickness: Float = 3f,
+    depth: Boolean = false,
+    mirrorBehindCamera: Boolean = false
+) {
     if (targets.isEmpty()) return
-    consumer.tracerFans.add(TracerFanData(targets, color.rgba, thickness, depth))
+    consumer.tracerFans.add(TracerFanData(targets, color.rgba, thickness, depth, mirrorBehindCamera))
 }
 
 fun RenderEvent.Extract.drawBeaconBeam(position: BlockPos, color: Color) {

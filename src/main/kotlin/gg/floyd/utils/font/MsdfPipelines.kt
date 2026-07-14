@@ -1,7 +1,8 @@
 package gg.floyd.utils.font
 
+import com.mojang.blaze3d.pipeline.DepthStencilState
 import com.mojang.blaze3d.pipeline.RenderPipeline
-import com.mojang.blaze3d.platform.DepthTestFunction
+import com.mojang.blaze3d.platform.CompareOp
 import gg.floyd.FloydAddonsMod
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
@@ -43,8 +44,7 @@ object MsdfPipelines {
             .withVertexShader(id("core/msdf_text_see_through"))
             .withFragmentShader(id("core/msdf_text_see_through"))
             .withSampler("Sampler0")
-            .withDepthWrite(false)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false))
             .build()
     )
 
@@ -55,7 +55,7 @@ object MsdfPipelines {
             .withFragmentShader(id("core/msdf_text"))
             .withSampler("Sampler0")
             .withSampler("Sampler2")
-            .withDepthBias(-1.0F, -10.0F)
+            .withDepthStencilState(DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true, -1.0F, -10.0F))
             .build()
     )
 
@@ -66,7 +66,6 @@ object MsdfPipelines {
             .withFragmentShader(id("core/msdf_text"))
             .withSampler("Sampler0")
             .withSampler("Sampler2")
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
             .build()
     )
 }

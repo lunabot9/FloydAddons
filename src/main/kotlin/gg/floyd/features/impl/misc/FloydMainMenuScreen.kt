@@ -6,7 +6,7 @@ import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import gg.floyd.utils.ui.mouseX as floydMouseX
 import gg.floyd.utils.ui.mouseY as floydMouseY
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
 import net.minecraft.client.gui.screens.options.OptionsScreen
@@ -28,18 +28,18 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
     private val buttons = listOf(
         MenuButton("Singleplayer", onClick = { screen -> FloydAddonsMod.mc.setScreen(SelectWorldScreen(screen)) }),
         MenuButton("Multiplayer", onClick = { screen -> FloydAddonsMod.mc.setScreen(JoinMultiplayerScreen(screen)) }),
-        MenuButton("Options", onClick = { screen -> FloydAddonsMod.mc.setScreen(OptionsScreen(screen, FloydAddonsMod.mc.options)) }),
+        MenuButton("Options", onClick = { screen -> FloydAddonsMod.mc.setScreen(OptionsScreen(screen, FloydAddonsMod.mc.options, false)) }),
         MenuButton("Quit", onClick = { _ -> FloydAddonsMod.mc.stop() })
     )
 
-    override fun renderBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
+    override fun extractBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         if (!FloydMenuVideoBackground.render(context)) {
             context.fill(0, 0, context.guiWidth(), context.guiHeight(), 0xFF000000.toInt())
         }
     }
 
-    override fun render(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        super.render(context, mouseX, mouseY, deltaTicks)
+    override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
+        super.extractRenderState(context, mouseX, mouseY, deltaTicks)
 
         val scale = ClickGUIModule.getStandardGuiScale()
         layout(scale)

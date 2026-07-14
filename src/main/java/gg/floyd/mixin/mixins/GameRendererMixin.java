@@ -3,9 +3,9 @@ package gg.floyd.mixin.mixins;
 import com.mojang.blaze3d.vertex.PoseStack;
 import gg.floyd.features.impl.hiders.FloydHiders;
 import gg.floyd.utils.render.WorldToScreen;
-import gg.floyd.utils.ui.rendering.PostHudOverlay;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,28 +18,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class GameRendererMixin {
 
     @Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true)
-    private void floydaddons$noHurtCamera(PoseStack poseStack, float partialTick, CallbackInfo ci) {
+    private void floydaddons$noHurtCamera(CameraRenderState cameraRenderState, PoseStack poseStack, CallbackInfo ci) {
         if (FloydHiders.shouldSuppressHurtCamera()) {
             FloydHiders.recordHurtCamera();
             ci.cancel();
         }
-    }
-
-    /**
-     * Draws Floyd's no-PIP HUD panels (scoreboard / inventory / day tracker / ESP overhead) straight to
-     * the main framebuffer at the WORLD->GUI boundary: after {@code renderLevel} (which renders the world
-     * AND the first-person hand item) but right before the vanilla HUD / open screen are drawn from the
-     * GUI render state. Doing it here (rather than at WorldRenderEvents.END_MAIN, which fires BEFORE the
-     * hand) keeps the panels ON TOP of the held item, while still sitting UNDER any GUI (which then blurs
-     * over them) and rendering regardless of an open screen. GuiRenderState.reset() is the first
-     * GUI-phase call and is unconditional, so this fires every frame the game renders.
-     */
-    @Inject(
-        method = "render(Lnet/minecraft/client/DeltaTracker;Z)V",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/render/state/GuiRenderState;reset()V")
-    )
-    private void floydaddons$renderPostHudPanels(DeltaTracker deltaTracker, boolean tick, CallbackInfo ci) {
-        PostHudOverlay.render();
     }
 
     /**

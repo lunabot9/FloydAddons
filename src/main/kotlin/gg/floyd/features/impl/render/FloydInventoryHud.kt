@@ -13,7 +13,9 @@ import gg.floyd.utils.render.ItemStateRenderer
 import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.ui.rendering.PostHudOverlay
-import net.minecraft.client.gui.GuiGraphics
+import gg.floyd.utils.ui.rendering.NVGPIPRenderer
+import gg.floyd.utils.ui.rendering.NVGRenderer
+import net.minecraft.client.gui.*
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState
 import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.item.ItemDisplayContext
@@ -85,12 +87,54 @@ object FloydInventoryHud : Module(
     // (used for SkyHanni compatibility), it draws the panel here instead so Floyd stays off the shared
     // post-world framebuffer override path.
     private fun GuiGraphics.drawInventoryHud(example: Boolean): Pair<Int, Int> {
+        val target = FloydPanelStyle.PanelTarget.INVENTORY
         val slotSize = slotSizePx()
-        val pad = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.INVENTORY).coerceAtLeast(0)
-        if (FloydCompatibility.shouldUseSafeHudLayer()) {
-            mc.player?.inventory?.let { drawInventoryHudInline(it, allowBlur = false) }
+        val pad = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
+        val width = 9 * slotSize + 2 * pad
+        val height = 3 * slotSize + 2 * pad
+
+        val panelMultiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
+        NVGPIPRenderer.draw(this, 0, 0, width, height, panelMultiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(width, height, target)) {
+            HudPanel.drawNvgPanel(
+                width,
+                height,
+                target,
+                HudPanel.panelBorderColors(target, inventoryHud.x, inventoryHud.y),
+            )
         }
-        return  (9 * slotSize + 2 * pad) to (3 * slotSize + 2 * pad)
+
+        val inventory = mc.player?.inventory ?: return width to height
+        val itemScale = slotSize / 18f
+        val itemPx = 16f * itemScale
+        val countFont = FloydFont.panelFont(FloydFont.PanelFont.INVENTORY)
+        val countFontSize = slotSize * COUNT_FONT_RATIO
+        val countScale = countFontSize / MsdfFontMetrics.LINE_HEIGHT
+        for (slot in 0 until 27) {
+            val col = slot % 9
+            val row = slot / 9
+            val stack = inventory.getItem(slot + 9)
+            if (stack.isEmpty) continue
+
+            val x = pad + col * slotSize + (slotSize - itemPx) / 2f
+            val y = pad + row * slotSize + (slotSize - itemPx) / 2f
+            pose().pushMatrix()
+            pose().translate(x, y)
+            pose().scale(itemScale, itemScale)
+            renderItem(stack, 0, 0)
+            pose().popMatrix()
+
+            if (stack.count > 1) {
+                val count = countText(slot, stack.count)
+                val tx = x + itemPx - 1f
+                val ty = y + itemPx - countFontSize * COUNT_BASELINE_RATIO
+                pose().pushMatrix()
+                pose().translate(tx, ty)
+                pose().scale(countScale, countScale)
+                drawString(countFont, count, -countFont.width(count), 0, 0xFFFFFFFF.toInt(), false)
+                pose().popMatrix()
+            }
+        }
+        return width to height
     }
 
     /**
@@ -122,9 +166,6 @@ object FloydInventoryHud : Module(
     private fun drawInventoryHudInline(inventory: Inventory, allowBlur: Boolean) {
         val target = FloydPanelStyle.PanelTarget.INVENTORY
         val scale = inventoryHud.scale
-        val fx = inventoryHud.x.toFloat()
-        val fy = inventoryHud.y.toFloat()
-
         val slotSize = slotSizePx()
         // Padding insets the slot grid from the border (so the panel's Padding setting has a visible effect).
         val pad = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
@@ -132,6 +173,8 @@ object FloydInventoryHud : Module(
         val boxHeight = 3 * slotSize + 2 * pad
         val fw = boxWidth * scale
         val fh = boxHeight * scale
+        val fx = inventoryHud.visibleX(fw)
+        val fy = inventoryHud.visibleY(fh)
         val itemScale = slotSize / 18f
 
         val fill = FloydPanelStyle.backgroundColorFor(target).rgba
@@ -142,7 +185,7 @@ object FloydInventoryHud : Module(
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
         if (allowBlur && FloydPanelStyle.blurFor(target)) {
             val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
-            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+            if (blurRadius >= 0.5f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
                 PostHudOverlay.bindMainFbo()
             }

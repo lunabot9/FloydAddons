@@ -234,7 +234,7 @@ class ColorSetting(
         NVGRenderer.rect(bx, by, bw, 20f, gray38.rgba, 4f)
         NVGRenderer.hollowRect(bx, by, bw, 20f, 2f, (if (on) ClickGUIModule.clickGUIColor else Colors.gray38).rgba, 4f)
         val lw = NVGRenderer.textWidth(label, 14f, NVGRenderer.defaultFont)
-        NVGRenderer.text(label, bx + bw / 2f - lw / 2f, by + 5f, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.textCentered(label, bx, by, bw, 20f, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont, lw)
     }
 
     /** Re-seed the slider animations + hex box to the active edit target so switching never jumps. */

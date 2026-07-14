@@ -67,7 +67,7 @@ import gg.floyd.keybind.KeybindSync
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.minecraft.client.DeltaTracker
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.Identifier.fromNamespaceAndPath
 import java.io.File
@@ -161,6 +161,7 @@ object ModuleManager {
         }
         configs.add(config)
         config.load()
+        normalizeDisabledCompatFeatures()
         // Freecam/Freelook are transient: never persist as active across restarts.
         FloydCamera.resetTransientModes()
         FloydSidecarConfig.loadExistingSidecars()
@@ -189,6 +190,16 @@ object ModuleManager {
             config.save()
         }
         FloydSidecarConfig.saveSidecars()
+    }
+
+    /**
+     * Keeps intentionally-disabled compatibility experiments from lingering as "enabled" in config
+     * when the runtime hard-disables them for the current porting window.
+     */
+    private fun normalizeDisabledCompatFeatures() {
+        if (FloydCustomMainMenu.enabled) {
+            FloydCustomMainMenu.toggle()
+        }
     }
 
     fun state(): Map<String, Any?> = mapOf(

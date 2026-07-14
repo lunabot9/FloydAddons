@@ -11,13 +11,13 @@ private const val DEFAULT_PREFIX = "FloydAddons"
 fun modMessage(message: Any?, prefix: String = DEFAULT_PREFIX, chatStyle: Style? = null) {
     val text = prefixComponent(prefix).append(Component.literal(message.toString()))
     chatStyle?.let { text.setStyle(chatStyle) }
-    mc.execute { mc.gui.chat.addMessage(text) }
+    mc.execute { mc.gui.chat.addClientSystemMessage(text) }
 }
 
 fun modMessage(message: Component, prefix: String = DEFAULT_PREFIX, chatStyle: Style? = null) {
     val text = prefixComponent(prefix).append(message)
     chatStyle?.let { text.setStyle(chatStyle) }
-    mc.execute { mc.gui.chat.addMessage(text) }
+    mc.execute { mc.gui.chat.addClientSystemMessage(text) }
 }
 
 /**

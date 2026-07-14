@@ -19,7 +19,7 @@ object FloydCompatibility {
 
     @JvmStatic fun shouldSpoofClientBrand(): Boolean = FloydSpoofClientBrand.enabled
     @JvmStatic fun shouldHideWatchdogMessages(): Boolean = FloydHideWatchdogMessages.enabled
-    @JvmStatic fun shouldUseCustomMainMenu(): Boolean = FloydCustomMainMenu.enabled
+    @JvmStatic fun shouldUseCustomMainMenu(): Boolean = false
     @JvmStatic fun shouldApplyTaskbarIcon(): Boolean = FloydTaskbarIconModule.enabled
     @JvmStatic fun shouldCheckUpdates(): Boolean = FloydUpdateCheckerModule.enabled
     @JvmStatic fun shouldHideLoaderEntry(): Boolean = FloydModHider.enabled
@@ -28,7 +28,7 @@ object FloydCompatibility {
     fun state(): Map<String, Any?> = mapOf(
         "spoofClientBrand" to FloydSpoofClientBrand.enabled,
         "hideWatchdogMessages" to FloydHideWatchdogMessages.enabled,
-        "customMainMenu" to FloydCustomMainMenu.enabled,
+        "customMainMenu" to shouldUseCustomMainMenu(),
         "taskbarIcon" to FloydTaskbarIconModule.enabled,
         "updateChecker" to FloydUpdateCheckerModule.enabled,
         "hideLoaderEntry" to FloydModHider.enabled,
@@ -48,6 +48,13 @@ object FloydCompatibility {
 
     internal fun shouldUseSafeHudLayer(modIds: Set<String>): Boolean =
         modIds.any(safeHudLayerMods::contains)
+
+    /**
+     * Minecraft 26.1 extracts GUI state before rendering it. Direct framebuffer writes made during
+     * extraction are not a stable HUD surface, so the three movable panels must submit normal deferred
+     * GuiGraphics state in both the editor and gameplay.
+     */
+    internal fun shouldRenderHudPanelsOnGuiLayer(): Boolean = true
 
     private fun loadedModIds(): Set<String> =
         FabricLoader.getInstance().allMods.mapTo(linkedSetOf()) { it.metadata.id }

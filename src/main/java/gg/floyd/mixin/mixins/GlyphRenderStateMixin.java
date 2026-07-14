@@ -7,7 +7,7 @@ import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import gg.floyd.utils.font.FloydMsdfRenderable;
 import net.minecraft.client.gui.font.TextRenderable;
-import net.minecraft.client.gui.render.state.GlyphRenderState;
+import net.minecraft.client.renderer.state.gui.GlyphRenderState;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

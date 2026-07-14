@@ -68,10 +68,7 @@ class KeybindSetting(
         if (keyNameWidth < 0) keyNameWidth = NVGRenderer.textWidth(value.displayName.string, 16f, NVGRenderer.defaultFont)
         val height = getHeight()
 
-        val rectX = x + width - 20 - keyNameWidth
-        val rectY = y + height / 2f - 10f
-        val rectWidth = keyNameWidth + 12f
-        val rectHeight = 20f
+        val (rectX, rectY, rectWidth, rectHeight) = keybindRect(x, y, height)
 
         NVGRenderer.rect(rectX, rectY, rectWidth, rectHeight, gray38.rgba, 5f)
         NVGRenderer.hollowRect(rectX - 1, rectY - 1, rectWidth + 2f, rectHeight + 2f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
@@ -87,9 +84,12 @@ class KeybindSetting(
             value = InputConstants.Type.MOUSE.getOrCreate(click.button())
             listening = false
             return true
-        } else if (click.button() == 0 && isHovered) {
-            listening = true
-            return true
+        } else {
+            val (rectX, rectY, rectWidth, rectHeight) = keybindRect(lastX, lastY, getHeight())
+            if (click.button() == 0 && mouseX in rectX..(rectX + rectWidth) && mouseY in rectY..(rectY + rectHeight)) {
+                listening = true
+                return true
+            }
         }
         return false
     }
@@ -115,8 +115,18 @@ class KeybindSetting(
 
 
     override val isHovered: Boolean
-        get() =
-            isAreaHovered(lastX + width - 20 - keyNameWidth, lastY + getHeight() / 2f - 10f, keyNameWidth + 12f, 22f, true)
+        get() {
+            val (rectX, rectY, rectWidth, rectHeight) = keybindRect(lastX, lastY, getHeight())
+            return isAreaHovered(rectX, rectY, rectWidth, rectHeight, true)
+        }
+
+    private fun keybindRect(x: Float, y: Float, height: Float): FloatArray =
+        floatArrayOf(
+            x + width - 20f - keyNameWidth,
+            y + height / 2f - 10f,
+            keyNameWidth + 12f,
+            20f
+        )
 
     override fun write(gson: Gson): JsonElement = JsonPrimitive(value.name)
 

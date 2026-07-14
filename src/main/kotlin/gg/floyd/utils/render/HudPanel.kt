@@ -4,7 +4,8 @@ import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.features.impl.render.FloydPanelStyle.PanelTarget
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
-import net.minecraft.client.gui.GuiGraphics
+import gg.floyd.utils.ui.rendering.NVGPIPRenderer
+import net.minecraft.client.gui.*
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -52,9 +53,6 @@ object HudPanel {
         val width = outlineWidth.coerceAtLeast(0f)
 
         if (FloydPanelStyle.blurFor(panel)) {
-            // Strength 0..20 -> blur radius 0..8 px (sampled with a step of 2, so ~0..16 px reach).
-            // Skip imperceptible blur (< 0.5px) and tiny panels (< ~45x45px) — the per-fragment kernel
-            // isn't worth running there.
             val blurRadius = FloydPanelStyle.blurStrengthFor(panel).coerceIn(0, 20) * 0.4f
             val area = (x1 - x0) * (y1 - y0)
             if (blurRadius >= 0.5f && area >= 2000) {
@@ -73,6 +71,49 @@ object HudPanel {
             fillColor, fillColor, fillColor, fillColor,
             radius, radius, radius, radius,
             border.topLeft, border.topRight, border.bottomRight, border.bottomLeft, width
+        )
+    }
+
+    /** The v2.1.0 framebuffer blur parameters for an NVG-rendered HUD panel. */
+    fun nvgBlur(width: Int, height: Int, panel: PanelTarget): NVGPIPRenderer.Companion.BackdropBlur? {
+        if (!FloydPanelStyle.blurFor(panel)) return null
+        val blurRadius = FloydPanelStyle.blurStrengthFor(panel).coerceIn(0, 20) * 0.4f
+        if (blurRadius < 0.5f || width * height < 2000) return null
+        val radius = FloydPanelStyle.cornerRadiusFor(panel).toFloat().coerceAtLeast(0f)
+        return NVGPIPRenderer.Companion.BackdropBlur(
+            radius, blurRadius, FloydPanelStyle.blurIsBoxFor(panel),
+        )
+    }
+
+    /**
+     * Draw the HUD surface with the same NanoVG rounded fill and hollow-border primitives used by
+     * the ClickGUI. Fill and stroke are independent paths, so a translucent background never
+     * reveals the border paint underneath it.
+     */
+    fun drawNvgPanel(
+        width: Int,
+        height: Int,
+        panel: PanelTarget,
+        border: BorderColors,
+    ) {
+        val fill = FloydPanelStyle.backgroundColorFor(panel).rgba
+        val radius = FloydPanelStyle.cornerRadiusFor(panel).toFloat().coerceAtLeast(0f)
+        val stroke = FloydPanelStyle.borderWidthFor(panel).toFloat().coerceAtLeast(0f)
+        gg.floyd.utils.ui.rendering.NVGRenderer.rect(0f, 0f, width.toFloat(), height.toFloat(), fill, radius)
+        if (stroke <= 0f) return
+
+        // NanoVG centres strokes on the path. Inset by half the width so none of the configured
+        // border is clipped by the panel's PIP texture bounds.
+        val inset = stroke * 0.5f
+        gg.floyd.utils.ui.rendering.NVGRenderer.hollowGradientRect(
+            inset,
+            inset,
+            (width - stroke).coerceAtLeast(0f),
+            (height - stroke).coerceAtLeast(0f),
+            stroke,
+            border.topLeft,
+            border.topRight,
+            (radius - inset).coerceAtLeast(0f),
         )
     }
 

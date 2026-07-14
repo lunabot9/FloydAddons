@@ -10,10 +10,10 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.Tesselator
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.navigation.ScreenRectangle
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.MultiBufferSource
@@ -54,7 +54,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         val mesh = builder.buildOrThrow()
 
         val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
-            RenderSystem.getModelViewMatrix(), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
+            Matrix4f(), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
         )
 
         val uniformBuffer = uniformStorage.writeUniform { buffer ->
@@ -133,7 +133,71 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
 
         fun clear() = uniformStorage.endFrame()
 
+        /**
+         * Paints the v2.1.0 framebuffer blur directly into the PIP texture currently selected by
+         * [RenderSystem.outputColorTextureOverride]. Minecraft 26.1.2 drops the separate blur-PIP
+         * blit, so HUD panels call this before NanoVG composites their fill and border in the same
+         * working PIP slot.
+         */
+        fun drawIntoCurrentPip(
+            screenX: Int,
+            screenY: Int,
+            width: Int,
+            height: Int,
+            cornerRadius: Float,
+            blurRadius: Float,
+            boxKernel: Boolean,
+        ) {
+            if (width <= 0 || height <= 0 || blurRadius < 0.5f) return
+            val output = RenderSystem.outputColorTextureOverride ?: return
+            val mainTarget = Minecraft.getInstance().mainRenderTarget
+            val screenW = mainTarget.width.toFloat()
+            val screenH = mainTarget.height.toFloat()
+            val guiScale = Minecraft.getInstance().window.guiScale.toFloat()
+            val w = width.toFloat()
+            val h = height.toFloat()
+
+            val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
+            builder.addVertex(0f, 0f, 0f).setColor(-1)
+            builder.addVertex(0f, h, 0f).setColor(-1)
+            builder.addVertex(w, h, 0f).setColor(-1)
+            builder.addVertex(w, 0f, 0f).setColor(-1)
+            val mesh = builder.buildOrThrow()
+
+            val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
+                Matrix4f(), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
+            )
+            val uniformBuffer = uniformStorage.writeUniform { buffer ->
+                Std140Builder.intoBuffer(buffer)
+                    .putVec4(w * 0.5f, h * 0.5f, w, h)
+                    .putVec4(cornerRadius, cornerRadius, cornerRadius, cornerRadius)
+                    .putVec4(screenW, screenH, screenX * guiScale, screenY * guiScale)
+                    .putVec4(blurRadius, if (boxKernel) 1f else 0f, 0f, 0f)
+            }
+
+            val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+            val vertexBuffer = CustomRenderPipelines.PIPELINE_PANEL_BLUR.vertexFormat.uploadImmediateVertexBuffer(mesh.vertexBuffer())
+            val indexStorage = RenderSystem.getSequentialBuffer(mesh.drawState().mode())
+            val indexBuffer = indexStorage.getBuffer(mesh.drawState().indexCount())
+            mesh.use {
+                RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                    { "FloydAddons Panel Blur In HUD PIP" }, output, OptionalInt.empty(),
+                    RenderSystem.outputDepthTextureOverride, OptionalDouble.empty()
+                ).use { pass ->
+                    pass.setPipeline(CustomRenderPipelines.PIPELINE_PANEL_BLUR)
+                    RenderSystem.bindDefaultUniforms(pass)
+                    pass.setUniform("DynamicTransforms", dynamicTransforms)
+                    pass.setUniform("u", uniformBuffer)
+                    pass.bindTexture("Sampler0", mainTarget.colorTextureView, sampler)
+                    pass.setVertexBuffer(0, vertexBuffer)
+                    pass.setIndexBuffer(indexBuffer, indexStorage.type())
+                    pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
+                }
+            }
+        }
+
         private val inlineProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons PanelBlur Inline", -1000f, 1000f, true)
+
 
         /**
          * Draws the frosted blur DIRECTLY to the main framebuffer (the post-HUD pass), in framebuffer
@@ -234,7 +298,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             val screenRect = ScreenRectangle(screenLeft, screenTop, screenW, screenH)
             val bounds = if (scissor != null) scissor.intersection(screenRect) else screenRect
 
-            context.guiRenderState.submitPicturesInPictureState(
+            context.guiRenderState.addPicturesInPictureState(
                 State(
                     screenLeft, screenTop, screenW, screenH,
                     topLeftRadius * poseScale, topRightRadius * poseScale,

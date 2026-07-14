@@ -22,6 +22,8 @@ object ClickGUIModule : Module(
     private const val BOOTSTRAP_SCREEN_WIDTH = 1920f
     private const val BOOTSTRAP_SCREEN_HEIGHT = 1080f
     private const val BOOTSTRAP_DEVICE_PIXEL_RATIO = 1f
+    private const val SCREENSHOT_LAYOUT_TOP = 31f
+    private const val POSITION_MATCH_TOLERANCE = 0.5f
 
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
     val clickGUIColor by ColorSetting("Color", Color(50, 150, 220).also { it.chroma = true }, desc = "The color of the Click GUI — toggle chroma/fade inside the picker.")
@@ -64,6 +66,10 @@ object ClickGUIModule : Module(
         migrateLegacyPanelNames()
         val activeCategories = Category.categories.values.toList()
         val availableWidth = currentAvailableWidth()
+        val wrappedFallbackLayout = wrappedPanelLayout(activeCategories, availableWidth)
+        val distinctRows = activeCategories
+            .mapNotNull { category -> panelSetting[category.name]?.y }
+            .distinct()
         val hasMissing = activeCategories.any { panelSetting[it.name] == null }
         // Any panel whose right edge falls past the window means the layout no longer fits (e.g. the
         // window shrank, or categories changed) — re-flow. Wrapped rows (y > 10) are NOT a trigger;
@@ -71,12 +77,21 @@ object ClickGUIModule : Module(
         val hasOffscreen = activeCategories.any { category ->
             panelSetting[category.name]?.let { it.x < 0f || it.x + Panel.WIDTH > availableWidth } ?: true
         }
+        val usesWrappedFallback = activeCategories.all { category ->
+            val current = panelSetting[category.name] ?: return@all false
+            val wrapped = wrappedFallbackLayout[category.name] ?: return@all false
+            positionsMatch(current, wrapped)
+        }
+        val usesLegacyWrappedRows = distinctRows.size > 1 && activeCategories.all { category ->
+            val current = panelSetting[category.name] ?: return@all false
+            alignsToWrappedColumn(current.x)
+        }
         val hasStackedDefaults = activeCategories
             .mapNotNull { category -> panelSetting[category.name]?.let { category.name to it } }
             .groupBy { (_, panel) -> panel.x to panel.y }
             .values
             .any { entries -> entries.size > 1 }
-        if (hasMissing || hasOffscreen || hasStackedDefaults) resetPositions()
+        if (hasMissing || hasOffscreen || hasStackedDefaults || usesWrappedFallback || usesLegacyWrappedRows) resetPositions()
     }
 
     private fun migrateLegacyPanelNames() {
@@ -95,7 +110,27 @@ object ClickGUIModule : Module(
 
     fun defaultPanelLayout(): Map<String, PanelData> {
         val activeCategories = Category.categories.values.toList()
-        val availableWidth = currentAvailableWidth()
+        return screenshotPanelLayout(activeCategories)
+    }
+
+    private fun screenshotPanelLayout(activeCategories: List<Category>): Map<String, PanelData> {
+        val template = linkedMapOf(
+            Category.RENDER.name to PanelData(x = 6f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.HIDERS.name to PanelData(x = 266f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.PLAYER.name to PanelData(x = 526f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.COSMETIC.name to PanelData(x = 796f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.CAMERA.name to PanelData(x = 1086f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.MISC.name to PanelData(x = 1356f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.PVP.name to PanelData(x = 1646f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+        )
+        val layout = linkedMapOf<String, PanelData>()
+        activeCategories.forEach { category ->
+            layout[category.name] = template[category.name]?.copy() ?: PanelData(10f, SCREENSHOT_LAYOUT_TOP, true)
+        }
+        return layout
+    }
+
+    private fun wrappedPanelLayout(activeCategories: List<Category>, availableWidth: Float): Map<String, PanelData> {
         val gap = 20f
         val rowGap = 14f
         var x = 10f
@@ -115,6 +150,16 @@ object ClickGUIModule : Module(
             x += Panel.WIDTH + gap
         }
         return layout
+    }
+
+    private fun positionsMatch(current: PanelData, expected: PanelData): Boolean =
+        kotlin.math.abs(current.x - expected.x) <= POSITION_MATCH_TOLERANCE &&
+            kotlin.math.abs(current.y - expected.y) <= POSITION_MATCH_TOLERANCE
+
+    private fun alignsToWrappedColumn(x: Float): Boolean {
+        val columnStep = Panel.WIDTH + 20f
+        val columnIndex = (x - 10f) / columnStep
+        return kotlin.math.abs(columnIndex - round(columnIndex)) <= POSITION_MATCH_TOLERANCE / columnStep
     }
 
     /** Rough extended-panel height (header + one row per module) used for default row-wrapping spacing. */

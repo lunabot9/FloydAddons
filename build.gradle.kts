@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.jvm.tasks.Jar
 
 plugins {
-    id("fabric-loom")
+    id("net.fabricmc.fabric-loom")
     kotlin("jvm")
     `maven-publish`
 }
@@ -24,12 +24,11 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:${property("minecraft_version")}")
-    mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
-    modImplementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
+    implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
+    implementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
 
-    modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:${property("devauth_version")}")
+    runtimeOnly("me.djtheredstoner:DevAuth-fabric:${property("devauth_version")}")
 
     property("commodore_version").let {
         implementation("com.github.stivais:Commodore:$it")
@@ -45,20 +44,20 @@ dependencies {
     implementation("org.jcodec:jcodec-javase:0.2.5")
     include("org.jcodec:jcodec-javase:0.2.5")
 
-    modCompileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
+    compileOnly("com.terraformersmc:modmenu:${property("modmenu_version")}")
 
     property("minecraft_lwjgl_version").let { lwjglVersion ->
-        modImplementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
+        implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
         include("org.lwjgl:lwjgl-nanovg:$lwjglVersion")
 
-        listOf("windows", "linux", "macos", "macos-arm64").forEach { os ->
-            modImplementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
+        listOf("windows", "windows-arm64", "windows-x86", "linux", "linux-arm64", "macos", "macos-arm64").forEach { os ->
+            implementation("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
             include("org.lwjgl:lwjgl-nanovg:$lwjglVersion:natives-$os")
         }
     }
 
-    "3.3.4".let { msdfgenVersion ->
-        modImplementation("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion") {
+    property("minecraft_lwjgl_version").let { msdfgenVersion ->
+        implementation("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion") {
             exclude(group = "org.lwjgl", module = "lwjgl")
         }
         include("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion")
@@ -68,19 +67,26 @@ dependencies {
             "natives-macos",
             "natives-windows",
             "natives-windows-arm64",
+            "natives-windows-x86",
             "natives-linux",
             "natives-linux-arm64",
         ).forEach { natives ->
-            modImplementation("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion:$natives") {
+            implementation("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion:$natives") {
                 exclude(group = "org.lwjgl", module = "lwjgl")
             }
             include("org.lwjgl:lwjgl-msdfgen:$msdfgenVersion:$natives")
         }
     }
 
-    modCompileOnly("maven.modrinth:iris:${property("iris")}")
-    if (System.getenv("FLOYDADDONS_SODIUM_RUNTIME") == "true") {
-        modRuntimeOnly("maven.modrinth:sodium:${property("sodium")}")
+    compileOnly("maven.modrinth:iris:${property("iris")}")
+    compileOnly("maven.modrinth:sodium:${property("sodium")}")
+
+    val sodiumRuntimeEnabled = providers.environmentVariable("FLOYDADDONS_SODIUM_RUNTIME")
+        .map { it.equals("false", ignoreCase = true).not() }
+        .orElse(true)
+        .get()
+    if (sodiumRuntimeEnabled) {
+        runtimeOnly("maven.modrinth:sodium:${property("sodium")}")
     }
 
     testImplementation(kotlin("test-junit5"))
@@ -114,8 +120,19 @@ afterEvaluate {
 
 tasks {
     processResources {
+        val resourceProps = mapOf(
+            "mod_id" to project.property("mod_id").toString(),
+            "mod_version" to project.property("mod_version").toString(),
+            "mod_name" to project.property("mod_name").toString(),
+            "mod_description" to project.property("mod_description").toString(),
+            "loader_version" to project.property("loader_version").toString(),
+            "fabric_api_version" to project.property("fabric_api_version").toString(),
+            "minecraft_version" to project.property("minecraft_version").toString(),
+            "fabric_kotlin_version" to project.property("fabric_kotlin_version").toString(),
+        )
+        inputs.properties(resourceProps)
         filesMatching("fabric.mod.json") {
-            expand(getProperties())
+            expand(resourceProps)
         }
     }
 
@@ -127,14 +144,14 @@ tasks {
 
     compileKotlin {
         compilerOptions {
-            jvmTarget = JvmTarget.JVM_21
+            jvmTarget = JvmTarget.JVM_25
             freeCompilerArgs.add("-Xlambdas=class") //Commodore
         }
     }
 
     compileJava {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
+        sourceCompatibility = "25"
+        targetCompatibility = "25"
         options.encoding = "UTF-8"
         options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:unchecked"))
     }
@@ -147,7 +164,7 @@ tasks.withType<Test>().configureEach {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
     withSourcesJar()
 }

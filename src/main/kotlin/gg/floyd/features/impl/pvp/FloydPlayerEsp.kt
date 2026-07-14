@@ -23,12 +23,13 @@ import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemWorld
 import gg.floyd.utils.render.ItemStateRenderer.Companion.drawItemInline
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.render.WorldToScreen
-import gg.floyd.utils.render.drawTracer
+import gg.floyd.utils.render.drawTracerFan
 import gg.floyd.utils.render.drawWireFrameBox
 import gg.floyd.utils.renderBoundingBox
 import gg.floyd.utils.renderPos
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.drawString
 import net.minecraft.client.player.AbstractClientPlayer
 import net.minecraft.client.renderer.LightTexture
 import net.minecraft.client.renderer.MultiBufferSource
@@ -105,10 +106,18 @@ object FloydPlayerEsp : Module(
             // World overlay (boxes + tracers) only for Overhead (0) or Both (2).
             if (display != 0 && display != 2) return@on
             if (mc.player == null) return@on
-            for (other in otherPlayers()) {
+            val others = otherPlayers()
+            if (others.isEmpty()) return@on
+            for (other in others) {
                 val c = color
                 if (boxes) drawWireFrameBox(other.renderBoundingBox, c, thickness = 1.5f, depth = false)
-                if (tracers) drawTracer(other.renderPos.add(0.0, other.bbHeight / 2.0, 0.0), c, depth = false, thickness = 1.5f)
+            }
+            if (tracers) {
+                val targets = ArrayList<Vec3>(others.size)
+                for (other in others) {
+                    targets.add(other.renderPos.add(0.0, other.bbHeight / 2.0, 0.0))
+                }
+                drawTracerFan(targets, color, thickness = 1.5f, depth = false, mirrorBehindCamera = true)
             }
         }
     }

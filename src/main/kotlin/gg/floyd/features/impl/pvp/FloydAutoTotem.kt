@@ -5,7 +5,7 @@ import gg.floyd.events.TickEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
-import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.ContainerInput
 import net.minecraft.world.item.Items
 
 /**
@@ -54,9 +54,9 @@ object FloydAutoTotem : Module(
 
             // Pick up the totem, drop it into the offhand, then return whatever was in the offhand.
             val containerId = menu.containerId
-            gameMode.handleInventoryMouseClick(containerId, totemSlot, 0, ClickType.PICKUP, player)
-            gameMode.handleInventoryMouseClick(containerId, OFFHAND_SLOT, 0, ClickType.PICKUP, player)
-            gameMode.handleInventoryMouseClick(containerId, totemSlot, 0, ClickType.PICKUP, player)
+            gameMode.handleContainerInput(containerId, totemSlot, 0, ContainerInput.PICKUP, player)
+            gameMode.handleContainerInput(containerId, OFFHAND_SLOT, 0, ContainerInput.PICKUP, player)
+            gameMode.handleContainerInput(containerId, totemSlot, 0, ContainerInput.PICKUP, player)
         }
     }
 }

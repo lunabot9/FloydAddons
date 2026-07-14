@@ -42,7 +42,7 @@ public class FontMixin {
         return dropShadow && !FloydFont.isTextShadowDisabled();
     }
 
-    @ModifyVariable(method = "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"), argsOnly = true)
+    @ModifyVariable(method = "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"), argsOnly = true)
     private FormattedCharSequence onDrawOutlineSequence(FormattedCharSequence text) {
         if (!CustomNameReplacer.isEnabled()) return text;
         return CustomNameReplacer.replaceSequenceIfNeeded(text);

@@ -8,7 +8,6 @@ import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Color
 import gg.floyd.utils.Color.Companion.brighter
 import gg.floyd.utils.Colors
-import gg.floyd.utils.font.FontEpochCache
 import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.animations.ColorAnimation
 import gg.floyd.utils.ui.animations.EaseInOutAnimation
@@ -35,7 +34,6 @@ class ModuleButton(val module: Module, val panel: Panel) {
         get() =
             colorAnim.get(ClickGUIModule.clickGUIColor, gray26, module.enabled).brighter(1 + hover.percent() / 500f)
 
-    private val nameWidth = FontEpochCache { NVGRenderer.textWidth(module.name, 18f, NVGRenderer.defaultFont) }
     private val hoverHandler = HoverHandler(750)
     private val extendAnim = EaseInOutAnimation(250)
     private val hover = HoverHandler(250)
@@ -58,7 +56,17 @@ class ModuleButton(val module: Module, val panel: Panel) {
         } else {
             NVGRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT, color.rgba)
         }
-        NVGRenderer.text(module.name, x + Panel.WIDTH / 2 - nameWidth.get() / 2, y + Panel.HEIGHT / 2 - 9f, 18f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.textCentered(
+            module.name,
+            x,
+            y,
+            Panel.WIDTH,
+            Panel.HEIGHT,
+            18f,
+            Colors.WHITE.rgba,
+            NVGRenderer.defaultFont,
+            NVGRenderer.textWidth(module.name, 18f, NVGRenderer.defaultFont)
+        )
 
         if (representableSettings.isEmpty()) return Panel.HEIGHT
 
@@ -69,7 +77,7 @@ class ModuleButton(val module: Module, val panel: Panel) {
 
         if (extendAnim.isAnimating() || extended) {
             for (setting in representableSettings) {
-                if (setting.isVisible) drawY += setting.render(x, y + drawY, mouseX / ClickGUIModule.getStandardGuiScale(), mouseY / ClickGUIModule.getStandardGuiScale())
+                if (setting.isVisible) drawY += setting.render(x, y + drawY, mouseX, mouseY)
             }
         }
 
@@ -129,6 +137,14 @@ class ModuleButton(val module: Module, val panel: Panel) {
         return false
     }
 
+    /**
+     * Conservative height used for coarse render-target bounds: closed buttons are one row, while
+     * open/animating buttons reserve their full setting stack so the PIP slot can be shrunk
+     * without clipping expanded editors.
+     */
+    fun predictedHeight(): Float =
+        if (extended || extendAnim.isAnimating()) Panel.HEIGHT + getSettingHeight() else Panel.HEIGHT
+
     private fun getSettingHeight(): Float {
         // Manual loop: this runs per extended button per frame, and filter+sumOf allocated an
         // intermediate list + boxed Doubles each call.
@@ -138,4 +154,5 @@ class ModuleButton(val module: Module, val panel: Panel) {
         }
         return height
     }
+
 }

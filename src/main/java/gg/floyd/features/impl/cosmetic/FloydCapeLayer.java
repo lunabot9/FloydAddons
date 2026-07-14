@@ -34,7 +34,7 @@ public class FloydCapeLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
 
         collector.submitCustomGeometry(
             poseStack,
-            RenderTypes.entityCutoutNoCull(FloydCape.texture()),
+            RenderTypes.entityCutout(FloydCape.texture()),
             (entry, consumer) -> drawCape(entry, consumer, light)
         );
         poseStack.popPose();

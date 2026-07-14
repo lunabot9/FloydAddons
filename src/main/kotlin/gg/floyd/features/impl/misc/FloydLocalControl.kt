@@ -68,6 +68,7 @@ import net.minecraft.world.flag.FeatureFlags
 import net.minecraft.world.level.GameType
 import net.minecraft.world.level.gamerules.GameRules
 import net.minecraft.world.level.LevelSettings
+import net.minecraft.world.level.LevelSettings.DifficultySettings
 import net.minecraft.world.level.WorldDataConfiguration
 import net.minecraft.world.level.levelgen.WorldOptions
 import net.minecraft.world.level.levelgen.presets.WorldPresets
@@ -507,7 +508,7 @@ object FloydLocalControl : Module(
         root["world"] = mapOf(
             "dimension" to level.dimension().identifier().toString(),
             "time" to level.gameTime,
-            "timeOfDay" to level.dayTime
+            "timeOfDay" to level.defaultClockTime
         )
         root["crosshair"] = describeHit()
         root["hotbar"] = describeHotbar(player.inventory)
@@ -701,10 +702,8 @@ object FloydLocalControl : Module(
                     val settings = LevelSettings(
                         levelId,
                         gameType,
-                        false,
-                        Difficulty.PEACEFUL,
+                        DifficultySettings(Difficulty.PEACEFUL, false, false),
                         cheats,
-                        GameRules(FeatureFlags.DEFAULT_FLAGS),
                         WorldDataConfiguration.DEFAULT
                     )
                     // Queue instead of running inline: createFreshLevel blocks the client
@@ -771,7 +770,7 @@ object FloydLocalControl : Module(
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
                 "pause", "pausemenu", "gamemenu" -> mc.setScreen(net.minecraft.client.gui.screens.PauseScreen(true))
-                "options", "settings" -> mc.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(mc.screen ?: net.minecraft.client.gui.screens.PauseScreen(true), mc.options))
+                "options", "settings" -> mc.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(mc.screen ?: net.minecraft.client.gui.screens.PauseScreen(true), mc.options, mc.level != null))
                 "close", "none" -> mc.setScreen(null)
                 else -> throw IllegalArgumentException("unknown_screen")
             }
@@ -861,7 +860,7 @@ object FloydLocalControl : Module(
                 handled = currentScreen.keyPressed(KeyEvent(GLFW.GLFW_KEY_DELETE, 0, 0)) || handled
             }
             text.codePoints().forEach { codepoint ->
-                handled = currentScreen.charTyped(CharacterEvent(codepoint, 0)) || handled
+                handled = currentScreen.charTyped(CharacterEvent(codepoint)) || handled
             }
             if (submit) {
                 handled = currentScreen.keyPressed(KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)) || handled

@@ -404,7 +404,7 @@ class MsdfGlyphProvider(
     private fun rasterizeGlyph(codepoint: Int, stack: MemoryStack): MsdfGlyphRaster {
         val shapePointer = stack.mallocPointer(1)
         checkMsdf(
-            MSDFGenExt.msdf_ft_font_load_glyph(msdfFont, codepoint, MSDFGenExt.MSDF_FONT_SCALING_EM_NORMALIZED, shapePointer),
+            MSDFGenExt.msdf_ft_font_load_glyph(msdfFont, codepoint, MSDFGenExt.MSDF_FONT_SCALING_EM_NORMALIZED, null, shapePointer),
             "msdf_ft_font_load_glyph",
         )
         val shape = shapePointer.get(0)

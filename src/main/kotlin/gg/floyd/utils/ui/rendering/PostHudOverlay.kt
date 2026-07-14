@@ -2,7 +2,6 @@ package gg.floyd.utils.ui.rendering
 
 import com.mojang.blaze3d.ProjectionType
 import com.mojang.blaze3d.opengl.GlConst
-import com.mojang.blaze3d.opengl.GlDevice
 import com.mojang.blaze3d.opengl.GlStateManager
 import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.platform.Lighting
@@ -37,6 +36,7 @@ import org.lwjgl.opengl.GL33C
  * pass — it only serves the ClickGUI's PIP ([NVGPIPRenderer]).
  */
 object PostHudOverlay {
+    private const val RECENT_RENDER_WINDOW_NANOS = 250_000_000L
 
     private val screenProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons PostHUD", -1000f, 1000f, true)
     private var boundFbo = 0
@@ -47,9 +47,24 @@ object PostHudOverlay {
     private var blurColorView: GpuTextureView? = null
     private var blurW = 0
     private var blurH = 0
+    @Volatile private var lastRenderNanoTime = 0L
 
     /** The framebuffer snapshot for panel blur to sample (null until [render] has snapshotted this frame). */
     fun blurSourceView(): GpuTextureView? = blurColorView
+
+    /**
+     * Whether the world-end post-HUD pass ran very recently.
+     *
+     * The scoreboard / day-tracker / inventory HUD normally render there and only fall back to the normal
+     * HUD layer for compatibility. On 26.1.2 the GameRenderer injection can silently stop landing because
+     * it uses `require = 0`; when that happens these panels would otherwise disappear entirely. A short
+     * recency window lets the HUD layer detect "the world-end pass did not run this frame" and render a
+     * safe inline fallback instead, without double-drawing during healthy frames.
+     */
+    fun renderedRecently(): Boolean {
+        val last = lastRenderNanoTime
+        return last != 0L && (System.nanoTime() - last) <= RECENT_RENDER_WINDOW_NANOS
+    }
 
     private fun snapshotForBlur(target: com.mojang.blaze3d.pipeline.RenderTarget) {
         if (blurColor == null || blurW != target.width || blurH != target.height) {
@@ -89,6 +104,7 @@ object PostHudOverlay {
     @JvmStatic
     fun render() {
         if (mc.level == null || mc.player == null || mc.options.hideGui) return
+        if (FloydCompatibility.shouldRenderHudPanelsOnGuiLayer()) return
         if (FloydCompatibility.shouldUseSafeHudLayer()) return
         FloydPerf.section("PostHud.total") { renderPass() }
     }
@@ -97,8 +113,9 @@ object PostHudOverlay {
         RenderSystem.assertOnRenderThread()
 
         val target = mc.mainRenderTarget
-        val dsa = (RenderSystem.getDevice() as? GlDevice)?.directStateAccess() ?: return
+        val dsa = DirectStateAccessCompat.directStateAccess() ?: return
         val colorTex = target.colorTexture as? GlTexture ?: return
+        lastRenderNanoTime = System.nanoTime()
         boundFbo = colorTex.getFbo(dsa, target.depthTexture as? GlTexture)
         val savedProjection = RenderSystem.getProjectionMatrixBuffer()
         val savedProjectionType = RenderSystem.getProjectionType()
@@ -162,7 +179,7 @@ object PostHudOverlay {
         GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, 0)
         GlStateManager._disableScissorTest()
         GlStateManager._depthMask(true)
-        GlStateManager._colorMask(true, true, true, true)
+        GlStateManager._colorMask(0xF)
         GlStateManager._disableDepthTest()
         GlStateManager._disableCull()
         GlStateManager._enableBlend()

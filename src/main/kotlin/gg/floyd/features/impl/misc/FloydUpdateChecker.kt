@@ -57,7 +57,7 @@ object FloydUpdateChecker {
 
         pendingMessage?.let {
             pendingMessage = null
-            FloydAddonsMod.mc.gui.chat.addMessage(it)
+            FloydAddonsMod.mc.gui.chat.addClientSystemMessage(it)
         }
 
         if (checked.compareAndSet(false, true)) CompletableFuture.runAsync(::checkAsync)

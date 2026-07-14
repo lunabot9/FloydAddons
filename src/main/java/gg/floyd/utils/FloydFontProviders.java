@@ -250,7 +250,8 @@ public final class FloydFontProviders {
         Path byoPath = FloydFont.customFontPath();
         TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
         if (!latched && msdfAvailable()) {
-            GlyphProviderDefinition.Conditional msdfReplacement = selectiveMsdfConditional(original, runtimeMetrics, byoPath);
+            GlyphProviderDefinition.Conditional msdfReplacement =
+                    selectiveMsdfConditional(original, runtimeMetrics, byoPath);
             if (msdfReplacement != null) return msdfReplacement;
         }
         if (byoPath != null) {

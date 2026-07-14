@@ -4,7 +4,7 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import gg.floyd.features.impl.hiders.FloydHiders;
 import gg.floyd.features.impl.render.FloydCustomScoreboard;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,16 +20,16 @@ public class GuiMixin {
     // read a stale false and the custom scoreboard never draws. The signal self-clears via
     // FloydCustomScoreboard.shouldDrawScoreboardHud()'s objective check when the sidebar disappears.
 
-    @Inject(method = "renderFood", at = @At("HEAD"), cancellable = true)
-    private void cancelFoodBar(GuiGraphics guiGraphics, Player player, int i, int j, CallbackInfo ci) {
+    @Inject(method = "extractFood", at = @At("HEAD"), cancellable = true)
+    private void cancelFoodBar(GuiGraphicsExtractor guiGraphics, Player player, int i, int j, CallbackInfo ci) {
         if (FloydHiders.shouldDisableHungerBar()) {
             FloydHiders.recordHungerBar();
             ci.cancel();
         }
     }
 
-    @Inject(method = "renderEffects", at = @At("HEAD"), cancellable = true)
-    private void cancelEffectOverlay(GuiGraphics guiGraphics, net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
+    @Inject(method = "extractEffects", at = @At("HEAD"), cancellable = true)
+    private void cancelEffectOverlay(GuiGraphicsExtractor guiGraphics, net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
         if (FloydHiders.shouldHidePotionEffects()) {
             FloydHiders.recordPotionEffects();
             ci.cancel();
@@ -37,14 +37,14 @@ public class GuiMixin {
     }
 
     @Inject(method = "displayScoreboardSidebar", at = @At("HEAD"), cancellable = true)
-    private void floydaddons$cancelVanillaScoreboard(GuiGraphics guiGraphics, Objective objective, CallbackInfo ci) {
+    private void floydaddons$cancelVanillaScoreboard(GuiGraphicsExtractor guiGraphics, Objective objective, CallbackInfo ci) {
         if (FloydCustomScoreboard.shouldUseCustomScoreboard()) {
             FloydCustomScoreboard.markVanillaScoreboardWouldRender();
             ci.cancel();
         }
     }
 
-    @ModifyExpressionValue(method = "renderCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/CameraType;isFirstPerson()Z"))
+    @ModifyExpressionValue(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/CameraType;isFirstPerson()Z"))
     private boolean floydaddons$thirdPersonCrosshair(boolean original) {
         if (!original && FloydHiders.shouldShowThirdPersonCrosshair()) {
             FloydHiders.recordThirdPersonCrosshair();

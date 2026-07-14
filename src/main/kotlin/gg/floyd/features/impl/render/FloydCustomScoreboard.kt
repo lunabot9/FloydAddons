@@ -17,7 +17,9 @@ import gg.floyd.utils.render.HudTextRenderer
 import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.ui.rendering.PostHudOverlay
-import net.minecraft.client.gui.GuiGraphics
+import gg.floyd.utils.ui.rendering.NVGPIPRenderer
+import gg.floyd.utils.ui.rendering.NVGRenderer
+import net.minecraft.client.gui.*
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
 import net.minecraft.network.chat.numbers.StyledFormat
@@ -30,6 +32,7 @@ import java.text.Normalizer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 /**
  * Standalone toggle for the Floyd custom scoreboard.
@@ -291,11 +294,57 @@ object FloydCustomScoreboard : Module(
     private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
         val r = when {
             example -> scoreboardRender(example = true, requireVanillaSignal = false)
-            FloydCompatibility.shouldUseSafeHudLayer() -> cachedLayout ?: scoreboardRender(example = false, requireVanillaSignal = false)
-            else -> cachedLayout
+            else -> cachedLayout ?: scoreboardRender(example = false, requireVanillaSignal = false)
         } ?: return 0 to 0
-        if (FloydCompatibility.shouldUseSafeHudLayer()) drawScoreboardInline(r, allowBlur = false)
+        drawScoreboardGui(r)
         return r.boxWidth to r.boxHeight
+    }
+
+    /** Deferred GuiGraphics path used by Minecraft 26.1 for both editor previews and the live HUD. */
+    private fun GuiGraphics.drawScoreboardGui(r: ScoreboardRender) {
+        val target = FloydPanelStyle.PanelTarget.SCOREBOARD
+        val useNvgFont = FloydFont.usesCustomFont(FloydFont.PanelFont.SCOREBOARD)
+        val multiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
+        NVGPIPRenderer.draw(this, 0, 0, r.boxWidth, r.boxHeight, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(r.boxWidth, r.boxHeight, target)) {
+            HudPanel.drawNvgPanel(
+                r.boxWidth,
+                r.boxHeight,
+                target,
+                HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y),
+            )
+            if (useNvgFont) {
+                val font = NVGRenderer.activeFont()
+                fun drawLine(text: ScoreboardText, segments: List<HudTextRenderer.Segment>) {
+                    var segmentX = text.x
+                    for (segment in segments) {
+                        NVGRenderer.text(segment.text, segmentX, text.y, SCOREBOARD_FONT_SIZE, segment.color, font)
+                        segmentX += NVGRenderer.textWidth(segment.text, SCOREBOARD_FONT_SIZE, font)
+                    }
+                }
+                for (i in 0 until r.texts.size - 1) {
+                    val text = r.texts[i]
+                    drawLine(text, text.value.segments)
+                }
+                val brand = r.texts.last()
+                drawLine(brand, brandSegments(r.brandGlyphs).segments)
+            }
+        }
+        if (!useNvgFont) {
+            val font = panelFont()
+            fun drawLine(text: ScoreboardText, segments: List<HudTextRenderer.Segment>) {
+                var segmentX = text.x
+                for (segment in segments) {
+                    drawString(font, segment.text, segmentX.roundToInt(), text.y.roundToInt(), segment.color, false)
+                    segmentX += MsdfFontMetrics.unitWidth(segment.text, font)
+                }
+            }
+            for (i in 0 until r.texts.size - 1) {
+                val text = r.texts[i]
+                drawLine(text, text.value.segments)
+            }
+            val brand = r.texts.last()
+            drawLine(brand, brandSegments(r.brandGlyphs).segments)
+        }
     }
 
     /**
@@ -342,11 +391,16 @@ object FloydCustomScoreboard : Module(
     /** The per-toggle font selection (custom vs pinned vanilla); layout and draw must agree. */
     private fun panelFont() = FloydFont.panelFont(FloydFont.PanelFont.SCOREBOARD)
 
-    private fun textWidth(text: String): Float = MsdfFontMetrics.width(text, SCOREBOARD_FONT_SIZE, panelFont())
+    private fun textWidth(text: String): Float =
+        if (FloydFont.usesCustomFont(FloydFont.PanelFont.SCOREBOARD)) {
+            NVGRenderer.textWidth(text, SCOREBOARD_FONT_SIZE, NVGRenderer.activeFont())
+        } else {
+            MsdfFontMetrics.width(text, SCOREBOARD_FONT_SIZE, panelFont())
+        }
 
     private fun textWidth(text: StyledScoreboardText): Float {
         var width = 0f
-        for (segment in text.segments) width += MsdfFontMetrics.width(segment.text, SCOREBOARD_FONT_SIZE, panelFont())
+        for (segment in text.segments) width += textWidth(segment.text)
         return width
     }
 
@@ -385,7 +439,7 @@ object FloydCustomScoreboard : Module(
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
         if (allowBlur && FloydPanelStyle.blurFor(target)) {
             val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
-            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+            if (blurRadius >= 0.5f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
                 PostHudOverlay.bindMainFbo()
             }

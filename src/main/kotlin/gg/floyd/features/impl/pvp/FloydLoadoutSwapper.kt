@@ -10,7 +10,7 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.inventory.ChestMenu
-import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.ContainerInput
 import org.lwjgl.glfw.GLFW
 import kotlin.random.Random
 
@@ -143,7 +143,7 @@ object FloydLoadoutSwapper : Module(
         val slot = menu.slots[slotIndex]
         if (!slot.hasItem()) return false
 
-        gameMode.handleInventoryMouseClick(menu.containerId, slotIndex, 0, ClickType.PICKUP, player)
+        gameMode.handleContainerInput(menu.containerId, slotIndex, 0, ContainerInput.PICKUP, player)
         if (autoClose) {
             pendingCloseTicks = 5
         } else {

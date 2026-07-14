@@ -56,7 +56,7 @@ void main() {
     vec3 acc = vec3(0.0);
     float wsum = 0.0;
     // Bounded 2D kernel sampled with a step of 2 (relying on bilinear filtering) to keep the sample
-    // count reasonable. Separable two-pass is a perf follow-up.
+    // count reasonable. This is the original v2.1.0 panel blur kernel.
     for (float dx = -radius; dx <= radius; dx += 2.0) {
         for (float dy = -radius; dy <= radius; dy += 2.0) {
             float wgt = box ? 1.0 : exp(-(dx * dx + dy * dy) / (2.0 * sigma * sigma));

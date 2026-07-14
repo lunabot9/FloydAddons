@@ -207,7 +207,7 @@ class ExtendedSearchableListSetting(
         NVGRenderer.rect(x, y, w, actionsH, Colors.gray38.rgba, 4f)
         NVGRenderer.hollowRect(x, y, w, actionsH, 1.5f, (if (hovered) ClickGUIModule.clickGUIColor else Colors.gray38).rgba, 4f)
         val lw = NVGRenderer.textWidth(label, 14f, NVGRenderer.defaultFont)
-        NVGRenderer.text(label, x + (w - lw) / 2f, y + actionsH / 2f - 7f, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.textCentered(label, x, y, w, actionsH, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont, lw)
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {

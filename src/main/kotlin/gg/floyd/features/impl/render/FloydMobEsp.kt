@@ -16,7 +16,7 @@ import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
 import gg.floyd.utils.Colors
 import gg.floyd.utils.Identifiers
-import gg.floyd.utils.render.drawTracer
+import gg.floyd.utils.render.drawTracerFan
 import gg.floyd.utils.render.drawWireFrameBox
 import gg.floyd.utils.render.drawText
 import gg.floyd.utils.renderBoundingBox
@@ -169,18 +169,23 @@ object FloydMobEsp : Module(
 
             if (debugLabelsActive()) drawDebugLabels()
 
+            val tracerTargetsByColor = if (tracers) linkedMapOf<Int, MutableList<net.minecraft.world.phys.Vec3>>() else null
             for (entity in renderTargets(level)) {
                 if (entity === player) continue
                 matchedRenderHits.incrementAndGet()
                 val color = colorFor(entity)
                 if (tracers) {
                     tracerRenderHits.incrementAndGet()
-                    drawTracer(entity.renderPos.add(0.0, entity.bbHeight / 2.0, 0.0), color, depth = false, thickness = 2f)
+                    tracerTargetsByColor?.getOrPut(color.rgba) { ArrayList() }
+                        ?.add(entity.renderPos.add(0.0, entity.bbHeight / 2.0, 0.0))
                 }
                 if (hitboxes) {
                     hitboxRenderHits.incrementAndGet()
                     drawWireFrameBox(entity.renderBoundingBox, color, thickness = 2f, depth = false)
                 }
+            }
+            tracerTargetsByColor?.forEach { (rgba, targets) ->
+                drawTracerFan(targets, Color(rgba), thickness = 2f, depth = false, mirrorBehindCamera = true)
             }
         }
     }
@@ -620,7 +625,13 @@ object FloydMobEsp : Module(
         val targetName = stalkTarget.takeIf { it.isNotBlank() } ?: return
         val target = mc.level?.players()?.firstOrNull { it.name.string.equals(targetName, ignoreCase = true) } ?: return
         stalkRenderHits.incrementAndGet()
-        drawTracer(target.renderPos.add(0.0, target.bbHeight / 2.0, 0.0), stalkColor, depth = false, thickness = 2f)
+        drawTracerFan(
+            listOf(target.renderPos.add(0.0, target.bbHeight / 2.0, 0.0)),
+            stalkColor,
+            thickness = 2f,
+            depth = false,
+            mirrorBehindCamera = true
+        )
     }
 
     private fun RenderEvent.Extract.drawDebugLabels() {

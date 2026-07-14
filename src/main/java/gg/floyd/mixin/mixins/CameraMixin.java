@@ -17,13 +17,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class CameraMixin {
     @Shadow private boolean detached;
     @Shadow private float eyeHeight;
+    @Shadow private Entity entity;
 
     @Shadow protected abstract void setPosition(double x, double y, double z);
     @Shadow protected abstract void setRotation(float yRot, float xRot);
     @Shadow protected abstract void move(float zoom, float dy, float dx);
 
     @Redirect(
-        method = "setup",
+        method = "alignWithEntity",
         at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getMaxZoom(F)F")
     )
     private float floydaddons$customThirdPersonDistance(Camera instance, float originalDistance) {
@@ -33,8 +34,8 @@ public abstract class CameraMixin {
         return ((CameraAccessor) this).floydaddons$invokeGetMaxZoom(desired);
     }
 
-    @Inject(method = "setup", at = @At("RETURN"))
-    private void floydaddons$cameraUpdate(Level level, Entity focusedEntity, boolean detached, boolean inverseView, float partialTick, CallbackInfo ci) {
+    @Inject(method = "update", at = @At("RETURN"))
+    private void floydaddons$cameraUpdate(net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
         if (FloydCamera.freecamActive()) {
             FloydCamera.updateFreecamMovement();
             setPosition(FloydCamera.freecamX(), FloydCamera.freecamY(), FloydCamera.freecamZ());
@@ -43,8 +44,11 @@ public abstract class CameraMixin {
             return;
         }
 
-        if (FloydCamera.freelookActive() && focusedEntity != null) {
-            Vec3 pos = focusedEntity.getPosition(partialTick);
+        if (FloydCamera.freelookActive() && this.entity != null) {
+            float partialTick = this.entity.level().tickRateManager().isEntityFrozen(this.entity)
+                ? 1.0F
+                : deltaTracker.getGameTimeDeltaPartialTick(true);
+            Vec3 pos = this.entity.getPosition(partialTick);
             setPosition(pos.x, pos.y + this.eyeHeight, pos.z);
             setRotation(FloydCamera.freelookYaw(), FloydCamera.freelookPitch());
             float desired = FloydCamera.currentFreelookDistance();

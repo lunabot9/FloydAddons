@@ -5,7 +5,7 @@ import gg.floyd.clickgui.settings.impl.HudElement
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.ModuleManager.hudSettingsCache
 import gg.floyd.utils.Colors
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -70,12 +70,12 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
      * the real HUD. Override it to a clear background so the editor is WYSIWYG (panels render exactly as in
      * game, with one rendering system); the free cursor + per-panel hover tooltip indicate edit mode.
      */
-    override fun renderBackground(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+    override fun extractBackground(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
         // intentionally empty — no dim/blur over the inline-rendered panels
     }
 
-    override fun render(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        super.render(guiGraphics, mouseX, mouseY, deltaTicks)
+    override fun extractRenderState(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, deltaTicks)
 
         dragging?.let {
             it.x = (renderSpaceMouseX() + deltaX).coerceIn(0f, (mc.window.width - (it.width * it.scale)).coerceAtLeast(0f)).toInt()

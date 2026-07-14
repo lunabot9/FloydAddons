@@ -32,10 +32,10 @@ object FloydTimeChanger : Module(
 
     @JvmStatic
     fun applyCustomTimeOverride() {
-        val levelData = mc.level?.levelData ?: return
+        val level = mc.level ?: return
         val ticks = customTimeTicks(timeValue)
-        levelData.setDayTime(ticks)
-        levelData.setGameTime(ticks)
+        level.setTimeFromServer(ticks)
+        level.levelData.setGameTime(ticks)
     }
 
     @JvmStatic

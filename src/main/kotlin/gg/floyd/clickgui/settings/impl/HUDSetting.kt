@@ -17,7 +17,7 @@ import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.animations.LinearAnimation
 import gg.floyd.utils.ui.isAreaHovered
 import gg.floyd.utils.ui.rendering.NVGRenderer
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.client.input.MouseButtonEvent
 
 class HUDSetting(
@@ -85,10 +85,14 @@ class HUDSetting(
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
         if (click.button() != 0) return false
-        return if (isHovered) {
+        val moveX = lastX + width - 30f
+        val moveY = lastY + getHeight() / 2f - 12f
+        val toggleX = lastX + width - 70f
+        val toggleY = lastY + getHeight() / 2f - 10f
+        return if (mouseX in moveX..(moveX + 24f) && mouseY in moveY..(moveY + 24f)) {
             mc.setScreen(HudManager)
             true
-        } else if (toggleable && isAreaHovered(lastX + width - 70f, lastY + getHeight() / 2f - 10f, 34f, 20f, true)) {
+        } else if (toggleable && mouseX in toggleX..(toggleX + 34f) && mouseY in toggleY..(toggleY + 20f)) {
             toggleAnimation.start()
             value.enabled = !value.enabled
             true

@@ -163,6 +163,19 @@ class Panel(private val category: Category) {
         }
     }
 
+    fun predictedBounds(search: String): FloatArray {
+        var estimatedHeight = HEIGHT
+        if (panelSetting.extended) {
+            for (button in moduleButtons) {
+                if (!button.module.name.contains(search, true)) continue
+                estimatedHeight += button.predictedHeight()
+            }
+        }
+        val contentHeight = previousHeight.takeIf { it > 0f } ?: estimatedHeight
+        val bottom = panelSetting.y + contentHeight.coerceAtLeast(HEIGHT) + if (ClickGUIModule.roundedPanelBottom) 10f else 0f
+        return floatArrayOf(panelSetting.x, panelSetting.y, panelSetting.x + WIDTH, bottom)
+    }
+
     private inline val isMouseOverExtended
         get() = panelSetting.extended && isAreaHovered(
             panelSetting.x,

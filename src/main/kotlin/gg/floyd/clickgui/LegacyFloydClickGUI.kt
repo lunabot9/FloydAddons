@@ -65,7 +65,7 @@ import gg.floyd.utils.ui.clearMouseOverride
 import gg.floyd.utils.ui.hasTransientMouseOverride
 import gg.floyd.utils.ui.mouseX as floydMouseX
 import gg.floyd.utils.ui.mouseY as floydMouseY
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.InventoryScreen
 import net.minecraft.client.input.CharacterEvent
@@ -756,7 +756,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
     }
 
-    override fun render(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
+    override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         val mouseOverride = activeMouseOverride()
         val hoverPoint = mouseOverride?.let { it.first.toDouble() to it.second.toDouble() }
             ?: activeEventMousePoint()
@@ -823,7 +823,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         textEditor?.let { drawTextEditor(context, left, top, alpha, it) }
         colorPicker?.let { drawColorPicker(context, alpha, it) }
 
-        super.render(context, mouseX, mouseY, deltaTicks)
+        super.extractRenderState(context, mouseX, mouseY, deltaTicks)
     }
 
     override fun onClose() {
@@ -834,7 +834,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         closeStartMs = System.currentTimeMillis()
     }
 
-    override fun renderBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
+    override fun extractBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
     }
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, ignoresInput: Boolean): Boolean {
@@ -2013,7 +2013,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val preview = "Preview"
         context.drawString(mc.font, preview, divX + (conePreviewWidth - mc.font.width(preview)) / 2, top + 6, applyAlpha(chromaColor(0f), alpha), true)
         mc.player?.let { player ->
-            InventoryScreen.renderEntityInInventoryFollowsMouse(
+            InventoryScreen.extractEntityInInventoryFollowsMouse(
                 context,
                 divX + 4,
                 top + 20,
@@ -2358,7 +2358,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val stack = when (kind) {
             MobFilterHitKind.ADD_TYPE, MobFilterHitKind.REMOVE_TYPE -> {
                 val entityType = runCatching { BuiltInRegistries.ENTITY_TYPE.getValue(Identifier.parse(key)) }.getOrNull()
-                entityType?.let { SpawnEggItem.byId(it)?.defaultInstance } ?: ItemStack(Items.PLAYER_HEAD)
+                entityType
+                    ?.let { SpawnEggItem.byId(it).map { holder -> holder.value().defaultInstance }.orElse(null) }
+                    ?: ItemStack(Items.PLAYER_HEAD)
             }
             else -> ItemStack(Items.PLAYER_HEAD)
         }
@@ -3218,7 +3220,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val rect = modulePopupPlayerPreviewBounds(popup)
         if (rect == Rect.ZERO) return
         context.fill(rect.left, rect.top, rect.right, rect.bottom, applyAlpha(0xCC000000.toInt(), alpha))
-        InventoryScreen.renderEntityInInventoryFollowsMouse(
+        InventoryScreen.extractEntityInInventoryFollowsMouse(
             context,
             rect.left,
             rect.top,

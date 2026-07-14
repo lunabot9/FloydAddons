@@ -35,13 +35,13 @@ class FloydCompatibilityTest {
 
         assertEquals(true, state["spoofClientBrand"])
         assertEquals(true, state["hideWatchdogMessages"])
-        assertEquals(true, state["customMainMenu"])
+        assertEquals(false, state["customMainMenu"])
         assertEquals(true, state["taskbarIcon"])
         assertEquals(true, state["updateChecker"])
         assertEquals(true, state["hideLoaderEntry"])
         assertEquals(true, state["shouldSpoofClientBrand"])
         assertEquals(true, state["shouldHideWatchdogMessages"])
-        assertEquals(true, state["shouldUseCustomMainMenu"])
+        assertEquals(false, state["shouldUseCustomMainMenu"])
         assertEquals(true, state["shouldApplyTaskbarIcon"])
         assertEquals(true, state["shouldCheckUpdates"])
         assertEquals(true, state["shouldHideLoaderEntry"])
@@ -59,7 +59,6 @@ class FloydCompatibilityTest {
         val gates = listOf(
             FloydSpoofClientBrand to FloydCompatibility::shouldSpoofClientBrand,
             FloydHideWatchdogMessages to FloydCompatibility::shouldHideWatchdogMessages,
-            FloydCustomMainMenu to FloydCompatibility::shouldUseCustomMainMenu,
             FloydTaskbarIconModule to FloydCompatibility::shouldApplyTaskbarIcon,
             FloydUpdateCheckerModule to FloydCompatibility::shouldCheckUpdates,
             FloydModHider to FloydCompatibility::shouldHideLoaderEntry,
@@ -83,6 +82,16 @@ class FloydCompatibilityTest {
         assertTrue(FloydCompatibility.shouldUseSafeHudLayer(setOf("fabricloader", "skyhanni")))
         assertFalse(FloydCompatibility.shouldUseSafeHudLayer(setOf("fabricloader", "skyblocker")))
         assertFalse(FloydCompatibility.shouldUseSafeHudLayer(emptySet()))
+    }
+
+    @Test
+    fun `legacy custom main menu hook stays disabled on the current port`() {
+        assertFalse(FloydCompatibility.shouldUseCustomMainMenu())
+    }
+
+    @Test
+    fun `current port keeps hud panels on the deferred gui layer`() {
+        assertTrue(FloydCompatibility.shouldRenderHudPanelsOnGuiLayer())
     }
 
     private fun withModuleEnabled(module: Module, block: () -> Unit) {

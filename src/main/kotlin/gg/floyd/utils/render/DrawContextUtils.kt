@@ -3,7 +3,7 @@ package gg.floyd.utils.render
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.utils.Color
 import gg.floyd.utils.Colors
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.util.FormattedCharSequence
 
 fun GuiGraphics.text(text: String, x: Int, y: Int, color: Color = Colors.WHITE, shadow: Boolean = true) {

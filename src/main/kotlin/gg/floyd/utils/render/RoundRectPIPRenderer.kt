@@ -9,9 +9,9 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.Tesselator
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.*
 import net.minecraft.client.gui.navigation.ScreenRectangle
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState
 import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 import net.minecraft.client.renderer.DynamicUniformStorage
 import net.minecraft.client.renderer.MultiBufferSource
@@ -36,7 +36,7 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         val mesh = builder.buildOrThrow()
 
         val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
-            RenderSystem.getModelViewMatrix(), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
+            Matrix4f(), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
         )
 
         val uniformBuffer = uniformStorage.writeUniform { buffer ->
@@ -325,7 +325,7 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             val screenRect = ScreenRectangle(screenLeft, screenTop, screenW, screenH)
             val bounds = if (scissor != null) scissor.intersection(screenRect) else screenRect
 
-            context.guiRenderState.submitPicturesInPictureState(
+            context.guiRenderState.addPicturesInPictureState(
                 State(
                     screenLeft, screenTop, screenW, screenH,
                     topLeftColor, topRightColor, bottomRightColor, bottomLeftColor,

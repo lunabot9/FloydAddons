@@ -9,7 +9,7 @@ import net.minecraft.client.gui.font.TextRenderable
 import net.minecraft.client.gui.font.glyphs.BakedGlyph
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.network.chat.Style
-import org.joml.Matrix4f
+import org.joml.Matrix4fc
 import kotlin.math.max
 import kotlin.math.min
 
@@ -61,7 +61,7 @@ class FloydMsdfGlyph(
         glyphX: Float,
         glyphY: Float,
         z: Float,
-        pose: Matrix4f,
+        pose: Matrix4fc,
         buffer: VertexConsumer,
         color: Int,
         bold: Boolean,
@@ -129,7 +129,7 @@ class FloydMsdfRenderable internal constructor(
 
     override fun activeBottom(): Float = y + 9.0F
 
-    override fun render(pose: Matrix4f, buffer: VertexConsumer, light: Int, gui: Boolean) {
+    override fun render(pose: Matrix4fc, buffer: VertexConsumer, light: Int, gui: Boolean) {
         val italic = textStyle.isItalic
         val bold = textStyle.isBold
         val boldZ = if (gui) 0.0F else Z_FIGHTER

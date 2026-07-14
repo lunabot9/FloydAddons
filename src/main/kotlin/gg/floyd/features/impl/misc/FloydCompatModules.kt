@@ -36,7 +36,7 @@ object FloydCustomMainMenu : Module(
     name = "Custom Main Menu",
     category = Category.MISC,
     description = "Replaces the vanilla title flow with Floyd's NVG-driven menu and custom media background.",
-    toggled = true,
+    toggled = false,
 ) {
     var mediaPath by StringSetting(
         "Media Path",
@@ -57,11 +57,15 @@ object FloydCustomMainMenu : Module(
 
     init {
         on<ScreenEvent.Open> {
-            if (!enabled) return@on
+            if (!enabled || !FloydCompatibility.shouldUseCustomMainMenu()) return@on
             if (screen is FloydMainMenuScreen) return@on
             if (screen is TitleScreen && mc.screen === screen) mc.setScreen(FloydMainMenuScreen())
         }
         on<TickEvent.ClientEnd> {
+            if (!FloydCompatibility.shouldUseCustomMainMenu()) {
+                FloydMenuVideoBackground.shutdown()
+                return@on
+            }
             ensureDefaultMediaSeeded()
             FloydMenuVideoBackground.tick()
         }
@@ -78,6 +82,7 @@ object FloydCustomMainMenu : Module(
     // Live toggle without a restart: swap the visible title screen to match the new state.
     override fun onEnable() {
         super.onEnable()
+        if (!FloydCompatibility.shouldUseCustomMainMenu()) return
         runCatching {
             if (mc.screen is TitleScreen) mc.setScreen(FloydMainMenuScreen())
         }

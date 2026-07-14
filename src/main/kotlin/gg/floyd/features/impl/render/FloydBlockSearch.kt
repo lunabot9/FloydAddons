@@ -232,7 +232,7 @@ object FloydBlockSearch : Module(
             }
             if (enabled && activeIds().isNotEmpty()) indexChunk(chunk)
         }
-        ClientChunkEvents.CHUNK_UNLOAD.register { _, chunk -> removeChunk(ChunkPos.asLong(chunk.pos.x, chunk.pos.z)) }
+        ClientChunkEvents.CHUNK_UNLOAD.register { _, chunk -> removeChunk(ChunkPos.pack(chunk.pos.x, chunk.pos.z)) }
 
         // Fabric-level (fires regardless of module enabled state): the level-identity guard holds a
         // strong ClientLevel reference — without this, a disconnect leaves the entire dead level
@@ -329,7 +329,7 @@ object FloydBlockSearch : Module(
     private fun indexChunk(chunk: LevelChunk): Unit = FloydPerf.section("BlockSearch.indexChunk") {
         FloydPerfCounters.blockSearchChunkScans.increment()
         val ids = activeIds()
-        val key = ChunkPos.asLong(chunk.pos.x, chunk.pos.z)
+        val key = ChunkPos.pack(chunk.pos.x, chunk.pos.z)
         if (ids.isEmpty()) { removeChunk(key); return }
 
         val sections = chunk.sections
@@ -383,7 +383,7 @@ object FloydBlockSearch : Module(
         FloydPerfCounters.blockSearchBlockChanges.increment()
         val ids = activeIds()
         if (ids.isEmpty()) return
-        val key = ChunkPos.asLong(pos)
+        val key = ChunkPos.pack(pos)
         val id = BuiltInRegistries.BLOCK.getKey(state.block).toString()
         if (!state.isAir && id in ids) {
             if (indexedCount >= MAX_INDEXED) { capped = true; return }

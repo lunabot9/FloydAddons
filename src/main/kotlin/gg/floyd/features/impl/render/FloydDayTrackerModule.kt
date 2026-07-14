@@ -11,7 +11,9 @@ import gg.floyd.utils.render.HudTextRenderer
 import gg.floyd.utils.render.PanelBlurPIPRenderer
 import gg.floyd.utils.render.RoundRectPIPRenderer
 import gg.floyd.utils.ui.rendering.PostHudOverlay
-import net.minecraft.client.gui.GuiGraphics
+import gg.floyd.utils.ui.rendering.NVGPIPRenderer
+import gg.floyd.utils.ui.rendering.NVGRenderer
+import net.minecraft.client.gui.*
 import kotlin.math.ceil
 
 /**
@@ -64,7 +66,7 @@ object FloydDayTrackerModule : Module(
         "cornerRadius" to FloydPanelStyle.cornerRadiusFor(FloydPanelStyle.PanelTarget.DAY_TRACKER)
     )
 
-    private fun currentServerDay(): Long? = mc.level?.let { (it.dayTime / 24000L) + 1L }
+    private fun currentServerDay(): Long? = mc.level?.let { (it.defaultClockTime / 24000L) + 1L }
 
     private fun currentServerDayLabel(): String? = currentServerDay()?.let { "Day $it" }
 
@@ -81,7 +83,13 @@ object FloydDayTrackerModule : Module(
         val padding = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.DAY_TRACKER).coerceAtLeast(0)
         // Size with the same live-FontSet float advances the draw renders with (MsdfFontMetrics
         // over the panel's selected font), so the box always fits the label exactly.
-        val width = ceil(MsdfFontMetrics.width(label, DAY_TRACKER_FONT_SIZE, panelFont())).toInt() + padding * 2
+        val width = ceil(
+            if (FloydFont.usesCustomFont(FloydFont.PanelFont.DAY_TRACKER)) {
+                NVGRenderer.textWidth(label, DAY_TRACKER_FONT_SIZE, NVGRenderer.activeFont())
+            } else {
+                MsdfFontMetrics.width(label, DAY_TRACKER_FONT_SIZE, panelFont())
+            }
+        ).toInt() + padding * 2
         val height = ceil(DAY_TRACKER_FONT_SIZE).toInt() + padding * 2
         return DayTrackerLayout(label, width, height)
     }
@@ -94,7 +102,24 @@ object FloydDayTrackerModule : Module(
     // draws here instead so Floyd avoids the shared post-world framebuffer override path.
     private fun GuiGraphics.drawDayTrackerHud(example: Boolean): Pair<Int, Int> {
         val layout = dayTrackerLayout(example) ?: return 0 to 0
-        if (FloydCompatibility.shouldUseSafeHudLayer()) drawDayTrackerInline(layout, allowBlur = false)
+        val target = FloydPanelStyle.PanelTarget.DAY_TRACKER
+        val padding = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
+        val useNvgFont = FloydFont.usesCustomFont(FloydFont.PanelFont.DAY_TRACKER)
+        val multiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
+        NVGPIPRenderer.draw(this, 0, 0, layout.width, layout.height, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(layout.width, layout.height, target)) {
+            HudPanel.drawNvgPanel(
+                layout.width,
+                layout.height,
+                target,
+                HudPanel.panelBorderColors(target, dayTrackerHud.x, dayTrackerHud.y),
+            )
+            if (useNvgFont) {
+                NVGRenderer.text(layout.label, padding.toFloat(), padding.toFloat(), DAY_TRACKER_FONT_SIZE, 0xFFFFFFFF.toInt(), NVGRenderer.activeFont())
+            }
+        }
+        if (!useNvgFont) {
+            drawString(panelFont(), layout.label, padding, padding, 0xFFFFFFFF.toInt(), true)
+        }
         return layout.width to layout.height
     }
 
@@ -119,10 +144,10 @@ object FloydDayTrackerModule : Module(
     private fun drawDayTrackerInline(layout: DayTrackerLayout, allowBlur: Boolean) {
         val target = FloydPanelStyle.PanelTarget.DAY_TRACKER
         val scale = dayTrackerHud.scale
-        val fx = dayTrackerHud.x.toFloat()
-        val fy = dayTrackerHud.y.toFloat()
         val fw = layout.width * scale
         val fh = layout.height * scale
+        val fx = dayTrackerHud.visibleX(fw)
+        val fy = dayTrackerHud.visibleY(fh)
 
         val fill = FloydPanelStyle.backgroundColorFor(target).rgba
         val border = HudPanel.panelBorderColors(target, dayTrackerHud.x, dayTrackerHud.y)
@@ -132,7 +157,7 @@ object FloydDayTrackerModule : Module(
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
         if (allowBlur && FloydPanelStyle.blurFor(target)) {
             val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
-            if (blurRadius >= 0.5f && fw * fh >= 2000f) {
+            if (blurRadius >= 0.5f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
                 PostHudOverlay.bindMainFbo()
             }
