@@ -4,11 +4,28 @@ on: [ pull_request, push ]
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     strategy:
+      fail-fast: false
       matrix:
-        java: [ 25 ]
+        include:
+          - java: 25
+            minecraft: '26.1'
+            fabric_api: '0.145.1+26.1'
+            modmenu: '18.0.0-alpha.8'
+            iris: '1.10.9+26.1-fabric'
+            sodium: 'mc26.1.1-0.8.9-fabric'
+          - java: 25
+            minecraft: '26.1.2'
+            fabric_api: '0.154.2+26.1.2'
+            modmenu: '18.0.0-alpha.8'
+            iris: '1.10.9+26.1-fabric'
+            sodium: 'mc26.1.2-0.8.12-fabric'
+          - java: 25
+            minecraft: '26.2'
+            fabric_api: '0.154.2+26.2'
+            modmenu: '20.0.1'
+            iris: '1.11.2+26.2-fabric'
+            sodium: 'mc26.2-0.9.1-fabric'
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
@@ -30,22 +47,38 @@ jobs:
       # built and the tests never ran, so CI "passed" without actually verifying or producing
       # anything. (The old per-push scripts/ chmod + skipped verify step are gone.)
       - name: build and test
-        run: ./gradlew build --stacktrace
+        run: ./gradlew ":${{ matrix.minecraft }}:build" --stacktrace
 
       # Per-build artifact, handy for PRs / non-main pushes.
       - name: upload build jar artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FloydAddons-${{ github.sha }}
+          name: FloydAddons-${{ matrix.minecraft }}-${{ github.sha }}
           path: |
-            build/libs/FloydAddons-*.jar
-            !build/libs/FloydAddons-*-sources.jar
+            versions/${{ matrix.minecraft }}/build/libs/FloydAddons-*.jar
+            !versions/${{ matrix.minecraft }}/build/libs/FloydAddons-*-sources.jar
 
-      # Publish (or refresh) the GitHub Release with the runtime jar on every push to main.
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: download all versioned jars
+        uses: actions/download-artifact@v4
+        with:
+          pattern: FloydAddons-*-${{ github.sha }}
+          path: release-jars
+          merge-multiple: true
+
+      # Publish (or refresh) the GitHub Release with all three runtime jars on every push to main.
       # The tag is derived from mod_version in gradle.properties (e.g. v2.1.0): bumping the
-      # version cuts a new release, re-pushing the same version refreshes that release's jar.
+      # version cuts a new release, re-pushing the same version refreshes all release jars.
       - name: publish release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -55,25 +88,35 @@ jobs:
           tag="v${version}"
 
           runtime_jars=()
-          for jar in build/libs/FloydAddons-*.jar; do
+          for jar in release-jars/FloydAddons-*.jar; do
             [[ "$jar" == *-sources.jar ]] && continue
             runtime_jars+=("$jar")
           done
-          if [[ "${#runtime_jars[@]}" -ne 1 ]]; then
+          expected=(
+            "release-jars/FloydAddons-${version}-26.1.jar"
+            "release-jars/FloydAddons-${version}-26.1.2.jar"
+            "release-jars/FloydAddons-${version}-26.2.jar"
+          )
+          if [[ "${#runtime_jars[@]}" -ne 3 ]]; then
             printf 'found: %s\n' "${runtime_jars[@]:-<none>}"
-            echo "expected exactly one FloydAddons runtime jar in build/libs" >&2
+            echo "expected exactly three FloydAddons runtime jars" >&2
             exit 1
           fi
-          jar="${runtime_jars[0]}"
-          echo "Releasing ${jar} as ${tag}"
+          for jar in "${expected[@]}"; do
+            if [[ ! -f "$jar" ]]; then
+              echo "missing expected release jar: $jar" >&2
+              exit 1
+            fi
+          done
+          echo "Releasing ${expected[*]} as ${tag}"
 
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release ${tag} exists — updating its jar."
-            gh release upload "$tag" "$jar" --clobber
+            echo "Release ${tag} exists — updating its jars."
+            gh release upload "$tag" "${expected[@]}" --clobber
           else
             echo "Creating release ${tag}."
-            gh release create "$tag" "$jar" \
+            gh release create "$tag" "${expected[@]}" \
               --target "$GITHUB_SHA" \
-              --title "FloydAddons ${version} (MC 26.1.2)" \
-              --notes "FloydAddons for Minecraft 26.1.2. Built from ${GITHUB_SHA}."
+              --title "FloydAddons ${version} (MC 26.1 / 26.1.2 / 26.2)" \
+              --notes "FloydAddons for Minecraft 26.1, 26.1.2, and 26.2. Built from ${GITHUB_SHA}."
           fi

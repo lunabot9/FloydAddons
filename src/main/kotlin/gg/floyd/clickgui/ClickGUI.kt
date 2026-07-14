@@ -11,6 +11,7 @@ import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.animations.EaseOutAnimation
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
+import gg.floyd.utils.render.nvgToGuiCoordinate
 import net.minecraft.client.gui.*
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.CharacterEvent
@@ -51,19 +52,25 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
     override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         val guiScale = ClickGUIModule.getStandardGuiScale()
+        val minecraftGuiScale = mc.window.guiScale.toFloat()
         val scaledMouseX = floydMouseX / guiScale
         val scaledMouseY = floydMouseY / guiScale
         val searchBarX = mc.window.screenWidth / (2f * guiScale) - 175f
         val searchBarY = (mc.window.screenHeight - 110f) / guiScale - 20f
-        val bounds = computeRenderBounds(searchBarX, searchBarY, context.guiWidth(), context.guiHeight())
+        val bounds = computeRenderBounds(
+            searchBarX,
+            searchBarY,
+            context.guiWidth(),
+            context.guiHeight(),
+            guiScale,
+            minecraftGuiScale,
+        )
 
         NVGPIPRenderer.draw(context, bounds.left, bounds.top, bounds.width, bounds.height) {
-            val scaledMouseX = floydMouseX / ClickGUIModule.getStandardGuiScale()
-            val scaledMouseY = floydMouseY / ClickGUIModule.getStandardGuiScale()
-            val searchBarX = mc.window.screenWidth / (2f * ClickGUIModule.getStandardGuiScale()) - 175f
-            val searchBarY = (mc.window.screenHeight - 110f) / ClickGUIModule.getStandardGuiScale() - 20f
+            val scaledMouseX = floydMouseX / guiScale
+            val scaledMouseY = floydMouseY / guiScale
 
-            NVGRenderer.scale(ClickGUIModule.getStandardGuiScale(), ClickGUIModule.getStandardGuiScale())
+            NVGRenderer.scale(guiScale, guiScale)
 
             drawTitle(searchBarX, searchBarY)
             SearchBar.draw(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
@@ -107,7 +114,9 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         searchBarX: Float,
         searchBarY: Float,
         guiWidth: Int,
-        guiHeight: Int
+        guiHeight: Int,
+        renderScale: Float,
+        minecraftGuiScale: Float,
     ): RenderBounds {
         val bounds = RenderBounds()
         bounds.include(searchBarX, searchBarY - 22f - 4f, searchBarX + 350f, searchBarY + 40f + 8f + 15f + 3f + 15f)
@@ -122,6 +131,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         // A small safety margin avoids clipping shadows/borders and preserves hover text near edges.
         return bounds
             .inflate(20f)
+            .toGuiCoordinates(renderScale, minecraftGuiScale)
             .clampTo(guiWidth.toFloat(), guiHeight.toFloat())
     }
 
@@ -177,6 +187,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     }
 
     override fun init() {
+        ClickGUIModule.ensurePanelPositionsFit()
         openAnim.start()
         super.init()
     }
@@ -345,6 +356,14 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
             minY -= padding
             maxX += padding
             maxY += padding
+            return this
+        }
+
+        fun toGuiCoordinates(renderScale: Float, minecraftGuiScale: Float): RenderBounds {
+            minX = nvgToGuiCoordinate(minX, renderScale, minecraftGuiScale)
+            minY = nvgToGuiCoordinate(minY, renderScale, minecraftGuiScale)
+            maxX = nvgToGuiCoordinate(maxX, renderScale, minecraftGuiScale)
+            maxY = nvgToGuiCoordinate(maxY, renderScale, minecraftGuiScale)
             return this
         }
 

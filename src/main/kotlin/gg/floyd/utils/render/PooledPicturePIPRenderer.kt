@@ -39,6 +39,159 @@ import net.minecraft.client.renderer.RenderPipelines
  * Pool textures are recycled once per frame via [recycleAll], wired from the existing per-frame PIP
  * clear hook (after the prior frame's GUI flush, before this frame's panels are submitted).
  */
+//? if >=26.2 {
+/*abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>() : PictureInPictureRenderer<T>() {
+    constructor(ignored: Any?) : this()
+
+    private val pool = ArrayDeque<Slot>()
+    private val inUse = ArrayList<Slot>()
+    private var frame = 0L
+    private val projection = CachedOrthoProjectionMatrixBuffer(
+        "Floyd Pooled PIP - ${this::class.java.simpleName}", -1000.0f, 1000.0f, true
+    )
+
+    init {
+        register(this)
+    }
+
+    protected lateinit var submitNodeCollector: net.minecraft.client.renderer.SubmitNodeCollector
+
+    protected abstract fun renderContent(state: T, poseStack: PoseStack)
+
+    final override fun renderToTexture(
+        state: T,
+        poseStack: PoseStack,
+        submitNodeCollector: net.minecraft.client.renderer.SubmitNodeCollector,
+    ) {
+        this.submitNodeCollector = submitNodeCollector
+        renderContent(state, poseStack)
+    }
+
+    final override fun prepare(
+        state: T,
+        guiRenderState: GuiRenderState,
+        featureRenderDispatcher: net.minecraft.client.renderer.feature.FeatureRenderDispatcher,
+        windowScale: Int,
+    ) {
+        val w = (state.x1() - state.x0()) * windowScale
+        val h = (state.y1() - state.y0()) * windowScale
+        if (w <= 0 || h <= 0) return
+
+        val slot = acquire(w, h)
+        val savedColorOverride = RenderSystem.outputColorTextureOverride
+        val savedDepthOverride = RenderSystem.outputDepthTextureOverride
+        val savedProjection = RenderSystem.getProjectionMatrixBuffer()
+        val savedProjectionType = RenderSystem.getProjectionType()
+        val modelView = RenderSystem.getModelViewStack()
+
+        try {
+            RenderSystem.outputColorTextureOverride = slot.colorView
+            RenderSystem.outputDepthTextureOverride = slot.depthView
+            RenderSystem.getDevice().createCommandEncoder().clearColorAndDepthTextures(
+                slot.color, org.joml.Vector4f(0f, 0f, 0f, 0f), slot.depth, 0.0
+            )
+            RenderSystem.setProjectionMatrix(projection.getBuffer(w.toFloat(), h.toFloat()), ProjectionType.ORTHOGRAPHIC)
+
+            modelView.pushMatrix()
+            try {
+                val pose = PoseStack()
+                pose.translate(w / 2.0f, getTranslateY(h, windowScale), 0.0f)
+                val scale = windowScale * state.scale()
+                pose.scale(scale, scale, -scale)
+                renderToTexture(state, pose, slot.submits)
+                featureRenderDispatcher.renderAllFeatures(slot.submits)
+            } finally {
+                modelView.popMatrix()
+            }
+        } finally {
+            RenderSystem.outputColorTextureOverride = savedColorOverride
+            RenderSystem.outputDepthTextureOverride = savedDepthOverride
+            if (savedProjection != null) RenderSystem.setProjectionMatrix(savedProjection, savedProjectionType)
+        }
+
+        guiRenderState.addBlitToCurrentLayer(
+            BlitRenderState(
+                RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
+                TextureSetup.singleTexture(slot.colorView, RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
+                state.pose(),
+                state.x0(), state.y0(), state.x1(), state.y1(),
+                0.0f, 1.0f, 1.0f, 0.0f,
+                -1,
+                state.scissorArea(),
+                null,
+            )
+        )
+    }
+
+    private fun acquire(w: Int, h: Int): Slot {
+        val index = pool.indexOfFirst { it.width == w && it.height == h }
+        val slot = if (index >= 0) pool.removeAt(index) else createSlot(w, h)
+        slot.lastUsedFrame = frame
+        inUse.add(slot)
+        return slot
+    }
+
+    private fun createSlot(w: Int, h: Int): Slot {
+        val device = RenderSystem.getDevice()
+        val colorUsage = GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_TEXTURE_BINDING or GpuTexture.USAGE_RENDER_ATTACHMENT
+        val depthUsage = GpuTexture.USAGE_COPY_DST or GpuTexture.USAGE_RENDER_ATTACHMENT
+        val color = device.createTexture(
+            { "Floyd PIP ${getTextureLabel()} color" }, colorUsage, TextureFormat.RGBA8, w, h, 1, 1
+        )
+        val colorView = device.createTextureView(color)
+        val depth = device.createTexture(
+            { "Floyd PIP ${getTextureLabel()} depth" }, depthUsage, TextureFormat.DEPTH32, w, h, 1, 1
+        )
+        val depthView = device.createTextureView(depth)
+        return Slot(w, h, color, colorView, depth, depthView, net.minecraft.client.renderer.SubmitNodeStorage())
+    }
+
+    private fun recycle() {
+        frame++
+        pool.addAll(inUse)
+        inUse.clear()
+        val cutoff = frame - IDLE_FRAMES_BEFORE_CLOSE
+        val iterator = pool.iterator()
+        while (iterator.hasNext()) {
+            val slot = iterator.next()
+            if (slot.lastUsedFrame < cutoff) {
+                slot.close()
+                iterator.remove()
+            }
+        }
+    }
+
+    private class Slot(
+        val width: Int,
+        val height: Int,
+        val color: GpuTexture,
+        val colorView: GpuTextureView,
+        val depth: GpuTexture,
+        val depthView: GpuTextureView,
+        val submits: net.minecraft.client.renderer.SubmitNodeStorage,
+    ) {
+        var lastUsedFrame = 0L
+
+        fun close() {
+            colorView.close(); color.close(); depthView.close(); depth.close()
+        }
+    }
+
+    companion object {
+        private const val IDLE_FRAMES_BEFORE_CLOSE = 180L
+        private val instances = ArrayList<PooledPicturePIPRenderer<*>>()
+
+        private fun register(renderer: PooledPicturePIPRenderer<*>) {
+            instances.add(renderer)
+        }
+
+        @JvmStatic
+        fun recycleAll() {
+            for (renderer in instances) renderer.recycle()
+        }
+    }
+}
+*///?} else {
 abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
     bufferSource: MultiBufferSource.BufferSource
 ) : PictureInPictureRenderer<T>(bufferSource) {
@@ -55,6 +208,8 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
     }
 
     /** Same contract as the vanilla `renderToTexture`: draw the panel into the bound override texture. */
+    protected lateinit var submitNodeCollector: net.minecraft.client.renderer.SubmitNodeCollector
+
     protected abstract fun renderContent(state: T, poseStack: PoseStack)
 
     final override fun renderToTexture(state: T, poseStack: PoseStack) = renderContent(state, poseStack)
@@ -175,3 +330,4 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
         }
     }
 }
+//?}

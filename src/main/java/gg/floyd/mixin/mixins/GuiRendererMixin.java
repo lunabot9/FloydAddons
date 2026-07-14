@@ -33,6 +33,23 @@ public abstract class GuiRendererMixin {
      * renderers. Floyd submits custom PictureInPictureRenderState subclasses (ClickGUI NVG, rounded
      * rects, blur panels, GUI items), so extend the live renderer's dispatch map at construction time.
      */
+    //? if >=26.2 {
+    /*@Inject(method = "<init>", at = @At("TAIL"))
+    private void floydaddons$registerCustomPipRenderers26(
+        net.minecraft.client.renderer.state.gui.GuiRenderState renderState,
+        net.minecraft.client.renderer.feature.FeatureRenderDispatcher featureRenderDispatcher,
+        List<PictureInPictureRenderer<?>> renderers,
+        CallbackInfo ci
+    ) {
+        var extended = new LinkedHashMap<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>>(this.pictureInPictureRenderers);
+        var ignoredCollector = new net.minecraft.client.renderer.SubmitNodeStorage();
+        addRenderer(extended, new NVGPIPRenderer(ignoredCollector));
+        addRenderer(extended, new RoundRectPIPRenderer(ignoredCollector));
+        addRenderer(extended, new PanelBlurPIPRenderer(ignoredCollector));
+        addRenderer(extended, new ItemStateRenderer(ignoredCollector));
+        this.pictureInPictureRenderers = Map.copyOf(extended);
+    }
+    *///?} else {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void floydaddons$registerCustomPipRenderers(
         net.minecraft.client.renderer.state.gui.GuiRenderState renderState,
@@ -49,6 +66,8 @@ public abstract class GuiRendererMixin {
         addRenderer(extended, new ItemStateRenderer(bufferSource));
         this.pictureInPictureRenderers = Map.copyOf(extended);
     }
+
+    //?}
 
     private static void addRenderer(
         Map<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>> renderers,

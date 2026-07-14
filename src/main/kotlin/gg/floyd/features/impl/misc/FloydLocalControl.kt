@@ -59,6 +59,7 @@ import net.minecraft.client.input.MouseButtonInfo
 import net.minecraft.client.multiplayer.ServerData
 import net.minecraft.client.multiplayer.resolver.ServerAddress
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
 import net.minecraft.world.Difficulty
 import net.minecraft.world.InteractionHand
@@ -715,8 +716,13 @@ object FloydLocalControl : Module(
                                 settings,
                                 WorldOptions(seed, false, false),
                                 { provider ->
+                                    //? if >=26.2 {
+                                    /*if (flat) provider.lookupOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).value().createWorldDimensions()
+                                    else WorldPresets.createNormalWorldDimensions(provider)
+                                    *///?} else {
                                     if (flat) WorldPresets.createFlatWorldDimensions(provider)
                                     else WorldPresets.createNormalWorldDimensions(provider)
+                                    //?}
                                 },
                                 TitleScreen()
                             )

@@ -90,7 +90,11 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
             val transform = NVGRenderer.currentTransform()
             NVGRenderer.endFrame()
             resyncBlazeStateAfterNvg()
+            //? if >=26.2 {
+            /*NvgTextReplay.replay(NVGRenderer.drainDeferredText(), slot.width, slot.height, submitNodeCollector)
+            *///?} else {
             NvgTextReplay.replay(NVGRenderer.drainDeferredText(), slot.width, slot.height, bufferSource)
+            //?}
             bindSlotTarget()
             NVGRenderer.beginFrame(slot.width.toFloat(), slot.height.toFloat())
             NVGRenderer.applyTransform(transform)
@@ -104,9 +108,17 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
         NVGRenderer.endFrame()
 
         resyncBlazeStateAfterNvg()
-        NvgTextReplay.replay(NVGRenderer.drainDeferredText(), slot.width, slot.height, bufferSource)
+        //? if >=26.2 {
+            /*NvgTextReplay.replay(NVGRenderer.drainDeferredText(), slot.width, slot.height, submitNodeCollector)
+            *///?} else {
+            NvgTextReplay.replay(NVGRenderer.drainDeferredText(), slot.width, slot.height, bufferSource)
+            //?}
         NvgTextReplay.publishFrameCounts()
     }
+
+    //? if >=26.2 {
+    /*private var fbo26 = 0
+    *///?}
 
     private class SlotTarget(val width: Int, val height: Int)
 
@@ -116,6 +128,26 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
      * Re-run before EVERY `nvgBeginFrame`: the interleaved replay's render passes rebind both.
      */
     private fun bindSlotTarget(): SlotTarget? {
+        //? if >=26.2 {
+        /*val colorTex = RenderSystem.outputColorTextureOverride ?: return logMissingSlot("noColorOverride")
+        val glColor = colorTex.texture() as? GlTexture ?: return logMissingSlot("nonOpenGlBackend")
+        val glDepth = RenderSystem.outputDepthTextureOverride?.texture() as? GlTexture
+        val width = colorTex.getWidth(0)
+        val height = colorTex.getHeight(0)
+        if (fbo26 == 0) fbo26 = GL33C.glGenFramebuffers()
+        // The 26.2 command encoder binds its render-pass FBOs behind GlStateManager's read/write
+        // framebuffer cache. On the next frame that cache can still claim fbo26 is bound while the
+        // real GL target is the main framebuffer; a cached no-op here then paints a small second copy
+        // of the entire ClickGUI at the top-left before the screen blur runs. Force a different cached
+        // value first so the following bind is guaranteed to reach OpenGL every time.
+        GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, 0)
+        GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, fbo26)
+        GL33C.glFramebufferTexture2D(GlConst.GL_FRAMEBUFFER, GL33C.GL_COLOR_ATTACHMENT0, GL33C.GL_TEXTURE_2D, glColor.glId(), 0)
+        if (glDepth != null) GL33C.glFramebufferTexture2D(GlConst.GL_FRAMEBUFFER, GL33C.GL_DEPTH_ATTACHMENT, GL33C.GL_TEXTURE_2D, glDepth.glId(), 0)
+        GlStateManager._viewport(0, 0, width, height)
+        GL33C.glBindSampler(0, 0)
+        return SlotTarget(width, height)
+        *///?} else {
         val colorTex = RenderSystem.outputColorTextureOverride ?: return logMissingSlot("noColorOverride")
         val bufferManager = DirectStateAccessCompat.directStateAccess() ?: return logMissingSlot("noDirectStateAccess")
         val glDepthTex = (RenderSystem.outputDepthTextureOverride?.texture() as? GlTexture) ?: return logMissingSlot("noDepthOverride")
@@ -129,6 +161,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
 
         GL33C.glBindSampler(0, 0)
         return SlotTarget(width, height)
+        //?}
     }
 
     private fun logMissingSlot(reason: String): SlotTarget? {
@@ -171,8 +204,16 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
             GlStateManager._bindTexture(0)
         }
         // Boolean states NVG raw-toggled: blend left ON, depth/cull/scissor left OFF.
+        //? if >=26.2 {
+        /*GlStateManager._disableBlend(0)
+        *///?} else {
         GlStateManager._disableBlend()
+        //?}
+        //? if >=26.2 {
+        /*GlStateManager._enableBlend(0)
+        *///?} else {
         GlStateManager._enableBlend()
+        //?}
         GlStateManager._enableDepthTest()
         GlStateManager._disableDepthTest()
         GlStateManager._enableCull()
@@ -186,9 +227,11 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
         // lastProgram flip: a zero-area invisible quad through a pipeline no text batch uses. Its
         // RenderType.draw opens a fresh render pass (which also nulls the encoder's lastPipeline),
         // leaving lastProgram = debug-quads, so the replay's glyph draws always re-bind for real.
+        //? if <26.2 {
         val sacrificial = bufferSource.getBuffer(RenderTypes.debugQuads())
         repeat(4) { sacrificial.addVertex(0f, 0f, 0f).setColor(0, 0, 0, 0) }
         bufferSource.endBatch()
+        //?}
     }
 
     override fun getTranslateY(height: Int, windowScaleFactor: Int): Float = height / 2f

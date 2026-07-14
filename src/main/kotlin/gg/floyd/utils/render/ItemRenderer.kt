@@ -31,13 +31,22 @@ import org.joml.Matrix3x2f
 import org.joml.Matrix4f
 import java.util.*
 
+//? if >=26.2 {
+/*class ItemStateRenderer(ignored: MultiBufferSource.BufferSource)
+    : PictureInPictureRenderer<ItemStateRenderer.State>() {
+*///?} else {
 class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
     : PictureInPictureRenderer<ItemStateRenderer.State>(vertexConsumers) {
+//?}
 
     private var textureView: GpuTextureView? = null
     private var lastState: State? = null
 
+    //? if >=26.2 {
+    /*override fun renderToTexture(state: State, poseStack: PoseStack, submitNodeCollector: MultiBufferSource) {
+    *///?} else {
     override fun renderToTexture(state: State, poseStack: PoseStack) {
+    //?}
         textureView = RenderSystem.outputColorTextureOverride
         lastState = state
         poseStack.scale(1f, -1f, -1f)
@@ -46,9 +55,14 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
             if (state.state.itemStackRenderState().usesBlockLight()) mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_3D)
             else mc.gameRenderer.lighting.setupFor(Lighting.Entry.ITEMS_FLAT)
 
+            //? if >=26.2 {
+            /*state.state.itemStackRenderState().submit(poseStack, submitNodeCollector, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
+            *///?} else {
             val dispatcher = mc.gameRenderer.featureRenderDispatcher
             state.state.itemStackRenderState().submit(poseStack, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
             dispatcher.renderAllFeatures()
+
+            //?}
         } finally {
             mc.gameRenderer.lighting.setupFor(Lighting.Entry.ENTITY_IN_UI)
         }
@@ -208,6 +222,9 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
             if (count == 0) return
             mc.gameRenderer.lighting.setupFor(lighting)
             val dispatcher = mc.gameRenderer.featureRenderDispatcher
+            //? if >=26.2 {
+            /*val submitNodeStorage = net.minecraft.client.renderer.SubmitNodeStorage()
+            *///?}
             for (i in 0 until count) {
                 val entry = group[i]
                 // A GUI item model (after its ItemDisplayContext.GUI display transform) occupies a ~1-unit
@@ -217,15 +234,25 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
                 inlinePose.pushPose()
                 inlinePose.translate(entry.x + entry.size / 2f, entry.y + entry.size / 2f, 0f)
                 inlinePose.scale(entry.size, -entry.size, entry.size)
+                //? if >=26.2 {
+                /*entry.tracking!!.submit(inlinePose, submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
+                *///?} else {
                 entry.tracking!!.submit(inlinePose, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
+                //?}
                 inlinePose.popPose()
             }
+            //? if >=26.2 {
+            /*dispatcher.renderAllFeatures(submitNodeStorage)
+            *///?} else {
             dispatcher.renderAllFeatures()
+            //?}
             // renderAllFeatures() only QUEUES geometry into the feature buffer source; it is not drawn
             // until the batch ends. The PIP path works because PictureInPictureRenderer.prepare() calls
             // bufferSource.endBatch() after renderToTexture. Inline we must flush it ourselves — once
             // per lighting group (the lighting UBO is read at draw time, so groups can't share a flush).
-            mc.renderBuffers().bufferSource().endBatch()
+            //? if <26.2 {
+                        mc.renderBuffers().bufferSource().endBatch()
+            //?}
         }
 
         // Cached zeroed Fog UBO (built once). FogColor alpha 0 makes core/entity.fsh's apply_fog() a no-op,
@@ -276,9 +303,15 @@ class ItemStateRenderer(vertexConsumers: MultiBufferSource.BufferSource)
                 val pose = PoseStack()
                 pose.last().pose().set(modelView)   // seed the PoseStack with the world billboard MVP
                 val dispatcher = mc.gameRenderer.featureRenderDispatcher
+                //? if >=26.2 {
+                /*val submitNodeStorage = net.minecraft.client.renderer.SubmitNodeStorage()
+                tracking.submit(pose, submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
+                dispatcher.renderAllFeatures(submitNodeStorage)
+                *///?} else {
                 tracking.submit(pose, dispatcher.submitNodeStorage, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, 0)
                 dispatcher.renderAllFeatures()
                 mc.renderBuffers().bufferSource().endBatch()
+                //?}
             } finally {
                 mvStack.popMatrix()
                 savedFog?.let { RenderSystem.setShaderFog(it) }

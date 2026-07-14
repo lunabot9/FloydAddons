@@ -11,6 +11,13 @@ class FramebufferBlurCoordinatesTest {
     }
 
     @Test
+    fun `nvg crop coordinates round trip through minecraft gui space`() {
+        val guiOrigin = nvgToGuiCoordinate(nvgCoordinate = 31f, renderScale = 0.6f, guiScale = 2f)
+        assertEquals(9.3f, guiOrigin)
+        assertEquals(-18.6f, pipContentOffset(guiOrigin, guiScale = 2f, devicePixelRatio = 1f))
+    }
+
+    @Test
     fun `panel blur uses the v2 1 kernel and normalizes color once`() {
         val shader = checkNotNull(javaClass.getResourceAsStream("/assets/floydaddons/shaders/core/panel_blur.fsh"))
             .bufferedReader()

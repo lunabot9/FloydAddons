@@ -227,7 +227,11 @@ object FloydPlayerEsp : Module(
         // applied for free, so they were missing the camera rotation and swam around the camera. Fold the
         // same view matrix into their transforms up front so all three share one world transform: this is
         // the matrix the text's flush applies, captured once here.
+        //? if >=26.2 {
+        /*val viewBasis = Matrix4f(basis)
+        *///?} else {
         val viewBasis = Matrix4f(RenderSystem.getModelViewMatrix()).mul(basis)
+        //?}
 
         // Local panel rect: bottom edge on the anchor -> top-left = (-w/2, -h).
         val left = (-dims.panelWidth / 2).toFloat()
@@ -259,11 +263,22 @@ object FloydPlayerEsp : Module(
         // 2) Heart + health text — same recipe as renderQueuedTexts. mc.font keeps the heart glyph.
         if (hpText != null) {
             val tyLocal = rowTop + (rowHeight - mc.font.lineHeight) / 2f
+            //? if >=26.2 {
+            /*val textPose = PoseStack()
+            textPose.mulPose(basis)
+            bufferSource.submitText(
+                textPose, left + pad, tyLocal,
+                net.minecraft.network.chat.Component.literal(hpText).visualOrderText,
+                true, Font.DisplayMode.SEE_THROUGH, Colors.MINECRAFT_RED.rgba,
+                0, LightTexture.FULL_BRIGHT, 0,
+            )
+            *///?} else {
             mc.font.drawInBatch(
                 hpText, left + pad, tyLocal, Colors.MINECRAFT_RED.rgba, true,
                 basis, bufferSource, Font.DisplayMode.SEE_THROUGH, 0, LightTexture.FULL_BRIGHT
             )
             bufferSource.endBatch()   // composit this plate's text immediately over its own rect
+            //?}
         }
 
         // 3) Equipment icons — each centered in an ICON_SIZE local box, under the same basis. The

@@ -1,0 +1,17 @@
+["26.1"]
+fabric_api_version = "0.145.1+26.1"
+modmenu_version = "18.0.0-alpha.8"
+iris = "1.10.9+26.1-fabric"
+sodium = "mc26.1.1-0.8.9-fabric"
+
+["26.1.2"]
+fabric_api_version = "0.154.2+26.1.2"
+modmenu_version = "18.0.0-alpha.8"
+iris = "1.10.9+26.1-fabric"
+sodium = "mc26.1.2-0.8.12-fabric"
+
+["26.2"]
+fabric_api_version = "0.154.2+26.2"
+modmenu_version = "20.0.1"
+iris = "1.11.2+26.2-fabric"
+sodium = "mc26.2-0.9.1-fabric"

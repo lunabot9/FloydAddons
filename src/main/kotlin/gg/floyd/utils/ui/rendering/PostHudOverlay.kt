@@ -94,11 +94,13 @@ object PostHudOverlay {
 
     /** Re-bind the main framebuffer + viewport (a blaze3d SDF render pass can retarget); call between draws. */
     fun bindMainFbo() {
+        //? if <26.2 {
         if (boundFbo == 0) return
         val t = mc.mainRenderTarget
         GlStateManager._glBindFramebuffer(GlConst.GL_FRAMEBUFFER, boundFbo)
         GlStateManager._viewport(0, 0, t.width, t.height)
         GL33C.glBindSampler(0, 0)
+        //?}
     }
 
     @JvmStatic
@@ -111,7 +113,13 @@ object PostHudOverlay {
 
     private fun renderPass() {
         RenderSystem.assertOnRenderThread()
-
+        //? if >=26.2 {
+        /*lastRenderNanoTime = System.nanoTime()
+        FloydPerf.section("PostHud.InventoryHud") { FloydInventoryHud.renderAtWorldEnd() }
+        FloydPerf.section("PostHud.DayTracker") { FloydDayTrackerModule.renderAtWorldEnd() }
+        FloydPerf.section("PostHud.Scoreboard") { FloydCustomScoreboard.renderAtWorldEnd() }
+        return
+        *///?} else {
         val target = mc.mainRenderTarget
         val dsa = DirectStateAccessCompat.directStateAccess() ?: return
         val colorTex = target.colorTexture as? GlTexture ?: return
@@ -185,5 +193,6 @@ object PostHudOverlay {
         GlStateManager._enableBlend()
         GlStateManager._blendFuncSeparate(770, 771, 1, 0)
         GL33C.glActiveTexture(GL13C.GL_TEXTURE0)
+        //?}
     }
 }

@@ -25,4 +25,19 @@ class FloydFontResourcesTest {
         assertNotNull(resourceRoot.resolve("assets/floydaddons/font/clickgui.json").takeIf(Files::exists))
         assertNotNull(resourceRoot.resolve("assets/floydaddons/font/vanilla.json").takeIf(Files::exists))
     }
+
+    @Test
+    fun `msdf shader preserves gui colors without world lightmap inputs`() {
+        val vertexShader = Files.readString(
+            resourceRoot.resolve("assets/floydaddons/shaders/core/msdf_text.vsh"),
+        )
+        val fragmentShader = Files.readString(
+            resourceRoot.resolve("assets/floydaddons/shaders/core/msdf_text.fsh"),
+        )
+
+        assertTrue(vertexShader.contains("#if !defined(IS_GUI) && !defined(IS_SEE_THROUGH)"))
+        assertTrue(vertexShader.contains("vertexColor = Color;"))
+        assertTrue(fragmentShader.contains("#if !defined(IS_GUI) && !defined(IS_SEE_THROUGH)"))
+        assertTrue(fragmentShader.contains("fragColor = color;"))
+    }
 }

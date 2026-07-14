@@ -27,6 +27,82 @@ import org.joml.Matrix4f
  * shadow hooks apply; callers that MEASURE text for layout must run CustomNameReplacer up front
  * (the replacement is idempotent, so the re-pass at draw time finds nothing left to replace).
  */
+//? if >=26.2 {
+/*object HudTextRenderer {
+    data class Segment(val text: String, val color: Int)
+    enum class Alignment { LEFT, RIGHT }
+
+    private var deferredStorage = net.minecraft.client.renderer.SubmitNodeStorage()
+
+    fun drawText(
+        text: String, x: Float, y: Float, scale: Float, color: Int,
+        alignment: Alignment = Alignment.LEFT,
+        displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font,
+    ) = drawSegments(listOf(Segment(text, color)), x, y, scale, alignment, displayMode, light, font)
+
+    private fun submitSegments(
+        storage: net.minecraft.client.renderer.SubmitNodeStorage,
+        segments: List<Segment>, x: Float, y: Float, scale: Float,
+        alignment: Alignment, displayMode: Font.DisplayMode, light: Int, font: Font,
+    ) {
+        if (segments.isEmpty() || scale <= 0f) return
+        PostHudOverlay.applyScreenProjection()
+        val pose = com.mojang.blaze3d.vertex.PoseStack()
+        pose.translate(x, y, 0f)
+        pose.scale(scale, scale, 1f)
+        var segX = when (alignment) {
+            Alignment.LEFT -> 0f
+            Alignment.RIGHT -> -segments.sumOf { MsdfFontMetrics.unitWidth(it.text, font).toDouble() }.toFloat()
+        }
+        for (segment in segments) {
+            storage.submitText(
+                pose, segX, 0f,
+                net.minecraft.network.chat.Component.literal(segment.text).visualOrderText,
+                false, displayMode, segment.color, 0, light, 0,
+            )
+            segX += MsdfFontMetrics.unitWidth(segment.text, font)
+        }
+    }
+
+    fun drawTextDeferred(
+        text: String, x: Float, y: Float, scale: Float, color: Int,
+        alignment: Alignment = Alignment.LEFT,
+        displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font,
+    ) = submitSegments(deferredStorage, listOf(Segment(text, color)), x, y, scale, alignment, displayMode, light, font)
+
+    fun drawSegmentsDeferred(
+        segments: List<Segment>, x: Float, y: Float, scale: Float,
+        alignment: Alignment = Alignment.LEFT,
+        displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font,
+    ) = submitSegments(deferredStorage, segments, x, y, scale, alignment, displayMode, light, font)
+
+    fun flushDeferred() {
+        val storage = deferredStorage
+        deferredStorage = net.minecraft.client.renderer.SubmitNodeStorage()
+        mc.gameRenderer.featureRenderDispatcher().renderAllFeatures(storage)
+        PostHudOverlay.bindMainFbo()
+    }
+
+    fun drawSegments(
+        segments: List<Segment>, x: Float, y: Float, scale: Float,
+        alignment: Alignment = Alignment.LEFT,
+        displayMode: Font.DisplayMode = Font.DisplayMode.SEE_THROUGH,
+        light: Int = LightTexture.FULL_BRIGHT,
+        font: Font = mc.font,
+    ) {
+        val storage = net.minecraft.client.renderer.SubmitNodeStorage()
+        submitSegments(storage, segments, x, y, scale, alignment, displayMode, light, font)
+        mc.gameRenderer.featureRenderDispatcher().renderAllFeatures(storage)
+        PostHudOverlay.bindMainFbo()
+    }
+}
+*///?} else {
 object HudTextRenderer {
 
     /** One run of same-colored text; per-segment color ints carry per-char chroma and style colors. */
@@ -139,3 +215,4 @@ object HudTextRenderer {
         PostHudOverlay.bindMainFbo()
     }
 }
+//?}

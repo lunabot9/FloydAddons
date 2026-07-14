@@ -214,7 +214,11 @@ object FloydXray : Module(
     @JvmStatic
     fun rebuildChunks() {
         try {
+            //? if >=26.2 {
+            /*mc.levelRenderer.invalidateCompiledGeometry(mc.level!!, mc.options, mc.gameRenderer.mainCamera(), mc.blockColors)
+            *///?} else {
             mc.levelRenderer.allChanged()
+            //?}
         } catch (_: NullPointerException) {
             return
         }

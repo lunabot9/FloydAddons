@@ -29,12 +29,22 @@ object MsdfPipelines {
     private fun id(path: String): Identifier = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, path)
 
     val TEXT: RenderPipeline = RenderPipelines.register(
-        RenderPipeline.builder(RenderPipelines.TEXT_SNIPPET, RenderPipelines.FOG_SNIPPET)
+        RenderPipeline.builder(
+            //? if >=26.2 {
+            /*RenderPipelines.WORLD_TEXT_SNIPPET
+            *///?} else {
+            RenderPipelines.TEXT_SNIPPET, RenderPipelines.FOG_SNIPPET
+            //?}
+        )
             .withLocation(id("pipeline/msdf_text"))
             .withVertexShader(id("core/msdf_text"))
             .withFragmentShader(id("core/msdf_text"))
+            //? if <26.2 {
             .withSampler("Sampler0")
+            //?}
+            //? if <26.2 {
             .withSampler("Sampler2")
+            //?}
             .build()
     )
 
@@ -43,29 +53,53 @@ object MsdfPipelines {
             .withLocation(id("pipeline/msdf_text_see_through"))
             .withVertexShader(id("core/msdf_text_see_through"))
             .withFragmentShader(id("core/msdf_text_see_through"))
+            //? if <26.2 {
             .withSampler("Sampler0")
+            //?}
+            //? if >=26.2 {
+            /*.withShaderDefine("IS_SEE_THROUGH")
+            *///?}
             .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false))
             .build()
     )
 
     val TEXT_POLYGON_OFFSET: RenderPipeline = RenderPipelines.register(
-        RenderPipeline.builder(RenderPipelines.TEXT_SNIPPET, RenderPipelines.FOG_SNIPPET)
+        RenderPipeline.builder(
+            //? if >=26.2 {
+            /*RenderPipelines.WORLD_TEXT_SNIPPET
+            *///?} else {
+            RenderPipelines.TEXT_SNIPPET, RenderPipelines.FOG_SNIPPET
+            //?}
+        )
             .withLocation(id("pipeline/msdf_text_polygon_offset"))
             .withVertexShader(id("core/msdf_text"))
             .withFragmentShader(id("core/msdf_text"))
+            //? if <26.2 {
             .withSampler("Sampler0")
+            //?}
+            //? if <26.2 {
             .withSampler("Sampler2")
+            //?}
             .withDepthStencilState(DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true, -1.0F, -10.0F))
             .build()
     )
 
     val GUI: RenderPipeline = RenderPipelines.register(
-        RenderPipeline.builder(RenderPipelines.GUI_TEXT_SNIPPET, RenderPipelines.FOG_SNIPPET)
+        RenderPipeline.builder(
+            RenderPipelines.GUI_TEXT_SNIPPET
+            //? if <26.2 {
+            , RenderPipelines.FOG_SNIPPET
+            //?}
+        )
             .withLocation(id("pipeline/msdf_text_gui"))
             .withVertexShader(id("core/msdf_text"))
             .withFragmentShader(id("core/msdf_text"))
+            //? if <26.2 {
             .withSampler("Sampler0")
+            //?}
+            //? if <26.2 {
             .withSampler("Sampler2")
+            //?}
             .build()
     )
 }

@@ -42,11 +42,19 @@ public class FontMixin {
         return dropShadow && !FloydFont.isTextShadowDisabled();
     }
 
+    //? if >=26.2 {
+    /*@ModifyVariable(method = "prepare8xTextOutline(Lnet/minecraft/util/FormattedCharSequence;FFI)Lnet/minecraft/client/gui/Font$PreparedText;", at = @At("HEAD"), argsOnly = true)
+    private FormattedCharSequence onPrepareOutlineSequence(FormattedCharSequence text) {
+        if (!CustomNameReplacer.isEnabled()) return text;
+        return CustomNameReplacer.replaceSequenceIfNeeded(text);
+    }
+    *///?} else {
     @ModifyVariable(method = "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"), argsOnly = true)
     private FormattedCharSequence onDrawOutlineSequence(FormattedCharSequence text) {
         if (!CustomNameReplacer.isEnabled()) return text;
         return CustomNameReplacer.replaceSequenceIfNeeded(text);
     }
+    //?}
 
     @ModifyVariable(method = "width(Ljava/lang/String;)I", at = @At("HEAD"), argsOnly = true)
     private String onWidthString(String text) {

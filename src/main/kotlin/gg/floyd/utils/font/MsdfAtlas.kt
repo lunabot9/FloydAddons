@@ -68,7 +68,11 @@ class MsdfAtlas {
         }
         val page = pages[placement.page]
         RenderSystem.getDevice().createCommandEncoder()
+            //? if >=26.2 {
+            /*.writeToTexture(page.getTexture(), cell, 0, 0, placement.x, placement.y, CELL_SIZE, CELL_SIZE)
+            *///?} else {
             .writeToTexture(page.getTexture(), cell, NativeImage.Format.RGBA, 0, 0, placement.x, placement.y, CELL_SIZE, CELL_SIZE)
+            //?}
         return Slot(page, placement.x, placement.y)
     }
 
@@ -122,7 +126,11 @@ class MsdfAtlas {
             val fill = MemoryUtilFill.blackOpaque(PAGE_SIZE * PAGE_SIZE)
             try {
                 device.createCommandEncoder()
+                    //? if >=26.2 {
+                    /*.writeToTexture(getTexture(), fill, 0, 0, 0, 0, PAGE_SIZE, PAGE_SIZE)
+                    *///?} else {
                     .writeToTexture(getTexture(), fill, NativeImage.Format.RGBA, 0, 0, 0, 0, PAGE_SIZE, PAGE_SIZE)
+                    //?}
             } finally {
                 org.lwjgl.system.MemoryUtil.memFree(fill)
             }

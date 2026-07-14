@@ -38,7 +38,6 @@ class Panel(private val category: Category) {
     val moduleButtons: List<ModuleButton> get() = sortedModuleButtons.get()
     private val lastModuleButton get() = moduleButtons.lastOrNull()
 
-    private val textWidth = FontEpochCache { NVGRenderer.textWidth(category.name, 22f, NVGRenderer.defaultFont) }
     private var previousHeight = 0f
     private var scrollOffset = 0f
     var dragging = false
@@ -63,13 +62,16 @@ class Panel(private val category: Category) {
         )
 
         NVGRenderer.drawHalfRoundedRect(panelSetting.x, panelSetting.y, WIDTH, HEIGHT, gray26.rgba, 5f, true)
-        NVGRenderer.text(
+        NVGRenderer.textCentered(
             category.name,
-            panelSetting.x + WIDTH / 2f - textWidth.get() / 2,
-            panelSetting.y + HEIGHT / 2f - 11,
+            panelSetting.x,
+            panelSetting.y,
+            WIDTH,
+            HEIGHT,
             22f,
             Colors.WHITE.rgba,
-            NVGRenderer.defaultFont
+            NVGRenderer.defaultFont,
+            NVGRenderer.textWidth(category.name, 22f, NVGRenderer.defaultFont),
         )
 
         if (scrollOffset != 0f) NVGRenderer.pushScissor(

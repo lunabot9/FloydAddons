@@ -91,7 +91,11 @@ object ClickGUIModule : Module(
             .groupBy { (_, panel) -> panel.x to panel.y }
             .values
             .any { entries -> entries.size > 1 }
-        if (hasMissing || hasOffscreen || hasStackedDefaults || usesWrappedFallback || usesLegacyWrappedRows) resetPositions()
+        val screenshotFits = screenshotPanelLayout(activeCategories).values
+            .all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }
+        if (hasMissing || hasOffscreen || hasStackedDefaults ||
+            (screenshotFits && (usesWrappedFallback || usesLegacyWrappedRows))
+        ) resetPositions()
     }
 
     private fun migrateLegacyPanelNames() {
@@ -110,7 +114,13 @@ object ClickGUIModule : Module(
 
     fun defaultPanelLayout(): Map<String, PanelData> {
         val activeCategories = Category.categories.values.toList()
-        return screenshotPanelLayout(activeCategories)
+        val availableWidth = currentAvailableWidth()
+        val screenshot = screenshotPanelLayout(activeCategories)
+        return if (screenshot.values.all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }) {
+            screenshot
+        } else {
+            wrappedPanelLayout(activeCategories, availableWidth)
+        }
     }
 
     private fun screenshotPanelLayout(activeCategories: List<Category>): Map<String, PanelData> {
@@ -228,7 +238,7 @@ object ClickGUIModule : Module(
     internal fun standardGuiScaleFor(screenWidth: Float, screenHeight: Float, devicePixelRatio: Float): Float {
         val verticalScale = (screenHeight / BOOTSTRAP_SCREEN_HEIGHT) / devicePixelRatio
         val horizontalScale = (screenWidth / BOOTSTRAP_SCREEN_WIDTH) / devicePixelRatio
-        return round(max(verticalScale, horizontalScale).coerceIn(1f, 1.5f) * 10f) / 10f
+        return round(minOf(verticalScale, horizontalScale).coerceIn(0.5f, 1.5f) * 10f) / 10f
     }
 
     internal fun availableWidthForLayout(screenWidth: Float, screenHeight: Float, devicePixelRatio: Float): Float =

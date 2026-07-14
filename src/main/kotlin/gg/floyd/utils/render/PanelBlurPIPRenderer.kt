@@ -7,7 +7,9 @@ import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.PoseStack
+//? if <26.2 {
 import com.mojang.blaze3d.vertex.Tesselator
+//?}
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.*
@@ -37,6 +39,8 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
     override fun getRenderStateClass(): Class<State> = State::class.java
 
     override fun renderContent(state: State, poseStack: PoseStack) {
+        // 26.2 uses the translucent panel fill as the safe backend-neutral fallback.
+        //? if <26.2 {
         val w = state.width * state.scale
         val h = state.height * state.scale
 
@@ -89,6 +93,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
             }
         }
+        //?}
     }
 
     override fun getTextureLabel(): String = "FloydAddons Panel Blur PIP"
@@ -148,6 +153,10 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             blurRadius: Float,
             boxKernel: Boolean,
         ) {
+            //? if >=26.2 {
+            /*return
+            *///?}
+            //? if <26.2 {
             if (width <= 0 || height <= 0 || blurRadius < 0.5f) return
             val output = RenderSystem.outputColorTextureOverride ?: return
             val mainTarget = Minecraft.getInstance().mainRenderTarget
@@ -194,6 +203,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                     pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
                 }
             }
+            //?}
         }
 
         private val inlineProjection = CachedOrthoProjectionMatrixBuffer("FloydAddons PanelBlur Inline", -1000f, 1000f, true)
@@ -209,6 +219,10 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             radTL: Float, radTR: Float, radBR: Float, radBL: Float,
             blurRadius: Float, boxKernel: Boolean
         ) {
+            //? if >=26.2 {
+            /*return
+            *///?}
+            //? if <26.2 {
             if (w <= 0f || h <= 0f) return
             val source = PostHudOverlay.blurSourceView() ?: return
             val target = Minecraft.getInstance().mainRenderTarget
@@ -259,6 +273,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                     pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
                 }
             }
+            //?}
         }
 
         fun submit(

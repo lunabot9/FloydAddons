@@ -6,7 +6,9 @@ import com.mojang.blaze3d.buffers.Std140SizeCalculator
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.PoseStack
+//? if <26.2 {
 import com.mojang.blaze3d.vertex.Tesselator
+//?}
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.*
@@ -28,6 +30,19 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         val w = state.width * state.scale
         val h = state.height * state.scale
 
+        //? if >=26.2 {
+        /*submitRounded26(
+            submitNodeCollector, poseStack, w, h,
+            state.topLeftColor, state.topRightColor, state.bottomRightColor, state.bottomLeftColor,
+            state.topLeftRadius * state.scale, state.topRightRadius * state.scale,
+            state.bottomRightRadius * state.scale, state.bottomLeftRadius * state.scale,
+            state.outlineTopLeftColor, state.outlineTopRightColor,
+            state.outlineBottomRightColor, state.outlineBottomLeftColor,
+            state.outlineWidth * state.scale,
+        )
+        return
+        *///?}
+        //? if <26.2 {
         val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
         builder.addVertex(0f, 0f, 0f).setColor(state.topLeftColor)
         builder.addVertex(0f, h, 0f).setColor(state.bottomLeftColor)
@@ -72,6 +87,7 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
             }
         }
+        //?}
     }
 
     override fun getTextureLabel(): String = "FloydAddons Rounded Rectangle PIP"
@@ -186,6 +202,15 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             outlineWidth: Float
         ) {
             if (w <= 0f || h <= 0f) return
+            //? if >=26.2 {
+            /*val collector = SubmitNodeRenderScope.current ?: return
+            val pose26 = PoseStack()
+            pose26.translate(x, y, 0f)
+            submitRounded26(collector, pose26, w, h, fillTL, fillTR, fillBR, fillBL,
+                radTL, radTR, radBR, radBL, outTL, outTR, outBR, outBL, outlineWidth)
+            return
+            *///?}
+        //? if <26.2 {
             val target = Minecraft.getInstance().mainRenderTarget
             RenderSystem.setProjectionMatrix(
                 inlineProjection.getBuffer(target.width.toFloat(), target.height.toFloat()),
@@ -236,6 +261,7 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                     pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
                 }
             }
+        //?}
         }
 
         /**
@@ -255,6 +281,15 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         ) {
             if (w <= 0f || h <= 0f) return
 
+            //? if >=26.2 {
+            /*val collector = SubmitNodeRenderScope.current ?: return
+            val pose26 = PoseStack()
+            pose26.mulPose(modelView)
+            submitRounded26(collector, pose26, w, h, fillTL, fillTR, fillBR, fillBL,
+                radTL, radTR, radBR, radBL, outTL, outTR, outBR, outBL, outlineWidth)
+            return
+            *///?}
+            //? if <26.2 {
             val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
             builder.addVertex(0f, 0f, 0f).setColor(fillTL)
             builder.addVertex(0f, h, 0f).setColor(fillBL)
@@ -299,8 +334,30 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                     pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
                 }
             }
+            //?}
         }
 
+        //? if >=26.2 {
+        /*private fun submitRounded26(
+            collector: net.minecraft.client.renderer.SubmitNodeCollector,
+            pose: PoseStack, w: Float, h: Float,
+            fillTL: Int, fillTR: Int, fillBR: Int, fillBL: Int,
+            radTL: Float, radTR: Float, radBR: Float, radBL: Float,
+            outTL: Int, outTR: Int, outBR: Int, outBL: Int, outlineWidth: Float,
+        ) {
+            if (outlineWidth > 0f) {
+                collector.submitRoundedRect(pose, w, h, floatArrayOf(radTL, radTR, radBR, radBL), intArrayOf(outTL, outTR, outBR, outBL))
+                val inner = PoseStack()
+                inner.mulPose(pose.last().pose())
+                inner.translate(outlineWidth, outlineWidth, 0.001f)
+                collector.submitRoundedRect(inner, w - outlineWidth * 2f, h - outlineWidth * 2f,
+                    floatArrayOf(radTL - outlineWidth, radTR - outlineWidth, radBR - outlineWidth, radBL - outlineWidth),
+                    intArrayOf(fillTL, fillTR, fillBR, fillBL))
+            } else {
+                collector.submitRoundedRect(pose, w, h, floatArrayOf(radTL, radTR, radBR, radBL), intArrayOf(fillTL, fillTR, fillBR, fillBL))
+            }
+        }
+        *///?}
         fun submit(
             context: GuiGraphics,
             x0: Int, y0: Int, x1: Int, y1: Int,

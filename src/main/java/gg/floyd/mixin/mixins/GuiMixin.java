@@ -12,7 +12,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+//? if >=26.2 {
+/*@Mixin(net.minecraft.client.gui.Hud.class)
+*///?} else {
 @Mixin(Gui.class)
+//?}
 public class GuiMixin {
 
     // NOTE: do NOT reset the vanilla-scoreboard signal in render() HEAD. The Floyd HUD pass races

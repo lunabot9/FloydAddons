@@ -8,7 +8,9 @@ plugins {
 }
 
 group = property("maven_group") as String
-version = property("mod_version") as String
+val modVersion = property("mod_version") as String
+val minecraftVersion = sc.current.version
+version = "$modVersion-$minecraftVersion"
 
 base {
     archivesName.set(property("archives_base_name") as String)
@@ -22,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:${property("minecraft_version")}")
+    minecraft("com.mojang:minecraft:$minecraftVersion")
     implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
     implementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
     implementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_api_version")}")
@@ -121,12 +123,14 @@ tasks {
     processResources {
         val resourceProps = mapOf(
             "mod_id" to project.property("mod_id").toString(),
-            "mod_version" to project.property("mod_version").toString(),
+            // Keep the in-game mod version release-oriented while the artifact name also
+            // identifies which Minecraft version it was compiled against.
+            "mod_version" to modVersion,
             "mod_name" to project.property("mod_name").toString(),
             "mod_description" to project.property("mod_description").toString(),
             "loader_version" to project.property("loader_version").toString(),
             "fabric_api_version" to project.property("fabric_api_version").toString(),
-            "minecraft_version" to project.property("minecraft_version").toString(),
+            "minecraft_version" to minecraftVersion,
             "fabric_kotlin_version" to project.property("fabric_kotlin_version").toString(),
         )
         inputs.properties(resourceProps)
@@ -159,6 +163,7 @@ tasks {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    workingDir = rootProject.projectDir
 }
 
 java {

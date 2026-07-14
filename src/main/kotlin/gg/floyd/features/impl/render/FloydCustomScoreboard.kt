@@ -541,7 +541,7 @@ object FloydCustomScoreboard : Module(
         val player = mc.player ?: return null
         val scoreboard = mc.level?.scoreboard ?: return null
         val team = scoreboard.getPlayersTeam(player.scoreboardName)
-        val teamObjective = team?.color?.let(DisplaySlot::teamColorToSlot)?.let(scoreboard::getDisplayObjective)
+        val teamObjective = team?.color?.let { gg.floyd.utils.teamDisplaySlot(it) }?.let(scoreboard::getDisplayObjective)
         return teamObjective ?: scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR)
     }
 

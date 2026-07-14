@@ -153,6 +153,11 @@ object NvgTextReplay {
 
     private fun replayInner(runs: List<DeferredNvgText>, slotWidth: Int, slotHeight: Int, bufferSource: MultiBufferSource.BufferSource) {
         val dpr = NVGRenderer.devicePixelRatio()
+        //? if >=26.2 {
+        /*for (run in runs) draw26(run, dpr, bufferSource)
+        return
+        *///?}
+        //? if <26.2 {
 
         // Glyph quads flush through RenderSystem's MODELVIEW; force identity for the replay (the
         // pose carries the full transform) and restore after — the PostHudOverlay precedent.
@@ -182,6 +187,7 @@ object NvgTextReplay {
             RenderSystem.disableScissorForRenderTypeDraws()
             modelView.popMatrix()
         }
+        //?}
     }
 
     /**
@@ -196,6 +202,7 @@ object NvgTextReplay {
     // matrices share one deferred endBatch and render correctly), so reuse across runs is safe.
     private val poseScratch = Matrix4f()
 
+    //? if <26.2 {
     private fun draw(run: DeferredNvgText, dpr: Float, bufferSource: MultiBufferSource.BufferSource) {
         val t = run.transform
         // Column-major: col0 = (a, b), col1 = (c, d), col3 = (e, f) — the NVG 2x3 affine.
@@ -230,6 +237,36 @@ object NvgTextReplay {
         }
         frameCounts.merge(run.layer, 1, Int::plus)
     }
+    //?}
+
+    //? if >=26.2 {
+    /*private fun draw26(run: DeferredNvgText, dpr: Float, collector: MultiBufferSource.BufferSource) {
+        val t = run.transform
+        val matrix = Matrix4f().set(
+            t[0], t[1], 0f, 0f,
+            t[2], t[3], 0f, 0f,
+            0f, 0f, 1f, 0f,
+            t[4], t[5], 0f, 1f,
+        ).scaleLocal(dpr, dpr, 1f)
+            .translate(run.x, run.y + VERTICAL_ANCHOR * run.size, 0f)
+            .scale(MsdfFontMetrics.scaleFor(run.size), MsdfFontMetrics.scaleFor(run.size), 1f)
+        val pose = com.mojang.blaze3d.vertex.PoseStack()
+        pose.mulPose(matrix)
+        if (run.wrapWidth <= 0f) {
+            collector.submitText(pose, 0f, 0f, Component.literal(run.text).visualOrderText, false,
+                Font.DisplayMode.SEE_THROUGH, run.color, 0, LightTexture.FULL_BRIGHT, 0)
+        } else {
+            val lines = ClickGuiFont.font.split(Component.literal(run.text), MsdfFontMetrics.wrapUnitsFor(run.wrapWidth, run.size))
+            var lineY = 0f
+            for (line in lines) {
+                collector.submitText(pose, 0f, lineY, line, false,
+                    Font.DisplayMode.SEE_THROUGH, run.color, 0, LightTexture.FULL_BRIGHT, 0)
+                lineY += MsdfFontMetrics.LINE_HEIGHT * run.lineHeight
+            }
+        }
+        frameCounts.merge(run.layer, 1, Int::plus)
+    }
+    *///?}
 
     private fun sameScissor(a: FloatArray?, b: FloatArray?): Boolean =
         a === b || (a != null && b != null && a.contentEquals(b))

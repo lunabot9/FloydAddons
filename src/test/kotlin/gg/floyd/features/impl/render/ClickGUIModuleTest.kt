@@ -17,8 +17,11 @@ class ClickGUIModuleTest {
     }
 
     @Test
-    fun `small windows keep their real layout width`() {
-        assertEquals(1f, ClickGUIModule.standardGuiScaleFor(854f, 480f, 1f))
-        assertEquals(854f, ClickGUIModule.availableWidthForLayout(854f, 480f, 1f))
+    fun `short windows scale the click gui down to keep its content visible`() {
+        assertEquals(0.6f, ClickGUIModule.standardGuiScaleFor(1920f, 600f, 1f))
+        assertEquals(3200f, ClickGUIModule.availableWidthForLayout(1920f, 600f, 1f), 0.001f)
+
+        assertEquals(0.5f, ClickGUIModule.standardGuiScaleFor(854f, 480f, 1f))
+        assertEquals(1708f, ClickGUIModule.availableWidthForLayout(854f, 480f, 1f))
     }
 }

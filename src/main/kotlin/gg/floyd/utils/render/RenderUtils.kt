@@ -139,7 +139,14 @@ object RenderBatchManager {
                 return@on
             }
             val matrix = context.poseStack()
+            //? if >=26.2 {
+            /*val bufferSource = context.submitNodeCollector()
+            *///?} else {
             val bufferSource = context.bufferSource()
+            //?}
+            //? if >=26.2 {
+            /*SubmitNodeRenderScope.current = bufferSource
+            *///?}
             val camera = mc.gameRenderer.mainCamera.position()
 
             // Draw the ESP world geometry (tracers, boxes, nameplate text) with fog DISABLED so
@@ -159,7 +166,7 @@ object RenderBatchManager {
             matrix.renderQueuedTexturedQuads(renderConsumer.texturedQuads, bufferSource)
             matrix.popPose()
 
-            matrix.renderQueuedBeaconBeams(renderConsumer.beaconBeams, camera)
+            matrix.renderQueuedBeaconBeams(renderConsumer.beaconBeams, camera, bufferSource)
             matrix.renderQueuedTexts(renderConsumer.texts, bufferSource, camera)
 
             // World-space ESP overhead billboards (nameplate panel + health + equipment icons) — drawn in
@@ -171,7 +178,9 @@ object RenderBatchManager {
             gg.floyd.features.impl.pvp.FloydPlayerEsp.renderOverheadBillboard(matrix, camera, cameraRotation, bufferSource)
 
             if (noFog != null) {
+                //? if <26.2 {
                 bufferSource.endBatch()
+                //?}
                 if (savedFog != null) RenderSystem.setShaderFog(savedFog)
             }
             if (renderConsumer.lines.isNotEmpty() || renderConsumer.wireBoxes.isNotEmpty() ||
@@ -205,6 +214,9 @@ object RenderBatchManager {
             if (!FloydCompatibility.shouldUseSafeHudLayer()) {
                 PostHudOverlay.render()
             }
+            //? if >=26.2 {
+            /*SubmitNodeRenderScope.current = null
+            *///?}
 
             // NOTE: Floyd's no-PIP HUD panels are NOT drawn here. END_MAIN fires before the first-person
             // hand item is rendered (renderItemInHand runs later inside renderLevel/GameRenderer), so drawing
@@ -427,7 +439,9 @@ private fun PoseStack.renderQueuedFilledBoxes(
     }
 }
 
-private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, camera: Vec3) {
+private fun PoseStack.renderQueuedBeaconBeams(
+    consumer: List<BeaconData>, camera: Vec3, bufferSource: MultiBufferSource.BufferSource,
+) {
     for (beacon in consumer) {
         pushPose()
         translate(beacon.pos.x - camera.x, beacon.pos.y - camera.y, beacon.pos.z - camera.z)
@@ -442,7 +456,11 @@ private fun PoseStack.renderQueuedBeaconBeams(consumer: List<BeaconData>, camera
 
         BeaconBeamAccessor.invokeRenderBeam(
             this,
+            //? if >=26.2 {
+            /*bufferSource,
+            *///?} else {
             mc.gameRenderer.featureRenderDispatcher.submitNodeStorage,
+            //?}
             BEAM_TEXTURE,
             1f,
             beacon.gameTime.toFloat(),
@@ -469,11 +487,21 @@ private fun PoseStack.renderQueuedTexts(consumer: List<TextData>, bufferSource: 
             .rotate(textData.cameraRotation)
             .scale(scaleFactor, -scaleFactor, scaleFactor)
 
+        //? if >=26.2 {
+        /*bufferSource.submitText(
+            this, -textData.textWidth / 2f, 0f,
+            net.minecraft.network.chat.Component.literal(textData.text).visualOrderText,
+            true,
+            if (textData.depth) Font.DisplayMode.POLYGON_OFFSET else Font.DisplayMode.SEE_THROUGH,
+            -1, 0, LightTexture.FULL_BRIGHT, 0,
+        )
+        *///?} else {
         textData.font.drawInBatch(
             textData.text, -textData.textWidth / 2f, 0f, -1, true, pose, bufferSource,
             if (textData.depth) Font.DisplayMode.POLYGON_OFFSET else Font.DisplayMode.SEE_THROUGH,
             0, LightTexture.FULL_BRIGHT
         )
+        //?}
 
         popPose()
     }
@@ -631,7 +659,11 @@ fun RenderEvent.Extract.drawCustomBeacon(
     drawBeaconBeam(position, color)
     drawText(
         (if (distance) ("$title §r§f(§3${dist}m§f)") else title),
+        //? if >=26.2 {
+        /*Vec3.atCenterOf(position).addVec(y = 1.7),
+        *///?} else {
         position.center.addVec(y = 1.7),
+        //?}
         if (increase) max(1f, dist * 0.05f) else 2f,
         false
     )

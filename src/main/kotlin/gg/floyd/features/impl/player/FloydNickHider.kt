@@ -369,7 +369,7 @@ object FloydNickHider : Module(
         val player = mc.player ?: return false
         scoreboardObjectiveNames = scoreboard.objectiveNames.sorted()
         scoreboardTrackedPlayerCount = scoreboard.trackedPlayers.size
-        val teamObjective = scoreboard.getPlayersTeam(player.scoreboardName)?.color?.let(DisplaySlot::teamColorToSlot)?.let(scoreboard::getDisplayObjective)
+        val teamObjective = scoreboard.getPlayersTeam(player.scoreboardName)?.color?.let { gg.floyd.utils.teamDisplaySlot(it) }?.let(scoreboard::getDisplayObjective)
         val sidebarObjective = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR)
         scoreboardTeamSlotObjective = teamObjective?.name
         scoreboardSidebarObjective = sidebarObjective?.name
