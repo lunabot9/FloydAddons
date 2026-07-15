@@ -100,6 +100,17 @@ object HudPanel {
         val radius = FloydPanelStyle.cornerRadiusFor(panel).toFloat().coerceAtLeast(0f)
         val stroke = FloydPanelStyle.borderWidthFor(panel).toFloat().coerceAtLeast(0f)
         gg.floyd.utils.ui.rendering.NVGRenderer.rect(0f, 0f, width.toFloat(), height.toFloat(), fill, radius)
+        drawNvgPanelOutline(width, height, radius, stroke, border)
+    }
+
+    /** Repaints only a NanoVG panel outline, useful when an overlay covers the original stroke. */
+    fun drawNvgPanelOutline(
+        width: Int,
+        height: Int,
+        radius: Float,
+        stroke: Float,
+        border: BorderColors,
+    ) {
         if (stroke <= 0f) return
 
         // NanoVG centres strokes on the path. Inset by half the width so none of the configured

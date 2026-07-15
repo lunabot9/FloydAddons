@@ -42,6 +42,8 @@ import gg.floyd.features.impl.misc.FloydUpdateCheckerModule
 import gg.floyd.features.impl.misc.FloydWindowModule
 import gg.floyd.features.impl.misc.FloydDiscordPresence
 import gg.floyd.features.impl.misc.FloydCompatibility
+import gg.floyd.features.impl.misc.FloydCalculator
+import gg.floyd.features.impl.misc.FloydCalculatorScreen
 import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
@@ -116,7 +118,7 @@ object ModuleManager {
             FloydFreecam, FloydFreelook, FloydF5Customizer,
             FloydSkin, FloydCape, FloydConeHat,
             FloydLoadoutSwapper, FloydAutoTotem, FloydPlayerEsp,
-            FloydDiscordPresence, FloydLocalControl,
+            FloydDiscordPresence, FloydLocalControl, FloydCalculator,
             // Misc compatibility (each feature is its own module).
             FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule, FloydFocusLossPrevention,
         )
@@ -201,6 +203,10 @@ object ModuleManager {
         if (FloydCustomMainMenu.enabled) {
             FloydCustomMainMenu.toggle()
         }
+        // Calculator's module row is a transient launcher; its HUD owns persistent visibility.
+        if (FloydCalculator.enabled) {
+            FloydCalculator.toggle()
+        }
     }
 
     fun state(): Map<String, Any?> = mapOf(
@@ -268,7 +274,11 @@ object ModuleManager {
                 guiGraphics.pose().scale(1f / sf, 1f / sf)
                 FloydPerf.section("HudLayer.elements") {
                     for (hudSettings in hudSettingsCache) {
-                        if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
+                        val calculatorHasDedicatedScreen =
+                            hudSettings.module === FloydCalculator && mc.screen is FloydCalculatorScreen
+                        if (hudSettings.isEnabled && !calculatorHasDedicatedScreen) {
+                            hudSettings.value.draw(guiGraphics, false)
+                        }
                     }
                 }
                 if (safeHudLayer) {

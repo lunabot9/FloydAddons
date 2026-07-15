@@ -42,7 +42,22 @@ class HUDSetting(
     override val default: HudElement = hud
     override var value: HudElement = default
 
-    val isEnabled: Boolean get() = module.enabled && value.enabled
+    private var requireModuleEnabled = true
+
+    val isEnabled: Boolean get() = (!requireModuleEnabled || module.enabled) && value.enabled
+    /**
+     * The Edit HUD tab is a layout workspace, so every registered element stays available there
+     * even when its module or own visibility toggle is currently off. This lets users position and
+     * resize the complete HUD before enabling features; normal in-game rendering still uses
+     * [isEnabled] and therefore preserves all module/toggle visibility rules.
+     */
+    val isAvailableInEditor: Boolean get() = true
+
+    /** Allows an always-active utility HUD to use its own toggle instead of the module toggle. */
+    fun independentOfModule(): HUDSetting {
+        requireModuleEnabled = false
+        return this
+    }
 
     private val toggleAnimation = LinearAnimation<Float>(200)
     private val hoverHandler = HoverHandler(150)

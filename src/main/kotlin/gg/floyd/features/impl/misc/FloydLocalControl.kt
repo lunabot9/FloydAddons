@@ -775,6 +775,7 @@ object FloydLocalControl : Module(
                 "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(LegacyFloydClickGUI.openHub())
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
+                "calculator", "calc" -> mc.setScreen(FloydCalculatorScreen())
                 "pause", "pausemenu", "gamemenu" -> mc.setScreen(net.minecraft.client.gui.screens.PauseScreen(true))
                 "options", "settings" -> mc.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(mc.screen ?: net.minecraft.client.gui.screens.PauseScreen(true), mc.options, mc.level != null))
                 "close", "none" -> mc.setScreen(null)

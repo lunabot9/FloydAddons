@@ -45,7 +45,7 @@ object FloydAddonsMod : ClientModInitializer {
 
     const val MOD_ID = "floydaddons"
     const val MOD_NAME = "Floyd Addons"
-    const val MOD_VERSION = "2.2.4"
+    const val MOD_VERSION = "2.2.5"
 
     val scope = CoroutineScope(SupervisorJob() + EmptyCoroutineContext)
 
@@ -59,6 +59,7 @@ object FloydAddonsMod : ClientModInitializer {
             arrayOf(
                 mainCommand,
                 stalkCommand,
+                calculatorCommand,
             ).forEach { commodore -> commodore.register(dispatcher) }
         }
 

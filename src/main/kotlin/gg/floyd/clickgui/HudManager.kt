@@ -2,6 +2,8 @@ package gg.floyd.clickgui
 
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.settings.impl.HudElement
+import gg.floyd.clickgui.settings.impl.HudResizeCorner
+import gg.floyd.clickgui.settings.impl.resizeHudFromCorner
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.ModuleManager.hudSettingsCache
 import gg.floyd.utils.Colors
@@ -17,6 +19,7 @@ import kotlin.math.sign
 object HudManager : Screen(Component.literal("HUD Manager")) {
 
     private var dragging: HudElement? = null
+    private var resizing: ResizeGesture? = null
 
     private var deltaX = 0f
     private var deltaY = 0f
@@ -82,19 +85,36 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
             it.y = (renderSpaceMouseY() + deltaY).coerceIn(0f, (mc.window.height - (it.height * it.scale)).coerceAtLeast(0f)).toInt()
             clampOutOfHotbar(it, it.width * it.scale, it.height * it.scale)
         }
+        resizing?.let { gesture ->
+            val result = resizeHudFromCorner(
+                startX = gesture.startX,
+                startY = gesture.startY,
+                width = gesture.width,
+                height = gesture.height,
+                startScale = gesture.startScale,
+                corner = gesture.corner,
+                mouseDeltaX = renderSpaceMouseX() - gesture.startMouseX,
+                mouseDeltaY = renderSpaceMouseY() - gesture.startMouseY,
+            )
+            gesture.element.scale = result.scale
+            gesture.element.x = result.x.toInt()
+            gesture.element.y = result.y.toInt()
+            clampHudToScreen(gesture.setting)
+        }
 
         guiGraphics.pose().pushMatrix()
         val sf = mc.window.guiScale
         guiGraphics.pose().scale(1f / sf, 1f / sf)
 
         for (hud in hudSettingsCache) {
-            if (hud.module.enabled) {
+            if (hud.isAvailableInEditor) {
                 hud.value.draw(guiGraphics, true)
                 clampHudToScreen(hud)
+                drawResizeHandles(guiGraphics, hud.value)
             }
         }
 
-        hudSettingsCache.firstOrNull { it.module.enabled && it.value.isHovered() }?.let { hoveredHud ->
+        hudSettingsCache.firstOrNull { it.isAvailableInEditor && it.value.isHovered() }?.let { hoveredHud ->
             guiGraphics.pose().pushMatrix()
             guiGraphics.pose().translate(
                 (hoveredHud.value.x + hoveredHud.value.width * hoveredHud.value.scale + 10f),
@@ -111,19 +131,43 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, horizontalAmount: Double, verticalAmount: Double): Boolean {
         val actualAmount = verticalAmount.sign.toFloat() * 0.2f
-        hudSettingsCache.firstOrNull { it.module.enabled && it.value.isHovered() }?.let { hovered ->
-            hovered.value.scale = (hovered.value.scale + actualAmount).coerceIn(1f, 10f)
+        hudSettingsCache.firstOrNull { it.isAvailableInEditor && it.value.isHovered() }?.let { hovered ->
+            hovered.value.scale = (hovered.value.scale + actualAmount).coerceIn(0.5f, 10f)
             return true
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
     }
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
-        hudSettingsCache.firstOrNull { it.module.enabled && it.value.isHovered() }?.let { hovered ->
+        if (mouseButtonEvent.button() != 0) return super.mouseClicked(mouseButtonEvent, bl)
+        val mouseX = renderSpaceMouseX()
+        val mouseY = renderSpaceMouseY()
+
+        hudSettingsCache.firstNotNullOfOrNull { setting ->
+            if (!setting.isAvailableInEditor) return@firstNotNullOfOrNull null
+            setting.value.resizeCornerAt(mouseX, mouseY)?.let { corner -> setting to corner }
+        }?.let { (setting, corner) ->
+            val element = setting.value
+            resizing = ResizeGesture(
+                setting = setting,
+                element = element,
+                corner = corner,
+                startMouseX = mouseX,
+                startMouseY = mouseY,
+                startX = element.renderedX,
+                startY = element.renderedY,
+                startScale = element.scale,
+                width = element.width.toFloat(),
+                height = element.height.toFloat(),
+            )
+            return true
+        }
+
+        hudSettingsCache.firstOrNull { it.isAvailableInEditor && it.value.isHovered() }?.let { hovered ->
             dragging = hovered.value
 
-            deltaX = (hovered.value.x - renderSpaceMouseX())
-            deltaY = (hovered.value.y - renderSpaceMouseY())
+            deltaX = hovered.value.renderedX - mouseX
+            deltaY = hovered.value.renderedY - mouseY
             return true
         }
 
@@ -132,14 +176,15 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
 
     override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean {
         dragging = null
+        resizing = null
         return super.mouseReleased(mouseButtonEvent)
     }
 
     override fun keyPressed(keyEvent: KeyEvent): Boolean {
-        hudSettingsCache.firstOrNull { it.module.enabled && it.value.isHovered() }?.let { hovered ->
+        hudSettingsCache.firstOrNull { it.isAvailableInEditor && it.value.isHovered() }?.let { hovered ->
             when (keyEvent.key) {
-                GLFW.GLFW_KEY_EQUAL -> hovered.value.scale = (hovered.value.scale + 0.1f).coerceIn(1f, 10f)
-                GLFW.GLFW_KEY_MINUS -> hovered.value.scale = (hovered.value.scale - 0.1f).coerceIn(1f, 10f)
+                GLFW.GLFW_KEY_EQUAL -> hovered.value.scale = (hovered.value.scale + 0.1f).coerceIn(0.5f, 10f)
+                GLFW.GLFW_KEY_MINUS -> hovered.value.scale = (hovered.value.scale - 0.1f).coerceIn(0.5f, 10f)
                 GLFW.GLFW_KEY_RIGHT -> hovered.value.x += 10
                 GLFW.GLFW_KEY_LEFT -> hovered.value.x -= 10
                 GLFW.GLFW_KEY_UP -> hovered.value.y -= 10
@@ -202,6 +247,32 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
 
     private fun estimatedHudSize(hud: gg.floyd.clickgui.settings.impl.HUDSetting): Pair<Int, Int> =
         HudSizeRegistry.estimate(hud.name)
+
+    private fun drawResizeHandles(context: GuiGraphics, element: HudElement) {
+        if (element.width <= 0 || element.height <= 0) return
+        val radius = HudElement.RESIZE_HANDLE_RADIUS.toInt()
+        val left = element.renderedX.toInt()
+        val top = element.renderedY.toInt()
+        val right = (element.renderedX + element.renderedWidth).toInt()
+        val bottom = (element.renderedY + element.renderedHeight).toInt()
+        for ((x, y) in listOf(left to top, right to top, left to bottom, right to bottom)) {
+            context.fill(x - radius, y - radius, x + radius, y + radius, Colors.WHITE.rgba)
+            context.fill(x - radius + 2, y - radius + 2, x + radius - 2, y + radius - 2, 0xFF202020.toInt())
+        }
+    }
+
+    private data class ResizeGesture(
+        val setting: gg.floyd.clickgui.settings.impl.HUDSetting,
+        val element: HudElement,
+        val corner: HudResizeCorner,
+        val startMouseX: Float,
+        val startMouseY: Float,
+        val startX: Float,
+        val startY: Float,
+        val startScale: Float,
+        val width: Float,
+        val height: Float,
+    )
 
     override fun isPauseScreen(): Boolean = false
 }
