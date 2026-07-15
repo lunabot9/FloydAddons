@@ -112,7 +112,10 @@ object RenderBatchManager {
     // verification should assert on.
     @Volatile private var lastFlushedCounts: Map<String, Int> = emptyMap()
 
-    internal fun shouldRenderWorldOverlayPass(safeHudLayer: Boolean): Boolean = !safeHudLayer
+    // Safe-HUD mode only relocates GUI/HUD compositing. World-space primitives (ESP boxes,
+    // tracers, block highlights) must still flush or every world overlay silently disappears
+    // whenever SkyHanni is installed.
+    internal fun shouldRenderWorldOverlayPass(@Suppress("UNUSED_PARAMETER") safeHudLayer: Boolean): Boolean = true
 
     fun state(): Map<String, Any?> = mapOf(
         "worldOverlayPassEnabled" to shouldRenderWorldOverlayPass(FloydCompatibility.shouldUseSafeHudLayer()),

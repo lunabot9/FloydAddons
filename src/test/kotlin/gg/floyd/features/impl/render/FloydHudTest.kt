@@ -84,8 +84,8 @@ class FloydHudTest {
     }
 
     @Test
-    fun `safe hud layer disables the shared world overlay pass`() {
-        assertFalse(RenderBatchManager.shouldRenderWorldOverlayPass(safeHudLayer = true))
+    fun `safe hud layer preserves the shared world overlay pass`() {
+        assertTrue(RenderBatchManager.shouldRenderWorldOverlayPass(safeHudLayer = true))
         assertTrue(RenderBatchManager.shouldRenderWorldOverlayPass(safeHudLayer = false))
     }
 }

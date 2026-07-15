@@ -30,6 +30,7 @@ import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.decoration.ArmorStand
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.EntityHitResult
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
@@ -170,8 +171,9 @@ object FloydMobEsp : Module(
             if (debugLabelsActive()) drawDebugLabels()
 
             val tracerTargetsByColor = if (tracers) linkedMapOf<Int, MutableList<net.minecraft.world.phys.Vec3>>() else null
-            for (entity in renderTargets(level)) {
-                if (entity === player) continue
+            drawNametagEsp(level, tracerTargetsByColor)
+            for (entity in level.entitiesForRendering()) {
+                if (!shouldRenderDirectEntity(entity, player)) continue
                 matchedRenderHits.incrementAndGet()
                 val color = colorFor(entity)
                 if (tracers) {
@@ -190,6 +192,45 @@ object FloydMobEsp : Module(
         }
     }
 
+    private fun shouldRenderDirectEntity(entity: Entity, player: Player): Boolean {
+        if (entity === player || entity is ArmorStand || isRealPlayer(entity)) return false
+        return matchesNameFilter(entity) || matchesTypeFilter(entity)
+    }
+
+    private fun RenderEvent.Extract.drawNametagEsp(
+        level: net.minecraft.client.multiplayer.ClientLevel,
+        tracerTargetsByColor: MutableMap<Int, MutableList<net.minecraft.world.phys.Vec3>>?
+    ) {
+        for (label in level.entitiesForRendering().filterIsInstance<ArmorStand>()) {
+            val isStar = starMobs && (
+                isStarMobLabelText(label.name.string) || isStarMobLabelText(label.displayName.string)
+                )
+            val isFilteredName = matchesNameFilter(label)
+            if (!isStar && !isFilteredName) continue
+            val color = if (isFilteredName) filterColorFor(label)?.toColor() ?: defaultColor else defaultColor
+            val box = starNametagBox(label.x, label.y, label.z)
+            matchedRenderHits.incrementAndGet()
+            if (tracers) {
+                tracerRenderHits.incrementAndGet()
+                tracerTargetsByColor?.getOrPut(color.rgba) { ArrayList() }
+                    ?.add(box.center)
+            }
+            if (hitboxes) {
+                hitboxRenderHits.incrementAndGet()
+                drawWireFrameBox(box, color, thickness = 2f, depth = false)
+            }
+        }
+    }
+
+    internal fun starNametagBox(x: Double, labelY: Double, z: Double): AABB = AABB(
+        x - STAR_NAMETAG_BOX_HALF_WIDTH,
+        labelY - STAR_NAMETAG_BOX_HEIGHT,
+        z - STAR_NAMETAG_BOX_HALF_WIDTH,
+        x + STAR_NAMETAG_BOX_HALF_WIDTH,
+        labelY,
+        z + STAR_NAMETAG_BOX_HALF_WIDTH
+    )
+
     override fun onDisable() {
         // Release entity/level pins and per-entity caches; rebuilt on the first scan after re-enable.
         renderTargetsScratch.clear()
@@ -206,33 +247,44 @@ object FloydMobEsp : Module(
         val level = mc.level ?: return clearResolvedTargets()
         if (!hasFilters()) return clearResolvedTargets()
 
-        armorStandToMob.entries.removeIf { (_, mobId) ->
-            if (level.getEntity(mobId) == null) {
-                resolvedMobIds.remove(mobId)
-                resolvedMobNames.remove(mobId)
-                renderTargetIds.remove(mobId)
-                true
-            } else {
-                false
-            }
-        }
+        // Hypixel spawns a dungeon mob immediately before its nameplate armor stand. In crowded
+        // rooms several labels can occupy the same coordinates (and some are offset by a block),
+        // so a spatial-only lookup cannot reliably distinguish the owning mobs. Prefer the live
+        // base-id -> label-id relationship and use a one-to-one spatial fallback for other servers.
+        armorStandToMob.clear()
+        resolvedMobIds.clear()
+        resolvedMobNames.clear()
 
-        val armorStands = level.entitiesForRendering()
+        val labels = level.entitiesForRendering()
             .filterIsInstance<ArmorStand>()
             .filter { isStarMobLabel(it) || matchesNameFilter(it) }
             .toList()
+        val entities = level.entitiesForRendering()
+            .filterIsInstance<LivingEntity>()
+            .filterNot { it is ArmorStand || it === mc.player || isRealPlayer(it) }
+            .toList()
+        val entitiesById = entities.associateBy(Entity::getId)
+        val claimedMobIds = mutableSetOf<Int>()
+        val unmatchedLabels = ArrayList<ArmorStand>()
 
-        val entities = level.entitiesForRendering().filterIsInstance<LivingEntity>().filterNot { it is ArmorStand }.toList()
-        for (stand in armorStands) {
-            if (armorStandToMob.containsKey(stand.id)) continue
-            val nearest = entities
-                .filter { it !== mc.player && !isRealPlayer(it) && isNearArmorStandLabel(it, stand) }
-                .minByOrNull { it.distanceToSqr(stand) }
-            if (nearest != null) {
-                armorStandToMob[stand.id] = nearest.id
-                resolvedMobIds.add(nearest.id)
-                resolvedMobNames[nearest.id] = strippedName(stand).lowercase(Locale.ROOT)
+        for (label in labels) {
+            val direct = entitiesById[starLabelBaseEntityId(label.id)]
+            if (direct != null && isNearArmorStandLabel(direct, label) && claimedMobIds.add(direct.id)) {
+                pairArmorStandLabel(label, direct)
+            } else {
+                unmatchedLabels.add(label)
             }
+        }
+
+        for (label in unmatchedLabels) {
+            val nearest = entities
+                .asSequence()
+                .filterNot { claimedMobIds.contains(it.id) }
+                .filter { isNearArmorStandLabel(it, label) }
+                .minByOrNull { horizontalDistanceSqr(it, label) }
+                ?: continue
+            claimedMobIds.add(nearest.id)
+            pairArmorStandLabel(label, nearest)
         }
 
         matchedArmorStandIds.clear()
@@ -282,7 +334,17 @@ object FloydMobEsp : Module(
     }
 
     private fun isStarMobLabel(entity: Entity): Boolean =
-        starMobs && (isStarMobLabelText(entity.displayName.string) || entity.customName?.string?.let(::isStarMobLabelText) == true)
+        starMobs && (
+            isStarMobLabelText(entity.name.string) ||
+                isStarMobLabelText(entity.displayName.string) ||
+                entity.customName?.string?.let(::isStarMobLabelText) == true
+            )
+
+    private fun pairArmorStandLabel(label: ArmorStand, mob: LivingEntity) {
+        armorStandToMob[label.id] = mob.id
+        resolvedMobIds.add(mob.id)
+        resolvedMobNames[mob.id] = strippedName(label).lowercase(Locale.ROOT)
+    }
 
     internal fun isStarMobLabelText(text: String): Boolean {
         val stripped = stripFormatting(text).lowercase(Locale.ROOT)
@@ -797,11 +859,23 @@ object FloydMobEsp : Module(
 
     private fun looksLikeNpcName(name: String): Boolean = npcNamePattern.matcher(name).matches()
 
-    private fun isNearArmorStandLabel(entity: Entity, armorStand: ArmorStand): Boolean {
-        val dx = entity.x - armorStand.x
-        val dz = entity.z - armorStand.z
-        if (dx * dx + dz * dz > 2.25) return false
-        val dy = entity.y - armorStand.y
+    internal fun starLabelBaseEntityId(labelEntityId: Int): Int = labelEntityId - 1
+
+    private fun isNearArmorStandLabel(entity: Entity, armorStand: ArmorStand): Boolean =
+        isNearArmorStandLabel(entity.x, entity.y, entity.z, armorStand.x, armorStand.y, armorStand.z)
+
+    internal fun isNearArmorStandLabel(
+        mobX: Double,
+        mobY: Double,
+        mobZ: Double,
+        labelX: Double,
+        labelY: Double,
+        labelZ: Double
+    ): Boolean {
+        val dx = mobX - labelX
+        val dz = mobZ - labelZ
+        if (dx * dx + dz * dz > STAR_LABEL_MAX_HORIZONTAL_DISTANCE_SQR) return false
+        val dy = mobY - labelY
         return dy <= 1.0 && dy >= -5.0
     }
 
@@ -895,6 +969,9 @@ object FloydMobEsp : Module(
     private val npcNamePattern: Pattern = Pattern.compile("^[a-z0-9]{8,12}$")
     private val playerNamePattern: Pattern = Pattern.compile("[a-zA-Z0-9_]{3,16}")
     private const val TAB_LIST_CACHE_MS = 1_000L
+    private const val STAR_LABEL_MAX_HORIZONTAL_DISTANCE_SQR = 4.0
+    private const val STAR_NAMETAG_BOX_HALF_WIDTH = 0.45
+    private const val STAR_NAMETAG_BOX_HEIGHT = 2.0
     private const val STAR_MOB_MARKER = "✯"
 
     private val knownMinibossNames: Set<String> = setOf(

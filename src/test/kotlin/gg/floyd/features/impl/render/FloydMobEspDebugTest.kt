@@ -24,6 +24,30 @@ class FloydMobEspDebugTest {
     }
 
     @Test
+    fun `hypixel star labels prefer the preceding base entity from live dungeon data`() {
+        assertEquals(1_075_815, FloydMobEsp.starLabelBaseEntityId(1_075_816))
+        assertEquals(1_075_823, FloydMobEsp.starLabelBaseEntityId(1_075_824))
+    }
+
+    @Test
+    fun `star label fallback accepts the live one block offset but rejects unrelated mobs`() {
+        assertTrue(FloydMobEsp.isNearArmorStandLabel(-153.0, 69.0, -155.0, -153.0, 71.0, -154.0))
+        assertFalse(FloydMobEsp.isNearArmorStandLabel(-153.0, 69.0, -158.0, -153.0, 71.0, -154.0))
+    }
+
+    @Test
+    fun `star nametag directly creates a mob sized box beneath the live label position`() {
+        val box = FloydMobEsp.starNametagBox(-153.0, 71.0, -156.0)
+
+        assertEquals(-153.45, box.minX)
+        assertEquals(69.0, box.minY)
+        assertEquals(-156.45, box.minZ)
+        assertEquals(-152.55, box.maxX)
+        assertEquals(71.0, box.maxY)
+        assertEquals(-155.55, box.maxZ)
+    }
+
+    @Test
     fun `debug and reload summaries preserve Floyd command wording`() {
         try {
             FloydMobEsp.clearFilters()

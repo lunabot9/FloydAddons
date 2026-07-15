@@ -22,6 +22,27 @@ import net.minecraft.world.item.ItemDisplayContext
 import net.minecraft.world.item.ItemStack
 import kotlin.math.roundToInt
 
+internal class InventoryHudCountTextCache(private val slotCount: Int = 27) {
+    private val values = arrayOfNulls<String>(slotCount)
+    private val counts = IntArray(slotCount) { Int.MIN_VALUE }
+
+    fun text(slot: Int, count: Int): String {
+        if (counts[slot] == count) values[slot]?.let { return it }
+        counts[slot] = count
+        return count.toString().also { values[slot] = it }
+    }
+
+    fun invalidate(slot: Int) {
+        values[slot] = null
+        counts[slot] = Int.MIN_VALUE
+    }
+
+    fun clear() {
+        values.fill(null)
+        counts.fill(Int.MIN_VALUE)
+    }
+}
+
 /**
  * Standalone toggle for the Floyd inventory HUD.
  *
@@ -260,7 +281,7 @@ object FloydInventoryHud : Module(
     private val cachedStack = arrayOfNulls<ItemStack>(27)
     private val cachedCount = IntArray(27)
     private val cachedDamage = IntArray(27)
-    private val cachedCountText = arrayOfNulls<String>(27)
+    private val countTextCache = InventoryHudCountTextCache()
     // Resource-reload guard: a reload (F3+T / server pack) re-stitches atlases without replacing
     // inventory ItemStack instances, so the identity key alone would keep serving render states
     // that reference pre-reload baked models. The font epoch bumps on every resource reload.
@@ -291,14 +312,14 @@ object FloydInventoryHud : Module(
         cachedStack[slot] = stack
         cachedCount[slot] = stack.count
         cachedDamage[slot] = stack.damageValue
-        cachedCountText[slot] = null
+        countTextCache.invalidate(slot)
         return tracking
     }
 
     private fun clearSlotCache() {
         cachedTracking.fill(null)
         cachedStack.fill(null)
-        cachedCountText.fill(null)
+        countTextCache.clear()
     }
 
     override fun onDisable() {
@@ -307,9 +328,9 @@ object FloydInventoryHud : Module(
         super.onDisable()
     }
 
-    private fun countText(slot: Int, count: Int): String {
-        // trackingFor has already validated the slot key this frame; only re-format on change.
-        cachedCountText[slot]?.let { return it }
-        return count.toString().also { cachedCountText[slot] = it }
+    internal fun countText(slot: Int, count: Int): String {
+        // The safe GuiGraphics HUD path does not call trackingFor, so the text cache must validate
+        // the numeric count itself instead of relying on the item-render-state cache invalidation.
+        return countTextCache.text(slot, count)
     }
 }
