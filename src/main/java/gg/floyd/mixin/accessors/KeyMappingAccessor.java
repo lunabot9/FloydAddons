@@ -18,4 +18,10 @@ public interface KeyMappingAccessor {
 
     @Accessor("key")
     void setBoundKey(InputConstants.Key key);
+
+    @Accessor("clickCount")
+    int getClickCount();
+
+    @Accessor("clickCount")
+    void setClickCount(int clickCount);
 }

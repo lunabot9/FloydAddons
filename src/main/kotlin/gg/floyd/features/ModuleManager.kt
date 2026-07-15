@@ -43,11 +43,11 @@ import gg.floyd.features.impl.misc.FloydWindowModule
 import gg.floyd.features.impl.misc.FloydDiscordPresence
 import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.features.impl.misc.FloydCalculator
-import gg.floyd.features.impl.misc.FloydCalculatorScreen
 import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
 import gg.floyd.features.impl.pvp.FloydAutoTotem
+import gg.floyd.features.impl.pvp.FloydAutoClicker
 import gg.floyd.features.impl.pvp.FloydLoadoutSwapper
 import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.cosmetic.FloydSkin
@@ -60,6 +60,7 @@ import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydDayTrackerModule
 import gg.floyd.features.impl.render.FloydMobEsp
+import gg.floyd.features.impl.render.FloydMusicOverlay
 import gg.floyd.features.impl.render.FloydSkyBlockPackDisabler
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.LegacyClickGUIModule
@@ -108,7 +109,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydSkyBlockPackDisabler,
+            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydSkyBlockPackDisabler,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
@@ -117,7 +118,7 @@ object ModuleManager {
             // Camera (each feature is its own module).
             FloydFreecam, FloydFreelook, FloydF5Customizer,
             FloydSkin, FloydCape, FloydConeHat,
-            FloydLoadoutSwapper, FloydAutoTotem, FloydPlayerEsp,
+            FloydLoadoutSwapper, FloydAutoTotem, FloydPlayerEsp, FloydAutoClicker,
             FloydDiscordPresence, FloydLocalControl, FloydCalculator,
             // Misc compatibility (each feature is its own module).
             FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule, FloydFocusLossPrevention,
@@ -203,10 +204,6 @@ object ModuleManager {
         if (FloydCustomMainMenu.enabled) {
             FloydCustomMainMenu.toggle()
         }
-        // Calculator's module row is a transient launcher; its HUD owns persistent visibility.
-        if (FloydCalculator.enabled) {
-            FloydCalculator.toggle()
-        }
     }
 
     fun state(): Map<String, Any?> = mapOf(
@@ -274,11 +271,7 @@ object ModuleManager {
                 guiGraphics.pose().scale(1f / sf, 1f / sf)
                 FloydPerf.section("HudLayer.elements") {
                     for (hudSettings in hudSettingsCache) {
-                        val calculatorHasDedicatedScreen =
-                            hudSettings.module === FloydCalculator && mc.screen is FloydCalculatorScreen
-                        if (hudSettings.isEnabled && !calculatorHasDedicatedScreen) {
-                            hudSettings.value.draw(guiGraphics, false)
-                        }
+                        if (hudSettings.isEnabled) hudSettings.value.draw(guiGraphics, false)
                     }
                 }
                 if (safeHudLayer) {

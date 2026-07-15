@@ -2,6 +2,8 @@ package gg.floyd.utils.render
 
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.utils.font.MsdfFontMetrics
+import net.minecraft.network.chat.Style
+import net.minecraft.util.FormattedCharSequence
 import gg.floyd.utils.ui.rendering.PostHudOverlay
 import net.minecraft.client.gui.Font
 import net.minecraft.client.renderer.LightTexture
@@ -29,7 +31,18 @@ import org.joml.Matrix4f
  */
 //? if >=26.2 {
 /*object HudTextRenderer {
-    data class Segment(val text: String, val color: Int)
+    data class Segment(val text: String, val color: Int, val style: Style = Style.EMPTY) {
+        /** Keeps explicit resource-pack font ids attached to icon/emoji runs. */
+        fun formatted(): FormattedCharSequence = FormattedCharSequence { visitor ->
+            var index = 0
+            while (index < text.length) {
+                val codePoint = text.codePointAt(index)
+                if (!visitor.accept(index, style, codePoint)) return@FormattedCharSequence false
+                index += Character.charCount(codePoint)
+            }
+            true
+        }
+    }
     enum class Alignment { LEFT, RIGHT }
 
     private var deferredStorage = net.minecraft.client.renderer.SubmitNodeStorage()
@@ -54,15 +67,15 @@ import org.joml.Matrix4f
         pose.scale(scale, scale, 1f)
         var segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -segments.sumOf { MsdfFontMetrics.unitWidth(it.text, font).toDouble() }.toFloat()
+            Alignment.RIGHT -> -segments.sumOf { MsdfFontMetrics.unitWidth(it.formatted(), font).toDouble() }.toFloat()
         }
         for (segment in segments) {
             storage.submitText(
                 pose, segX, 0f,
-                net.minecraft.network.chat.Component.literal(segment.text).visualOrderText,
+                segment.formatted(),
                 false, displayMode, segment.color, 0, light, 0,
             )
-            segX += MsdfFontMetrics.unitWidth(segment.text, font)
+            segX += MsdfFontMetrics.unitWidth(segment.formatted(), font)
         }
     }
 
@@ -106,7 +119,18 @@ import org.joml.Matrix4f
 object HudTextRenderer {
 
     /** One run of same-colored text; per-segment color ints carry per-char chroma and style colors. */
-    data class Segment(val text: String, val color: Int)
+    data class Segment(val text: String, val color: Int, val style: Style = Style.EMPTY) {
+        /** Keeps explicit resource-pack font ids attached to icon/emoji runs. */
+        fun formatted(): FormattedCharSequence = FormattedCharSequence { visitor ->
+            var index = 0
+            while (index < text.length) {
+                val codePoint = text.codePointAt(index)
+                if (!visitor.accept(index, style, codePoint)) return@FormattedCharSequence false
+                index += Character.charCount(codePoint)
+            }
+            true
+        }
+    }
 
     enum class Alignment { LEFT, RIGHT }
 
@@ -174,11 +198,11 @@ object HudTextRenderer {
         val buffer = mc.renderBuffers().bufferSource()
         var segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.text, font) }
+            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.formatted(), font) }
         }
         for (segment in segments) {
-            font.drawInBatch(segment.text, segX, 0f, segment.color, false, deferredPose, buffer, displayMode, 0, light)
-            segX += MsdfFontMetrics.unitWidth(segment.text, font)
+            font.drawInBatch(segment.formatted(), segX, 0f, segment.color, false, deferredPose, buffer, displayMode, 0, light)
+            segX += MsdfFontMetrics.unitWidth(segment.formatted(), font)
         }
     }
 
@@ -205,11 +229,11 @@ object HudTextRenderer {
         val buffer = mc.renderBuffers().bufferSource()
         var segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.text, font) }
+            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.formatted(), font) }
         }
         for (segment in segments) {
-            font.drawInBatch(segment.text, segX, 0f, segment.color, false, pose, buffer, displayMode, 0, light)
-            segX += MsdfFontMetrics.unitWidth(segment.text, font)
+            font.drawInBatch(segment.formatted(), segX, 0f, segment.color, false, pose, buffer, displayMode, 0, light)
+            segX += MsdfFontMetrics.unitWidth(segment.formatted(), font)
         }
         buffer.endBatch()
         PostHudOverlay.bindMainFbo()

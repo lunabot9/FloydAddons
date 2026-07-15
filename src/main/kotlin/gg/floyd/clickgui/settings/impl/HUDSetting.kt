@@ -81,18 +81,18 @@ class HUDSetting(
             NVGRenderer.rect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, if (hovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
             if (value.enabled || toggleAnimation.isAnimating()) {
-                val color = ClickGUIModule.clickGUIColor
+                val accent = ClickGUIModule.guiAccentColor()
                 NVGRenderer.rect(
                     x + width - 70f,
                     y + height / 2f - 10f,
                     toggleAnimation.get(34f, 9f, value.enabled),
                     20f,
-                    if (hovered) color.brighter().rgba else color.rgba,
+                    if (hovered) ClickGUIModule.hoveredAccentColor(accent) else accent,
                     9f
                 )
             }
 
-            NVGRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.clickGUIColor.rgba, 9f)
+            NVGRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.guiAccentColor(), 9f)
             NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !value.enabled) - 30f, y + height / 2f, 6f, Colors.WHITE.rgba)
         }
         return height

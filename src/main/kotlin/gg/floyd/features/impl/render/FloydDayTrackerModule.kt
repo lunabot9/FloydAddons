@@ -6,6 +6,7 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.impl.misc.FloydCompatibility
 import gg.floyd.utils.font.MsdfFontMetrics
+import gg.floyd.utils.font.ClickGuiFont
 import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.render.HudTextRenderer
 import gg.floyd.utils.render.PanelBlurPIPRenderer
@@ -81,21 +82,13 @@ object FloydDayTrackerModule : Module(
     private fun dayTrackerLayout(example: Boolean): DayTrackerLayout? {
         val label = currentServerDayLabel() ?: if (example) "Day 1" else return null
         val padding = FloydPanelStyle.paddingFor(FloydPanelStyle.PanelTarget.DAY_TRACKER).coerceAtLeast(0)
-        // Size with the same live-FontSet float advances the draw renders with (MsdfFontMetrics
-        // over the panel's selected font), so the box always fits the label exactly.
-        val width = ceil(
-            if (FloydFont.usesCustomFont(FloydFont.PanelFont.DAY_TRACKER)) {
-                NVGRenderer.textWidth(label, DAY_TRACKER_FONT_SIZE, NVGRenderer.activeFont())
-            } else {
-                MsdfFontMetrics.width(label, DAY_TRACKER_FONT_SIZE, panelFont())
-            }
-        ).toInt() + padding * 2
+        // Inter is pinned for this HUD, so layout and rendering cannot drift with font settings.
+        val width = ceil(MsdfFontMetrics.width(label, DAY_TRACKER_FONT_SIZE, panelFont())).toInt() + padding * 2
         val height = ceil(DAY_TRACKER_FONT_SIZE).toInt() + padding * 2
         return DayTrackerLayout(label, width, height)
     }
 
-    /** The per-toggle font selection (custom vs pinned vanilla); layout and draw must agree. */
-    private fun panelFont() = FloydFont.panelFont(FloydFont.PanelFont.DAY_TRACKER)
+    private fun panelFont() = ClickGuiFont.font
 
     // HUD element callback: in the default path it only reports size because the real draw happens
     // from the world-end inline pass. In safe HUD-layer mode (used for SkyHanni compatibility), it
@@ -104,7 +97,6 @@ object FloydDayTrackerModule : Module(
         val layout = dayTrackerLayout(example) ?: return 0 to 0
         val target = FloydPanelStyle.PanelTarget.DAY_TRACKER
         val padding = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
-        val useNvgFont = FloydFont.usesCustomFont(FloydFont.PanelFont.DAY_TRACKER)
         val multiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
         NVGPIPRenderer.draw(this, 0, 0, layout.width, layout.height, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(layout.width, layout.height, target)) {
             HudPanel.drawNvgPanel(
@@ -113,13 +105,8 @@ object FloydDayTrackerModule : Module(
                 target,
                 HudPanel.panelBorderColors(target, dayTrackerHud.x, dayTrackerHud.y),
             )
-            if (useNvgFont) {
-                NVGRenderer.text(layout.label, padding.toFloat(), padding.toFloat(), DAY_TRACKER_FONT_SIZE, 0xFFFFFFFF.toInt(), NVGRenderer.activeFont())
-            }
         }
-        if (!useNvgFont) {
-            drawString(panelFont(), layout.label, padding, padding, 0xFFFFFFFF.toInt(), true)
-        }
+        drawString(panelFont(), layout.label, padding, padding, 0xFFFFFFFF.toInt(), true)
         return layout.width to layout.height
     }
 
@@ -170,7 +157,7 @@ object FloydDayTrackerModule : Module(
             outline
         )
 
-        // Label via the shared HUD text helper using this panel's toggled font, framebuffer px. The
+        // Label via the shared HUD text helper using the HUD's pinned Inter font, framebuffer px. The
         // 9px font size means one font unit = one local panel unit, so the px-per-unit factor is [scale].
         val padding = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
         HudTextRenderer.drawText(layout.label, fx + padding * scale, fy + padding * scale, scale, 0xFFFFFFFF.toInt(), font = panelFont())

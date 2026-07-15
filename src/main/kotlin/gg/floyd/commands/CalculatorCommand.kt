@@ -6,6 +6,6 @@ import gg.floyd.utils.handlers.schedule
 
 val calculatorCommand = Commodore("calculator", "calc") {
     runs {
-        schedule(0) { FloydCalculator.toggleHudVisibility() }
+        schedule(0) { FloydCalculator.toggleVisibility() }
     }
 }

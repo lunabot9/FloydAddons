@@ -4,6 +4,7 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.utils.FloydFontProviders
 import net.minecraft.client.gui.Font
 import net.minecraft.network.chat.Component
+import net.minecraft.util.FormattedCharSequence
 import kotlin.math.floor
 
 /**
@@ -33,6 +34,9 @@ object MsdfFontMetrics {
      * [ClickGuiFont.font] for the ClickGUI — always the SAME Font the caller renders with (D6).
      */
     fun unitWidth(text: String, font: Font = mc.font): Float = font.splitter.stringWidth(text)
+
+    /** Style-aware width, including explicit resource-pack font ids used by icon and emoji runs. */
+    fun unitWidth(text: FormattedCharSequence, font: Font = mc.font): Float = font.splitter.stringWidth(text)
 
     /** Width in pixels of [text] rendered at [sizePx] (a 9-unit line scaled by `sizePx / 9`). */
     fun width(text: String, sizePx: Float, font: Font = mc.font): Float = unitWidth(text, font) * scaleFor(sizePx)

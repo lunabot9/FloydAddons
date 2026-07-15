@@ -7,57 +7,9 @@ import gg.floyd.utils.render.HudPanel
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.gui.GuiGraphics
-import net.minecraft.client.gui.screens.Screen
-import net.minecraft.client.input.CharacterEvent
-import net.minecraft.client.input.KeyEvent
-import net.minecraft.client.input.MouseButtonEvent
-import net.minecraft.network.chat.Component
-import org.lwjgl.glfw.GLFW
 
-class FloydCalculatorScreen : Screen(Component.literal("Calculator")) {
-    override fun extractBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        context.fill(0, 0, context.guiWidth(), context.guiHeight(), 0xB0000000.toInt())
-    }
-
-    override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        super.extractRenderState(context, mouseX, mouseY, deltaTicks)
-        FloydCalculator.drawOnScreen(context)
-    }
-
-    override fun mouseClicked(event: MouseButtonEvent, ignored: Boolean): Boolean =
-        FloydCalculator.handleMouseClick(event) || super.mouseClicked(event, ignored)
-
-    override fun mouseReleased(event: MouseButtonEvent): Boolean =
-        FloydCalculator.stopDragging() || super.mouseReleased(event)
-
-    override fun charTyped(event: CharacterEvent): Boolean {
-        val engine = FloydCalculator.engine
-        return when (val character = event.codepointAsString().firstOrNull()) {
-            in '0'..'9' -> true.also { engine.digit(character!!.digitToInt()) }
-            '.' -> true.also { engine.decimal() }
-            '+' -> true.also { engine.binary(CalculatorBinaryOperation.ADD) }
-            '-' -> true.also { engine.binary(CalculatorBinaryOperation.SUBTRACT) }
-            '*', 'x', 'X' -> true.also { engine.binary(CalculatorBinaryOperation.MULTIPLY) }
-            '/' -> true.also { engine.binary(CalculatorBinaryOperation.DIVIDE) }
-            '%' -> true.also { engine.percent() }
-            '=' -> true.also { engine.equals() }
-            else -> super.charTyped(event)
-        }
-    }
-
-    override fun keyPressed(event: KeyEvent): Boolean = when {
-        calculatorConsumesNavigationKey(event.key()) -> true
-        else -> when (event.key()) {
-            GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> true.also { FloydCalculator.engine.equals() }
-            GLFW.GLFW_KEY_BACKSPACE -> true.also { FloydCalculator.engine.backspace() }
-            GLFW.GLFW_KEY_DELETE -> true.also { FloydCalculator.engine.clearEntry() }
-            else -> super.keyPressed(event)
-        }
-    }
-
-    override fun isPauseScreen(): Boolean = false
-
-    companion object {
+/** Renderer and input geometry for the HUD-only calculator. */
+object FloydCalculatorScreen {
         internal const val PANEL_WIDTH = 330f
         internal const val PANEL_HEIGHT = 494f
         internal const val DRAG_BAR_HEIGHT = 72f
@@ -405,20 +357,6 @@ class FloydCalculatorScreen : Screen(Component.literal("Calculator")) {
             }
             return (0xFF shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
         }
-    }
-}
-
-internal fun calculatorConsumesNavigationKey(key: Int): Boolean = when (key) {
-    GLFW.GLFW_KEY_W,
-    GLFW.GLFW_KEY_A,
-    GLFW.GLFW_KEY_S,
-    GLFW.GLFW_KEY_D,
-    GLFW.GLFW_KEY_UP,
-    GLFW.GLFW_KEY_DOWN,
-    GLFW.GLFW_KEY_LEFT,
-    GLFW.GLFW_KEY_RIGHT,
-    GLFW.GLFW_KEY_TAB -> true
-    else -> false
 }
 
 internal data class CalculatorOutlineBounds(val x: Float, val y: Float, val width: Float, val height: Float)

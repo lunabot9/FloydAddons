@@ -271,21 +271,20 @@ object FloydCustomScoreboard : Module(
      * path (same merge logic as [styledText], same accent sampling as the original forcedColorAt).
      */
     private fun brandSegments(glyphs: List<String>): StyledScoreboardText {
-        if (glyphs.isEmpty()) return StyledScoreboardText(emptyList())
-        val segments = mutableListOf<HudTextRenderer.Segment>()
-        val currentText = StringBuilder()
-        var currentColor = scoreboardAccentColor(0f)
-        for (i in glyphs.indices) {
-            val color = scoreboardAccentColor(i * BRAND_LETTER_PHASE_STEP)
-            if (currentText.isNotEmpty() && color != currentColor) {
-                segments += HudTextRenderer.Segment(currentText.toString(), currentColor)
-                currentText.clear()
-            }
-            currentColor = color
-            currentText.append(glyphs[i])
-        }
-        if (currentText.isNotEmpty()) segments += HudTextRenderer.Segment(currentText.toString(), currentColor)
-        return StyledScoreboardText(segments)
+        return StyledScoreboardText(scoreboardBrandSegments(glyphs) { index ->
+            scoreboardAccentColor(index * BRAND_LETTER_PHASE_STEP)
+        })
+    }
+
+    /**
+     * Keeps the brand's text-run boundaries invariant while fade/chroma colors animate. Merging
+     * equal adjacent colors changes kerning at fade endpoints and makes later glyphs visibly jump.
+     */
+    internal fun scoreboardBrandSegments(
+        glyphs: List<String>,
+        colorAt: (Int) -> Int,
+    ): List<HudTextRenderer.Segment> = glyphs.mapIndexed { index, glyph ->
+        HudTextRenderer.Segment(glyph, colorAt(index))
     }
 
     // HUD element callback: the default path only reports the panel's size because the real draw happens
@@ -303,7 +302,6 @@ object FloydCustomScoreboard : Module(
     /** Deferred GuiGraphics path used by Minecraft 26.1 for both editor previews and the live HUD. */
     private fun GuiGraphics.drawScoreboardGui(r: ScoreboardRender) {
         val target = FloydPanelStyle.PanelTarget.SCOREBOARD
-        val useNvgFont = FloydFont.usesCustomFont(FloydFont.PanelFont.SCOREBOARD)
         val multiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
         NVGPIPRenderer.draw(this, 0, 0, r.boxWidth, r.boxHeight, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(r.boxWidth, r.boxHeight, target)) {
             HudPanel.drawNvgPanel(
@@ -312,39 +310,26 @@ object FloydCustomScoreboard : Module(
                 target,
                 HudPanel.panelBorderColors(target, scoreboardHud.x, scoreboardHud.y),
             )
-            if (useNvgFont) {
-                val font = NVGRenderer.activeFont()
-                fun drawLine(text: ScoreboardText, segments: List<HudTextRenderer.Segment>) {
-                    var segmentX = text.x
-                    for (segment in segments) {
-                        NVGRenderer.text(segment.text, segmentX, text.y, SCOREBOARD_FONT_SIZE, segment.color, font)
-                        segmentX += NVGRenderer.textWidth(segment.text, SCOREBOARD_FONT_SIZE, font)
-                    }
-                }
-                for (i in 0 until r.texts.size - 1) {
-                    val text = r.texts[i]
-                    drawLine(text, text.value.segments)
-                }
-                val brand = r.texts.last()
-                drawLine(brand, brandSegments(r.brandGlyphs).segments)
+        }
+
+        // Match the working 1.21.11 renderer: NanoVG owns only the panel surface. Text must go
+        // through Minecraft's Font pipeline so explicit Hypixel sprite-font ids survive. Sending
+        // these runs through NanoVG renders private-use icons as narrow bars from the TTF instead.
+        val font = panelFont()
+        fun drawLine(text: ScoreboardText, segments: List<HudTextRenderer.Segment>) {
+            var segmentX = text.x
+            for (segment in segments) {
+                val formatted = segment.formatted()
+                drawString(font, formatted, segmentX.roundToInt(), text.y.roundToInt(), segment.color, false)
+                segmentX += MsdfFontMetrics.unitWidth(formatted, font)
             }
         }
-        if (!useNvgFont) {
-            val font = panelFont()
-            fun drawLine(text: ScoreboardText, segments: List<HudTextRenderer.Segment>) {
-                var segmentX = text.x
-                for (segment in segments) {
-                    drawString(font, segment.text, segmentX.roundToInt(), text.y.roundToInt(), segment.color, false)
-                    segmentX += MsdfFontMetrics.unitWidth(segment.text, font)
-                }
-            }
-            for (i in 0 until r.texts.size - 1) {
-                val text = r.texts[i]
-                drawLine(text, text.value.segments)
-            }
-            val brand = r.texts.last()
-            drawLine(brand, brandSegments(r.brandGlyphs).segments)
+        for (i in 0 until r.texts.size - 1) {
+            val text = r.texts[i]
+            drawLine(text, text.value.segments)
         }
+        val brand = r.texts.last()
+        drawLine(brand, brandSegments(r.brandGlyphs).segments)
     }
 
     /**
@@ -400,7 +385,10 @@ object FloydCustomScoreboard : Module(
 
     private fun textWidth(text: StyledScoreboardText): Float {
         var width = 0f
-        for (segment in text.segments) width += textWidth(segment.text)
+        val font = panelFont()
+        for (segment in text.segments) {
+            width += MsdfFontMetrics.unitWidth(segment.formatted(), font) * (SCOREBOARD_FONT_SIZE / MsdfFontMetrics.LINE_HEIGHT)
+        }
         return width
     }
 
@@ -467,6 +455,9 @@ object FloydCustomScoreboard : Module(
         HudTextRenderer.flushDeferred()
     }
 
+    internal fun scoreboardSegments(text: FormattedCharSequence): List<HudTextRenderer.Segment> =
+        styledText(text).segments
+
     private fun styledText(text: FormattedCharSequence, forcedColor: Int? = null, forcedColorAt: ((Int) -> Int)? = null): StyledScoreboardText {
         // Apply Neck/Nick Hider + server/profile-id replacement to the scoreboard text up front. The
         // draw path re-passes through FontMixin (Font.prepareText) where the replacement is idempotent,
@@ -479,10 +470,12 @@ object FloydCustomScoreboard : Module(
         // fallback (unifont), measured with exactly the advances it renders with.
         val glyphs = ArrayList<String>()
         val colors = ArrayList<Int>()
+        val styles = ArrayList<Style>()
         source.accept { _, style, codePoint ->
             glyphs.add(normalizeForScoreboardFont(codePoint) ?: String(Character.toChars(codePoint)))
             // forcedColorAt colors per visual glyph index (left→right) for the brand's letter-by-letter chroma.
             colors.add(forcedColorAt?.invoke(colors.size) ?: forcedColor ?: scoreboardStyleColor(style))
+            styles.add(style)
             true
         }
         if (glyphs.isEmpty()) return StyledScoreboardText(emptyList())
@@ -490,14 +483,16 @@ object FloydCustomScoreboard : Module(
         val segments = mutableListOf<HudTextRenderer.Segment>()
         val currentText = StringBuilder()
         var currentColor = colors[0]
+        var currentStyle = styles[0]
         fun flush() {
             if (currentText.isEmpty()) return
-            segments += HudTextRenderer.Segment(currentText.toString(), currentColor)
+            segments += HudTextRenderer.Segment(currentText.toString(), currentColor, currentStyle)
             currentText.clear()
         }
         for (i in glyphs.indices) {
-            if (currentText.isNotEmpty() && colors[i] != currentColor) flush()
+            if (currentText.isNotEmpty() && (colors[i] != currentColor || styles[i] != currentStyle)) flush()
             currentColor = colors[i]
+            currentStyle = styles[i]
             currentText.append(glyphs[i])
         }
         flush()

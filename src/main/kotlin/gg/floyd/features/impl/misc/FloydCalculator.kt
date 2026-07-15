@@ -1,6 +1,5 @@
 package gg.floyd.features.impl.misc
 
-import gg.floyd.clickgui.settings.AlwaysActive
 import gg.floyd.clickgui.settings.impl.KeybindSetting
 import gg.floyd.clickgui.settings.impl.HudElement
 import gg.floyd.clickgui.HudSizeRegistry
@@ -10,81 +9,64 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.clickgui.HudManager
-import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.ChatScreen
 import net.minecraft.client.input.MouseButtonEvent
 import org.lwjgl.glfw.GLFW
 
-/** Calculator launcher and persistent HUD toggle. */
-@AlwaysActive
+/** HUD-only calculator controlled by the module toggle, keybind, or chat commands. */
 object FloydCalculator : Module(
     name = "Calculator",
     key = null,
     category = Category.MISC,
-    description = "Opens a ClickGUI-themed calculator with an optional persistent HUD.",
+    description = "Opens an on-screen calculator. It can also be opened with /calc or /calculator.",
 ) {
     private val openKey by KeybindSetting(
         "Open Calc",
         GLFW.GLFW_KEY_UNKNOWN,
-        desc = "Opens the calculator screen.",
-    ).onPress(::openScreen)
+        desc = "Toggles the on-screen calculator.",
+    ).onPress(::toggleVisibility)
 
     internal val engine = FloydCalculatorEngine()
 
     internal val calculatorHud: HudElement by HUD(
-        "Keep Calc On Screen",
+        "Calculator HUD",
         "Drag the calculator by its title bar. Open chat to use it while playing.",
-        toggleable = true,
+        toggleable = false,
         x = 40,
         y = 40,
         scale = 1f,
-    ) { FloydCalculatorScreen.drawCalculatorHud(this) }.independentOfModule()
+    ) { FloydCalculatorScreen.drawCalculatorHud(this) }
 
     private var dragging = false
     private var dragOffsetX = 0f
     private var dragOffsetY = 0f
 
     init {
-        HudSizeRegistry.register("Keep Calc On Screen") {
+        HudSizeRegistry.register("Calculator HUD") {
             FloydCalculatorScreen.PANEL_WIDTH.toInt() to FloydCalculatorScreen.PANEL_HEIGHT.toInt()
         }
         on<ScreenEvent.Render> {
-            if (dragging && (screen is FloydCalculatorScreen || calculatorHud.enabled && screen is ChatScreen)) {
+            if (dragging && screen is ChatScreen) {
                 updateDrag()
             }
         }
         on<ScreenEvent.MouseClick> {
-            if (calculatorHud.enabled && screen is ChatScreen && handleMouseClick(click)) cancel()
+            if (screen is ChatScreen && handleMouseClick(click)) cancel()
         }
         on<ScreenEvent.MouseRelease> {
-            if (calculatorHud.enabled && screen is ChatScreen && stopDragging()) cancel()
+            if (screen is ChatScreen && stopDragging()) cancel()
         }
     }
 
     @JvmStatic
-    fun openScreen() {
-        mc.setScreen(FloydCalculatorScreen())
-    }
-
-    @JvmStatic
-    fun toggleHudVisibility() {
-        calculatorHud.enabled = !calculatorHud.enabled
+    fun toggleVisibility() {
+        toggle()
         ModuleManager.saveConfigurations()
     }
 
-    override fun onKeybind() = openScreen()
-
-    override fun onEnable() {
-        openScreen()
-        super.onEnable()
-        toggle()
-    }
-
-    internal fun drawOnScreen(context: GuiGraphics) {
-        context.pose().pushMatrix()
-        context.pose().scale(1f / mc.window.guiScale, 1f / mc.window.guiScale)
-        calculatorHud.draw(context, false)
-        context.pose().popMatrix()
+    override fun onDisable() {
+        dragging = false
+        super.onDisable()
     }
 
     internal fun handleMouseClick(click: MouseButtonEvent): Boolean {

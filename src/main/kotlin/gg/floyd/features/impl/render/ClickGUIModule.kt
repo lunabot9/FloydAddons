@@ -9,6 +9,7 @@ import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Color
+import gg.floyd.utils.Color.Companion.brighter
 import gg.floyd.utils.render.HudPanel
 import org.lwjgl.glfw.GLFW
 import kotlin.math.max
@@ -198,6 +199,9 @@ object ClickGUIModule : Module(
         )
         else -> clickGUIColor.rgba
     }
+
+    /** Brightens the color already resolved for this frame without falling back to its base hue. */
+    internal fun hoveredAccentColor(displayedAccent: Int): Int = Color(displayedAccent).brighter().rgba
 
     private fun currentAvailableWidth(): Float {
         val screenWidth = currentScreenWidth()

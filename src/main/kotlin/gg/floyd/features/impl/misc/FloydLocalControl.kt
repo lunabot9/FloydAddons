@@ -24,6 +24,7 @@ import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydMobEsp
+import gg.floyd.features.impl.render.FloydMusicOverlay
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
@@ -468,7 +469,8 @@ object FloydLocalControl : Module(
             "mobEsp" to FloydMobEsp.state(),
             "hud" to FloydHud.state(),
             "inventoryHud" to FloydInventoryHud.state(),
-            "customScoreboard" to FloydCustomScoreboard.state()
+            "customScoreboard" to FloydCustomScoreboard.state(),
+            "musicOverlay" to FloydMusicOverlay.state()
         )
         root["qol"] = emptyMap<String, Any?>()
         root["cosmetics"] = mapOf(
@@ -775,7 +777,7 @@ object FloydLocalControl : Module(
                 "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(LegacyFloydClickGUI.openHub())
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
-                "calculator", "calc" -> mc.setScreen(FloydCalculatorScreen())
+                "calculator", "calc" -> FloydCalculator.toggleVisibility()
                 "pause", "pausemenu", "gamemenu" -> mc.setScreen(net.minecraft.client.gui.screens.PauseScreen(true))
                 "options", "settings" -> mc.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(mc.screen ?: net.minecraft.client.gui.screens.PauseScreen(true), mc.options, mc.level != null))
                 "close", "none" -> mc.setScreen(null)

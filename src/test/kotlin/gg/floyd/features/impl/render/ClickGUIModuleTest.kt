@@ -1,9 +1,18 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.utils.Color
+import gg.floyd.utils.Color.Companion.brighter
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ClickGUIModuleTest {
+    @Test
+    fun `hover brightens the displayed accent instead of the configured base hue`() {
+        val displayedPurple = 0xFF9C27B0.toInt()
+
+        assertEquals(Color(displayedPurple).brighter().rgba, ClickGUIModule.hoveredAccentColor(displayedPurple))
+    }
+
     @Test
     fun `bootstrap gui scale stays stable before the Minecraft window exists`() {
         assertEquals(1f, ClickGUIModule.standardGuiScaleFor(1920f, 1080f, 1f))

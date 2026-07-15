@@ -44,6 +44,7 @@
     "mixins.KeyBindingMixin",
     "mixins.LevelRendererMixin",
     "mixins.LivingEntityRendererMixin",
+    "mixins.MinecraftAutoClickerMixin",
     "mixins.ParticleEngineMixin",
     "mixins.PerfFrameMixin",
     "mixins.PlayerTabOverlayMixin",

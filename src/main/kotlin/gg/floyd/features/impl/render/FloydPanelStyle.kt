@@ -18,7 +18,7 @@ import gg.floyd.utils.render.HudPanel
  * color, chroma/fade, corner radius, border width, padding and blur from here. By default ("Per-Panel
  * Style" off) every panel reads ONE shared global set, so the whole HUD has a unified look. Turning
  * "Per-Panel Style" on reveals a "Configure Panel" selector and a per-panel copy of every setting, so
- * each panel (scoreboard, inventory HUD, day tracker, calculator, ESP overhead) can be styled independently while
+ * each panel (scoreboard, inventory HUD, day tracker, calculator, music overlay, ESP overhead) can be styled independently while
  * still using the same settings UI — the selector just retargets which panel the settings edit.
  *
  * [AlwaysActive] so the panel style is always consulted even when no module is "on"; it carries no
@@ -37,6 +37,7 @@ object FloydPanelStyle : Module(
         INVENTORY("Inventory HUD"),
         DAY_TRACKER("Day Tracker"),
         CALCULATOR("Calculator"),
+        MUSIC_OVERLAY("Music Overlay"),
         ESP_OVERHEAD("ESP Overhead"),
     }
 

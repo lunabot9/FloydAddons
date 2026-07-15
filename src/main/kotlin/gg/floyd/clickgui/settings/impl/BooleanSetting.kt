@@ -34,13 +34,13 @@ class BooleanSetting(
         NVGRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
         if (enabled || toggleAnimation.isAnimating()) {
-            val color = ClickGUIModule.clickGUIColor
+            val accent = ClickGUIModule.guiAccentColor()
             NVGRenderer.rect(
                 x + width - 40f,
                 y + height / 2f - 10f,
                 toggleAnimation.get(34f, 9f, enabled),
                 20f,
-                if (isHovered) color.brighter().rgba else color.rgba,
+                if (isHovered) ClickGUIModule.hoveredAccentColor(accent) else accent,
                 9f
             )
         }
@@ -51,7 +51,7 @@ class BooleanSetting(
             34f,
             20f,
             2f,
-            ClickGUIModule.clickGUIColor.rgba,
+            ClickGUIModule.guiAccentColor(),
             9f
         )
         NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)
@@ -97,13 +97,13 @@ class RuntimeBooleanSetting(
         NVGRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
 
         if (enabled || toggleAnimation.isAnimating()) {
-            val color = ClickGUIModule.clickGUIColor
+            val accent = ClickGUIModule.guiAccentColor()
             NVGRenderer.rect(
                 x + width - 40f,
                 y + height / 2f - 10f,
                 toggleAnimation.get(34f, 9f, enabled),
                 20f,
-                if (isHovered) color.brighter().rgba else color.rgba,
+                if (isHovered) ClickGUIModule.hoveredAccentColor(accent) else accent,
                 9f
             )
         }
@@ -114,7 +114,7 @@ class RuntimeBooleanSetting(
             34f,
             20f,
             2f,
-            ClickGUIModule.clickGUIColor.rgba,
+            ClickGUIModule.guiAccentColor(),
             9f
         )
         NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)

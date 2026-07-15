@@ -175,6 +175,9 @@ class ModuleConfig internal constructor(file: File) {
             "cone hat" to mapOf(
                 "selected image" to "Image",
                 "rotation speed" to "Spin Speed"
+            ),
+            "calculator" to mapOf(
+                "keep calc on screen" to "Calculator HUD"
             )
         )
 

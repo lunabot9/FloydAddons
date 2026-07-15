@@ -36,13 +36,12 @@ import java.nio.file.Path
 object FloydFont : Module(
     name = "Font",
     category = Category.RENDER,
-    description = "Custom font: per-surface toggles (vanilla text, scoreboard, day tracker, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
+    description = "Custom font: per-surface toggles (vanilla text, scoreboard, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
     toggled = true,
 ) {
     val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = the live Minecraft font on normal text and per-panel custom-font toggles decide Floyd HUD text (the ClickGUI keeps its own pinned font).")
     private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the selected custom font to vanilla game text (chat, hotbar, F3, menus) for normal letters while pack emoji/special glyphs still fall through. OFF restores the live Minecraft/resource-pack font stack for normal game text, and Hypixel sessions automatically yield to the live glyph stack to preserve SkyBlock icons.")
     private val scoreboardFont by BooleanSetting("Scoreboard Font", true, desc = "Custom Scoreboard panel uses the custom font. Applies instantly.")
-    private val dayTrackerFont by BooleanSetting("Day Tracker Font", true, desc = "Day Tracker panel uses the custom font. Applies instantly.")
     private val inventoryHudFont by BooleanSetting("Inventory HUD Font", true, desc = "Inventory HUD stack counts use the custom font. Applies instantly.")
     private val disableTextShadow by BooleanSetting("Disable Text Shadow", false, desc = "Removes the 1px drop shadow under ALL rendered text (vanilla HUD + every Floyd panel) for a cleaner, sharper look. Applies instantly, no reload needed.")
     private val fontDisplaySize by NumberSetting("Font Size", 25.0, 6.0, 50.0, 0.5, desc = "Display size for the global TTF provider. 25 matches the Font mod default. Reload resources (F3+T) to apply.")
@@ -82,11 +81,10 @@ object FloydFont : Module(
     fun isGlobalCustomFontEnabled(): Boolean = enabled && globalCustomFont && minecraftFont
 
     /** A Floyd HUD panel surface with its own custom-font toggle (see [panelFont]). */
-    enum class PanelFont { SCOREBOARD, DAY_TRACKER, INVENTORY }
+    enum class PanelFont { SCOREBOARD, INVENTORY }
 
     fun usesCustomFont(panel: PanelFont): Boolean = enabled && globalCustomFont && when (panel) {
         PanelFont.SCOREBOARD -> scoreboardFont
-        PanelFont.DAY_TRACKER -> dayTrackerFont
         PanelFont.INVENTORY -> inventoryHudFont
     }
 
@@ -175,7 +173,6 @@ object FloydFont : Module(
         "globalCustomFont" to globalCustomFont,
         "minecraftFont" to minecraftFont,
         "scoreboardFont" to scoreboardFont,
-        "dayTrackerFont" to dayTrackerFont,
         "inventoryHudFont" to inventoryHudFont,
         "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
         "fontDisplaySize" to fontDisplaySize,
