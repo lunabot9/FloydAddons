@@ -25,6 +25,7 @@ import gg.floyd.features.impl.camera.FloydFreelook
 import gg.floyd.features.impl.camera.FloydF5Customizer
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
+import gg.floyd.features.impl.cosmetic.FloydPlayerModel
 import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.hiders.FloydNoHurtCamera
 import gg.floyd.features.impl.hiders.FloydRemoveFireOverlay
@@ -4472,6 +4473,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 LegacyModuleBrowserEntry(FloydConeHat, "Cone Hat", LegacyModuleBrowserKind.PLAYER_CONE_HAT, "Enabled"),
                 LegacyModuleBrowserEntry(FloydNickHider, "Neck Hider", LegacyModuleBrowserKind.PLAYER_NICK_HIDER, "Enabled"),
                 LegacyModuleBrowserEntry(FloydSkin, "Custom Skin", LegacyModuleBrowserKind.PLAYER_CUSTOM_SKIN, "Custom Skin"),
+                moduleEntry(FloydPlayerModel),
                 LegacyModuleBrowserEntry(FloydPlayerSize, "Player Size", LegacyModuleBrowserKind.PLAYER_SIZE)
             )
             Category.CAMERA -> listOf(

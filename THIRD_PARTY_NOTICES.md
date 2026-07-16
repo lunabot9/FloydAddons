@@ -39,6 +39,15 @@ The active Fabric metadata therefore declares `BSD-3-Clause AND MIT`.
 
 Exact source baselines are recorded in `PROVENANCE.md`.
 
+## Tung Tung Sahur visual reference
+
+The Floyd player-model cosmetic includes an original low-poly recreation informed by
+"tung tung tung sahur ffree fire skin" by rocklee.ff (rocklee.ff123):
+https://sketchfab.com/3d-models/tung-tung-tung-sahur-ffree-fire-skin-1388ca1f7c0242ac9225ea129c724e32
+
+The reference is licensed under Creative Commons Attribution 4.0:
+https://creativecommons.org/licenses/by/4.0/
+
 ## FloydAddons MIT Terms
 
 The vendored FloydAddons snapshot does not include a standalone license file;

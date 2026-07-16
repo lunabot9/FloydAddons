@@ -28,6 +28,7 @@ import gg.floyd.features.impl.render.FloydMusicOverlay
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
+import gg.floyd.features.impl.cosmetic.FloydPlayerModel
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
 import gg.floyd.features.impl.cosmetic.FloydSkin
@@ -480,7 +481,8 @@ object FloydLocalControl : Module(
         )
         root["playerFeatures"] = mapOf(
             "nickHider" to FloydNickHider.state(),
-            "playerSize" to FloydPlayerSize.state()
+            "playerSize" to FloydPlayerSize.state(),
+            "playerModel" to FloydPlayerModel.state()
         )
         root["misc"] = mapOf(
             "localControl" to state(),

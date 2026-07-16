@@ -81,6 +81,7 @@ object FloydCamera {
         resetFreecamVelocity()
         lastMoveTime = System.nanoTime()
         freecam = true
+        FloydXray.rebuildChunks()
         if (FloydFreelook.enabled) FloydFreelook.toggle()
     }
 

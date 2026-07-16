@@ -34,7 +34,13 @@ public abstract class CameraMixin {
         return ((CameraAccessor) this).floydaddons$invokeGetMaxZoom(desired);
     }
 
-    @Inject(method = "update", at = @At("RETURN"))
+    @Inject(
+        method = "update",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/Camera;prepareCullFrustum(Lorg/joml/Matrix4fc;Lorg/joml/Matrix4f;Lnet/minecraft/world/phys/Vec3;)V"
+        )
+    )
     private void floydaddons$cameraUpdate(net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
         if (FloydCamera.freecamActive()) {
             FloydCamera.updateFreecamMovement();

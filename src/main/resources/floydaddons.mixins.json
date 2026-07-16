@@ -50,6 +50,7 @@
     "mixins.PlayerTabOverlayMixin",
     "mixins.ScreenEffectRendererMixin",
     "mixins.ScreenMixin",
+    "mixins.SectionOcclusionGraphMixin",
     "mixins.SkyBlockPackDisablerMixin",
     "mixins.SkyBlockPackRepositoryMixin",
     "mixins.SkyBlockItemModelMixin",

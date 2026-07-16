@@ -19,6 +19,7 @@ import gg.floyd.features.impl.camera.FloydFreelook
 import gg.floyd.features.impl.camera.FloydF5Customizer
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
+import gg.floyd.features.impl.cosmetic.FloydPlayerModel
 import gg.floyd.features.impl.hiders.FloydNoHurtCamera
 import gg.floyd.features.impl.hiders.FloydRemoveFireOverlay
 import gg.floyd.features.impl.hiders.FloydDisableHungerBar
@@ -117,7 +118,7 @@ object ModuleManager {
             FloydNickHider, FloydPlayerSize,
             // Camera (each feature is its own module).
             FloydFreecam, FloydFreelook, FloydF5Customizer,
-            FloydSkin, FloydCape, FloydConeHat,
+            FloydSkin, FloydCape, FloydConeHat, FloydPlayerModel,
             FloydLoadoutSwapper, FloydAutoTotem, FloydPlayerEsp, FloydAutoClicker,
             FloydDiscordPresence, FloydLocalControl, FloydCalculator,
             // Misc compatibility (each feature is its own module).
