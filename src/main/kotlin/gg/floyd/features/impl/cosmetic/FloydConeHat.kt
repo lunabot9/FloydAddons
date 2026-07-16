@@ -66,6 +66,26 @@ object FloydConeHat : Module(
     fun isActiveFor(id: Int): Boolean = isActive() && FloydAddonsMod.mc.player?.id == id
 
     @JvmStatic
+    fun isSharedActiveFor(id: Int): Boolean =
+        if (FloydAddonsMod.mc.player?.id == id) isActive()
+        else FloydSharedCosmetics.appearanceForEntity(id)?.cone?.enabled == true
+
+    @JvmStatic fun textureFor(id: Int): Identifier =
+        if (FloydAddonsMod.mc.player?.id == id) texture() else builtinTexture
+    @JvmStatic fun heightFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.cone?.height ?: height
+    @JvmStatic fun radiusFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.cone?.radius ?: radius
+    @JvmStatic fun yOffsetFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.cone?.yOffset ?: yOffset
+    @JvmStatic fun baseRotation(): Float = rotation
+    @JvmStatic fun spinSpeed(): Float = rotationSpeed
+
+    @JvmStatic
+    fun currentRotationFor(id: Int): Float {
+        if (FloydAddonsMod.mc.player?.id == id) return currentRotation()
+        val cone = FloydSharedCosmetics.appearanceForEntity(id)?.cone ?: return 0.0f
+        return normalizeRotation(cone.rotation + (System.currentTimeMillis() / 1000.0f) * cone.spinSpeed)
+    }
+
+    @JvmStatic
     fun texture(): Identifier {
         val selected = selectedImage
         if (cachedTexture == null || cachedSelection != selected) loadTexture()

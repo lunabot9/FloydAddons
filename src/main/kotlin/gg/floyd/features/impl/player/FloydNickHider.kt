@@ -5,6 +5,7 @@ import gg.floyd.clickgui.settings.impl.MapSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.impl.cosmetic.SharedNeckHiderNames
 import gg.floyd.features.impl.hiders.FloydHiders
 import gg.floyd.utils.ChatChroma
 import net.minecraft.network.chat.Component
@@ -18,7 +19,7 @@ import java.util.regex.Pattern
 
 object FloydNickHider : Module(
     name = "Neck Hider",
-    category = Category.PLAYER,
+    category = Category.COSMETIC,
     description = "Floyd nickname replacement and per-player name mappings.",
     // Default OFF: the module toggle IS the nick-replacement switch now (the redundant inner
     // "Enabled" setting was collapsed into it, see ModuleConfig.collapsedEnabledModules), and
@@ -50,7 +51,7 @@ object FloydNickHider : Module(
 
     @JvmStatic
     fun hasReplacements(): Boolean =
-        enabled || FloydHiders.serverIdHider || FloydHiders.profileIdHider
+        enabled || FloydHiders.serverIdHider || FloydHiders.profileIdHider || SharedNeckHiderNames.hasMappings()
 
     @JvmStatic
     fun replaceString(text: String): String {
@@ -65,6 +66,9 @@ object FloydNickHider : Module(
                     result = replaceIgnoreCase(result, find, replace)
                 }
             }
+        }
+        for ((find, replace) in SharedNeckHiderNames.mappings()) {
+            result = replaceIgnoreCase(result, find, replace)
         }
         if (FloydHiders.serverIdHider) {
             result = serverIds.replaceDateServerId(result, SERVER_ID_REPLACEMENT)
@@ -97,6 +101,12 @@ object FloydNickHider : Module(
                         changed = changed || replacement.changed
                     }
                 }
+            }
+        }
+        for ((find, replace) in SharedNeckHiderNames.mappings()) {
+            replaceLiteralComponentIgnoreCase(result, find, replace).also { replacement ->
+                result = replacement.component
+                changed = changed || replacement.changed
             }
         }
         if (FloydHiders.serverIdHider) {
@@ -144,6 +154,9 @@ object FloydNickHider : Module(
                     changed = styled.replaceIgnoreCase(find, replace) || changed
                 }
             }
+        }
+        for ((find, replace) in SharedNeckHiderNames.mappings()) {
+            changed = styled.replaceIgnoreCase(find, replace) || changed
         }
         if (FloydHiders.serverIdHider) {
             changed = styled.replaceDateServerId(SERVER_ID_REPLACEMENT) || changed

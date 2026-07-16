@@ -17,14 +17,14 @@ public abstract class AvatarRendererMixin {
     @Inject(method = "scale(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;)V", at = @At("RETURN"))
     private void scale(AvatarRenderState avatarRenderState, PoseStack poseStack, CallbackInfo ci) {
         if (!FloydPlayerSize.shouldScale(avatarRenderState.id)) return;
-        if (FloydPlayerSize.scaleY() < 0.0F) poseStack.translate(0.0F, FloydPlayerSize.negativeScaleYOffset(), 0.0F);
-        poseStack.scale(FloydPlayerSize.scaleX(), FloydPlayerSize.scaleY(), FloydPlayerSize.scaleZ());
+        if (FloydPlayerSize.scaleYFor(avatarRenderState.id) < 0.0F) poseStack.translate(0.0F, FloydPlayerSize.negativeScaleYOffsetFor(avatarRenderState.id), 0.0F);
+        poseStack.scale(FloydPlayerSize.scaleXFor(avatarRenderState.id), FloydPlayerSize.scaleYFor(avatarRenderState.id), FloydPlayerSize.scaleZFor(avatarRenderState.id));
     }
 
     @Inject(method = "getTextureLocation(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)Lnet/minecraft/resources/Identifier;", at = @At("HEAD"), cancellable = true)
     private void floydaddons$customSkin(AvatarRenderState avatarRenderState, CallbackInfoReturnable<Identifier> cir) {
         if (!FloydSkin.shouldUseCustomSkin(avatarRenderState.id)) return;
-        Identifier custom = FloydSkin.customSkinTexture();
+        Identifier custom = FloydSkin.customSkinTextureFor(avatarRenderState.id);
         if (custom != null) cir.setReturnValue(custom);
     }
 

@@ -21,20 +21,20 @@ public class FloydConeHatLayer extends RenderLayer<AvatarRenderState, PlayerMode
 
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state, float limbAngle, float limbDistance) {
-        if (!FloydConeHat.isActiveFor(state.id) || state.isInvisible) return;
+        if (!FloydConeHat.isSharedActiveFor(state.id) || state.isInvisible) return;
 
         poseStack.pushPose();
         ModelPart head = getParentModel().head;
         head.translateAndRotate(poseStack);
         poseStack.mulPose(Axis.ZP.rotation(-head.zRot));
         poseStack.mulPose(Axis.XP.rotation(-head.xRot));
-        poseStack.translate(0.0F, FloydConeHat.yOffset(), 0.0F);
-        poseStack.mulPose(Axis.YP.rotationDegrees(FloydConeHat.currentRotation()));
+        poseStack.translate(0.0F, FloydConeHat.yOffsetFor(state.id), 0.0F);
+        poseStack.mulPose(Axis.YP.rotationDegrees(FloydConeHat.currentRotationFor(state.id)));
 
         collector.submitCustomGeometry(
             poseStack,
-            RenderTypes.entityCutout(FloydConeHat.texture()),
-            (entry, consumer) -> drawCone(entry, consumer, light, FloydConeHat.height(), FloydConeHat.radius())
+            RenderTypes.entityCutout(FloydConeHat.textureFor(state.id)),
+            (entry, consumer) -> drawCone(entry, consumer, light, FloydConeHat.heightFor(state.id), FloydConeHat.radiusFor(state.id))
         );
         poseStack.popPose();
     }

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "floyd-cosmetics",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-16",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "floyd-cosmetics",
+      "database_id": "f2b50156-2fd7-4fa3-80aa-12bb124d18d6",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

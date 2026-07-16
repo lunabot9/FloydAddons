@@ -65,6 +65,9 @@ object FloydSkin : Module(
 
     @JvmStatic
     fun shouldUseCustomSkin(id: Int): Boolean {
+        if (mc.player?.id != id) {
+            FloydSharedCosmetics.appearanceForEntity(id)?.let { return it.skin.enabled }
+        }
         if (!enabled || !customSkin) return false
         val player = mc.player ?: return false
         val isSelf = id == player.id
@@ -81,6 +84,15 @@ object FloydSkin : Module(
         }
         return cachedTexture
     }
+
+    @JvmStatic
+    fun customSkinTextureFor(id: Int): Identifier? =
+        if (mc.player?.id == id) customSkinTexture()
+        else FloydSharedCosmetics.appearanceForEntity(id)?.let { if (it.skin.enabled) builtinSkin else null }
+            ?: customSkinTexture()
+
+    @JvmStatic
+    fun isSharedSkinEnabled(): Boolean = enabled && customSkin && self
 
     @JvmStatic
     fun state(): Map<String, Any?> {

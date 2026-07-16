@@ -29,6 +29,7 @@ import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
 import gg.floyd.features.impl.cosmetic.FloydPlayerModel
+import gg.floyd.features.impl.cosmetic.FloydSharedCosmetics
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
 import gg.floyd.features.impl.cosmetic.FloydSkin
@@ -477,7 +478,8 @@ object FloydLocalControl : Module(
         root["cosmetics"] = mapOf(
             "cape" to FloydCape.state(),
             "coneHat" to FloydConeHat.state(),
-            "skin" to FloydSkin.state()
+            "skin" to FloydSkin.state(),
+            "shared" to FloydSharedCosmetics.state()
         )
         root["playerFeatures"] = mapOf(
             "nickHider" to FloydNickHider.state(),

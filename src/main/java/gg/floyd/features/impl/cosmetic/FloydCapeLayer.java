@@ -18,7 +18,7 @@ public class FloydCapeLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
 
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state, float limbAngle, float limbDistance) {
-        if (!FloydCape.isActiveFor(state.id) || state.isInvisible) return;
+        if (!FloydCape.isSharedActiveFor(state.id) || state.isInvisible) return;
 
         poseStack.pushPose();
         getParentModel().body.translateAndRotate(poseStack);
@@ -34,15 +34,14 @@ public class FloydCapeLayer extends RenderLayer<AvatarRenderState, PlayerModel> 
 
         collector.submitCustomGeometry(
             poseStack,
-            RenderTypes.entityCutout(FloydCape.texture()),
-            (entry, consumer) -> drawCape(entry, consumer, light)
+            RenderTypes.entityCutout(FloydCape.textureFor(state.id)),
+            (entry, consumer) -> drawCape(entry, consumer, light, FloydCape.aspectRatioFor(state.id))
         );
         poseStack.popPose();
     }
 
-    private static void drawCape(PoseStack.Pose pose, VertexConsumer consumer, int light) {
+    private static void drawCape(PoseStack.Pose pose, VertexConsumer consumer, int light, float aspect) {
         int overlay = OverlayTexture.NO_OVERLAY;
-        float aspect = FloydCape.aspectRatio();
         float width = Math.max(0.65F, Math.min(0.80F, 0.8F * (aspect / 2.0F)));
         float height = 1.02F;
         float thickness = 0.08F;

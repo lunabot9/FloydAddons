@@ -7,6 +7,7 @@ import gg.floyd.clickgui.settings.impl.SelectorSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
+import gg.floyd.features.impl.cosmetic.FloydSharedCosmetics
 import gg.floyd.utils.moduleToggle
 import net.minecraft.world.entity.player.Player
 
@@ -20,7 +21,7 @@ internal object FloydPlayerSizeControls {
 
 object FloydPlayerSize : Module(
     name = "Player Size",
-    category = Category.PLAYER,
+    category = Category.COSMETIC,
     description = "Floyd player model scale settings.",
     toggled = true,
 ) {
@@ -36,6 +37,9 @@ object FloydPlayerSize : Module(
 
     @JvmStatic
     fun shouldScale(id: Int): Boolean {
+        if (mc.player?.id != id) {
+            FloydSharedCosmetics.appearanceForEntity(id)?.let { return it.size.enabled }
+        }
         if (!enabled || !playerSizeActive()) return false
         val player = mc.player ?: return false
         return when (targetName()) {
@@ -52,13 +56,28 @@ object FloydPlayerSize : Module(
     fun scaleX(): Float = scaleX
 
     @JvmStatic
+    fun scaleXFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.size?.x ?: scaleX
+
+    @JvmStatic
     fun scaleY(): Float = scaleY
+
+    @JvmStatic
+    fun scaleYFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.size?.y ?: scaleY
 
     @JvmStatic
     fun scaleZ(): Float = scaleZ
 
     @JvmStatic
+    fun scaleZFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.size?.z ?: scaleZ
+
+    @JvmStatic
     fun negativeScaleYOffset(): Float = kotlin.math.abs(scaleY) * 1.5f
+
+    @JvmStatic
+    fun negativeScaleYOffsetFor(id: Int): Float = kotlin.math.abs(scaleYFor(id)) * 1.5f
+
+    @JvmStatic
+    fun isSharedSizeEnabled(): Boolean = enabled && playerSizeActive()
 
     @JvmStatic
     fun playerSizeActive(): Boolean =

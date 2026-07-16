@@ -65,6 +65,19 @@ object FloydCape : Module(
     fun isActiveFor(id: Int): Boolean = isActive() && FloydAddonsMod.mc.player?.id == id
 
     @JvmStatic
+    fun isSharedActiveFor(id: Int): Boolean =
+        if (FloydAddonsMod.mc.player?.id == id) isActive()
+        else FloydSharedCosmetics.appearanceForEntity(id)?.cape?.enabled == true
+
+    @JvmStatic
+    fun textureFor(id: Int): Identifier =
+        if (FloydAddonsMod.mc.player?.id == id) texture() else builtinCape
+
+    @JvmStatic
+    fun aspectRatioFor(id: Int): Float =
+        if (FloydAddonsMod.mc.player?.id == id) aspectRatio() else 2.0f
+
+    @JvmStatic
     fun texture(): Identifier {
         gifTexture?.tick()
         val selected = selectedCape

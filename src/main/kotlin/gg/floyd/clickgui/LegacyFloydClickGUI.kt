@@ -4344,7 +4344,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun moduleBrowserCategories(): List<Category> =
-        listOf(Category.RENDER, Category.HIDERS, Category.PLAYER, Category.CAMERA, Category.PVP)
+        listOf(Category.RENDER, Category.HIDERS, Category.COSMETIC, Category.CAMERA, Category.PVP)
 
     private fun drawModuleBrowserSearch(context: GuiGraphics, alpha: Float) {
         val x = (width - moduleBrowserSearchWidth) / 2
@@ -4468,7 +4468,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 hiderEntry("Remove Tab Ping"),
                 LegacyModuleBrowserEntry(FloydNoArmor, "No Armor", LegacyModuleBrowserKind.HIDER_NO_ARMOR, "Target")
             )
-            Category.PLAYER -> listOf(
+            Category.COSMETIC -> listOf(
                 LegacyModuleBrowserEntry(FloydCape, "Cape", LegacyModuleBrowserKind.PLAYER_CAPE, "Enabled"),
                 LegacyModuleBrowserEntry(FloydConeHat, "Cone Hat", LegacyModuleBrowserKind.PLAYER_CONE_HAT, "Enabled"),
                 LegacyModuleBrowserEntry(FloydNickHider, "Neck Hider", LegacyModuleBrowserKind.PLAYER_NICK_HIDER, "Enabled"),

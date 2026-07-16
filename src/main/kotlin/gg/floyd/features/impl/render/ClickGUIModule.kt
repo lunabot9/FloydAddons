@@ -65,7 +65,8 @@ object ClickGUIModule : Module(
 
     fun ensurePanelPositionsFit() {
         migrateLegacyPanelNames()
-        val activeCategories = Category.categories.values.toList()
+        val activeCategories = activeCategories()
+        val removedPlayerPanel = Category.PLAYER !in activeCategories && panelSetting.remove(Category.PLAYER.name) != null
         val availableWidth = currentAvailableWidth()
         val wrappedFallbackLayout = wrappedPanelLayout(activeCategories, availableWidth)
         val distinctRows = activeCategories
@@ -94,7 +95,7 @@ object ClickGUIModule : Module(
             .any { entries -> entries.size > 1 }
         val screenshotFits = screenshotPanelLayout(activeCategories).values
             .all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }
-        if (hasMissing || hasOffscreen || hasStackedDefaults ||
+        if (removedPlayerPanel || hasMissing || hasOffscreen || hasStackedDefaults ||
             (screenshotFits && (usesWrappedFallback || usesLegacyWrappedRows))
         ) resetPositions()
     }
@@ -114,7 +115,7 @@ object ClickGUIModule : Module(
     }
 
     fun defaultPanelLayout(): Map<String, PanelData> {
-        val activeCategories = Category.categories.values.toList()
+        val activeCategories = activeCategories()
         val availableWidth = currentAvailableWidth()
         val screenshot = screenshotPanelLayout(activeCategories)
         return if (screenshot.values.all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }) {
@@ -124,15 +125,17 @@ object ClickGUIModule : Module(
         }
     }
 
+    private fun activeCategories(): List<Category> =
+        Category.categories.values.filter { ModuleManager.modulesByCategory[it].orEmpty().isNotEmpty() }
+
     private fun screenshotPanelLayout(activeCategories: List<Category>): Map<String, PanelData> {
         val template = linkedMapOf(
             Category.RENDER.name to PanelData(x = 6f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
             Category.HIDERS.name to PanelData(x = 266f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.PLAYER.name to PanelData(x = 526f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.COSMETIC.name to PanelData(x = 796f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.CAMERA.name to PanelData(x = 1086f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.MISC.name to PanelData(x = 1356f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.PVP.name to PanelData(x = 1646f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.COSMETIC.name to PanelData(x = 526f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.CAMERA.name to PanelData(x = 796f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.MISC.name to PanelData(x = 1086f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.PVP.name to PanelData(x = 1356f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
         )
         val layout = linkedMapOf<String, PanelData>()
         activeCategories.forEach { category ->

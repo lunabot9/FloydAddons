@@ -36,10 +36,16 @@ object FloydPlayerModel : Module(
     )
 
     @JvmStatic
-    fun isActiveFor(id: Int): Boolean = enabled && mc.player?.id == id
+    fun isActiveFor(id: Int): Boolean =
+        if (mc.player?.id == id) enabled else FloydSharedCosmetics.appearanceForEntity(id)?.model?.enabled == true
 
     @JvmStatic
     fun selectedModel(): String = FloydPlayerModelSelection.selectedName(model)
+
+    @JvmStatic
+    fun selectedModelFor(id: Int): String =
+        if (mc.player?.id == id) selectedModel()
+        else FloydSharedCosmetics.appearanceForEntity(id)?.model?.id ?: FloydPlayerModelSelection.models.first()
 
     @JvmStatic
     fun isGeorgeFloydModel(): Boolean = selectedModel() == "George Floyd"
@@ -49,6 +55,11 @@ object FloydPlayerModel : Module(
 
     @JvmStatic
     fun shouldShowHeads(): Boolean = showHeads
+
+    @JvmStatic
+    fun shouldShowHeadsFor(id: Int): Boolean =
+        if (mc.player?.id == id) showHeads
+        else FloydSharedCosmetics.appearanceForEntity(id)?.model?.showHeads ?: false
 
     @JvmStatic
     fun shouldHideHead(customModelActive: Boolean, hasWornHead: Boolean, showHeads: Boolean): Boolean =

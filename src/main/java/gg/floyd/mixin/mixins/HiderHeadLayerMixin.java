@@ -24,7 +24,7 @@ public class HiderHeadLayerMixin<S extends LivingEntityRenderState, M extends En
         boolean hideHead = FloydPlayerModel.shouldHideHead(
             FloydPlayerModel.isActiveFor(playerState.id),
             playerState.wornHeadType != null,
-            FloydPlayerModel.shouldShowHeads()
+            FloydPlayerModel.shouldShowHeadsFor(playerState.id)
         );
         if (!hideWithArmor && !hideHead) return;
 
