@@ -1,6 +1,7 @@
 package gg.floyd.features.impl.cosmetic
 
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.SelectorSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
@@ -28,6 +29,12 @@ object FloydPlayerModel : Module(
         desc = "The custom model shown for your local player."
     )
 
+    private val showHeads by BooleanSetting(
+        "Show Heads",
+        false,
+        desc = "Shows equipped player and mob heads while the custom player model is active."
+    )
+
     @JvmStatic
     fun isActiveFor(id: Int): Boolean = enabled && mc.player?.id == id
 
@@ -41,9 +48,17 @@ object FloydPlayerModel : Module(
     fun isJennyModel(): Boolean = selectedModel() == "Jenny"
 
     @JvmStatic
+    fun shouldShowHeads(): Boolean = showHeads
+
+    @JvmStatic
+    fun shouldHideHead(customModelActive: Boolean, hasWornHead: Boolean, showHeads: Boolean): Boolean =
+        customModelActive && hasWornHead && !showHeads
+
+    @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "model" to selectedModel(),
+        "showHeads" to showHeads,
         "localOnly" to true
     )
 }

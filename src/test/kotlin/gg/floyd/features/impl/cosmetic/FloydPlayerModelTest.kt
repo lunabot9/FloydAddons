@@ -2,6 +2,8 @@ package gg.floyd.features.impl.cosmetic
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class FloydPlayerModelTest {
     @Test
@@ -10,5 +12,13 @@ class FloydPlayerModelTest {
         assertEquals("George Floyd", FloydPlayerModelSelection.selectedName(1))
         assertEquals("Jenny", FloydPlayerModelSelection.selectedName(2))
         assertEquals("Tung Tung Sahur", FloydPlayerModelSelection.selectedName(99))
+    }
+
+    @Test
+    fun `heads are hidden only when the custom model is active and showing heads is disabled`() {
+        assertTrue(FloydPlayerModel.shouldHideHead(customModelActive = true, hasWornHead = true, showHeads = false))
+        assertFalse(FloydPlayerModel.shouldHideHead(customModelActive = true, hasWornHead = true, showHeads = true))
+        assertFalse(FloydPlayerModel.shouldHideHead(customModelActive = true, hasWornHead = false, showHeads = false))
+        assertFalse(FloydPlayerModel.shouldHideHead(customModelActive = false, hasWornHead = true, showHeads = false))
     }
 }
