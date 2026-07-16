@@ -52,14 +52,14 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
         }
 
         if (selectedModel.equals("Jenny")) {
-            submitJenny(poseStack, collector, light);
+            submitJenny(poseStack, collector, light, state);
             return;
         }
 
         submitTungTung(poseStack, collector, light);
     }
 
-    private void submitJenny(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+    private void submitJenny(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state) {
         poseStack.pushPose();
         getParentModel().head.translateAndRotate(poseStack);
         JennyImportedModel.renderHead(poseStack, collector, light);
@@ -68,8 +68,9 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
         poseStack.pushPose();
         getParentModel().body.translateAndRotate(poseStack);
         JennyImportedModel.renderBody(poseStack, collector, light);
-        renderJennyBust(poseStack, collector, light);
-        renderJennyBackside(poseStack, collector, light);
+        JennyJiggleOffset jiggle = JennyJiggleMotion.sample(state.id);
+        renderJennyBust(poseStack, collector, light, jiggle);
+        renderJennyBackside(poseStack, collector, light, jiggle);
         poseStack.popPose();
 
         poseStack.pushPose();
@@ -97,22 +98,32 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
         poseStack.popPose();
     }
 
-    private void renderJennyBackside(PoseStack poseStack, SubmitNodeCollector collector, int light) {
-        ellipsoid(poseStack, collector, light, -0.095F, 0.680F, 0.192F, 0.242F, 0.198F, 0.205F, JENNY_PANTS);
-        ellipsoid(poseStack, collector, light, 0.095F, 0.680F, 0.192F, 0.242F, 0.198F, 0.205F, JENNY_PANTS);
+    private void renderJennyBackside(PoseStack poseStack, SubmitNodeCollector collector, int light, JennyJiggleOffset jiggle) {
+        jiggledEllipsoid(poseStack, collector, light, -0.132F, 0.680F, 0.192F, 0.205F, 0.178F, 0.184F, JENNY_PANTS, jiggle, 0.88F);
+        jiggledEllipsoid(poseStack, collector, light, 0.132F, 0.680F, 0.192F, 0.205F, 0.178F, 0.184F, JENNY_PANTS, jiggle, 0.88F);
     }
 
-    private void renderJennyBust(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+    private void renderJennyBust(PoseStack poseStack, SubmitNodeCollector collector, int light, JennyJiggleOffset jiggle) {
         // Keep the bust part of Jenny's purple top while giving the otherwise flat imported
         // torso a rounded silhouette. The ellipsoids overlap the torso so they remain joined
         // during vanilla body animation instead of reading as separate floating pieces.
-        ellipsoid(poseStack, collector, light, -0.106F, 0.192F, -0.132F, 0.159F, 0.135F, 0.146F, JENNY_SHIRT);
-        ellipsoid(poseStack, collector, light, 0.106F, 0.192F, -0.132F, 0.159F, 0.135F, 0.146F, JENNY_SHIRT);
+        jiggledEllipsoid(poseStack, collector, light, -0.106F, 0.192F, -0.132F, 0.159F, 0.135F, 0.146F, JENNY_SHIRT, jiggle, 1.0F);
+        jiggledEllipsoid(poseStack, collector, light, 0.106F, 0.192F, -0.132F, 0.159F, 0.135F, 0.146F, JENNY_SHIRT, jiggle, 1.0F);
 
         // Two smaller exposed shapes sit above the larger clothed pair. They use Jenny's
         // existing skin tone and leave the center open instead of painting cleavage in front.
-        ellipsoid(poseStack, collector, light, -0.057F, 0.133F, -0.137F, 0.101F, 0.086F, 0.107F, JENNY_SKIN);
-        ellipsoid(poseStack, collector, light, 0.057F, 0.133F, -0.137F, 0.101F, 0.086F, 0.107F, JENNY_SKIN);
+        jiggledEllipsoid(poseStack, collector, light, -0.057F, 0.133F, -0.137F, 0.101F, 0.086F, 0.107F, JENNY_SKIN, jiggle, 1.18F);
+        jiggledEllipsoid(poseStack, collector, light, 0.057F, 0.133F, -0.137F, 0.101F, 0.086F, 0.107F, JENNY_SKIN, jiggle, 1.18F);
+    }
+
+    private static void jiggledEllipsoid(PoseStack stack, SubmitNodeCollector collector, int light,
+                                          float x, float y, float z, float sx, float sy, float sz,
+                                          int color, JennyJiggleOffset jiggle, float response) {
+        ellipsoid(stack, collector, light,
+            x + jiggle.getX() * response,
+            y + jiggle.getY() * response,
+            z + jiggle.getZ() * response,
+            sx, sy, sz, color);
     }
 
     private void submitTungTung(PoseStack poseStack, SubmitNodeCollector collector, int light) {

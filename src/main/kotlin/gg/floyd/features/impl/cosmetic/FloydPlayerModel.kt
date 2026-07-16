@@ -70,6 +70,7 @@ object FloydPlayerModel : Module(
         "enabled" to enabled,
         "model" to selectedModel(),
         "showHeads" to showHeads,
+        "jennyJiggle" to (mc.player?.id?.let(JennyJiggleMotion::stateFor) ?: mapOf("x" to 0f, "y" to 0f, "z" to 0f)),
         "localOnly" to true
     )
 }
