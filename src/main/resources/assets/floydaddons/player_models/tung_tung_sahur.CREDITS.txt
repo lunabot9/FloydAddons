@@ -1,0 +1,6 @@
+Tung Tung Sahur player model and texture
+Created by ImJoyler.
+https://github.com/ImJoyler
+
+Provided directly by the owner for use in FloydAddons.
+Imported from shizo--public-1.0.0.jar and rendered with its original run and hit animations.

@@ -25,6 +25,7 @@
     "mixins.CameraTypeMixin",
     "mixins.ChatComponentMixin",
     "mixins.ClientPacketListenerMixin",
+    "mixins.EntityRenderDispatcherMixin",
     "mixins.FontMixin",
     "mixins.FloydBrandSpoofMixin",
     "mixins.FloydDefaultFontMixin",

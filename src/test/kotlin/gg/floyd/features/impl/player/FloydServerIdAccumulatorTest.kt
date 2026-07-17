@@ -82,6 +82,31 @@ class FloydServerIdAccumulatorTest {
     }
 
     @Test
+    fun `shared Floyd user nicknames render with chroma styles`() {
+        val red = Style.EMPTY.withColor(ChatFormatting.RED)
+        val blue = Style.EMPTY.withColor(ChatFormatting.BLUE)
+        val sequence = sequenceOf(
+            "Hello " to red,
+            "RemoteFloyd" to blue,
+            "!" to red
+        )
+
+        val replaced = FloydNickHider.replaceSharedFloydNameInSequenceForTest(
+            sequence,
+            "RemoteFloyd",
+            "George"
+        )
+        val collected = collect(replaced)
+
+        assertEquals("Hello George!", collected.joinToString("") { it.first })
+        assertEquals(red, collected[5].second)
+        assertEquals(red, collected[12].second)
+        val replacementColors = collected.subList(6, 12).map { it.second.color?.value }
+        assertTrue(replacementColors.all { it != null })
+        assertTrue(replacementColors.distinct().size > 1)
+    }
+
+    @Test
     fun `sequence date suffix replacement only changes the date-following token`() {
         val red = Style.EMPTY.withColor(ChatFormatting.RED)
         val blue = Style.EMPTY.withColor(ChatFormatting.BLUE)

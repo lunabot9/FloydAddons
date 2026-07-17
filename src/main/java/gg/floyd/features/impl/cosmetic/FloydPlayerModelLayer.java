@@ -20,8 +20,6 @@ import net.minecraft.resources.Identifier;
  */
 public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
     private static final Identifier WHITE_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/block/white_concrete.png");
-    private static final int WOOD = 0xFFDE7A20;
-    private static final int WOOD_DARK = 0xFF8B3E0D;
     private static final int WHITE = 0xFFFFFFFF;
     private static final int BLACK = 0xFF17100B;
     private static final int SKIN = 0xFF704733;
@@ -56,7 +54,7 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
             return;
         }
 
-        submitTungTung(poseStack, collector, light);
+        submitTungTung(poseStack, collector, light, state.walkAnimationSpeed, state.attackTime);
     }
 
     private void submitJenny(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state) {
@@ -126,53 +124,9 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
             sx, sy, sz, color);
     }
 
-    private void submitTungTung(PoseStack poseStack, SubmitNodeCollector collector, int light) {
-        renderTungHead(poseStack, collector, light);
-
-        poseStack.pushPose();
-        getParentModel().body.translateAndRotate(poseStack);
-        // Use a much squarer torso profile so the body reads as a simple block under the head.
-        profiledTube(poseStack, collector, light,
-            new float[] {-0.07F, 0.02F, 0.20F, 0.38F, 0.58F},
-            new float[] {0.22F, 0.23F, 0.23F, 0.23F, 0.22F},
-            new float[] {0.16F, 0.17F, 0.17F, 0.17F, 0.16F},
-            new float[] {0, 0, 0, 0, 0, 0}, WOOD);
-        poseStack.popPose();
-
-        renderArm(poseStack, collector, light, getParentModel().rightArm, true);
-        renderArm(poseStack, collector, light, getParentModel().leftArm, false);
-        renderLeg(poseStack, collector, light, getParentModel().rightLeg);
-        renderLeg(poseStack, collector, light, getParentModel().leftLeg);
-    }
-
-    private void renderTungHead(PoseStack poseStack, SubmitNodeCollector collector, int light) {
-        poseStack.pushPose();
-        getParentModel().head.translateAndRotate(poseStack);
-        // Match the torso's squarer look so the head reads more like a block than a rounded log.
-        profiledTube(poseStack, collector, light,
-            new float[] {-0.59F, -0.52F, -0.36F, -0.20F, -0.07F},
-            new float[] {0.16F, 0.22F, 0.22F, 0.22F, 0.18F},
-            new float[] {0.12F, 0.17F, 0.17F, 0.17F, 0.13F},
-            new float[] {0, 0, 0, 0, 0}, WOOD);
-
-        // Expressive face on the front (-Z), based on the supplied reference.
-        // Deep sockets and large circular eyes replace the previous eyebrow/cartoon-eye treatment.
-        ellipsoid(poseStack, collector, light, -0.095F, -0.30F, -0.181F, 0.105F, 0.125F, 0.032F, WOOD_DARK);
-        ellipsoid(poseStack, collector, light, 0.095F, -0.30F, -0.181F, 0.105F, 0.125F, 0.032F, WOOD_DARK);
-        ellipsoid(poseStack, collector, light, -0.095F, -0.30F, -0.208F, 0.076F, 0.090F, 0.026F, WHITE);
-        ellipsoid(poseStack, collector, light, 0.095F, -0.30F, -0.208F, 0.076F, 0.090F, 0.026F, WHITE);
-        ellipsoid(poseStack, collector, light, -0.078F, -0.295F, -0.232F, 0.039F, 0.049F, 0.018F, BLACK);
-        ellipsoid(poseStack, collector, light, 0.078F, -0.295F, -0.232F, 0.039F, 0.049F, 0.018F, BLACK);
-        ellipsoid(poseStack, collector, light, -0.090F, -0.315F, -0.249F, 0.011F, 0.014F, 0.007F, WHITE);
-        ellipsoid(poseStack, collector, light, 0.066F, -0.315F, -0.249F, 0.011F, 0.014F, 0.007F, WHITE);
-        ellipsoid(poseStack, collector, light, 0.0F, -0.15F, -0.225F, 0.052F, 0.082F, 0.045F, WOOD);
-        // Simple black smile: the middle sits lower than the corners in model-space (+Y is down).
-        for (int i = -3; i <= 3; i++) {
-            float x = i * 0.026F;
-            float y = 0.052F - (i * i) * 0.005F;
-            ellipsoid(poseStack, collector, light, x, y, -0.231F, 0.020F, 0.017F, 0.012F, BLACK);
-        }
-        poseStack.popPose();
+    private void submitTungTung(PoseStack poseStack, SubmitNodeCollector collector, int light,
+                                float movementSpeed, float attackTime) {
+        TungImportedModel.render(poseStack, collector, light, movementSpeed, attackTime);
     }
 
     private void submitGeorgeFloyd(PoseStack poseStack, SubmitNodeCollector collector, int light) {
@@ -265,38 +219,6 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
             new float[] {0.095F, 0.095F, 0.080F, 0.0F},
             new float[] {0, 0, 0, -0.08F}, PANTS);
         ellipsoid(poseStack, collector, light, 0.0F, 0.68F, -0.09F, 0.135F, 0.075F, 0.205F, PANTS);
-        poseStack.popPose();
-    }
-
-    private static void renderArm(PoseStack poseStack, SubmitNodeCollector collector, int light, ModelPart arm, boolean rightArm) {
-        poseStack.pushPose();
-        arm.translateAndRotate(poseStack);
-        poseStack.translate(rightArm ? 0.035F : -0.035F, -0.09F, 0.0F);
-        poseStack.mulPose(Axis.ZP.rotationDegrees(rightArm ? 16.0F : -16.0F));
-        // Shoulder, tapered forearm and rounded hand are one mesh, rather than stacked shapes.
-        profiledTube(poseStack, collector, light,
-            new float[] {-0.02F, 0.10F, 0.39F, 0.66F, 0.78F, 0.84F},
-            new float[] {0.085F, 0.080F, 0.058F, 0.047F, 0.060F, 0.0F},
-            new float[] {0.080F, 0.075F, 0.055F, 0.044F, 0.055F, 0.0F},
-            new float[] {0, 0, 0, 0, 0, 0}, WOOD);
-        // One rounded hand sphere, deliberately wider than the 0.047-wide forearm.
-        ellipsoid(poseStack, collector, light, 0.0F, 0.80F, -0.004F, 0.082F, 0.092F, 0.082F, WOOD);
-        poseStack.popPose();
-    }
-
-    private static void renderLeg(PoseStack poseStack, SubmitNodeCollector collector, int light, ModelPart leg) {
-        poseStack.pushPose();
-        leg.translateAndRotate(poseStack);
-        // Thigh, knee, shin, ankle and broad forward foot remain a single continuous mesh.
-        profiledTube(poseStack, collector, light,
-            new float[] {-0.19F, -0.08F, 0.25F, 0.34F, 0.55F, 0.695F, 0.765F},
-            new float[] {0.078F, 0.074F, 0.070F, 0.082F, 0.055F, 0.145F, 0.0F},
-            new float[] {0.075F, 0.071F, 0.068F, 0.078F, 0.055F, 0.190F, 0.0F},
-            new float[] {0, 0, 0, 0, -0.015F, -0.105F, -0.19F}, WOOD);
-        // Three forward-facing rounded toes, attached to the broad integrated foot.
-        ellipsoid(poseStack, collector, light, -0.075F, 0.710F, -0.245F, 0.035F, 0.032F, 0.105F, WOOD);
-        ellipsoid(poseStack, collector, light, 0.0F, 0.717F, -0.270F, 0.038F, 0.033F, 0.120F, WOOD);
-        ellipsoid(poseStack, collector, light, 0.075F, 0.710F, -0.245F, 0.035F, 0.032F, 0.105F, WOOD);
         poseStack.popPose();
     }
 

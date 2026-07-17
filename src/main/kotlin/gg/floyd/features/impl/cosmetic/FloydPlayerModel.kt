@@ -7,9 +7,17 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 
 internal object FloydPlayerModelSelection {
-    val models = listOf("Tung Tung Sahur", "George Floyd", "Jenny")
+    private val customModels = listOf("Tung Tung Sahur", "George Floyd", "Jenny")
+    val models = customModels + VanillaMobCatalog.labels
+    val modelDescriptions = mapOf(
+        "Tung Tung Sahur" to "Tung Tung Sahur player model created by ImJoyler."
+    ) + VanillaMobCatalog.labels.associateWith {
+        "Uses Minecraft's built-in mob model, texture, and animations for your player."
+    }
 
     fun selectedName(index: Int): String = models.getOrElse(index) { models.first() }
+
+    fun vanillaMobId(model: String): String? = VanillaMobCatalog.idForLabel(model)
 }
 
 /**
@@ -19,14 +27,15 @@ internal object FloydPlayerModelSelection {
 object FloydPlayerModel : Module(
     name = "Player Model",
     category = Category.COSMETIC,
-    description = "Client-side-only custom model for your player.",
+    description = "Client-side-only custom model for your player. Tung Tung Sahur model by ImJoyler.",
     toggled = false,
 ) {
     private val model by SelectorSetting(
         "Model",
         FloydPlayerModelSelection.models.first(),
         FloydPlayerModelSelection.models,
-        desc = "The custom model shown for your local player."
+        desc = "The custom model shown for your local player.",
+        optionDescriptions = FloydPlayerModelSelection.modelDescriptions
     )
 
     private val showHeads by BooleanSetting(
@@ -46,6 +55,9 @@ object FloydPlayerModel : Module(
     fun selectedModelFor(id: Int): String =
         if (mc.player?.id == id) selectedModel()
         else FloydSharedCosmetics.appearanceForEntity(id)?.model?.id ?: FloydPlayerModelSelection.models.first()
+
+    @JvmStatic
+    fun selectedVanillaMobIdFor(id: Int): String? = FloydPlayerModelSelection.vanillaMobId(selectedModelFor(id))
 
     @JvmStatic
     fun isGeorgeFloydModel(): Boolean = selectedModel() == "George Floyd"
@@ -69,6 +81,8 @@ object FloydPlayerModel : Module(
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "model" to selectedModel(),
+        "vanillaMobId" to FloydPlayerModelSelection.vanillaMobId(selectedModel()),
+        "vanillaMobRenderer" to VanillaMobPlayerModel.state(),
         "showHeads" to showHeads,
         "jennyJiggle" to (mc.player?.id?.let(JennyJiggleMotion::stateFor) ?: mapOf("x" to 0f, "y" to 0f, "z" to 0f)),
         "localOnly" to true

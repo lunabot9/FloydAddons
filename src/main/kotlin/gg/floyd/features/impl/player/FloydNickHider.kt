@@ -156,7 +156,11 @@ object FloydNickHider : Module(
             }
         }
         for ((find, replace) in SharedNeckHiderNames.mappings()) {
-            changed = styled.replaceIgnoreCase(find, replace) || changed
+            changed = styled.replaceIgnoreCase(
+                find,
+                replace,
+                { index, style -> ChatChroma.applyToStyle(style, index, speedMs = 12.0) }
+            ) || changed
         }
         if (FloydHiders.serverIdHider) {
             changed = styled.replaceDateServerId(SERVER_ID_REPLACEMENT) || changed
@@ -184,6 +188,7 @@ object FloydNickHider : Module(
             "profileIdHider" to FloydHiders.profileIdHider,
             "nickname" to nickname,
             "selfNameChroma" to selfNameChroma,
+            "sharedFloydNameChroma" to true,
             "nameMappings" to nameMappings.toSortedMap(String.CASE_INSENSITIVE_ORDER),
             "mappingCount" to nameMappings.size
         ),
@@ -435,6 +440,20 @@ object FloydNickHider : Module(
     ): FormattedCharSequence {
         val styled = StyledText.from(text) ?: return text
         return if (styled.replaceIgnoreCase(find, replace)) styled.toSequence() else text
+    }
+
+    internal fun replaceSharedFloydNameInSequenceForTest(
+        text: FormattedCharSequence,
+        find: String,
+        replace: String,
+    ): FormattedCharSequence {
+        val styled = StyledText.from(text) ?: return text
+        return if (styled.replaceIgnoreCase(
+                find,
+                replace,
+                { index, style -> ChatChroma.applyToStyle(style, index, speedMs = 12.0) }
+            )
+        ) styled.toSequence() else text
     }
 
     internal fun replaceDateServerIdInSequenceForTest(
