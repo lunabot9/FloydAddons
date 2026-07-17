@@ -78,6 +78,14 @@ object FloydPlayerModel : Module(
         customModelActive && hasWornHead && !showHeads
 
     @JvmStatic
+    fun shouldHideHeldItemFor(id: Int): Boolean =
+        shouldHideHeldItem(isActiveFor(id), selectedModelFor(id))
+
+    @JvmStatic
+    fun shouldHideHeldItem(customModelActive: Boolean, selectedModel: String): Boolean =
+        customModelActive && selectedModel == FloydPlayerModelSelection.models.first()
+
+    @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "model" to selectedModel(),

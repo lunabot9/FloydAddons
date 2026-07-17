@@ -35,4 +35,12 @@ class FloydPlayerModelTest {
         assertFalse(FloydPlayerModel.shouldHideHead(customModelActive = true, hasWornHead = false, showHeads = false))
         assertFalse(FloydPlayerModel.shouldHideHead(customModelActive = false, hasWornHead = true, showHeads = false))
     }
+
+    @Test
+    fun `held item is hidden only for an active tung tung model`() {
+        assertTrue(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "Tung Tung Sahur"))
+        assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = false, selectedModel = "Tung Tung Sahur"))
+        assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "George Floyd"))
+        assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "Jenny"))
+    }
 }
