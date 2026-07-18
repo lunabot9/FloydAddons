@@ -46,4 +46,10 @@ class FloydPlayerModelTest {
         assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "Jenny"))
         assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "Minion"))
     }
+
+    @Test
+    fun `minion is treated as a vanilla mob backed model`() {
+        assertEquals("copper_golem", FloydPlayerModelSelection.vanillaMobId("Minion"))
+        assertEquals("copper_golem", FloydPlayerModelSelection.vanillaMobId(FloydPlayerModelSelection.selectedName(3)))
+    }
 }

@@ -90,6 +90,9 @@ object FloydPlayerModel : Module(
         customModelActive && selectedModel == FloydPlayerModelSelection.models.first()
 
     @JvmStatic
+    fun usesBundledLayerFor(id: Int): Boolean = isActiveFor(id) && selectedVanillaMobIdFor(id) == null
+
+    @JvmStatic
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "model" to selectedModel(),

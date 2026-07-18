@@ -39,6 +39,6 @@ public abstract class LivingEntityRendererMixin {
     @Inject(method = "getRenderType", at = @At("HEAD"), cancellable = true)
     private void floydaddons$hideVanillaPlayerModel(LivingEntityRenderState state, boolean bodyVisible, boolean translucent, boolean glowing, CallbackInfoReturnable<RenderType> cir) {
         if (!((Object) this instanceof AvatarRenderer<?>) || !(state instanceof AvatarRenderState avatarState)) return;
-        if (FloydPlayerModel.isActiveFor(avatarState.id)) cir.setReturnValue(null);
+        if (FloydPlayerModel.usesBundledLayerFor(avatarState.id)) cir.setReturnValue(null);
     }
 }

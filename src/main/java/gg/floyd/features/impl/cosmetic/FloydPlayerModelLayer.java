@@ -41,7 +41,7 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
 
     @Override
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state, float limbAngle, float limbDistance) {
-        if (!FloydPlayerModel.isActiveFor(state.id) || state.isInvisible) return;
+        if (!FloydPlayerModel.usesBundledLayerFor(state.id) || state.isInvisible) return;
 
         String selectedModel = FloydPlayerModel.selectedModelFor(state.id);
         if (selectedModel.equals("George Floyd")) {
