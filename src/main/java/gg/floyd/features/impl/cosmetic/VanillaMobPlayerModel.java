@@ -14,7 +14,9 @@ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds lightweight, client-only mob entities and asks Minecraft's own entity renderers to
@@ -22,7 +24,10 @@ import java.util.Map;
  * the player's appearance and cannot affect hitboxes, AI, networking, or gameplay.
  */
 public final class VanillaMobPlayerModel {
+    private static final String MINION_MODEL = "Minion";
+    private static final Identifier MINION_TEXTURE = Identifier.fromNamespaceAndPath("floydaddons", "textures/entity/player_model/minion_copper_golem.png");
     private static final Map<Integer, CachedMob> CACHE = new HashMap<>();
+    private static final Set<EntityRenderState> MINION_RENDER_STATES = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     private static String lastRequestedMobId;
     private static String lastCreatedEntityType;
     private static String lastFailure;
@@ -51,8 +56,18 @@ public final class VanillaMobPlayerModel {
 
         syncEntity(cached, player);
         EntityRenderState state = dispatcher.extractEntity(cached.entity, partialTick);
+        if (state != null) {
+            MINION_RENDER_STATES.remove(state);
+            if (MINION_MODEL.equals(FloydPlayerModel.selectedModelFor(player.getId()))) {
+                markMinionState(state);
+            }
+        }
         replacementCount++;
         return state;
+    }
+
+    public static Identifier minionTextureFor(EntityRenderState state) {
+        return MINION_RENDER_STATES.contains(state) ? MINION_TEXTURE : null;
     }
 
     public static Map<String, Object> state() {
@@ -118,6 +133,10 @@ public final class VanillaMobPlayerModel {
                 cached.lastAnimationTick = player.tickCount;
             }
         }
+    }
+
+    private static void markMinionState(EntityRenderState state) {
+        MINION_RENDER_STATES.add(state);
     }
 
     private static final class CachedMob {

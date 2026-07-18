@@ -55,6 +55,7 @@ import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydDarkMode
 import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydHubMap
 import gg.floyd.features.impl.render.FloydTimeChanger
@@ -111,7 +112,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydTimeChanger, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydSkyBlockPackDisabler,
+            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydSkyBlockPackDisabler,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
@@ -258,6 +259,10 @@ object ModuleManager {
 
     fun render(guiGraphics: GuiGraphics, tickCounter: DeltaTracker) {
         if (mc.level == null || mc.player == null || mc.screen == HudManager || mc.options.hideGui) return
+
+        FloydPerf.section("HudLayer.darkMode") {
+            FloydDarkMode.renderHudBackdrop(guiGraphics)
+        }
 
         // The overhead ESP nameplates now render from the world-end post-HUD pass (PostHudOverlay), like
         // the other Floyd panels, so they stay visible with any screen open and composite under GUIs.

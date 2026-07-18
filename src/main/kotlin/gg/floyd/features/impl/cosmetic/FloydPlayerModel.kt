@@ -7,17 +7,21 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 
 internal object FloydPlayerModelSelection {
-    private val customModels = listOf("Tung Tung Sahur", "George Floyd", "Jenny")
+    private const val MINION_MODEL = "Minion"
+    private val customModels = listOf("Tung Tung Sahur", "George Floyd", "Jenny", MINION_MODEL)
     val models = customModels + VanillaMobCatalog.labels
     val modelDescriptions = mapOf(
-        "Tung Tung Sahur" to "Tung Tung Sahur player model created by ImJoyler."
+        "Tung Tung Sahur" to "Tung Tung Sahur player model created by ImJoyler.",
+        MINION_MODEL to "Uses the Copper Golem's height and animations with a Floyd minion texture."
     ) + VanillaMobCatalog.labels.associateWith {
         "Uses Minecraft's built-in mob model, texture, and animations for your player."
     }
 
     fun selectedName(index: Int): String = models.getOrElse(index) { models.first() }
 
-    fun vanillaMobId(model: String): String? = VanillaMobCatalog.idForLabel(model)
+    fun vanillaMobId(model: String): String? =
+        if (model == MINION_MODEL) "copper_golem"
+        else VanillaMobCatalog.idForLabel(model)
 }
 
 /**

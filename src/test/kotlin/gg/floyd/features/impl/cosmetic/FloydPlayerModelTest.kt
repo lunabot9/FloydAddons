@@ -11,6 +11,7 @@ class FloydPlayerModelTest {
         assertEquals("Tung Tung Sahur", FloydPlayerModelSelection.selectedName(0))
         assertEquals("George Floyd", FloydPlayerModelSelection.selectedName(1))
         assertEquals("Jenny", FloydPlayerModelSelection.selectedName(2))
+        assertEquals("Minion", FloydPlayerModelSelection.selectedName(3))
         assertEquals("Tung Tung Sahur", FloydPlayerModelSelection.selectedName(99))
     }
 
@@ -22,6 +23,7 @@ class FloydPlayerModelTest {
     @Test
     fun `every vanilla mob model is exposed through the player model selector`() {
         assertEquals(89, VanillaMobCatalog.ids.size)
+        assertEquals("copper_golem", FloydPlayerModelSelection.vanillaMobId("Minion"))
         assertEquals("allay", FloydPlayerModelSelection.vanillaMobId("Allay"))
         assertEquals("zombified_piglin", FloydPlayerModelSelection.vanillaMobId("Zombified Piglin"))
         assertTrue(FloydPlayerModelSelection.models.contains("Ender Dragon"))
@@ -42,5 +44,6 @@ class FloydPlayerModelTest {
         assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = false, selectedModel = "Tung Tung Sahur"))
         assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "George Floyd"))
         assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "Jenny"))
+        assertFalse(FloydPlayerModel.shouldHideHeldItem(customModelActive = true, selectedModel = "Minion"))
     }
 }
