@@ -47,7 +47,9 @@ public abstract class GuiRendererMixin {
         addRenderer(extended, new RoundRectPIPRenderer(ignoredCollector));
         addRenderer(extended, new PanelBlurPIPRenderer(ignoredCollector));
         addRenderer(extended, new ItemStateRenderer(ignoredCollector));
-        this.pictureInPictureRenderers = Map.copyOf(extended);
+        // Fabric API registers additional PIP renderers after GuiRenderer construction, so this
+        // registry must stay mutable after we append Floyd's custom renderers.
+        this.pictureInPictureRenderers = new LinkedHashMap<>(extended);
     }
     *///?} else {
     @Inject(method = "<init>", at = @At("TAIL"))
@@ -64,7 +66,9 @@ public abstract class GuiRendererMixin {
         addRenderer(extended, new RoundRectPIPRenderer(bufferSource));
         addRenderer(extended, new PanelBlurPIPRenderer(bufferSource));
         addRenderer(extended, new ItemStateRenderer(bufferSource));
-        this.pictureInPictureRenderers = Map.copyOf(extended);
+        // Fabric API registers additional PIP renderers after GuiRenderer construction, so this
+        // registry must stay mutable after we append Floyd's custom renderers.
+        this.pictureInPictureRenderers = new LinkedHashMap<>(extended);
     }
 
     //?}
