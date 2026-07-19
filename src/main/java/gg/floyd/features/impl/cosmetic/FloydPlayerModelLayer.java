@@ -28,6 +28,14 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
     private static final int SWEATER = 0xFF171719;
     private static final int SWEATER_STRIPE = 0xFF77777B;
     private static final int PANTS = 0xFF09090B;
+    private static final int SUIT_BLACK = 0xFF111112;
+    private static final int SHIRT_WHITE = 0xFFF1EFE8;
+    private static final int HAT_SHADOW = 0xFF050505;
+    private static final int BEARD = 0xFF1A120F;
+    private static final int BEARD_LIGHT = 0xFF9B9B95;
+    private static final int GLASSES = 0xFF2A2A2A;
+    private static final int ORTHODOX_SKIN = 0xFFB98563;
+    private static final int ORTHODOX_SKIN_LIGHT = 0xFFD6AA86;
     private static final int JENNY_SKIN = 0xFFF8CAA7;
     private static final int JENNY_SHIRT = 0xFF322640;
     private static final int JENNY_TRIM = 0xFF171719;
@@ -54,7 +62,112 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
             return;
         }
 
+        if (selectedModel.equals("Orthodox Man")) {
+            submitOrthodoxMan(poseStack, collector, light);
+            return;
+        }
+
         submitTungTung(poseStack, collector, light, state.walkAnimationSpeed, state.attackTime);
+    }
+
+    private void submitOrthodoxMan(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+        renderOrthodoxHead(poseStack, collector, light);
+
+        poseStack.pushPose();
+        getParentModel().body.translateAndRotate(poseStack);
+        profiledTube(poseStack, collector, light,
+            new float[] {-0.03F, 0.12F, 0.62F, 0.72F},
+            new float[] {0.19F, 0.21F, 0.18F, 0.13F},
+            new float[] {0.13F, 0.15F, 0.14F, 0.11F},
+            new float[] {0.01F, 0.01F, 0.02F, 0.02F}, SUIT_BLACK);
+        // White shirt panel and black tie from the workshop screenshot.
+        box(poseStack, collector, light, -0.095F, -0.005F, -0.151F, 0.095F, 0.44F, -0.115F, SHIRT_WHITE);
+        box(poseStack, collector, light, -0.028F, 0.02F, -0.172F, 0.028F, 0.29F, -0.112F, HAT_SHADOW);
+        box(poseStack, collector, light, -0.15F, -0.01F, -0.152F, -0.04F, 0.12F, -0.112F, SHIRT_WHITE);
+        box(poseStack, collector, light, 0.04F, -0.01F, -0.152F, 0.15F, 0.12F, -0.112F, SHIRT_WHITE);
+        poseStack.popPose();
+
+        renderOrthodoxArm(poseStack, collector, light, getParentModel().rightArm);
+        renderOrthodoxArm(poseStack, collector, light, getParentModel().leftArm);
+        renderOrthodoxLeg(poseStack, collector, light, getParentModel().rightLeg);
+        renderOrthodoxLeg(poseStack, collector, light, getParentModel().leftLeg);
+    }
+
+    private void renderOrthodoxHead(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+        poseStack.pushPose();
+        getParentModel().head.translateAndRotate(poseStack);
+        ellipsoid(poseStack, collector, light, 0.0F, -0.29F, -0.005F, 0.185F, 0.245F, 0.175F, ORTHODOX_SKIN);
+        ellipsoidCap(poseStack, collector, light, 0.0F, -0.32F, -0.005F, 0.19F, 0.25F, 0.18F, HAIR);
+        // Taller square hat with a wide brim like the workshop model.
+        box(poseStack, collector, light, -0.33F, -0.59F, -0.33F, 0.33F, -0.54F, 0.33F, SUIT_BLACK);
+        box(poseStack, collector, light, -0.16F, -0.95F, -0.16F, 0.16F, -0.54F, 0.16F, SUIT_BLACK);
+        box(poseStack, collector, light, -0.13F, -0.92F, -0.13F, 0.13F, -0.80F, 0.13F, HAT_SHADOW);
+        // Small eyes tucked behind round wire glasses.
+        ellipsoid(poseStack, collector, light, -0.058F, -0.26F, -0.172F, 0.020F, 0.025F, 0.012F, BLACK);
+        ellipsoid(poseStack, collector, light, 0.058F, -0.26F, -0.172F, 0.020F, 0.025F, 0.012F, BLACK);
+        renderGlasses(poseStack, collector, light);
+        ellipsoid(poseStack, collector, light, 0.0F, -0.19F, -0.18F, 0.038F, 0.055F, 0.032F, ORTHODOX_SKIN_LIGHT);
+        ellipsoid(poseStack, collector, light, 0.0F, -0.02F, -0.10F, 0.17F, 0.16F, 0.135F, BEARD);
+        ellipsoid(poseStack, collector, light, 0.0F, 0.02F, -0.14F, 0.11F, 0.10F, 0.09F, BEARD_LIGHT);
+        ellipsoid(poseStack, collector, light, -0.12F, -0.06F, -0.13F, 0.062F, 0.085F, 0.060F, BEARD_LIGHT);
+        ellipsoid(poseStack, collector, light, 0.12F, -0.06F, -0.13F, 0.062F, 0.085F, 0.060F, BEARD_LIGHT);
+        renderOrthodoxBraids(poseStack, collector, light);
+        profiledTube(poseStack, collector, light,
+            new float[] {-0.43F, -0.25F, -0.03F},
+            new float[] {0.024F, 0.021F, 0.015F},
+            new float[] {0.018F, 0.016F, 0.012F},
+            new float[] {0.155F, 0.15F, 0.14F}, BEARD);
+        profiledTube(poseStack, collector, light,
+            new float[] {-0.43F, -0.25F, -0.03F},
+            new float[] {0.024F, 0.021F, 0.015F},
+            new float[] {0.018F, 0.016F, 0.012F},
+            new float[] {-0.155F, -0.15F, -0.14F}, BEARD);
+        poseStack.popPose();
+    }
+
+    private static void renderGlasses(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+        box(poseStack, collector, light, -0.118F, -0.305F, -0.190F, -0.008F, -0.198F, -0.176F, GLASSES);
+        box(poseStack, collector, light, 0.008F, -0.305F, -0.190F, 0.118F, -0.198F, -0.176F, GLASSES);
+        box(poseStack, collector, light, -0.010F, -0.259F, -0.188F, 0.010F, -0.246F, -0.176F, GLASSES);
+        box(poseStack, collector, light, -0.165F, -0.255F, -0.184F, -0.118F, -0.242F, -0.176F, GLASSES);
+        box(poseStack, collector, light, 0.118F, -0.255F, -0.184F, 0.165F, -0.242F, -0.176F, GLASSES);
+    }
+
+    private static void renderOrthodoxBraids(PoseStack poseStack, SubmitNodeCollector collector, int light) {
+        braidedLock(poseStack, collector, light, -0.182F);
+        braidedLock(poseStack, collector, light, 0.182F);
+    }
+
+    private static void braidedLock(PoseStack poseStack, SubmitNodeCollector collector, int light, float x) {
+        ellipsoid(poseStack, collector, light, x, -0.16F, -0.02F, 0.024F, 0.040F, 0.020F, HAIR);
+        ellipsoid(poseStack, collector, light, x * 1.01F, -0.06F, -0.015F, 0.022F, 0.038F, 0.019F, HAIR);
+        ellipsoid(poseStack, collector, light, x * 1.02F, 0.04F, -0.010F, 0.021F, 0.036F, 0.018F, HAIR);
+        ellipsoid(poseStack, collector, light, x * 1.03F, 0.14F, -0.006F, 0.020F, 0.034F, 0.017F, HAIR);
+        ellipsoid(poseStack, collector, light, x * 1.04F, 0.22F, -0.002F, 0.015F, 0.022F, 0.013F, HAIR);
+    }
+
+    private static void renderOrthodoxArm(PoseStack poseStack, SubmitNodeCollector collector, int light, ModelPart arm) {
+        poseStack.pushPose();
+        arm.translateAndRotate(poseStack);
+        profiledTube(poseStack, collector, light,
+            new float[] {-0.05F, 0.10F, 0.62F, 0.69F},
+            new float[] {0.10F, 0.10F, 0.08F, 0.07F},
+            new float[] {0.09F, 0.09F, 0.07F, 0.06F},
+            new float[] {0.0F, 0.0F, 0.0F, 0.0F}, SUIT_BLACK);
+        ellipsoid(poseStack, collector, light, 0.0F, 0.73F, 0.0F, 0.078F, 0.095F, 0.074F, ORTHODOX_SKIN);
+        poseStack.popPose();
+    }
+
+    private static void renderOrthodoxLeg(PoseStack poseStack, SubmitNodeCollector collector, int light, ModelPart leg) {
+        poseStack.pushPose();
+        leg.translateAndRotate(poseStack);
+        profiledTube(poseStack, collector, light,
+            new float[] {-0.04F, 0.10F, 0.62F, 0.70F},
+            new float[] {0.10F, 0.10F, 0.08F, 0.0F},
+            new float[] {0.09F, 0.09F, 0.07F, 0.0F},
+            new float[] {0.0F, 0.0F, 0.0F, -0.07F}, PANTS);
+        ellipsoid(poseStack, collector, light, 0.0F, 0.68F, -0.09F, 0.13F, 0.07F, 0.19F, SUIT_BLACK);
+        poseStack.popPose();
     }
 
     private void submitJenny(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state) {

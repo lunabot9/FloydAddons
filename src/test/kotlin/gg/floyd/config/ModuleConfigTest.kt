@@ -256,6 +256,22 @@ class ModuleConfigTest {
     }
 
     @Test
+    fun `legacy player model value alias migrates before selector settings are read`() {
+        val playerModel = LegacyPlayerModelModule()
+        loadLegacyConfigEntry(
+            "Player Model",
+            playerModel,
+            """
+            {
+              "Model": "Jew"
+            }
+            """.trimIndent()
+        )
+
+        assertEquals(3, playerModel.model)
+    }
+
+    @Test
     fun `legacy hiders no armor mode setting loads into Floyd GUI target label`() {
         val hiders = LegacyHidersModule()
         loadLegacyConfigEntry(
@@ -592,6 +608,20 @@ class ModuleConfigTest {
     ) {
         val image by gg.floyd.clickgui.settings.impl.StringSetting("Image", "", 96, desc = "Test image.")
         val spinSpeed by NumberSetting("Spin Speed", 0.0f, 0.0f, 360.0f, 1.0f, desc = "Test spin.")
+    }
+
+    private class LegacyPlayerModelModule : Module(
+        name = "Player Model",
+        category = Category.COSMETIC,
+        description = "Test module for player model selector value aliases.",
+        toggled = false
+    ) {
+        val model by SelectorSetting(
+            "Model",
+            "Tung Tung Sahur",
+            listOf("Tung Tung Sahur", "George Floyd", "Jenny", "Orthodox Man", "Minion"),
+            desc = "Test player model."
+        )
     }
 
     private class MovedInventoryModule : Module(

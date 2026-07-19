@@ -11,7 +11,8 @@ class FloydPlayerModelTest {
         assertEquals("Tung Tung Sahur", FloydPlayerModelSelection.selectedName(0))
         assertEquals("George Floyd", FloydPlayerModelSelection.selectedName(1))
         assertEquals("Jenny", FloydPlayerModelSelection.selectedName(2))
-        assertEquals("Minion", FloydPlayerModelSelection.selectedName(3))
+        assertEquals("Orthodox Man", FloydPlayerModelSelection.selectedName(3))
+        assertEquals("Minion", FloydPlayerModelSelection.selectedName(4))
         assertEquals("Tung Tung Sahur", FloydPlayerModelSelection.selectedName(99))
     }
 
@@ -50,6 +51,6 @@ class FloydPlayerModelTest {
     @Test
     fun `minion is treated as a vanilla mob backed model`() {
         assertEquals("copper_golem", FloydPlayerModelSelection.vanillaMobId("Minion"))
-        assertEquals("copper_golem", FloydPlayerModelSelection.vanillaMobId(FloydPlayerModelSelection.selectedName(3)))
+        assertEquals("copper_golem", FloydPlayerModelSelection.vanillaMobId(FloydPlayerModelSelection.selectedName(4)))
     }
 }

@@ -8,10 +8,12 @@ import gg.floyd.features.Module
 
 internal object FloydPlayerModelSelection {
     private const val MINION_MODEL = "Minion"
-    private val customModels = listOf("Tung Tung Sahur", "George Floyd", "Jenny", MINION_MODEL)
+    private const val ORTHODOX_MAN_MODEL = "Orthodox Man"
+    private val customModels = listOf("Tung Tung Sahur", "George Floyd", "Jenny", ORTHODOX_MAN_MODEL, MINION_MODEL)
     val models = customModels + VanillaMobCatalog.labels
     val modelDescriptions = mapOf(
         "Tung Tung Sahur" to "Tung Tung Sahur player model created by ImJoyler.",
+        ORTHODOX_MAN_MODEL to "A bundled suit-and-hat player model inspired by a reference portrait.",
         MINION_MODEL to "Uses the Copper Golem's height and animations with a Floyd minion texture."
     ) + VanillaMobCatalog.labels.associateWith {
         "Uses Minecraft's built-in mob model, texture, and animations for your player."

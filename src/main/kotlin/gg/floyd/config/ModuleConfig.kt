@@ -46,6 +46,7 @@ class ModuleConfig internal constructor(file: File) {
                 // Remap keys that moved between modules in the HUD/GUI reorg before reading them.
                 // Persisted immediately so the on-disk config uses the new keys on subsequent loads.
                 var migrated = migrateMovedKeys(jsonArray)
+                migrated = migratePlayerModelAliases(jsonArray) || migrated
                 migrated = migratePanelBorderFadeChroma(jsonArray) || migrated
                 migrated = migrateCollapsedEnabledToggles(jsonArray) || migrated
                 if (migrated) {
@@ -201,6 +202,10 @@ class ModuleConfig internal constructor(file: File) {
         private fun canonicalSettingName(moduleName: String, settingName: String): String =
             legacySettingNames[moduleName]?.get(settingName.lowercase()) ?: settingName
 
+        private val legacyPlayerModelNames = mapOf(
+            "jew" to "Orthodox Man"
+        )
+
         /**
          * Destination of a relocated setting key: the canonical (lowercased) name of the module that
          * now owns it, and the setting key it is serialized under there ([toKey], same as the source
@@ -333,6 +338,30 @@ class ModuleConfig internal constructor(file: File) {
                             settingKey, sourceModule, target.toModule, target.toKey
                         )
                     }
+                }
+            }
+            return changed
+        }
+
+        /**
+         * Rewrites legacy Player Model option labels to their current selector entry names before the
+         * settings are read. SelectorSetting falls back to the first option when a saved string is no
+         * longer present, so these aliases must be normalized first to avoid silently selecting the
+         * default Tung Tung Sahur entry.
+         */
+        private fun migratePlayerModelAliases(jsonArray: JsonArray): Boolean {
+            var changed = false
+            for (element in jsonArray) {
+                val moduleObj = element as? JsonObject ?: continue
+                val moduleName = moduleObj.get("name")?.asString ?: continue
+                if (canonicalModuleName(moduleName) != "player model") continue
+                val settings = moduleObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject ?: continue
+                val model = settings.get("Model")?.takeIf { it.isJsonPrimitive }?.asString ?: continue
+                val migratedModel = legacyPlayerModelNames[model.lowercase()] ?: continue
+                settings.addProperty("Model", migratedModel)
+                changed = true
+                if (loggedMovedKeys.add("player model:model:$model")) {
+                    migrationLogger.info("Migrated Player Model selection '{}' to '{}'.", model, migratedModel)
                 }
             }
             return changed
