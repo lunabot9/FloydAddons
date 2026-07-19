@@ -45,6 +45,7 @@
     "mixins.HiderFallingBlockRendererMixin",
     "mixins.HiderHeadLayerMixin",
     "mixins.HiderHeldItemLayerMixin",
+    "mixins.InventoryScreenMixin",
     "mixins.KeyBindingMixin",
     "mixins.LevelRendererMixin",
     "mixins.LivingEntityRendererMixin",

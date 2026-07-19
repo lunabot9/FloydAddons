@@ -27,6 +27,7 @@ public final class VanillaMobPlayerModel {
     private static final String MINION_MODEL = "Minion";
     private static final Identifier MINION_TEXTURE = Identifier.fromNamespaceAndPath("floydaddons", "textures/entity/player_model/minion_copper_golem.png");
     private static final Map<Integer, CachedMob> CACHE = new HashMap<>();
+    private static final Set<Entity> MINION_ENTITIES = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     private static final Set<EntityRenderState> MINION_RENDER_STATES = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     private static String lastRequestedMobId;
     private static String lastCreatedEntityType;
@@ -35,39 +36,44 @@ public final class VanillaMobPlayerModel {
 
     private VanillaMobPlayerModel() {}
 
+    public static LivingEntity previewEntityFor(AbstractClientPlayer player) {
+        String mobId = FloydPlayerModel.selectedVanillaMobIdFor(player.getId());
+        if (mobId == null) return player;
+
+        CachedMob cached = getOrCreateCachedMob(player, mobId);
+        if (cached == null || !(cached.entity instanceof LivingEntity living)) return player;
+
+        syncEntity(cached, player);
+        trackMinionEntity(cached.entity, MINION_MODEL.equals(FloydPlayerModel.selectedModelFor(player.getId())));
+        return living;
+    }
+
     public static EntityRenderState extract(EntityRenderDispatcher dispatcher, AbstractClientPlayer player, float partialTick) {
         String mobId = FloydPlayerModel.selectedVanillaMobIdFor(player.getId());
         if (mobId == null) return null;
         lastRequestedMobId = mobId;
 
-        Level level = player.level();
-        CachedMob cached = CACHE.get(player.getId());
-        if (cached == null || cached.source != player || cached.level != level || !cached.mobId.equals(mobId)) {
-            Entity mob = createMob(level, mobId);
-            if (mob == null) {
-                lastFailure = "Could not create minecraft:" + mobId;
-                return null;
-            }
-            cached = new CachedMob(player, level, mobId, mob);
-            CACHE.put(player.getId(), cached);
-            lastCreatedEntityType = BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).toString();
-            lastFailure = null;
-        }
+        CachedMob cached = getOrCreateCachedMob(player, mobId);
+        if (cached == null) return null;
 
         syncEntity(cached, player);
+        trackMinionEntity(cached.entity, MINION_MODEL.equals(FloydPlayerModel.selectedModelFor(player.getId())));
         EntityRenderState state = dispatcher.extractEntity(cached.entity, partialTick);
-        if (state != null) {
-            MINION_RENDER_STATES.remove(state);
-            if (MINION_MODEL.equals(FloydPlayerModel.selectedModelFor(player.getId()))) {
-                markMinionState(state);
-            }
-        }
+        onEntityStateExtracted(cached.entity, state);
         replacementCount++;
         return state;
     }
 
     public static Identifier minionTextureFor(EntityRenderState state) {
         return MINION_RENDER_STATES.contains(state) ? MINION_TEXTURE : null;
+    }
+
+    public static void onEntityStateExtracted(Entity entity, EntityRenderState state) {
+        if (state == null) return;
+        MINION_RENDER_STATES.remove(state);
+        if (MINION_ENTITIES.contains(entity)) {
+            markMinionState(state);
+        }
     }
 
     public static Map<String, Object> state() {
@@ -86,6 +92,30 @@ public final class VanillaMobPlayerModel {
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getValue(id);
         Entity entity = type.create(level, EntitySpawnReason.COMMAND);
         return entity instanceof Mob ? entity : null;
+    }
+
+    private static CachedMob getOrCreateCachedMob(AbstractClientPlayer player, String mobId) {
+        Level level = player.level();
+        CachedMob cached = CACHE.get(player.getId());
+        if (cached != null && cached.source == player && cached.level == level && cached.mobId.equals(mobId)) {
+            return cached;
+        }
+
+        if (cached != null) {
+            MINION_ENTITIES.remove(cached.entity);
+        }
+
+        Entity mob = createMob(level, mobId);
+        if (mob == null) {
+            lastFailure = "Could not create minecraft:" + mobId;
+            return null;
+        }
+
+        cached = new CachedMob(player, level, mobId, mob);
+        CACHE.put(player.getId(), cached);
+        lastCreatedEntityType = BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).toString();
+        lastFailure = null;
+        return cached;
     }
 
     private static void syncEntity(CachedMob cached, AbstractClientPlayer player) {
@@ -137,6 +167,11 @@ public final class VanillaMobPlayerModel {
 
     private static void markMinionState(EntityRenderState state) {
         MINION_RENDER_STATES.add(state);
+    }
+
+    private static void trackMinionEntity(Entity entity, boolean minion) {
+        if (minion) MINION_ENTITIES.add(entity);
+        else MINION_ENTITIES.remove(entity);
     }
 
     private static final class CachedMob {

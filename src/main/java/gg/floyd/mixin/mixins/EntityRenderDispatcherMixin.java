@@ -26,4 +26,13 @@ public abstract class EntityRenderDispatcherMixin {
         );
         if (replacement != null) cir.setReturnValue(replacement);
     }
+
+    @Inject(method = "extractEntity", at = @At("RETURN"))
+    private <E extends Entity> void floydaddons$markMinionPreviewStates(
+        E entity,
+        float partialTick,
+        CallbackInfoReturnable<EntityRenderState> cir
+    ) {
+        VanillaMobPlayerModel.onEntityStateExtracted(entity, cir.getReturnValue());
+    }
 }
