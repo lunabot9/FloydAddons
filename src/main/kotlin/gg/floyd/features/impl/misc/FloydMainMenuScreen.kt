@@ -26,47 +26,55 @@ import net.minecraft.network.chat.Component
  */
 class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
     private val buttons = listOf(
-        MenuButton("Singleplayer", onClick = { screen -> FloydAddonsMod.mc.setScreen(SelectWorldScreen(screen)) }),
-        MenuButton("Multiplayer", onClick = { screen -> FloydAddonsMod.mc.setScreen(JoinMultiplayerScreen(screen)) }),
-        MenuButton("Options", onClick = { screen -> FloydAddonsMod.mc.setScreen(OptionsScreen(screen, FloydAddonsMod.mc.options, false)) }),
-        MenuButton("Quit", onClick = { _ -> FloydAddonsMod.mc.stop() })
+        MenuButton("Singleplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(SelectWorldScreen(screen)) }),
+        MenuButton("Multiplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(JoinMultiplayerScreen(screen)) }),
+        MenuButton("Options", ButtonStyle.SECONDARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(OptionsScreen(screen, FloydAddonsMod.mc.options, false)) }),
+        MenuButton("Quit", ButtonStyle.SECONDARY, onClick = { _ -> FloydAddonsMod.mc.stop() })
     )
 
     override fun extractBackground(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
-        if (!FloydMenuVideoBackground.render(context)) {
-            context.fill(0, 0, context.guiWidth(), context.guiHeight(), 0xFF000000.toInt())
-        }
+        context.fill(0, 0, context.guiWidth(), context.guiHeight(), 0xFF050913.toInt())
     }
 
     override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         super.extractRenderState(context, mouseX, mouseY, deltaTicks)
 
         val scale = ClickGUIModule.getStandardGuiScale()
+        val time = (System.currentTimeMillis() % 1_200_000L) / 1000f
         layout(scale)
         val cursorX = floydMouseX / scale
         val cursorY = floydMouseY / scale
 
         NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
             NVGRenderer.scale(scale, scale)
-
-            val titleX = buttons.first().x
-            val titleY = titleTop
-            FloydMenuScreenStyling.drawWord("FloydAddons", titleX, titleY, TITLE_SIZE, 1f)
-            val titleWidth = NVGRenderer.textWidth("FloydAddons", TITLE_SIZE, NVGRenderer.defaultFont)
-            NVGRenderer.text(
-                "v${FloydAddonsMod.MOD_VERSION}",
-                titleX + titleWidth + 12f,
-                titleY + TITLE_SIZE * 0.55f,
-                VERSION_SIZE,
-                0xD4D4D4D4.toInt(),
-                NVGRenderer.defaultFont
+            FloydMenuVideoBackground.render(
+                width = FloydAddonsMod.mc.window.screenWidth / scale,
+                height = FloydAddonsMod.mc.window.screenHeight / scale,
+                time = time
             )
+
+            drawPanels(time, cursorX, cursorY)
+
+            val titleWidth = NVGRenderer.textWidth(TITLE_TEXT, TITLE_SIZE, NVGRenderer.defaultFont)
+            NVGRenderer.textImmediate(TITLE_TEXT, titleX - titleWidth * 0.5f, titleY, TITLE_SIZE, 0xFFD2D2D2.toInt(), NVGRenderer.defaultFont)
 
             for (button in buttons) {
                 val hovered = button.contains(cursorX, cursorY)
-                val color = if (hovered) 0xFFFFFFFF.toInt() else 0xD6D6D6D6.toInt()
-                NVGRenderer.text(button.label, button.x, button.y, BUTTON_SIZE, color, NVGRenderer.defaultFont)
+                val color = when (button.style) {
+                    ButtonStyle.PRIMARY -> if (hovered) 0xFFFFFFFF.toInt() else 0xE8ECECEC.toInt()
+                    ButtonStyle.SECONDARY -> if (hovered) 0xFFFFFFFF.toInt() else 0xCFCFCFCF.toInt()
+                }
+                NVGRenderer.textImmediate(button.label, button.labelX, button.labelY, button.textSize, color, NVGRenderer.defaultFont)
             }
+
+            NVGRenderer.textImmediate(
+                "Floyd Addons v${FloydAddonsMod.MOD_VERSION}",
+                footerX - NVGRenderer.textWidth("Floyd Addons v${FloydAddonsMod.MOD_VERSION}", FOOTER_SIZE, NVGRenderer.defaultFont) * 0.5f,
+                footerY,
+                FOOTER_SIZE,
+                0x8ED4D4D4.toInt(),
+                NVGRenderer.defaultFont
+            )
         }
     }
 
@@ -74,13 +82,54 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
     private fun layout(scale: Float) {
         val viewWidth = FloydAddonsMod.mc.window.screenWidth / scale
         val viewHeight = FloydAddonsMod.mc.window.screenHeight / scale
-        val baseX = viewWidth * 0.06f
-        titleTop = viewHeight * 0.12f
-        var y = titleTop + TITLE_SIZE + 34f
+
+        val panelWidth = minOf(320f, viewWidth * 0.36f).coerceAtLeast(240f)
+        val primaryHeight = 30f
+        val primaryGap = 14f
+        val primaryLeft = (viewWidth - panelWidth) * 0.5f
+        titleX = primaryLeft + panelWidth * 0.5f
+
+        val primaryTop = viewHeight * 0.44f
+        titleY = primaryTop - TITLE_SIZE - 18f
+        buttons[0].layout(primaryLeft, primaryTop, panelWidth, primaryHeight)
+        buttons[1].layout(primaryLeft, primaryTop + primaryHeight + primaryGap, panelWidth, primaryHeight)
+
+        val secondaryWidth = 66f
+        val secondaryHeight = 22f
+        val secondaryGap = 18f
+        val secondaryTop = buttons[1].y + buttons[1].height + 16f
+        val secondaryLeft = titleX - secondaryWidth - secondaryGap * 0.5f
+        buttons[2].layout(secondaryLeft, secondaryTop, secondaryWidth, secondaryHeight)
+        buttons[3].layout(secondaryLeft + secondaryWidth + secondaryGap, secondaryTop, secondaryWidth, secondaryHeight)
+
+        footerX = titleX
+        footerY = viewHeight - 26f
+    }
+
+    private fun drawPanels(time: Float, cursorX: Float, cursorY: Float) {
         for (button in buttons) {
-            button.layout(baseX, y, BUTTON_SIZE)
-            y += BUTTON_SIZE + 18f
+            val hovered = button.contains(cursorX, cursorY)
+            val pulse = ((kotlin.math.sin(time * 2.1f + button.phase) * 0.5f) + 0.5f)
+            val fillAlpha = when (button.style) {
+                ButtonStyle.PRIMARY -> if (hovered) 64 else (38 + pulse * 14f).toInt()
+                ButtonStyle.SECONDARY -> if (hovered) 52 else (24 + pulse * 10f).toInt()
+            }
+            val borderGray = if (hovered) 236 else if (button.style == ButtonStyle.PRIMARY) 154 else 126
+            drawBox(
+                button.x,
+                button.y,
+                button.width,
+                button.height,
+                argb(fillAlpha, 255, 255, 255),
+                argb(hovered.then(166, borderGray), borderGray, borderGray, borderGray)
+            )
         }
+    }
+
+    private fun drawBox(x: Float, y: Float, width: Float, height: Float, fillColor: Int, borderColor: Int) {
+        val radius = if (height >= 30f) 5f else 4f
+        NVGRenderer.rect(x, y, width, height, fillColor, radius)
+        NVGRenderer.hollowRect(x, y, width, height, 1.1f, borderColor, radius)
     }
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
@@ -102,30 +151,56 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
     override fun shouldCloseOnEsc(): Boolean = false
     override fun isPauseScreen(): Boolean = false
 
-    private var titleTop = 0f
+    private var titleX = 0f
+    private var titleY = 0f
+    private var footerX = 0f
+    private var footerY = 0f
 
     private class MenuButton(
         val label: String,
+        val style: ButtonStyle,
         val onClick: (FloydMainMenuScreen) -> Unit,
         var x: Float = 0f,
         var y: Float = 0f,
         var width: Float = 0f,
-        var height: Float = 0f
+        var height: Float = 0f,
+        var labelX: Float = 0f,
+        var labelY: Float = 0f
     ) {
-        fun layout(x: Float, y: Float, size: Float) {
+        val textSize: Float
+            get() = if (style == ButtonStyle.PRIMARY) PRIMARY_TEXT_SIZE else SECONDARY_TEXT_SIZE
+
+        val phase: Float = label.fold(0) { acc, c -> acc + c.code }.toFloat() * 0.011f
+
+        fun layout(x: Float, y: Float, width: Float, height: Float) {
             this.x = x
             this.y = y
-            this.width = NVGRenderer.textWidth(label, size, NVGRenderer.defaultFont)
-            this.height = size
+            this.width = width
+            this.height = height
+            val labelWidth = NVGRenderer.textWidth(label, textSize, NVGRenderer.defaultFont)
+            labelX = x + (width - labelWidth) * 0.5f
+            labelY = y + (height - textSize) * 0.5f + if (style == ButtonStyle.PRIMARY) 1f else 1.5f
         }
 
         fun contains(mouseX: Float, mouseY: Float): Boolean =
-            mouseX in (x - 6f)..(x + width + 10f) && mouseY in (y - 6f)..(y + height + 6f)
+            mouseX in x..(x + width) && mouseY in y..(y + height)
     }
 
+    private enum class ButtonStyle { PRIMARY, SECONDARY }
+
     private companion object {
-        const val TITLE_SIZE = 48f
-        const val VERSION_SIZE = 15f
-        const val BUTTON_SIZE = 34f
+        const val TITLE_SIZE = 44f
+        const val PRIMARY_TEXT_SIZE = 16f
+        const val SECONDARY_TEXT_SIZE = 10.5f
+        const val FOOTER_SIZE = 12f
+        const val TITLE_TEXT = "Floyd Addons"
+
+        private fun argb(alpha: Int, red: Int, green: Int, blue: Int): Int =
+            (alpha.coerceIn(0, 255) shl 24) or
+                (red.coerceIn(0, 255) shl 16) or
+                (green.coerceIn(0, 255) shl 8) or
+                blue.coerceIn(0, 255)
+
+        private fun Boolean.then(ifTrue: Int, ifFalse: Int): Int = if (this) ifTrue else ifFalse
     }
 }

@@ -1,7 +1,6 @@
 package gg.floyd.features.impl.misc
 
 import gg.floyd.FloydAddonsMod
-import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.ScreenEvent
@@ -10,12 +9,7 @@ import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.impl.render.FloydRender
-import gg.floyd.utils.modMessage
-import gg.floyd.utils.openDirectory
-import kotlinx.coroutines.launch
 import net.minecraft.client.gui.screens.TitleScreen
-import java.nio.file.Files
-import java.nio.file.Path
 
 /**
  * Per-feature compatibility modules.
@@ -35,26 +29,9 @@ object FloydSpoofClientBrand : Module(
 object FloydCustomMainMenu : Module(
     name = "Custom Main Menu",
     category = Category.MISC,
-    description = "Replaces the vanilla title flow with Floyd's NVG-driven menu and custom media background.",
-    toggled = false,
+    description = "Replaces the vanilla title flow with Floyd's animated custom main menu.",
+    toggled = true,
 ) {
-    var mediaPath by StringSetting(
-        "Media Path",
-        "",
-        260,
-        desc = "Absolute path to the MP4, frame-sequence zip, or image behind Floyd's custom menus. Leave blank to use the seeded mainmenu.mp4 in the config folder."
-    )
-
-    private val openFile by ActionSetting("Open File", desc = "Opens the folder holding the configured main-menu media.") {
-        modMessage(
-            if (openDirectory(mediaDirectory())) "Opened main-menu media folder."
-            else "Could not open main-menu media folder."
-        )
-    }
-
-    @Volatile
-    private var seedAttempted = false
-
     init {
         on<ScreenEvent.Open> {
             if (!enabled || !FloydCompatibility.shouldUseCustomMainMenu()) return@on
@@ -66,17 +43,8 @@ object FloydCustomMainMenu : Module(
                 FloydMenuVideoBackground.shutdown()
                 return@on
             }
-            ensureDefaultMediaSeeded()
             FloydMenuVideoBackground.tick()
         }
-    }
-
-    /** First-tick (real client) hook so object init never touches [FloydAddonsMod] (keeps unit tests JVM-safe). */
-    private fun ensureDefaultMediaSeeded() {
-        if (seedAttempted) return
-        seedAttempted = true
-        // Ship a default background on first run so the custom menu is never blank out of the box.
-        FloydAddonsMod.scope.launch { runCatching { seedDefaultMediaIfMissing() } }
     }
 
     // Live toggle without a restart: swap the visible title screen to match the new state.
@@ -95,30 +63,6 @@ object FloydCustomMainMenu : Module(
             if (mc.screen is FloydMainMenuScreen) mc.setScreen(TitleScreen())
         }
     }
-
-    /**
-     * Copies the bundled default video into the config folder as `mainmenu.mp4` when the user has no
-     * media configured and none of the convention files exist yet — i.e. a fresh install or an empty
-     * media folder. Never overwrites a user file.
-     */
-    private fun seedDefaultMediaIfMissing() {
-        if (FloydMenuVideoBackground.hasMedia()) return
-        val target = FloydAddonsMod.configFile.toPath().resolve("mainmenu.mp4")
-        if (Files.exists(target)) return
-        val resource = javaClass.getResourceAsStream("/assets/floydaddons/menu/default-background.mp4") ?: return
-        resource.use { input -> Files.copy(input, target) }
-    }
-
-    @JvmStatic
-    fun mainMenuPath(): Path = FloydAddonsMod.configFile.toPath().resolve("mainmenu.png")
-
-    @JvmStatic
-    fun configuredMediaPath(): Path? = runCatching {
-        mediaPath.takeIf { it.isNotBlank() }?.let(Path::of)
-    }.getOrNull()
-
-    private fun mediaDirectory(): Path =
-        configuredMediaPath()?.parent ?: FloydAddonsMod.configFile.toPath()
 }
 
 object FloydTaskbarIconModule : Module(

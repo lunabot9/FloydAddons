@@ -55,6 +55,7 @@ import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydCrosshairChanger
 import gg.floyd.features.impl.render.FloydDarkMode
 import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydHubMap
@@ -112,7 +113,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydSkyBlockPackDisabler,
+            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
@@ -199,15 +200,8 @@ object ModuleManager {
         FloydSidecarConfig.saveSidecars()
     }
 
-    /**
-     * Keeps intentionally-disabled compatibility experiments from lingering as "enabled" in config
-     * when the runtime hard-disables them for the current porting window.
-     */
-    private fun normalizeDisabledCompatFeatures() {
-        if (FloydCustomMainMenu.enabled) {
-            FloydCustomMainMenu.toggle()
-        }
-    }
+    /** Compatibility experiments now ship live; preserve the user's saved toggle state. */
+    private fun normalizeDisabledCompatFeatures() = Unit
 
     fun state(): Map<String, Any?> = mapOf(
         "moduleCount" to modules.size,
@@ -262,6 +256,9 @@ object ModuleManager {
 
         FloydPerf.section("HudLayer.darkMode") {
             FloydDarkMode.renderHudBackdrop(guiGraphics)
+        }
+        FloydPerf.section("HudLayer.crosshair") {
+            FloydCrosshairChanger.render(guiGraphics)
         }
 
         // The overhead ESP nameplates now render from the world-end post-HUD pass (PostHudOverlay), like

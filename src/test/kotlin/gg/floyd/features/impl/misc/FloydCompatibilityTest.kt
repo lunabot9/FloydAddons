@@ -35,13 +35,13 @@ class FloydCompatibilityTest {
 
         assertEquals(true, state["spoofClientBrand"])
         assertEquals(true, state["hideWatchdogMessages"])
-        assertEquals(false, state["customMainMenu"])
+        assertEquals(true, state["customMainMenu"])
         assertEquals(true, state["taskbarIcon"])
         assertEquals(true, state["updateChecker"])
         assertEquals(true, state["hideLoaderEntry"])
         assertEquals(true, state["shouldSpoofClientBrand"])
         assertEquals(true, state["shouldHideWatchdogMessages"])
-        assertEquals(false, state["shouldUseCustomMainMenu"])
+        assertEquals(true, state["shouldUseCustomMainMenu"])
         assertEquals(true, state["shouldApplyTaskbarIcon"])
         assertEquals(true, state["shouldCheckUpdates"])
         assertEquals(true, state["shouldHideLoaderEntry"])
@@ -85,8 +85,8 @@ class FloydCompatibilityTest {
     }
 
     @Test
-    fun `legacy custom main menu hook stays disabled on the current port`() {
-        assertFalse(FloydCompatibility.shouldUseCustomMainMenu())
+    fun `custom main menu hook follows the enabled module on the current port`() {
+        assertTrue(FloydCompatibility.shouldUseCustomMainMenu())
     }
 
     @Test

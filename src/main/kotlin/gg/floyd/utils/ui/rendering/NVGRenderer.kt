@@ -70,10 +70,11 @@ object NVGRenderer {
      * (`textWidth`/`wrappedTextBounds`) flip as ONE unit, or layouts would shear against the
      * renderer (the D6 invariant). Read once here; deleted with the NVG text code in step 7.
      */
-    // 26.1.2 fallback: keep ClickGUI text on the native NVG path by default for now. The newer
-    // mc.font deferred replay path is active behind FLOYD_NVG_TEXT=0 once its PIP replay is
-    // fully revalidated on 26.1.2.
-    private val legacyNvgText: Boolean = System.getenv("FLOYD_NVG_TEXT") != "0"
+    // Prefer the deferred mc.font replay path by default. The legacy NVG text path remains
+    // available only as an explicit override because it carries substantially more native-memory
+    // risk on long-lived menu/client sessions.
+    private val legacyNvgText: Boolean =
+        (System.getProperty("floyd.nvg.text") ?: System.getenv("FLOYD_NVG_TEXT")) == "1"
 
     /** True when text calls are deferred for mc.font replay (the default; see [DeferredNvgText]). */
     val deferringText: Boolean get() = !legacyNvgText
@@ -381,15 +382,19 @@ object NVGRenderer {
 
     fun text(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
         if (legacyNvgText) {
-            nvgFontSize(vg, size)
-            nvgFontFaceId(vg, getFontID(font))
-            color(color)
-            nvgFillColor(vg, nvgColor)
-            nvgText(vg, x, y + .5f, text)
+            drawImmediateText(text, x, y, size, color, font)
             return
         }
         // Legacy parity: the NVG path drew the em-box top at y + .5f — bake the same anchor in.
         deferText(text, x, y + .5f, size, color)
+    }
+
+    /**
+     * Immediate NVG text draw that bypasses deferred mc.font replay. Keep this scoped to screens
+     * where replay is known to be unreliable; the default path should still be [text].
+     */
+    fun textImmediate(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
+        drawImmediateText(text, x, y, size, color, font)
     }
 
     fun textCentered(
@@ -499,6 +504,14 @@ object NVGRenderer {
         nvgCurrentTransform(vg, record.transform)
         record.set(text, x, y, size, color, scissor?.frameRect, textLayer, wrapWidth, lineHeight)
         deferredText.add(record)
+    }
+
+    private fun drawImmediateText(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
+        nvgFontSize(vg, size)
+        nvgFontFaceId(vg, getFontID(font))
+        color(color)
+        nvgFillColor(vg, nvgColor)
+        nvgText(vg, x, y + .5f, text)
     }
 
     /**

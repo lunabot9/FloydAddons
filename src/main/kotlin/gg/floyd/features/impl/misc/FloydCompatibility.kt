@@ -19,7 +19,7 @@ object FloydCompatibility {
 
     @JvmStatic fun shouldSpoofClientBrand(): Boolean = FloydSpoofClientBrand.enabled
     @JvmStatic fun shouldHideWatchdogMessages(): Boolean = FloydHideWatchdogMessages.enabled
-    @JvmStatic fun shouldUseCustomMainMenu(): Boolean = false
+    @JvmStatic fun shouldUseCustomMainMenu(): Boolean = FloydCustomMainMenu.enabled
     @JvmStatic fun shouldApplyTaskbarIcon(): Boolean = FloydTaskbarIconModule.enabled
     @JvmStatic fun shouldCheckUpdates(): Boolean = FloydUpdateCheckerModule.enabled
     @JvmStatic fun shouldHideLoaderEntry(): Boolean = FloydModHider.enabled

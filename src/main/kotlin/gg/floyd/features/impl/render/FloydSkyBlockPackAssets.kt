@@ -29,6 +29,7 @@ object FloydSkyBlockPackAssets {
     private const val FALLBACK_RESOURCE = "/floyd_skyblock_pack_fallback.zip"
     private const val ITEM_DATA_RESOURCE = "/floyd_skyblock_items.json"
     private const val FALLBACK_PACK_REVISION = "480bc658b73a9ca7"
+    private val vanillaPaper = Identifier.parse("minecraft:paper")
     private val extractedPack = FabricLoader.getInstance().configDir
         .resolve("floydaddons")
         .resolve("skyblock-pack-models-$FALLBACK_PACK_REVISION.zip")
@@ -51,6 +52,7 @@ object FloydSkyBlockPackAssets {
                 }
             }
         }
+        applySprayonatorAliases(models, profiles)
         FloydAddonsMod.logger.info("Loaded ${models.size} SkyBlock vanilla item fallbacks")
         models to profiles
     }
@@ -65,6 +67,23 @@ object FloydSkyBlockPackAssets {
             properties,
         )
         return ResolvableProfile.createResolved(profile)
+    }
+
+    private fun applySprayonatorAliases(
+        models: MutableMap<String, Identifier>,
+        profiles: MutableMap<String, ResolvableProfile>,
+    ) {
+        val sprayonatorModel = models["SPRAYONATOR"] ?: return
+        val sprayonatorProfile = profiles["SPRAYONATOR"]
+
+        for (upgradedId in listOf("JUICY_SPRAYONATOR", "SALTY_SPRAYONATOR")) {
+            models.putIfAbsent(upgradedId, sprayonatorModel)
+            sprayonatorProfile?.let { profiles.putIfAbsent(upgradedId, it) }
+        }
+
+        for (nozzleId in listOf("JUICY_NOZZLE", "SALTY_NOZZLE")) {
+            models.putIfAbsent(nozzleId, vanillaPaper)
+        }
     }
 
     private fun buildPack(): Pack {

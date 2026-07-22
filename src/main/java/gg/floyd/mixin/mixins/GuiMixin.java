@@ -2,6 +2,7 @@ package gg.floyd.mixin.mixins;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import gg.floyd.features.impl.hiders.FloydHiders;
+import gg.floyd.features.impl.render.FloydCrosshairChanger;
 import gg.floyd.features.impl.render.FloydCustomScoreboard;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -55,6 +56,13 @@ public class GuiMixin {
             return true;
         }
         return original;
+    }
+
+    @Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
+    private void floydaddons$replaceVanillaCrosshair(GuiGraphicsExtractor guiGraphics, net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
+        if (FloydCrosshairChanger.shouldHideVanillaCrosshair()) {
+            ci.cancel();
+        }
     }
 
 }

@@ -23,7 +23,7 @@ object FloydMenuScreenStyling {
      */
     @JvmStatic
     fun shouldReplaceBackground(screen: Screen): Boolean {
-        if (!FloydCompatibility.shouldUseCustomMainMenu() || !FloydMenuVideoBackground.hasMedia()) return false
+        if (!FloydCompatibility.shouldUseCustomMainMenu()) return false
         if (screen is FloydMainMenuScreen) return false
         if (screen is AbstractContainerScreen<*>) return false
         if (screen is ChatScreen) return false
