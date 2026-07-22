@@ -101,7 +101,6 @@ loom {
             arrayOf(
                 "-Xms512M",
                 "-Xmx2G",
-                "-Dfloyd.nvg.text=0",
                 "-Dmixin.debug.export=true",
                 "-Ddevauth.enabled=${System.getenv("FLOYDADDONS_DEVAUTH") ?: "false"}",
                 "-Ddevauth.account=${System.getenv("FLOYDADDONS_DEVAUTH_ACCOUNT") ?: "main"}",

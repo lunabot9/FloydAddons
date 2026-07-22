@@ -70,11 +70,10 @@ object NVGRenderer {
      * (`textWidth`/`wrappedTextBounds`) flip as ONE unit, or layouts would shear against the
      * renderer (the D6 invariant). Read once here; deleted with the NVG text code in step 7.
      */
-    // Prefer the deferred mc.font replay path by default. The legacy NVG text path remains
-    // available only as an explicit override because it carries substantially more native-memory
-    // risk on long-lived menu/client sessions.
-    private val legacyNvgText: Boolean =
-        (System.getProperty("floyd.nvg.text") ?: System.getenv("FLOYD_NVG_TEXT")) == "1"
+    // 26.1.2 fallback: keep ClickGUI text on the native NVG path by default for now. The newer
+    // mc.font deferred replay path is active behind FLOYD_NVG_TEXT=0 once its PIP replay is
+    // fully revalidated on 26.1.2.
+    private val legacyNvgText: Boolean = System.getenv("FLOYD_NVG_TEXT") != "0"
 
     /** True when text calls are deferred for mc.font replay (the default; see [DeferredNvgText]). */
     val deferringText: Boolean get() = !legacyNvgText
