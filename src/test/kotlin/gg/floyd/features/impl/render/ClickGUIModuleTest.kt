@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.clickgui.Panel
 import gg.floyd.utils.Color
 import gg.floyd.utils.Color.Companion.brighter
 import kotlin.test.Test
@@ -32,5 +33,27 @@ class ClickGUIModuleTest {
 
         assertEquals(0.5f, ClickGUIModule.standardGuiScaleFor(854f, 480f, 1f))
         assertEquals(1708f, ClickGUIModule.availableWidthForLayout(854f, 480f, 1f))
+    }
+
+    @Test
+    fun `retina logical points are not double-penalized`() {
+        assertEquals(0.8f, ClickGUIModule.standardGuiScaleFor(1512f, 982f, 2f))
+        assertEquals(1890f, ClickGUIModule.availableWidthForLayout(1512f, 982f, 2f))
+    }
+
+    @Test
+    fun `screenshot layout is centered inside narrow virtual widths`() {
+        val centered = ClickGUIModule.centeredPanelLayout(
+            linkedMapOf(
+                "render" to ClickGUIModule.PanelData(x = 6f, y = 31f, extended = true),
+                "pvp" to ClickGUIModule.PanelData(x = 1356f, y = 31f, extended = true),
+            ),
+            availableWidth = 1708f,
+        )
+
+        val minX = centered.minOf { it.value.x }
+        val maxRight = centered.maxOf { it.value.x + Panel.WIDTH }
+        assertEquals(59f, minX)
+        assertEquals(1649f, maxRight)
     }
 }

@@ -93,7 +93,7 @@ object ClickGUIModule : Module(
             .groupBy { (_, panel) -> panel.x to panel.y }
             .values
             .any { entries -> entries.size > 1 }
-        val screenshotFits = screenshotPanelLayout(activeCategories).values
+        val screenshotFits = screenshotPanelLayout(activeCategories, availableWidth).values
             .all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }
         if (removedPlayerPanel || hasMissing || hasOffscreen || hasStackedDefaults ||
             (screenshotFits && (usesWrappedFallback || usesLegacyWrappedRows))
@@ -117,7 +117,7 @@ object ClickGUIModule : Module(
     fun defaultPanelLayout(): Map<String, PanelData> {
         val activeCategories = activeCategories()
         val availableWidth = currentAvailableWidth()
-        val screenshot = screenshotPanelLayout(activeCategories)
+        val screenshot = screenshotPanelLayout(activeCategories, availableWidth)
         return if (screenshot.values.all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }) {
             screenshot
         } else {
@@ -128,7 +128,7 @@ object ClickGUIModule : Module(
     private fun activeCategories(): List<Category> =
         Category.categories.values.filter { ModuleManager.modulesByCategory[it].orEmpty().isNotEmpty() }
 
-    private fun screenshotPanelLayout(activeCategories: List<Category>): Map<String, PanelData> {
+    private fun screenshotPanelLayout(activeCategories: List<Category>, availableWidth: Float): Map<String, PanelData> {
         val template = linkedMapOf(
             Category.RENDER.name to PanelData(x = 6f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
             Category.HIDERS.name to PanelData(x = 266f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
@@ -141,7 +141,16 @@ object ClickGUIModule : Module(
         activeCategories.forEach { category ->
             layout[category.name] = template[category.name]?.copy() ?: PanelData(10f, SCREENSHOT_LAYOUT_TOP, true)
         }
-        return layout
+        return centeredPanelLayout(layout, availableWidth)
+    }
+
+    internal fun centeredPanelLayout(layout: Map<String, PanelData>, availableWidth: Float): Map<String, PanelData> {
+        if (layout.isEmpty()) return layout
+        val minX = layout.minOf { it.value.x }
+        val maxRight = layout.maxOf { it.value.x + Panel.WIDTH }
+        val occupiedWidth = maxRight - minX
+        val offset = (availableWidth - occupiedWidth) / 2f - minX
+        return layout.mapValuesTo(linkedMapOf()) { (_, panel) -> panel.copy(x = panel.x + offset) }
     }
 
     private fun wrappedPanelLayout(activeCategories: List<Category>, availableWidth: Float): Map<String, PanelData> {
@@ -243,8 +252,10 @@ object ClickGUIModule : Module(
     }
 
     internal fun standardGuiScaleFor(screenWidth: Float, screenHeight: Float, devicePixelRatio: Float): Float {
-        val verticalScale = (screenHeight / BOOTSTRAP_SCREEN_HEIGHT) / devicePixelRatio
-        val horizontalScale = (screenWidth / BOOTSTRAP_SCREEN_WIDTH) / devicePixelRatio
+        // screenWidth/screenHeight are already logical window points, so HiDPI displays should not
+        // be penalized a second time by dividing through the device-pixel ratio.
+        val verticalScale = screenHeight / BOOTSTRAP_SCREEN_HEIGHT
+        val horizontalScale = screenWidth / BOOTSTRAP_SCREEN_WIDTH
         return round(minOf(verticalScale, horizontalScale).coerceIn(0.5f, 1.5f) * 10f) / 10f
     }
 

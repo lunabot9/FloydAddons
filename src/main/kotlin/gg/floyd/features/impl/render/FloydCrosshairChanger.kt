@@ -24,7 +24,7 @@ object FloydCrosshairChanger : Module(
     )
     private val size by NumberSetting(
         "Crosshair Size",
-        8,
+        12,
         4,
         24,
         1,
@@ -40,7 +40,7 @@ object FloydCrosshairChanger : Module(
     )
     private val centerGap by NumberSetting(
         "Center Gap",
-        3,
+        0,
         0,
         8,
         1,
