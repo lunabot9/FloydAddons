@@ -11,6 +11,7 @@ internal object FloydPlayerModelSelection {
     private const val ORTHODOX_MAN_MODEL = "Orthodox Man"
     private val customModels = listOf("Tung Tung Sahur", "George Floyd", "Jenny", ORTHODOX_MAN_MODEL, MINION_MODEL)
     val models = customModels + VanillaMobCatalog.labels
+    private val modelsByLowercase = models.associateBy { it.lowercase() }
     val modelDescriptions = mapOf(
         "Tung Tung Sahur" to "Tung Tung Sahur player model created by ImJoyler.",
         ORTHODOX_MAN_MODEL to "A bundled suit-and-hat player model inspired by a reference portrait.",
@@ -20,6 +21,22 @@ internal object FloydPlayerModelSelection {
     }
 
     fun selectedName(index: Int): String = models.getOrElse(index) { models.first() }
+
+    fun canonicalModelName(value: String?): String? {
+        val trimmed = value?.trim().orEmpty()
+        if (trimmed.isEmpty()) return null
+
+        modelsByLowercase[trimmed.lowercase()]?.let { return it }
+
+        val normalizedId = trimmed
+            .removePrefix("minecraft:")
+            .lowercase()
+            .replace(' ', '_')
+        if (normalizedId == "minion") return MINION_MODEL
+
+        VanillaMobCatalog.labelForId(normalizedId)?.let { return it }
+        return null
+    }
 
     fun vanillaMobId(model: String): String? =
         if (model == MINION_MODEL) "copper_golem"
@@ -60,7 +77,8 @@ object FloydPlayerModel : Module(
     @JvmStatic
     fun selectedModelFor(id: Int): String =
         if (mc.player?.id == id) selectedModel()
-        else FloydSharedCosmetics.appearanceForEntity(id)?.model?.id ?: FloydPlayerModelSelection.models.first()
+        else FloydPlayerModelSelection.canonicalModelName(FloydSharedCosmetics.appearanceForEntity(id)?.model?.id)
+            ?: FloydPlayerModelSelection.models.first()
 
     @JvmStatic
     fun selectedVanillaMobIdFor(id: Int): String? = FloydPlayerModelSelection.vanillaMobId(selectedModelFor(id))

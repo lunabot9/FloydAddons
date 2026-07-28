@@ -49,7 +49,7 @@ data class SharedAppearance(
     fun sanitized(): SharedAppearance = copy(
         version = SHARED_APPEARANCE_VERSION,
         model = model.copy(
-            id = model.id.takeIf(FloydPlayerModelSelection.models::contains)
+            id = FloydPlayerModelSelection.canonicalModelName(model.id)
                 ?: FloydPlayerModelSelection.models.first()
         ),
         cape = cape.copy(id = "default"),

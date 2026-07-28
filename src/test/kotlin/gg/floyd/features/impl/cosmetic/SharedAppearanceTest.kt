@@ -40,6 +40,17 @@ class SharedAppearanceTest {
     }
 
     @Test
+    fun `shared appearance normalizes vanilla mob ids to supported selector labels`() {
+        val sanitized = SharedAppearance(
+            model = SharedModelAppearance(true, "minecraft:zombified_piglin", true),
+        ).sanitized()
+
+        assertEquals("Zombified Piglin", sanitized.model.id)
+        assertTrue(sanitized.model.enabled)
+        assertTrue(sanitized.model.showHeads)
+    }
+
+    @Test
     fun `registry exposes enabled shared neck hider names by username`() {
         val registry = SharedAppearanceRegistry()
         val enabled = UUID.randomUUID()

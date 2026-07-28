@@ -32,6 +32,17 @@ class FloydPlayerModelTest {
     }
 
     @Test
+    fun `shared player model ids accept labels raw mob ids and namespaced mob ids`() {
+        assertEquals("Pig", FloydPlayerModelSelection.canonicalModelName("Pig"))
+        assertEquals("Pig", FloydPlayerModelSelection.canonicalModelName("pig"))
+        assertEquals("Pig", FloydPlayerModelSelection.canonicalModelName("minecraft:pig"))
+        assertEquals("Zombified Piglin", FloydPlayerModelSelection.canonicalModelName("zombified_piglin"))
+        assertEquals("Zombified Piglin", FloydPlayerModelSelection.canonicalModelName("minecraft:zombified_piglin"))
+        assertEquals("Minion", FloydPlayerModelSelection.canonicalModelName("minion"))
+        assertEquals("Minion", FloydPlayerModelSelection.canonicalModelName("minecraft:minion"))
+    }
+
+    @Test
     fun `heads are hidden only when the custom model is active and showing heads is disabled`() {
         assertTrue(FloydPlayerModel.shouldHideHead(customModelActive = true, hasWornHead = true, showHeads = false))
         assertFalse(FloydPlayerModel.shouldHideHead(customModelActive = true, hasWornHead = true, showHeads = true))
