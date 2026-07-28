@@ -56,6 +56,7 @@ import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydTimeChanger
 import gg.floyd.features.impl.render.FloydMobEsp
+import gg.floyd.features.impl.render.FloydSkyBlockPackDisabler
 import gg.floyd.features.impl.misc.FloydWindowModule
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.render.FloydXray
@@ -2872,7 +2873,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val stalk = Rect(controlLeft, renderRowY(top, 11), renderFullWidth, renderRowHeight)
         drawButton(context, stalk, renderStalkLabel(), alpha)
         hits += RenderHitEntry(stalk, "Stalk", RenderHitKind.STALK)
-        renderFullButton(context, hits, controlLeft, top, 12, "Borderless Window: ${onOff(booleanSetting(FloydWindowModule, "Borderless Window")?.enabled ?: false)}", "Borderless Window", RenderHitKind.BORDERLESS, alpha)
+        renderFullButton(context, hits, controlLeft, top, 12, "SkyBlock Pack Disabler: ${onOff(FloydSkyBlockPackDisabler.enabled)}", "SkyBlock Pack Disabler", RenderHitKind.MODULE_TOGGLE, alpha)
+        renderFullButton(context, hits, controlLeft, top, 13, "Clear & Reload Textures", "Clear & Reload Textures", RenderHitKind.CLEAR_SERVER_PACK, alpha)
+        renderFullButton(context, hits, controlLeft, top, 14, "Borderless Window: ${onOff(booleanSetting(FloydWindowModule, "Borderless Window")?.enabled ?: false)}", "Borderless Window", RenderHitKind.BORDERLESS, alpha)
 
         val title = Rect(controlLeft, renderRowY(top, 15), renderFullWidth, renderRowHeight)
         drawRenderTitleField(context, title, alpha)
@@ -4444,6 +4447,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 moduleEntry(FloydXray),
                 moduleEntry(FloydMobEsp),
                 moduleEntry(FloydBlockSearch),
+                moduleEntry(FloydSkyBlockPackDisabler),
                 LegacyModuleBrowserEntry(FloydProfileIdHider, "Profile ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Profile ID Hider"),
                 LegacyModuleBrowserEntry(FloydServerIdHider, "Server ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Server ID Hider"),
                 moduleEntry(FloydTimeChanger),
@@ -4598,6 +4602,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             toggleModuleRow(FloydTimeChanger, "Time Changer", RowLayout.LEFT),
             numberRow(FloydTimeChanger, "Time", "Time", RowLayout.RIGHT) { "${it.roundToInt()}%" },
             stalkRow(),
+            toggleModuleRow(FloydSkyBlockPackDisabler, "SkyBlock Pack Disabler"),
+            actionRow("Clear & Reload Textures") { FloydSkyBlockPackDisabler.clearAndReloadTextures() },
             toggleSettingRow(FloydWindowModule, "Borderless Window", "Borderless Window"),
             actionRow({ "Window Title: ${stringSetting(FloydWindowModule, "Instance Title")?.value?.ifBlank { "(default)" } ?: "?"}" }) {
                 openWindowTitleEditor()
@@ -5475,7 +5481,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 }
             }
             RenderHitKind.MODULE_TOGGLE -> {
-                FloydMobEsp.toggle()
+                when (hit.settingName) {
+                    "SkyBlock Pack Disabler" -> FloydSkyBlockPackDisabler.toggle()
+                    else -> FloydMobEsp.toggle()
+                }
                 ModuleManager.saveConfigurations()
             }
             RenderHitKind.SLIDER -> {
@@ -5497,6 +5506,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 val previous = FloydMobEsp.stopStalk()
                 modMessage(if (previous == null) "Usage: /fa stalk <name>" else "Stopped stalking $previous")
             }
+            RenderHitKind.CLEAR_SERVER_PACK -> FloydSkyBlockPackDisabler.clearAndReloadTextures()
             RenderHitKind.BORDERLESS -> {
                 FloydRender.setBorderlessWindowed(!(booleanSetting(FloydWindowModule, "Borderless Window")?.enabled ?: false), force = true)
                 ModuleManager.saveConfigurations()
@@ -6853,6 +6863,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         NAV_HIDERS,
         NAV_ANIMATIONS,
         STALK,
+        CLEAR_SERVER_PACK,
         BORDERLESS,
         TITLE_FIELD
     }

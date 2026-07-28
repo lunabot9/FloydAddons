@@ -8,10 +8,26 @@ import kotlin.test.assertTrue
 
 class FloydAutoClickerTest {
     @Test
-    fun `click delay randomizes cps and retains timing jitter`() {
-        assertEquals(170L, FloydAutoClicker.clickDelayMs(5.0, 10.0, 0.0, 0.0))
+    fun `click delay stays inside configured cps range`() {
+        assertEquals(200L, FloydAutoClicker.clickDelayMs(5.0, 10.0, 0.0, 0.0))
         assertEquals(133L, FloydAutoClicker.clickDelayMs(5.0, 10.0, 0.5, 0.5))
-        assertEquals(130L, FloydAutoClicker.clickDelayMs(5.0, 10.0, 1.0, 1.0))
+        assertEquals(100L, FloydAutoClicker.clickDelayMs(5.0, 10.0, 1.0, 1.0))
+    }
+
+    @Test
+    fun `scheduler catches up instead of dropping overdue clicks`() {
+        val schedule = FloydAutoClicker.drainDueClicks(now = 150L, nextClickAt = 66L) { 66L }
+
+        assertEquals(2, schedule.clicks)
+        assertEquals(198L, schedule.nextClickAt)
+    }
+
+    @Test
+    fun `scheduler clicks immediately on first active tick`() {
+        val schedule = FloydAutoClicker.drainDueClicks(now = 100L, nextClickAt = 0L) { 80L }
+
+        assertEquals(1, schedule.clicks)
+        assertEquals(180L, schedule.nextClickAt)
     }
 
     @Test

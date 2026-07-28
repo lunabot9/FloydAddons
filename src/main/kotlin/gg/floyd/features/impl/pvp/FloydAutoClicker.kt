@@ -20,6 +20,7 @@ import net.minecraft.world.phys.BlockHitResult
 import org.lwjgl.glfw.GLFW
 import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
+import kotlin.math.roundToLong
 
 /**
  * Auto clicker adapted from skies-starred/OdinClient's BSD-3-Clause AutoClicker module.
@@ -136,10 +137,12 @@ object FloydAutoClicker : Module(
     private var nextLeftClickAt = 0L
     private var nextRightClickAt = 0L
     private var previousVanillaAttackDown: Boolean? = null
+    private var bypassMissCooldown = false
 
     override fun onDisable() {
         nextLeftClickAt = 0L
         nextRightClickAt = 0L
+        bypassMissCooldown = false
         restoreVanillaAttackKey()
         super.onDisable()
     }
@@ -147,16 +150,27 @@ object FloydAutoClicker : Module(
     @JvmStatic
     fun beforeVanillaKeybinds() {
         restoreVanillaAttackKey()
+        bypassMissCooldown = false
         if (!enabled) return
         val player = mc.player ?: return
         if (mc.screen != null || player.isUsingItem) return
         val now = System.currentTimeMillis()
 
         if (terminatorOnly) {
-            if (mc.gameMode?.isDestroying == true) return
-            if (heldSkyBlockId() != "TERMINATOR" || !mc.options.keyUse.isDown || now < nextLeftClickAt) return
-            nextLeftClickAt = now + clickDelayMs(minimumCps.toDouble(), maximumCps.toDouble())
-            queueVanillaClick(mc.options.keyAttack)
+            if (mc.gameMode?.isDestroying == true) {
+                nextLeftClickAt = 0L
+                return
+            }
+            if (heldSkyBlockId() != "TERMINATOR" || !mc.options.keyUse.isDown) {
+                nextLeftClickAt = 0L
+                return
+            }
+            bypassMissCooldown = true
+            val schedule = drainDueClicks(now, nextLeftClickAt) { clickDelayMs(minimumCps.toDouble(), maximumCps.toDouble()) }
+            nextLeftClickAt = schedule.nextClickAt
+            repeat(schedule.clicks) {
+                queueVanillaClick(mc.options.keyAttack)
+            }
             return
         }
 
@@ -177,23 +191,38 @@ object FloydAutoClicker : Module(
         } else if (shouldSuppressVanillaAttackHold(action)) {
             overrideVanillaAttackHold(false)
         }
-        if ((action == LeftClickAction.ATTACK || action == LeftClickAction.CLICK_BLOCK) &&
-            mc.gameMode?.isDestroying != true && now >= nextLeftClickAt
-        ) {
-            nextLeftClickAt = now + clickDelayMs(minimumLeftCps.toDouble(), maximumLeftCps.toDouble())
-            queueVanillaClick(mc.options.keyAttack)
+        val leftShouldClick = (action == LeftClickAction.ATTACK || action == LeftClickAction.CLICK_BLOCK) &&
+            mc.gameMode?.isDestroying != true
+        if (leftShouldClick) {
+            if (action == LeftClickAction.ATTACK) bypassMissCooldown = true
+            val schedule = drainDueClicks(now, nextLeftClickAt) { clickDelayMs(minimumLeftCps.toDouble(), maximumLeftCps.toDouble()) }
+            nextLeftClickAt = schedule.nextClickAt
+            repeat(schedule.clicks) {
+                queueVanillaClick(mc.options.keyAttack)
+            }
+        } else {
+            nextLeftClickAt = 0L
         }
 
-        if (rightHeld && shouldQueueRightClick(mc.options.keyUse.isDown) && now >= nextRightClickAt) {
-            nextRightClickAt = now + clickDelayMs(minimumRightCps.toDouble(), maximumRightCps.toDouble())
-            queueVanillaClick(mc.options.keyUse)
+        if (rightHeld && shouldQueueRightClick(mc.options.keyUse.isDown)) {
+            val schedule = drainDueClicks(now, nextRightClickAt) { clickDelayMs(minimumRightCps.toDouble(), maximumRightCps.toDouble()) }
+            nextRightClickAt = schedule.nextClickAt
+            repeat(schedule.clicks) {
+                queueVanillaClick(mc.options.keyUse)
+            }
+        } else {
+            nextRightClickAt = 0L
         }
     }
 
     @JvmStatic
     fun afterVanillaKeybinds() {
         restoreVanillaAttackKey()
+        bypassMissCooldown = false
     }
+
+    @JvmStatic
+    fun shouldBypassMissCooldown(): Boolean = enabled && bypassMissCooldown
 
     fun heldIdentity(): String? {
         val stack = mc.player?.mainHandItem ?: return null
@@ -295,16 +324,33 @@ object FloydAutoClicker : Module(
         return lower + ((upper - lower) * randomUnit.coerceIn(0.0, 1.0))
     }
 
+    internal data class ClickSchedule(val clicks: Int, val nextClickAt: Long)
+
+    internal fun drainDueClicks(
+        now: Long,
+        nextClickAt: Long,
+        maxBurst: Int = 8,
+        nextDelayMs: () -> Long,
+    ): ClickSchedule {
+        var scheduledAt = if (nextClickAt > 0L) nextClickAt else now
+        var clicks = 0
+        while (now >= scheduledAt && clicks < maxBurst) {
+            clicks++
+            scheduledAt += nextDelayMs().coerceAtLeast(1L)
+        }
+        return ClickSchedule(clicks, scheduledAt)
+    }
+
     internal fun clickDelayMs(
         minimumCps: Double,
         maximumCps: Double,
         cpsRandomUnit: Double = Random.nextDouble(),
         jitterRandomUnit: Double = Random.nextDouble(),
-    ): Long =
-        ((1000.0 / randomizedCps(minimumCps, maximumCps, cpsRandomUnit)) +
-            ((jitterRandomUnit.coerceIn(0.0, 1.0) - 0.5) * 60.0))
-            .toLong()
-            .coerceAtLeast(1L)
+    ): Long {
+        val boundedBlend = ((cpsRandomUnit.coerceIn(0.0, 1.0) + jitterRandomUnit.coerceIn(0.0, 1.0)) / 2.0)
+        val cps = randomizedCps(minimumCps, maximumCps, boundedBlend)
+        return (1000.0 / cps).roundToLong().coerceAtLeast(1L)
+    }
 
     internal fun heldIdentity(uuid: String?, id: String?, name: String?): String? =
         uuid?.takeIf(String::isNotBlank) ?: id?.takeIf(String::isNotBlank) ?: name?.takeIf(String::isNotBlank)
