@@ -11,9 +11,10 @@ import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
-import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.customData
 import gg.floyd.mixin.accessors.KeyMappingAccessor
 import net.minecraft.client.KeyMapping
+import net.minecraft.core.component.DataComponents
+import net.minecraft.nbt.CompoundTag
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.phys.BlockHitResult
 import org.lwjgl.glfw.GLFW
@@ -245,6 +246,9 @@ object FloydAutoClicker : Module(
     private fun heldSkyBlockId(): String? = mc.player?.mainHandItem?.skyBlockId()
 
     private fun ItemStack.skyBlockId(): String? = customData.getString("id").getOrNull()
+
+    private val ItemStack.customData: CompoundTag
+        get() = getOrDefault(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()
 
     private fun InputConstants.Key.isHeld(): Boolean {
         if (this == InputConstants.UNKNOWN || value < 0) return false

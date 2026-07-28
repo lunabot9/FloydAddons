@@ -4,26 +4,35 @@ import gg.floyd.features.impl.camera.FloydCamera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
-import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(MouseHandler.class)
 public class CameraMouseMixin {
-    @Redirect(
+    @Inject(
         method = "turnPlayer",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V")
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V"),
+        cancellable = true,
+        locals = LocalCapture.CAPTURE_FAILHARD
     )
-    private void floydaddons$redirectLookDirection(LocalPlayer player, double deltaX, double deltaY) {
+    private void floydaddons$redirectLookDirection(
+        double deltaTime,
+        CallbackInfo ci,
+        double sensitivity,
+        double cubicSensitivity,
+        double turnScale,
+        double deltaX,
+        double deltaY
+    ) {
         if (FloydCamera.freecamActive()) {
             FloydCamera.adjustFreecamLook(deltaX, deltaY);
+            ci.cancel();
         } else if (FloydCamera.freelookActive()) {
             FloydCamera.adjustFreelook(deltaX, deltaY);
-        } else {
-            player.turn(deltaX, deltaY);
+            ci.cancel();
         }
     }
 
