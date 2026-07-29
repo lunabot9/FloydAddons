@@ -13,6 +13,7 @@
     "accessors.GameRendererFogAccessor",
     "accessors.KeyMappingAccessor",
     "accessors.KeyMappingCategoryAccessor",
+    "accessors.LivingEntityRendererAccessor",
     "mixins.AnimationItemInHandRendererMixin",
     "mixins.AnimationLivingEntityMixin",
     "mixins.AnimationToggleKeyMappingMixin",

@@ -341,19 +341,21 @@ class LegacyClickGuiRuntimeVerifierTest(unittest.TestCase):
         self.assertEqual("Off", FakeClient.latest.no_armor_target)
         self.assertTrue(proof["animationsPageControls"]["entriesContainExpected"])
         self.assertEqual(
-            {"enabled": False, "posX": 0.0, "cancelReEquip": False, "hideHand": False, "classicClick": False},
+            {"enabled": False, "posX": 0.0, "rotateOnlySwing": False, "cancelReEquip": False, "hideHand": False, "classicClick": False},
             proof["animationsPageControls"]["before"],
         )
         self.assertEqual(True, proof["animationsPageControls"]["after"]["enabled"])
         self.assertNotEqual(0.0, proof["animationsPageControls"]["after"]["posX"])
+        self.assertEqual(True, proof["animationsPageControls"]["after"]["rotateOnlySwing"])
         self.assertEqual(True, proof["animationsPageControls"]["after"]["cancelReEquip"])
         self.assertEqual(True, proof["animationsPageControls"]["after"]["hideHand"])
         self.assertEqual(True, proof["animationsPageControls"]["after"]["classicClick"])
+        self.assertTrue(proof["animationsPageControls"]["rotateOnlySwingClickHandled"])
         self.assertTrue(proof["animationsPageControls"]["cancelClickHandled"])
         self.assertTrue(proof["animationsPageControls"]["hideHandClickHandled"])
         self.assertTrue(proof["animationsPageControls"]["classicClickHandled"])
         self.assertEqual(
-            {"enabled": False, "posX": 0.0, "cancelReEquip": False, "hideHand": False, "classicClick": False},
+            {"enabled": False, "posX": 0.0, "rotateOnlySwing": False, "cancelReEquip": False, "hideHand": False, "classicClick": False},
             proof["animationsPageControls"]["restored"],
         )
         self.assertFalse(FakeClient.latest.animations_enabled)
@@ -830,6 +832,7 @@ class FakeClient:
         self.render_time_value = 50.0
         self.animations_enabled = False
         self.anim_pos_x = 0.0
+        self.anim_rotate_only_swing = False
         self.anim_cancel_re_equip = False
         self.anim_hide_hand = False
         self.anim_classic_click = False
@@ -1128,6 +1131,10 @@ class FakeClient:
             if not self.ignore_animations_page:
                 bounds = self.animations_pos_x_bounds()
                 self.anim_pos_x = -150.0 + ((x - bounds["left"]) / (bounds["right"] - bounds["left"])) * 300.0
+            handled = True
+        elif self.page == "ANIMATIONS" and inside(x, y, self.animations_rotate_only_swing_bounds()):
+            if not self.ignore_animations_page:
+                self.anim_rotate_only_swing = not self.anim_rotate_only_swing
             handled = True
         elif self.page == "ANIMATIONS" and inside(x, y, self.animations_cancel_re_equip_bounds()):
             if not self.ignore_animations_page:
@@ -1713,11 +1720,13 @@ class FakeClient:
                     "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
                     "scale": 1.0,
                     "swingDuration": 6,
+                    "rotateOnlySwing": self.anim_rotate_only_swing,
                     "cancelReEquip": self.anim_cancel_re_equip,
                     "hideEmptyMainHand": self.anim_hide_hand,
                     "classicClick": self.anim_classic_click,
                     "settings": {
                         "posX": self.anim_pos_x,
+                        "rotateOnlySwing": self.anim_rotate_only_swing,
                         "cancelReEquip": self.anim_cancel_re_equip,
                         "hideHand": self.anim_hide_hand,
                         "classicClick": self.anim_classic_click,
@@ -2013,15 +2022,19 @@ class FakeClient:
 
     @staticmethod
     def animations_cancel_re_equip_bounds() -> dict[str, int]:
+        return {"left": 850, "top": 752, "right": 1070, "bottom": 772}
+
+    @staticmethod
+    def animations_rotate_only_swing_bounds() -> dict[str, int]:
         return {"left": 850, "top": 728, "right": 1070, "bottom": 748}
 
     @staticmethod
     def animations_hide_hand_bounds() -> dict[str, int]:
-        return {"left": 850, "top": 752, "right": 1070, "bottom": 772}
+        return {"left": 850, "top": 776, "right": 1070, "bottom": 796}
 
     @staticmethod
     def animations_classic_click_bounds() -> dict[str, int]:
-        return {"left": 850, "top": 776, "right": 1070, "bottom": 796}
+        return {"left": 850, "top": 800, "right": 1070, "bottom": 820}
 
     def animations_page_entries(self) -> list[dict[str, Any]]:
         sliders = [
@@ -2037,6 +2050,7 @@ class FakeClient:
         return [{"kind": "TOGGLE_MODULE", "settingName": "", "bounds": self.animations_enabled_bounds()}] + [
             {"kind": "SLIDER", "settingName": name, "bounds": bounds} for name, bounds in sliders
         ] + [
+            {"kind": "TOGGLE_SETTING", "settingName": "Rotate-Only Swing", "bounds": self.animations_rotate_only_swing_bounds()},
             {"kind": "TOGGLE_SETTING", "settingName": "Cancel Re-Equip", "bounds": self.animations_cancel_re_equip_bounds()},
             {"kind": "TOGGLE_SETTING", "settingName": "Hide Hand", "bounds": self.animations_hide_hand_bounds()},
             {"kind": "TOGGLE_SETTING", "settingName": "Classic Click", "bounds": self.animations_classic_click_bounds()},

@@ -222,9 +222,11 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private const val nickFullWidth = 220
     private const val githubUrl = "https://github.com/lunabot9/FloydAddons"
     private const val discordUrl = "https://discord.gg/FLOYD"
+    private const val coffeeUrl = "https://buymeacoffee.com/lunabot9"
     private const val communityHeader = "Join the Floyd Addons Community"
     private const val githubLinkText = "github"
     private const val discordLinkText = ".gg/FLOYD"
+    private const val coffeeLinkText = "Buy Me A Coffee!"
     private val legacyClickGuiPanelConfigPath: Path = FloydAddonsMod.configFile.toPath().resolve("clickgui-panels.json")
     private val legacyClickGuiPanelGson = GsonBuilder().setPrettyPrinting().create()
     private val legacyClickGuiPanelType = object : TypeToken<Map<String, List<Int>>>() {}.type
@@ -249,6 +251,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private var v2Button = Rect.ZERO
     private var linkBounds = Rect.ZERO
     private var discordLinkBounds = Rect.ZERO
+    private var coffeeLinkBounds = Rect.ZERO
     private var labelBounds = emptyList<Rect>()
     private var pageBackButton = Rect.ZERO
     private var pageDoneButton = Rect.ZERO
@@ -819,6 +822,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             labelBounds = emptyList()
             linkBounds = Rect.ZERO
             discordLinkBounds = Rect.ZERO
+            coffeeLinkBounds = Rect.ZERO
             drawPage(context, left, top, bottom, alpha)
         }
 
@@ -959,6 +963,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
             button == 0 && points.any { discordLinkBounds.contains(it.first, it.second) } -> {
                 runCatching { Desktop.getDesktop().browse(URI(discordUrl)) }
+                return true
+            }
+            button == 0 && points.any { coffeeLinkBounds.contains(it.first, it.second) } -> {
+                runCatching { Desktop.getDesktop().browse(URI(coffeeUrl)) }
                 return true
             }
             button == 0 && points.any { pageBackButton.contains(it.first, it.second) } -> {
@@ -1324,6 +1332,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         add(v2Button)
         add(linkBounds)
         add(discordLinkBounds)
+        add(coffeeLinkBounds)
         add(pageBackButton)
         add(pageDoneButton)
         add(editorSaveButton)
@@ -1885,6 +1894,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawSkinDropdownButton(context: GuiGraphics, alpha: Float) {
@@ -1980,6 +1991,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawConeHatPage(context: GuiGraphics, left: Int, top: Int, bottom: Int, alpha: Float) {
@@ -2037,6 +2050,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawConeSliderRow(context: GuiGraphics, index: Int, spec: ConeSpec, slider: Rect, input: Rect, alpha: Float) {
@@ -2166,6 +2181,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawMobEspPage(context: GuiGraphics, left: Int, top: Int, bottom: Int, alpha: Float) {
@@ -2193,6 +2210,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawMobEspFullButton(context: GuiGraphics, hits: MutableList<MobEspHitEntry>, left: Int, top: Int, row: Int, label: String, settingName: String, kind: MobEspHitKind, alpha: Float) {
@@ -2257,6 +2276,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawCosmeticPair(context: GuiGraphics, hits: MutableList<CosmeticHitEntry>, left: Int, top: Int, row: Int, label: String, settingName: String, kind: CosmeticHitKind, configPage: Page, alpha: Float) {
@@ -2470,6 +2491,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawXrayEditorEntry(
@@ -2575,6 +2598,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawNameMappingEntry(
@@ -2712,6 +2737,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawAnimationSlider(context: GuiGraphics, rect: Rect, spec: AnimationSliderSpec, alpha: Float) {
@@ -2793,6 +2820,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawCameraHeader(context: GuiGraphics, left: Int, y: Int, text: String, alpha: Float) {
@@ -2890,6 +2919,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun renderFullButton(context: GuiGraphics, hits: MutableList<RenderHitEntry>, left: Int, top: Int, row: Int, label: String, settingName: String, kind: RenderHitKind, alpha: Float) {
@@ -2972,6 +3003,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun hidersRowY(top: Int, row: Int): Int = top + 28 + row * hidersRowSpacing
@@ -3031,6 +3064,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawNickInput(context: GuiGraphics, rect: Rect, alpha: Float) {
@@ -3072,6 +3107,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun guiStyleTargets(): List<StyleTarget> = listOf(StyleTarget.TEXT, StyleTarget.BUTTON_BORDER, StyleTarget.GUI_BORDER)
@@ -3143,6 +3180,8 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         pageRows = emptyList()
         labelBounds = emptyList()
         linkBounds = Rect.ZERO
+        discordLinkBounds = Rect.ZERO
+        coffeeLinkBounds = Rect.ZERO
     }
 
     private fun drawModuleBrowserBottomTitle(context: GuiGraphics, alpha: Float) {
@@ -6441,13 +6480,18 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val discordW = mc.font.width(discordLinkText)
         val rowX = centerX - (githubW + gap + discordW) / 2
         val discordX = rowX + githubW + gap
+        val coffeeY = linkY + mc.font.lineHeight + 4
+        val coffeeX = centerX - mc.font.width(coffeeLinkText) / 2
         // Set bounds before the hover check so hover highlighting isn't a frame behind the cursor.
         linkBounds = Rect(rowX, linkY, githubW, mc.font.lineHeight)
         discordLinkBounds = Rect(discordX, linkY, discordW, mc.font.lineHeight)
+        coffeeLinkBounds = Rect(coffeeX, coffeeY, mc.font.width(coffeeLinkText), mc.font.lineHeight)
         val githubHovered = linkBounds.contains(hoverX, hoverY)
         val discordHovered = discordLinkBounds.contains(hoverX, hoverY)
+        val coffeeHovered = coffeeLinkBounds.contains(hoverX, hoverY)
         context.drawString(mc.font, githubLinkText, rowX, linkY, applyAlpha(if (githubHovered) 0xFFFFFFFF.toInt() else chromaColor(0f), alpha), true)
-        context.drawString(mc.font, discordLinkText, discordX, linkY, applyAlpha(if (discordHovered) 0xFFFFFFFF.toInt() else chromaColor(0.5f), alpha), true)
+        context.drawString(mc.font, discordLinkText, discordX, linkY, applyAlpha(if (discordHovered) 0xFFFFFFFF.toInt() else chromaColor(0f), alpha), true)
+        context.drawString(mc.font, coffeeLinkText, coffeeX, coffeeY, applyAlpha(if (coffeeHovered) 0xFFFFFFFF.toInt() else chromaColor(0f), alpha), true)
     }
 
     private fun drawButton(context: GuiGraphics, rect: Rect, label: String, alpha: Float) {

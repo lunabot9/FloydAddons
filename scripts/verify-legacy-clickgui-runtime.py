@@ -2277,6 +2277,7 @@ def verify_animations_page_controls(client: "BridgeClient") -> dict[str, Any]:
         ("SLIDER", "Rot Z"),
         ("SLIDER", "Scale"),
         ("SLIDER", "Swing Duration"),
+        ("TOGGLE_SETTING", "Rotate-Only Swing"),
         ("TOGGLE_SETTING", "Cancel Re-Equip"),
         ("TOGGLE_SETTING", "Hide Hand"),
         ("TOGGLE_SETTING", "Classic Click"),
@@ -2289,6 +2290,9 @@ def verify_animations_page_controls(client: "BridgeClient") -> dict[str, Any]:
     pos_x_entry = find_animations_entry(state, "SLIDER", "Pos X")
     pos_x_fraction = 0.25 if float(before["posX"]) > 0.0 else 0.75
     pos_x_click = click_rect_slider_at_fraction(client, pos_x_entry, pos_x_fraction)
+    time.sleep(0.15)
+    state = client.get("/state")
+    rotate_only_swing_click = client.post("/mouse", mouse_payload(find_animations_entry(state, "TOGGLE_SETTING", "Rotate-Only Swing")["bounds"], button=0))
     time.sleep(0.15)
     state = client.get("/state")
     cancel_click = client.post("/mouse", mouse_payload(find_animations_entry(state, "TOGGLE_SETTING", "Cancel Re-Equip")["bounds"], button=0))
@@ -2310,6 +2314,8 @@ def verify_animations_page_controls(client: "BridgeClient") -> dict[str, Any]:
         failures.append("Animations module row click was not handled")
     if pos_x_click.get("handled") is not True:
         failures.append("Animations Pos X row click was not handled")
+    if rotate_only_swing_click.get("handled") is not True:
+        failures.append("Animations Rotate-Only Swing row click was not handled")
     if cancel_click.get("handled") is not True:
         failures.append("Animations Cancel Re-Equip row click was not handled")
     if hide_hand_click.get("handled") is not True:
@@ -2322,6 +2328,8 @@ def verify_animations_page_controls(client: "BridgeClient") -> dict[str, Any]:
         failures.append(f"Animations module row did not toggle value {before['enabled']!r}")
     if abs(float(after["posX"]) - float(before["posX"])) < 0.01:
         failures.append(f"Animations Pos X row did not change value {before['posX']!r} -> {after['posX']!r}")
+    if after["rotateOnlySwing"] == before["rotateOnlySwing"]:
+        failures.append(f"Animations Rotate-Only Swing row did not toggle value {before['rotateOnlySwing']!r}")
     if after["cancelReEquip"] == before["cancelReEquip"]:
         failures.append(f"Animations Cancel Re-Equip row did not toggle value {before['cancelReEquip']!r}")
     if after["hideHand"] == before["hideHand"]:
@@ -2341,6 +2349,7 @@ def verify_animations_page_controls(client: "BridgeClient") -> dict[str, Any]:
         "animationsClickHandled": animations_click.get("handled"),
         "moduleClickHandled": module_click.get("handled"),
         "posXClickHandled": pos_x_click.get("handled"),
+        "rotateOnlySwingClickHandled": rotate_only_swing_click.get("handled"),
         "cancelClickHandled": cancel_click.get("handled"),
         "hideHandClickHandled": hide_hand_click.get("handled"),
         "classicClickHandled": classic_click.get("handled"),
@@ -3033,9 +3042,12 @@ def animations_page_state(state: dict[str, Any]) -> dict[str, Any]:
         position_x = nested(state, "render", "animations", "position", "x")
         if isinstance(position_x, (int, float)):
             position_x = float(position_x) * 100.0
+    rotate_only_swing = nested(state, "render", "animations", "settings", "rotateOnlySwing")
     cancel_re_equip = nested(state, "render", "animations", "settings", "cancelReEquip")
     hide_hand = nested(state, "render", "animations", "settings", "hideHand")
     classic_click = nested(state, "render", "animations", "settings", "classicClick")
+    if rotate_only_swing is None:
+        rotate_only_swing = nested(state, "render", "animations", "rotateOnlySwing")
     if cancel_re_equip is None:
         cancel_re_equip = nested(state, "render", "animations", "cancelReEquip")
     if hide_hand is None:
@@ -3046,14 +3058,15 @@ def animations_page_state(state: dict[str, Any]) -> dict[str, Any]:
         raise SystemExit(f"Animations page state expected boolean, got enabled={enabled!r}")
     if not isinstance(position_x, (int, float)):
         raise SystemExit(f"Animations page Pos X state expected number, got {position_x!r}")
-    if not isinstance(cancel_re_equip, bool) or not isinstance(hide_hand, bool) or not isinstance(classic_click, bool):
+    if not isinstance(rotate_only_swing, bool) or not isinstance(cancel_re_equip, bool) or not isinstance(hide_hand, bool) or not isinstance(classic_click, bool):
         raise SystemExit(
             "Animations page boolean state expected booleans, "
-            f"got cancelReEquip={cancel_re_equip!r}, hideHand={hide_hand!r}, classicClick={classic_click!r}"
+            f"got rotateOnlySwing={rotate_only_swing!r}, cancelReEquip={cancel_re_equip!r}, hideHand={hide_hand!r}, classicClick={classic_click!r}"
         )
     return {
         "enabled": enabled,
         "posX": round(float(position_x), 2),
+        "rotateOnlySwing": rotate_only_swing,
         "cancelReEquip": cancel_re_equip,
         "hideHand": hide_hand,
         "classicClick": classic_click,
@@ -3842,6 +3855,7 @@ def restore_animations_page_controls(client: "BridgeClient", desired: dict[str, 
             time.sleep(0.15)
             continue
         for setting_name, state_key in (
+            ("Rotate-Only Swing", "rotateOnlySwing"),
             ("Cancel Re-Equip", "cancelReEquip"),
             ("Hide Hand", "hideHand"),
             ("Classic Click", "classicClick"),
@@ -3853,7 +3867,10 @@ def restore_animations_page_controls(client: "BridgeClient", desired: dict[str, 
         else:
             break
     state = client.get("/state")
-    raise SystemExit(f"Could not restore Animations page controls to {desired!r}, got {animations_page_state(state)!r}")
+    final_state = animations_page_state(state)
+    if final_state == desired:
+        return
+    raise SystemExit(f"Could not restore Animations page controls to {desired!r}, got {final_state!r}")
 
 
 def restore_mob_esp_page_controls(client: "BridgeClient", desired: dict[str, Any]) -> None:

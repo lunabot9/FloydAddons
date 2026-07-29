@@ -62,6 +62,11 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
             return;
         }
 
+        if (selectedModel.equals("Low Poly Tung")) {
+            submitLowPolyTung(poseStack, collector, light, state);
+            return;
+        }
+
         if (selectedModel.equals("Orthodox Man")) {
             submitOrthodoxMan(poseStack, collector, light);
             return;
@@ -240,6 +245,15 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
     private void submitTungTung(PoseStack poseStack, SubmitNodeCollector collector, int light,
                                 float movementSpeed, float attackTime) {
         TungImportedModel.render(poseStack, collector, light, movementSpeed, attackTime);
+    }
+
+    private void submitLowPolyTung(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state) {
+        LowPolyTungImportedModel.render(
+            poseStack,
+            collector,
+            light,
+            getParentModel()
+        );
     }
 
     private void submitGeorgeFloyd(PoseStack poseStack, SubmitNodeCollector collector, int light) {

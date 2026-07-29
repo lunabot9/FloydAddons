@@ -1,0 +1,6 @@
+Low Poly Tung player model and texture
+Adapted from the public scoliossis Model Modifier example resource pack.
+https://github.com/scoliossis/Model-Modifier
+
+Imported into FloydAddons on July 29, 2026.
+Only the model asset and audited OBJ render/parser logic were ported.

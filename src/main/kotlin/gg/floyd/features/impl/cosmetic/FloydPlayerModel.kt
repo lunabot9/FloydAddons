@@ -8,8 +8,9 @@ import gg.floyd.features.Module
 
 internal object FloydPlayerModelSelection {
     private const val MINION_MODEL = "Minion"
+    private const val LOW_POLY_TUNG_MODEL = "Low Poly Tung"
     private const val ORTHODOX_MAN_MODEL = "Orthodox Man"
-    private val customModels = listOf("Tung Tung Sahur", "George Floyd", "Jenny", ORTHODOX_MAN_MODEL, MINION_MODEL)
+    private val customModels = listOf("Tung Tung Sahur", LOW_POLY_TUNG_MODEL, "George Floyd", "Jenny", ORTHODOX_MAN_MODEL, MINION_MODEL)
     val models = customModels + VanillaMobCatalog.labels
     private val modelsByLowercase = models.associateBy { it.lowercase() }
     val modelDescriptions = mapOf(
@@ -107,7 +108,15 @@ object FloydPlayerModel : Module(
 
     @JvmStatic
     fun shouldHideHeldItem(customModelActive: Boolean, selectedModel: String): Boolean =
-        customModelActive && selectedModel == FloydPlayerModelSelection.models.first()
+        customModelActive && (selectedModel == "Tung Tung Sahur" || selectedModel == "Low Poly Tung")
+
+    @JvmStatic
+    fun shouldOffsetHeldItemFor(id: Int): Boolean =
+        isActiveFor(id) && selectedModelFor(id) == "Low Poly Tung"
+
+    @JvmStatic
+    fun shouldUseLowPolyTungFirstPerson(): Boolean =
+        mc.player?.id?.let(::shouldOffsetHeldItemFor) == true
 
     @JvmStatic
     fun usesBundledLayerFor(id: Int): Boolean = isActiveFor(id) && selectedVanillaMobIdFor(id) == null

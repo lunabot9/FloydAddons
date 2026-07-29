@@ -48,6 +48,15 @@ https://sketchfab.com/3d-models/tung-tung-tung-sahur-ffree-fire-skin-1388ca1f7c0
 The reference is licensed under Creative Commons Attribution 4.0:
 https://creativecommons.org/licenses/by/4.0/
 
+## Low Poly Tung asset source
+
+The `Low Poly Tung` cosmetic bundles a player OBJ/texture asset adapted from the public
+`scoliossis/Model-Modifier` example resource pack:
+https://github.com/scoliossis/Model-Modifier
+
+Only the example pack asset and the minimum OBJ parser/render math needed to display it in
+FloydAddons were ported.
+
 ## FloydAddons MIT Terms
 
 The vendored FloydAddons snapshot does not include a standalone license file;

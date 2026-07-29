@@ -42,9 +42,11 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
     private const val githubUrl = "https://github.com/lunabot9/FloydAddons"
     private const val discordUrl = "https://discord.gg/FLOYD"
+    private const val coffeeUrl = "https://buymeacoffee.com/lunabot9"
     // Clickable-link bounds (x, y, w, h) in the scaled GUI space, refreshed in place every frame.
     private val communityGithubBounds = floatArrayOf(0f, 0f, 0f, 0f)
     private val communityDiscordBounds = floatArrayOf(0f, 0f, 0f, 0f)
+    private val coffeeBounds = floatArrayOf(0f, 0f, 0f, 0f)
 
     private fun setBounds(b: FloatArray, x: Float, y: Float, w: Float, h: Float) {
         b[0] = x; b[1] = y; b[2] = w; b[3] = h
@@ -72,7 +74,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
 
             NVGRenderer.scale(guiScale, guiScale)
 
-            drawTitle(searchBarX, searchBarY)
+            drawTitle(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
             SearchBar.draw(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
             drawCommunity(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
 
@@ -119,7 +121,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         minecraftGuiScale: Float,
     ): RenderBounds {
         val bounds = RenderBounds()
-        bounds.include(searchBarX, searchBarY - 22f - 4f, searchBarX + 350f, searchBarY + 40f + 8f + 15f + 3f + 15f)
+        bounds.include(searchBarX, searchBarY - 22f - 16f, searchBarX + 350f, searchBarY + 40f + 8f + 15f + 3f + 15f)
         for (panel in panels) {
             val panelBounds = panel.predictedBounds(SearchBar.currentSearch)
             bounds.include(panelBounds[0], panelBounds[1], panelBounds[2], panelBounds[3])
@@ -297,6 +299,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     /** Opens the community link under the cursor, if any. Returns true if a link was hit. */
     private fun hitCommunityLink(x: Float, y: Float): Boolean {
         val url = when {
+            inBounds(coffeeBounds, x, y) -> coffeeUrl
             inBounds(communityGithubBounds, x, y) -> githubUrl
             inBounds(communityDiscordBounds, x, y) -> discordUrl
             else -> return false
@@ -319,18 +322,27 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
      * Renders the "FloydAddons" title above the search bar, tinted with the GUI accent
      * (chroma-cycling per character). Size is fixed at 22f — the width cache is keyed to it.
      */
-    private fun drawTitle(x: Float, searchBarY: Float) {
+    private fun drawTitle(x: Float, searchBarY: Float, mouseX: Float, mouseY: Float) {
         val size = 22f
         val widths = titleWidths.get()
         val titleWidth = widths[0]
         val startX = x + 175f - titleWidth / 2f
         var cursorX = startX
-        val titleY = searchBarY - size - 4f
+        val titleY = searchBarY - size - 16f
         for (i in titleChars.indices) {
             val offset = 1f - ((cursorX - startX) / titleWidth)
             NVGRenderer.text(titleChars[i], cursorX, titleY, size, ClickGUIModule.guiAccentColor(offset), NVGRenderer.defaultFont)
             cursorX += widths[i + 1]
         }
+
+        val coffeeText = "Buy Me A Coffee!"
+        val coffeeSize = 15f
+        val coffeeWidth = NVGRenderer.textWidth(coffeeText, coffeeSize, NVGRenderer.defaultFont)
+        val coffeeX = x + 175f - coffeeWidth / 2f
+        val coffeeY = titleY + size + 1f
+        setBounds(coffeeBounds, coffeeX, coffeeY, coffeeWidth, coffeeSize)
+        val coffeeColor = if (inBounds(coffeeBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor()
+        NVGRenderer.text(coffeeText, coffeeX, coffeeY, coffeeSize, coffeeColor, NVGRenderer.defaultFont)
     }
 
     private class RenderBounds {
