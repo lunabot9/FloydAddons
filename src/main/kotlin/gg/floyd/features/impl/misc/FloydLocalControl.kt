@@ -783,6 +783,7 @@ object FloydLocalControl : Module(
                 "hud", "edithud" -> mc.setScreen(HudManager)
                 "calculator", "calc" -> FloydCalculator.toggleVisibility()
                 "pause", "pausemenu", "gamemenu" -> mc.setScreen(net.minecraft.client.gui.screens.PauseScreen(true))
+                "inventory" -> mc.setScreen(net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player ?: throw IllegalArgumentException("not_connected")))
                 "options", "settings" -> mc.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(mc.screen ?: net.minecraft.client.gui.screens.PauseScreen(true), mc.options, mc.level != null))
                 "close", "none" -> mc.setScreen(null)
                 else -> throw IllegalArgumentException("unknown_screen")

@@ -60,10 +60,21 @@ public final class LowPolyTungImportedModel {
 
     public static void renderFirstPersonArm(PoseStack poseStack, SubmitNodeCollector collector, int light,
                                             ModelPart arm, HumanoidArm armSide) {
+        prepareFirstPersonArm(arm, armSide);
         renderPart(poseStack, collector, light, arm, armSide == HumanoidArm.RIGHT ? RIGHT_ARM : LEFT_ARM);
         if (armSide == HumanoidArm.RIGHT) {
             renderPart(poseStack, collector, light, arm, BASE_ITEM);
         }
+    }
+
+    /**
+     * AvatarRenderer normally resets the mutable shared arm before drawing first person. Floyd's
+     * custom hand cancels that vanilla method, so it must preserve the same reset here or inventory
+     * preview poses and other third-person animation state leak into the next hand frame.
+     */
+    public static void prepareFirstPersonArm(ModelPart arm, HumanoidArm armSide) {
+        arm.resetPose();
+        arm.zRot = armSide == HumanoidArm.RIGHT ? 0.1F : -0.1F;
     }
 
     private static void renderPart(PoseStack stack, SubmitNodeCollector collector, int light, ModelPart part, String partName) {
