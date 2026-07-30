@@ -2711,19 +2711,23 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             hits += AnimationHitEntry(rect, spec.settingName, AnimationHitKind.SLIDER)
         }
 
-        val rotateOnlySwing = Rect(controlLeft, animationRowY(top, 9), animationsFullWidth, animationsRowHeight)
+        val noSwing = Rect(controlLeft, animationRowY(top, 9), animationsFullWidth, animationsRowHeight)
+        drawButton(context, noSwing, "No Swing: ${onOff(booleanSetting(FloydAnimations, "No Swing")?.enabled ?: false)}", alpha)
+        hits += AnimationHitEntry(noSwing, "No Swing", AnimationHitKind.TOGGLE_SETTING)
+
+        val rotateOnlySwing = Rect(controlLeft, animationRowY(top, 10), animationsFullWidth, animationsRowHeight)
         drawButton(context, rotateOnlySwing, "Rotate-Only Swing: ${onOff(booleanSetting(FloydAnimations, "Rotate-Only Swing")?.enabled ?: false)}", alpha)
         hits += AnimationHitEntry(rotateOnlySwing, "Rotate-Only Swing", AnimationHitKind.TOGGLE_SETTING)
 
-        val cancelReEquip = Rect(controlLeft, animationRowY(top, 10), animationsFullWidth, animationsRowHeight)
+        val cancelReEquip = Rect(controlLeft, animationRowY(top, 11), animationsFullWidth, animationsRowHeight)
         drawButton(context, cancelReEquip, "Cancel Re-Equip: ${onOff(booleanSetting(FloydAnimations, "Cancel Re-Equip")?.enabled ?: false)}", alpha)
         hits += AnimationHitEntry(cancelReEquip, "Cancel Re-Equip", AnimationHitKind.TOGGLE_SETTING)
 
-        val hideHand = Rect(controlLeft, animationRowY(top, 11), animationsFullWidth, animationsRowHeight)
+        val hideHand = Rect(controlLeft, animationRowY(top, 12), animationsFullWidth, animationsRowHeight)
         drawButton(context, hideHand, "Hide Hand: ${onOff(booleanSetting(FloydAnimations, "Hide Hand")?.enabled ?: false)}", alpha)
         hits += AnimationHitEntry(hideHand, "Hide Hand", AnimationHitKind.TOGGLE_SETTING)
 
-        val classicClick = Rect(controlLeft, animationRowY(top, 12), animationsFullWidth, animationsRowHeight)
+        val classicClick = Rect(controlLeft, animationRowY(top, 13), animationsFullWidth, animationsRowHeight)
         drawButton(context, classicClick, "Classic Click: ${onOff(booleanSetting(FloydAnimations, "Classic Click")?.enabled ?: false)}", alpha)
         hits += AnimationHitEntry(classicClick, "Classic Click", AnimationHitKind.TOGGLE_SETTING)
 
@@ -4741,6 +4745,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             headerRow("Other"),
             numberRow(FloydAnimations, "Scale", "Scale") { twoDecimal(it) },
             numberRow(FloydAnimations, "Swing Duration", "Swing Duration") { it.roundToInt().toString() },
+            toggleSettingRow(FloydAnimations, "No Swing", "No Swing"),
             toggleSettingRow(FloydAnimations, "Rotate-Only Swing", "Rotate-Only Swing"),
             toggleSettingRow(FloydAnimations, "Cancel Re-Equip", "Cancel Re-Equip"),
             toggleSettingRow(FloydAnimations, "Hide Hand", "Hide Hand"),

@@ -54,6 +54,7 @@
     "mixins.ParticleEngineMixin",
     "mixins.PerfFrameMixin",
     "mixins.PlayerTabOverlayMixin",
+    "mixins.RotateOnlySwingItemLayerMixin",
     "mixins.ScreenEffectRendererMixin",
     "mixins.ScreenMixin",
     "mixins.SectionOcclusionGraphMixin",

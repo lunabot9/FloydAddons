@@ -133,6 +133,21 @@ class FloydMsdfRenderable internal constructor(
         val italic = textStyle.isItalic
         val bold = textStyle.isBold
         val boldZ = if (gui) 0.0F else Z_FIGHTER
+        val colorName = textStyle.color?.serialize()
+        val mainColor = if (SkyHanniChromaCompat.isMarker(colorName)) {
+            val window = net.minecraft.client.Minecraft.getInstance().window
+            val guiToDisplay = if (window.screenWidth > 0) window.width.toFloat() / window.screenWidth else 1f
+            SkyHanniChromaCompat.resolveArgb(
+                colorName = colorName,
+                fallbackArgb = color,
+                glyphX = x * guiToDisplay,
+                glyphY = y * guiToDisplay,
+                displayWidth = window.width,
+                ticks = ((System.nanoTime() / 50_000_000L) % 3600L).toFloat(),
+            )
+        } else {
+            color
+        }
         var mainZ = 0.0F
         if (hasShadow()) {
             glyph.renderQuad(italic, x + shadowOffset, y + shadowOffset, 0.0F, pose, buffer, shadowColor, bold, light)
@@ -141,9 +156,9 @@ class FloydMsdfRenderable internal constructor(
             }
             mainZ = if (gui) 0.0F else 0.03F
         }
-        glyph.renderQuad(italic, x, y, mainZ, pose, buffer, color, bold, light)
+        glyph.renderQuad(italic, x, y, mainZ, pose, buffer, mainColor, bold, light)
         if (bold) {
-            glyph.renderQuad(italic, x + boldOffset, y, mainZ + boldZ, pose, buffer, color, true, light)
+            glyph.renderQuad(italic, x + boldOffset, y, mainZ + boldZ, pose, buffer, mainColor, true, light)
         }
     }
 

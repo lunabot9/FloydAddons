@@ -1,12 +1,14 @@
 package gg.floyd.mixin.mixins;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import gg.floyd.features.impl.render.FloydAnimations;
+import gg.floyd.features.impl.render.RotateOnlySwingTransform;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
@@ -46,17 +48,35 @@ public class AnimationItemInHandRendererMixin {
         poseStack.mulPose(Axis.XP.rotationDegrees(FloydAnimations.xRotation()));
         poseStack.mulPose(Axis.YP.rotationDegrees(FloydAnimations.yRotation()));
         poseStack.mulPose(Axis.ZP.rotationDegrees(FloydAnimations.zRotation()));
-        if (FloydAnimations.shouldUseRotateOnlySwing()) {
-            float easedSwing = Mth.sin(swingProgress * swingProgress * (float) Math.PI);
-            float rootSwing = Mth.sin(Mth.sqrt(swingProgress) * (float) Math.PI);
-            int direction = player.getMainArm() == HumanoidArm.RIGHT ? 1 : -1;
-            poseStack.mulPose(Axis.YP.rotationDegrees(direction * -20.0f * easedSwing));
-            poseStack.mulPose(Axis.ZP.rotationDegrees(direction * -20.0f * rootSwing));
-            poseStack.mulPose(Axis.XP.rotationDegrees(-80.0f * rootSwing));
-        }
 
         float scale = FloydAnimations.itemScale();
         if (scale != 1.0f) poseStack.scale(scale, scale, scale);
+
+        RotateOnlySwingTransform.begin(swingProgress, player.getMainArm());
+    }
+
+    @Inject(
+        method = "renderArmWithItem",
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+            shift = At.Shift.AFTER
+        )
+    )
+    private void floydaddons$clearRotateOnlySwing(
+        AbstractClientPlayer player,
+        float partialTick,
+        float pitch,
+        InteractionHand hand,
+        float swingProgress,
+        ItemStack stack,
+        float equipProgress,
+        PoseStack poseStack,
+        SubmitNodeCollector submitNodeCollector,
+        int packedLight,
+        CallbackInfo ci
+    ) {
+        if (hand == InteractionHand.MAIN_HAND) RotateOnlySwingTransform.end();
     }
 
     @Inject(method = "renderArmWithItem", at = @At("HEAD"), cancellable = true)
@@ -89,11 +109,38 @@ public class AnimationItemInHandRendererMixin {
         ci.cancel();
     }
 
-    @Inject(method = "applyItemArmAttackTransform", at = @At("HEAD"), cancellable = true)
-    private void floydaddons$rotateSwingInPlace(PoseStack poseStack, HumanoidArm arm, float swingProgress, CallbackInfo ci) {
-        if (!FloydAnimations.shouldUseRotateOnlySwing()) return;
+    @WrapOperation(
+        method = "swingArm",
+        at = @At(
+            value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(FFF)V"
+        )
+    )
+    private void floydaddons$removeSwingTravel(
+        PoseStack poseStack,
+        float x,
+        float y,
+        float z,
+        Operation<Void> original
+    ) {
+        if (FloydAnimations.shouldSuppressSwingMotion()) {
+            if (FloydAnimations.shouldUseNoSwing()) {
+                FloydAnimations.recordNoSwing();
+            } else {
+                FloydAnimations.recordRotateOnlySwing();
+            }
+            return;
+        }
+        original.call(poseStack, x, y, z);
+    }
 
-        FloydAnimations.recordRotateOnlySwing();
-        ci.cancel();
+    @Inject(method = "applyItemArmAttackTransform", at = @At("HEAD"), cancellable = true)
+    private void floydaddons$moveSwingRotationToItemSpace(
+        PoseStack poseStack,
+        HumanoidArm arm,
+        float swingProgress,
+        CallbackInfo ci
+    ) {
+        if (FloydAnimations.shouldSuppressSwingMotion()) ci.cancel();
     }
 }

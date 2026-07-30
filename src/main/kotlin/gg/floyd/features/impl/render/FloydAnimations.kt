@@ -20,6 +20,7 @@ object FloydAnimations : Module(
     val rotZ by NumberSetting("Rot Z", 0, -180, 180, 1, desc = "First-person item Z rotation.")
     val scale by NumberSetting("Scale", 1.0f, 0.1f, 2.0f, 0.05f, desc = "First-person item scale.")
     val swingDuration by NumberSetting("Swing Duration", 6, 1, 100, 1, desc = "Ticks for a complete swing animation.")
+    val noSwing by BooleanSetting("No Swing", false, desc = "Keeps the held item completely still during swings.")
     val rotateOnlySwing by BooleanSetting("Rotate-Only Swing", false, desc = "Keeps the held item planted and rotates it in place during swings.")
     val cancelReEquip by BooleanSetting("Cancel Re-Equip", false, desc = "Removes the held-item re-equip bob.")
     val hidePlayerHand by BooleanSetting("Hide Hand", false, desc = "Hides the main hand when no item is held.")
@@ -28,6 +29,7 @@ object FloydAnimations : Module(
     private val customSwingDurationHits = AtomicLong()
     private val preventedSwingRestartHits = AtomicLong()
     private val itemTransformHits = AtomicLong()
+    private val noSwingHits = AtomicLong()
     private val rotateOnlySwingHits = AtomicLong()
     private val hideEmptyMainHandHits = AtomicLong()
     private val cancelReEquipHits = AtomicLong()
@@ -42,7 +44,9 @@ object FloydAnimations : Module(
     @JvmStatic fun zRotation(): Float = rotZ.toFloat()
     @JvmStatic fun itemScale(): Float = scale
     @JvmStatic fun swingTicks(): Int = swingDuration
-    @JvmStatic fun shouldUseRotateOnlySwing(): Boolean = enabled && rotateOnlySwing
+    @JvmStatic fun shouldUseNoSwing(): Boolean = enabled && noSwing
+    @JvmStatic fun shouldSuppressSwingMotion(): Boolean = enabled && (noSwing || rotateOnlySwing)
+    @JvmStatic fun shouldUseRotateOnlySwing(): Boolean = enabled && rotateOnlySwing && !noSwing
     @JvmStatic fun shouldCancelReEquip(): Boolean = enabled && cancelReEquip
     @JvmStatic fun shouldHideEmptyMainHand(): Boolean = enabled && hidePlayerHand
     @JvmStatic fun shouldUseClassicClick(): Boolean = enabled && classicClick
@@ -50,6 +54,7 @@ object FloydAnimations : Module(
     @JvmStatic fun recordCustomSwingDuration() { customSwingDurationHits.incrementAndGet() }
     @JvmStatic fun recordPreventedSwingRestart() { preventedSwingRestartHits.incrementAndGet() }
     @JvmStatic fun recordItemTransform() { itemTransformHits.incrementAndGet() }
+    @JvmStatic fun recordNoSwing() { noSwingHits.incrementAndGet() }
     @JvmStatic fun recordRotateOnlySwing() { rotateOnlySwingHits.incrementAndGet() }
     @JvmStatic fun recordHideEmptyMainHand() { hideEmptyMainHandHits.incrementAndGet() }
     @JvmStatic fun recordCancelReEquip() { cancelReEquipHits.incrementAndGet() }
@@ -62,6 +67,7 @@ object FloydAnimations : Module(
         "rotation" to mapOf("x" to xRotation(), "y" to yRotation(), "z" to zRotation()),
         "scale" to itemScale(),
         "swingDuration" to swingTicks(),
+        "noSwing" to shouldUseNoSwing(),
         "rotateOnlySwing" to shouldUseRotateOnlySwing(),
         "cancelReEquip" to shouldCancelReEquip(),
         "hideEmptyMainHand" to shouldHideEmptyMainHand(),
@@ -75,6 +81,7 @@ object FloydAnimations : Module(
             "rotZ" to rotZ,
             "scale" to scale,
             "swingDuration" to swingDuration,
+            "noSwing" to noSwing,
             "rotateOnlySwing" to rotateOnlySwing,
             "cancelReEquip" to cancelReEquip,
             "hideHand" to hidePlayerHand,
@@ -84,6 +91,7 @@ object FloydAnimations : Module(
             "customSwingDuration" to customSwingDurationHits.get(),
             "preventedSwingRestart" to preventedSwingRestartHits.get(),
             "itemTransform" to itemTransformHits.get(),
+            "noSwing" to noSwingHits.get(),
             "rotateOnlySwing" to rotateOnlySwingHits.get(),
             "hideEmptyMainHand" to hideEmptyMainHandHits.get(),
             "cancelReEquip" to cancelReEquipHits.get(),
