@@ -1,38 +1,35 @@
 package gg.floyd.mixin.mixins;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import gg.floyd.features.impl.camera.FloydCamera;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
+import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @Mixin(MouseHandler.class)
 public class CameraMouseMixin {
-    @Inject(
+    @WrapOperation(
         method = "turnPlayer",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V"),
-        cancellable = true,
-        locals = LocalCapture.CAPTURE_FAILHARD
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V")
     )
     private void floydaddons$redirectLookDirection(
-        double deltaTime,
-        CallbackInfo ci,
-        double sensitivity,
-        double cubicSensitivity,
-        double turnScale,
+        LocalPlayer player,
         double deltaX,
-        double deltaY
+        double deltaY,
+        Operation<Void> original
     ) {
         if (FloydCamera.freecamActive()) {
             FloydCamera.adjustFreecamLook(deltaX, deltaY);
-            ci.cancel();
         } else if (FloydCamera.freelookActive()) {
             FloydCamera.adjustFreelook(deltaX, deltaY);
-            ci.cancel();
+        } else {
+            original.call(player, deltaX, deltaY);
         }
     }
 

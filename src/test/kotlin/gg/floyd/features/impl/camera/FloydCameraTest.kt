@@ -1,10 +1,25 @@
 package gg.floyd.features.impl.camera
 
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import net.minecraft.client.CameraType
+import java.nio.file.Files
+import java.nio.file.Path
 
 class FloydCameraTest {
+    @Test
+    fun `mouse hook wraps the exact player turn arguments without captured-local ordering`() {
+        val source = Files.readString(
+            Path.of("src/main/java/gg/floyd/mixin/mixins/CameraMouseMixin.java")
+        )
+
+        assertContains(source, "@WrapOperation(")
+        assertContains(source, "Operation<Void> original")
+        assertFalse(source.contains("LocalCapture"))
+    }
+
     @Test
     fun `camera state exposes Floyd module controls for local smokes`() {
         val state = FloydCamera.state()
