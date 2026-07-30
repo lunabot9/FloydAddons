@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation
 import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.customData
 import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.resolveDynamic
 import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.skyBlockId
+import gg.floyd.features.impl.render.FloydSkyBlockItemModelPolicy
 import gg.floyd.features.impl.render.FloydSkyBlockPackAssets
 import gg.floyd.features.impl.render.FloydSkyBlockPackDisabler
 import net.minecraft.client.renderer.item.ItemModelResolver
@@ -34,14 +35,20 @@ abstract class SkyBlockItemModelMixin {
         if (!FloydSkyBlockPackDisabler.enabled || stack.isEmpty || currentModel.namespace != "hypixel_skyblock") {
             return currentModel
         }
+        if (FloydSkyBlockPackAssets.hasLiveItemModel(currentModel)) return currentModel
 
         val customData = stack.customData
         val skyBlockId = skyBlockId(customData)
+        val vanillaItemModel = stack.item.components()[DataComponents.ITEM_MODEL] ?: currentModel
         val vanillaModel = when {
-            skyBlockId != null -> FloydSkyBlockPackAssets.itemModels[skyBlockId]
+            skyBlockId != null -> FloydSkyBlockItemModelPolicy.resolveBaseModel(
+                skyBlockId = skyBlockId,
+                knownModels = FloydSkyBlockPackAssets.itemModels,
+                vanillaItemModel = vanillaItemModel,
+            )
             customData.contains("quiver_arrow") -> Items.ARROW.components()[DataComponents.ITEM_MODEL]
-            else -> null
-        } ?: return currentModel
+            else -> vanillaItemModel
+        } ?: vanillaItemModel
 
         return skyBlockId?.let { resolveDynamic(it, stack, customData, vanillaModel) } ?: vanillaModel
     }

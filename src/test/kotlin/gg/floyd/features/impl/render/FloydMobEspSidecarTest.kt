@@ -187,13 +187,13 @@ class FloydMobEspSidecarTest {
             val summary = FloydMobEsp.filterListSummary()
 
             assertEquals(
-                "--- Mob ESP Filters ---\nname: Shadow Assassin\ntype: minecraft:zombie\nStar mobs: OFF",
+                "--- Mob ESP Filters ---\nname: Shadow Assassin\ntype: minecraft:zombie\nStar mobs: OFF\nSparkling critters: OFF",
                 summary
             )
 
             FloydMobEsp.clearFilters()
             assertEquals(
-                "--- Mob ESP Filters ---\nNo filters configured.\nStar mobs: OFF",
+                "--- Mob ESP Filters ---\nNo filters configured.\nStar mobs: OFF\nSparkling critters: OFF",
                 FloydMobEsp.filterListSummary()
             )
         } finally {

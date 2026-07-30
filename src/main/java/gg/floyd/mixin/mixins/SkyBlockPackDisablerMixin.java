@@ -1,6 +1,7 @@
 package gg.floyd.mixin.mixins;
 
 import gg.floyd.features.impl.render.FloydSkyBlockPackDisabler;
+import gg.floyd.features.impl.render.FloydSkyBlockPackAssets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
 import net.minecraft.network.Connection;
@@ -31,6 +32,7 @@ public abstract class SkyBlockPackDisablerMixin {
         // starting the download before Floyd can cancel it.
         if (!Minecraft.getInstance().isSameThread()) return;
 
+        FloydSkyBlockPackAssets.refreshFromLivePack(packet.url(), packet.hash());
         connection.send(new ServerboundResourcePackPacket(packet.id(), ServerboundResourcePackPacket.Action.ACCEPTED));
         connection.send(new ServerboundResourcePackPacket(packet.id(), ServerboundResourcePackPacket.Action.SUCCESSFULLY_LOADED));
         ci.cancel();

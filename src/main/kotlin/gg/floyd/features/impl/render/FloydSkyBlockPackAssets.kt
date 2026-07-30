@@ -33,10 +33,13 @@ object FloydSkyBlockPackAssets {
     private val extractedPack = FabricLoader.getInstance().configDir
         .resolve("floydaddons")
         .resolve("skyblock-pack-models-$FALLBACK_PACK_REVISION.zip")
+    private val cacheDir = extractedPack.parent
 
     val itemModels: Map<String, Identifier> by lazy { loadItemData().first }
     val skullProfiles: Map<String, ResolvableProfile> by lazy { loadItemData().second }
-    private val activePack: Pack by lazy { buildPack() }
+    @Volatile private var livePack = runCatching { FloydSkyBlockLivePackCache.latest(cacheDir) }
+        .onFailure { FloydAddonsMod.logger.warn("Failed to inspect cached live SkyBlock item pack", it) }
+        .getOrNull()
 
     private val itemData by lazy {
         val models = HashMap<String, Identifier>()
@@ -86,19 +89,48 @@ object FloydSkyBlockPackAssets {
         }
     }
 
+    fun hasLiveItemModel(model: Identifier): Boolean = livePack?.itemModels?.contains(model) == true
+
+    @JvmStatic
+    fun refreshFromLivePack(url: String, expectedSha1: String) {
+        FloydSkyBlockLivePackDownloader.fetch(url, expectedSha1, cacheDir).whenComplete { downloaded, error ->
+            if (error != null) {
+                FloydAddonsMod.logger.error("Failed to refresh the live Hypixel item-only pack", error)
+                return@whenComplete
+            }
+            if (livePack?.path == downloaded.path) return@whenComplete
+
+            livePack = downloaded
+            FloydAddonsMod.logger.info(
+                "Loaded live Hypixel item-only pack with ${downloaded.itemModels.size} models " +
+                    "and ${downloaded.copiedEntries} sanitized entries"
+            )
+            FloydAddonsMod.mc.execute {
+                FloydAddonsMod.mc.reloadResourcePacks().whenComplete { _, reloadError ->
+                    if (reloadError != null) {
+                        FloydAddonsMod.logger.error("Failed to reload the live Hypixel item-only pack", reloadError)
+                    } else {
+                        FloydAddonsMod.logger.info("Activated refreshed live Hypixel item-only pack")
+                    }
+                }
+            }
+        }
+    }
+
     private fun buildPack(): Pack {
         Files.createDirectories(extractedPack.parent)
         javaClass.getResourceAsStream(FALLBACK_RESOURCE)?.use { input ->
             FloydSkyBlockPackMaterializer.materialize(input, extractedPack)
         } ?: error("Missing $FALLBACK_RESOURCE")
+        val packPath = livePack?.path?.takeIf(Files::isRegularFile) ?: extractedPack
 
         val location = PackLocationInfo(
             "floyd_skyblock_model_fallbacks",
-            Component.literal("FloydAddons: SkyBlock model fallbacks"),
+            Component.literal("FloydAddons: live SkyBlock item compatibility"),
             PackSource.BUILT_IN,
             Optional.empty(),
         )
-        val supplier = FilePackResources.FileResourcesSupplier(extractedPack.toFile())
+        val supplier = FilePackResources.FileResourcesSupplier(packPath.toFile())
         val selection = PackSelectionConfig(true, Pack.Position.BOTTOM, true)
         return Pack.readMetaAndCreate(location, supplier, PackType.CLIENT_RESOURCES, selection)
             ?: error("Failed to load SkyBlock fallback pack")
@@ -106,7 +138,7 @@ object FloydSkyBlockPackAssets {
 
     class Repository : RepositorySource {
         override fun loadPacks(onLoad: Consumer<Pack>) {
-            onLoad.accept(activePack)
+            onLoad.accept(buildPack())
         }
     }
 }

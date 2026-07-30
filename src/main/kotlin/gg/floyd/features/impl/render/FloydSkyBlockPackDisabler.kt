@@ -5,6 +5,7 @@ import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.utils.modMessage
+import net.minecraft.resources.Identifier
 
 /**
  * Prevents Hypixel's official SkyBlock server pack from replacing the player's selected visuals.
@@ -54,4 +55,12 @@ internal object FloydSkyBlockPackPolicy {
     fun isOfficialSkyBlockPack(url: String): Boolean =
         url.contains("hypixel.net", ignoreCase = true) &&
             url.contains("SkyBlock", ignoreCase = true)
+}
+
+internal object FloydSkyBlockItemModelPolicy {
+    fun resolveBaseModel(
+        skyBlockId: String?,
+        knownModels: Map<String, Identifier>,
+        vanillaItemModel: Identifier,
+    ): Identifier = skyBlockId?.let(knownModels::get) ?: vanillaItemModel
 }
