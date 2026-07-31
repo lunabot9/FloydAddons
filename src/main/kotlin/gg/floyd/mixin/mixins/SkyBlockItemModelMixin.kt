@@ -35,12 +35,14 @@ abstract class SkyBlockItemModelMixin {
         if (!FloydSkyBlockPackDisabler.enabled || stack.isEmpty || currentModel.namespace != "hypixel_skyblock") {
             return currentModel
         }
-        if (FloydSkyBlockPackAssets.hasLiveItemModel(currentModel)) return currentModel
-
         val customData = stack.customData
         val skyBlockId = skyBlockId(customData)
+        val liveBaseModel = FloydSkyBlockPackAssets.liveBaseModel(currentModel)
         val vanillaItemModel = stack.item.components()[DataComponents.ITEM_MODEL] ?: currentModel
         val vanillaModel = when {
+            skyBlockId != null && FloydSkyBlockPackAssets.itemModels.containsKey(skyBlockId) ->
+                FloydSkyBlockPackAssets.itemModels.getValue(skyBlockId)
+            liveBaseModel != null -> liveBaseModel
             skyBlockId != null -> FloydSkyBlockItemModelPolicy.resolveBaseModel(
                 skyBlockId = skyBlockId,
                 knownModels = FloydSkyBlockPackAssets.itemModels,

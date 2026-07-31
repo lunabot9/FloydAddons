@@ -60,7 +60,7 @@ class FloydSkyBlockPackDisablerTest {
     }
 
     @Test
-    fun `live pack sanitizer keeps Hypixel item assets and removes global Minecraft overrides`() {
+    fun `live pack cache learns vanilla parents without retaining Hypixel textures`() {
         val input = Files.createTempFile("floyd-live-pack-input", ".zip")
         val output = Files.createTempFile("floyd-live-pack-output", ".zip")
         ZipOutputStream(Files.newOutputStream(input)).use { zip ->
@@ -89,11 +89,14 @@ class FloydSkyBlockPackDisablerTest {
             assertNotNull(zip.getEntry("pack.mcmeta"))
             assertNotNull(zip.getEntry("assets/hypixel_skyblock/items/item/alpha/new_food.json"))
             assertNotNull(zip.getEntry("assets/hypixel_skyblock/models/item/alpha/new_food.json"))
-            assertNotNull(zip.getEntry("assets/hypixel_skyblock/textures/item/alpha/new_food.png"))
+            assertEquals(null, zip.getEntry("assets/hypixel_skyblock/textures/item/alpha/new_food.png"))
             assertEquals(null, zip.getEntry("assets/minecraft/textures/gui/title/background/panorama_0.png"))
             assertEquals(null, zip.getEntry("assets/minecraft/font/default.json"))
         }
-        assertEquals(setOf(Identifier.parse("hypixel_skyblock:item/alpha/new_food")), result.itemModels)
+        assertEquals(
+            Identifier.parse("minecraft:item/paper"),
+            result.baseModels[Identifier.parse("hypixel_skyblock:item/alpha/new_food")],
+        )
     }
 
     @Test

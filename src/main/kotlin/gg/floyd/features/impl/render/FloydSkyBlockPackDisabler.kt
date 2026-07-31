@@ -11,9 +11,9 @@ import net.minecraft.resources.Identifier
  * Prevents Hypixel's official SkyBlock server pack from replacing the player's selected visuals.
  *
  * The network mixin acknowledges matching pack pushes as loaded, then cancels Minecraft's normal
- * download path. A lowest-priority copy of Hypixel's model definitions stays mounted so the
- * server's `hypixel_skyblock:*` item references remain resolvable, while item models are mapped
- * back to their vanilla equivalents. Other server resource packs are left untouched.
+ * download path. Floyd reads Hypixel's item/model JSON as inert metadata so new custom model IDs
+ * can be mapped back to their vanilla parents, but it never mounts Hypixel's textures. Other
+ * server resource packs are left untouched.
  */
 object FloydSkyBlockPackDisabler : Module(
     name = "SkyBlock Pack Disabler",

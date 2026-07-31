@@ -1,5 +1,7 @@
 package gg.floyd.features.impl.render
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
 import net.minecraft.resources.Identifier
 import java.net.URI
 import java.net.http.HttpClient
@@ -19,25 +21,24 @@ import java.util.zip.ZipOutputStream
 
 internal data class FloydSanitizedSkyBlockPack(
     val path: Path,
-    val itemModels: Set<Identifier>,
+    val baseModels: Map<Identifier, Identifier>,
     val copiedEntries: Int,
 )
 
 /**
- * Converts Hypixel's server pack into an item-only pack. The custom SkyBlock item definitions,
- * models and textures stay available, while Minecraft GUI, font, shader and panorama overrides
- * are omitted so the rest of the game remains vanilla.
+ * Converts Hypixel's server pack into a metadata-only cache. Item definitions and model parents
+ * are retained so new custom IDs can be mapped back to vanilla models, while Hypixel textures and
+ * every global Minecraft override are omitted.
  */
 internal object FloydSkyBlockLivePackCache {
     private const val CACHE_PREFIX = "skyblock-live-items-"
     private const val CACHE_SUFFIX = ".zip"
-    private const val HYPIXEL_ASSET_PREFIX = "assets/hypixel_skyblock/"
     private const val ITEM_DEFINITION_PREFIX = "assets/hypixel_skyblock/items/"
+    private const val MODEL_DEFINITION_PREFIX = "assets/hypixel_skyblock/models/"
     private const val MAX_ENTRY_COUNT = 50_000
     private const val MAX_UNCOMPRESSED_BYTES = 128L * 1024L * 1024L
 
     fun sanitize(input: Path, output: Path): FloydSanitizedSkyBlockPack {
-        val itemModels = linkedSetOf<Identifier>()
         var copiedEntries = 0
         var copiedBytes = 0L
 
@@ -47,7 +48,7 @@ internal object FloydSkyBlockLivePackCache {
                 while (entries.hasMoreElements()) {
                     val entry = entries.nextElement()
                     if (entry.isDirectory || !isSafeEntryName(entry.name)) continue
-                    if (entry.name != "pack.mcmeta" && !entry.name.startsWith(HYPIXEL_ASSET_PREFIX)) continue
+                    if (!isMetadataEntry(entry.name)) continue
                     if (++copiedEntries > MAX_ENTRY_COUNT) error("Hypixel item pack contains too many entries")
 
                     target.putNextEntry(ZipEntry(entry.name))
@@ -64,31 +65,46 @@ internal object FloydSkyBlockLivePackCache {
                         }
                     }
                     target.closeEntry()
-
-                    itemModelId(entry.name)?.let(itemModels::add)
                 }
             }
         }
 
-        require(copiedEntries > 1 && itemModels.isNotEmpty()) {
-            "Hypixel pack did not contain usable SkyBlock item assets"
-        }
-        return FloydSanitizedSkyBlockPack(output, itemModels, copiedEntries)
+        return inspect(output)
     }
 
     fun inspect(path: Path): FloydSanitizedSkyBlockPack {
-        val models = linkedSetOf<Identifier>()
+        val itemDefinitions = linkedMapOf<Identifier, Identifier>()
+        val modelParents = linkedMapOf<Identifier, Identifier>()
         var entries = 0
         ZipFile(path.toFile()).use { zip ->
             val iterator = zip.entries()
             while (iterator.hasMoreElements()) {
                 val entry = iterator.nextElement()
                 if (!entry.isDirectory) entries++
-                itemModelId(entry.name)?.let(models::add)
+                if (entry.isDirectory || !entry.name.endsWith(".json")) continue
+
+                itemModelId(entry.name)?.let { itemId ->
+                    val root = zip.getInputStream(entry).reader().use(JsonParser::parseReader)
+                    findModelReference(root)?.let { itemDefinitions[itemId] = it }
+                }
+                modelDefinitionId(entry.name)?.let { modelId ->
+                    val root = zip.getInputStream(entry).reader().use(JsonParser::parseReader)
+                    root.takeIf(JsonElement::isJsonObject)
+                        ?.asJsonObject
+                        ?.get("parent")
+                        ?.takeIf(JsonElement::isJsonPrimitive)
+                        ?.asString
+                        ?.let(Identifier::tryParse)
+                        ?.let { modelParents[modelId] = it }
+                }
             }
         }
-        require(models.isNotEmpty()) { "Cached Hypixel item pack contains no item definitions" }
-        return FloydSanitizedSkyBlockPack(path, models, entries)
+
+        val baseModels = itemDefinitions.mapNotNull { (itemId, modelId) ->
+            resolveVanillaParent(modelId, modelParents)?.let { itemId to it }
+        }.toMap()
+        require(baseModels.isNotEmpty()) { "Cached Hypixel item pack contains no resolvable vanilla item parents" }
+        return FloydSanitizedSkyBlockPack(path, baseModels, entries)
     }
 
     fun latest(cacheDir: Path): FloydSanitizedSkyBlockPack? {
@@ -116,6 +132,50 @@ internal object FloydSkyBlockLivePackCache {
         val path = entryName.removePrefix(ITEM_DEFINITION_PREFIX).removeSuffix(".json")
         return Identifier.tryParse("hypixel_skyblock:$path")
     }
+
+    private fun modelDefinitionId(entryName: String): Identifier? {
+        if (!entryName.startsWith(MODEL_DEFINITION_PREFIX) || !entryName.endsWith(".json")) return null
+        val path = entryName.removePrefix(MODEL_DEFINITION_PREFIX).removeSuffix(".json")
+        return Identifier.tryParse("hypixel_skyblock:$path")
+    }
+
+    private fun findModelReference(element: JsonElement): Identifier? {
+        if (element.isJsonObject) {
+            val objectValue = element.asJsonObject
+            objectValue.get("model")
+                ?.takeIf(JsonElement::isJsonPrimitive)
+                ?.asString
+                ?.let(Identifier::tryParse)
+                ?.let { return it }
+            for ((_, value) in objectValue.entrySet()) {
+                findModelReference(value)?.let { return it }
+            }
+        } else if (element.isJsonArray) {
+            for (value in element.asJsonArray) {
+                findModelReference(value)?.let { return it }
+            }
+        }
+        return null
+    }
+
+    private fun resolveVanillaParent(
+        initialModel: Identifier,
+        modelParents: Map<Identifier, Identifier>,
+    ): Identifier? {
+        var current = initialModel
+        val visited = hashSetOf<Identifier>()
+        repeat(32) {
+            if (!visited.add(current)) return null
+            if (current.namespace == "minecraft") return current
+            current = modelParents[current] ?: return null
+        }
+        return null
+    }
+
+    private fun isMetadataEntry(name: String): Boolean =
+        name == "pack.mcmeta" ||
+            (name.startsWith(ITEM_DEFINITION_PREFIX) && name.endsWith(".json")) ||
+            (name.startsWith(MODEL_DEFINITION_PREFIX) && name.endsWith(".json"))
 
     private fun isSafeEntryName(name: String): Boolean =
         name.isNotBlank() &&

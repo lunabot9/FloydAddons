@@ -89,7 +89,7 @@ object FloydSkyBlockPackAssets {
         }
     }
 
-    fun hasLiveItemModel(model: Identifier): Boolean = livePack?.itemModels?.contains(model) == true
+    fun liveBaseModel(model: Identifier): Identifier? = livePack?.baseModels?.get(model)
 
     @JvmStatic
     fun refreshFromLivePack(url: String, expectedSha1: String) {
@@ -102,8 +102,8 @@ object FloydSkyBlockPackAssets {
 
             livePack = downloaded
             FloydAddonsMod.logger.info(
-                "Loaded live Hypixel item-only pack with ${downloaded.itemModels.size} models " +
-                    "and ${downloaded.copiedEntries} sanitized entries"
+                "Loaded live Hypixel metadata with ${downloaded.baseModels.size} vanilla model mappings " +
+                    "from ${downloaded.copiedEntries} sanitized entries"
             )
             FloydAddonsMod.mc.execute {
                 FloydAddonsMod.mc.reloadResourcePacks().whenComplete { _, reloadError ->
@@ -122,15 +122,13 @@ object FloydSkyBlockPackAssets {
         javaClass.getResourceAsStream(FALLBACK_RESOURCE)?.use { input ->
             FloydSkyBlockPackMaterializer.materialize(input, extractedPack)
         } ?: error("Missing $FALLBACK_RESOURCE")
-        val packPath = livePack?.path?.takeIf(Files::isRegularFile) ?: extractedPack
-
         val location = PackLocationInfo(
             "floyd_skyblock_model_fallbacks",
-            Component.literal("FloydAddons: live SkyBlock item compatibility"),
+            Component.literal("FloydAddons: vanilla SkyBlock item compatibility"),
             PackSource.BUILT_IN,
             Optional.empty(),
         )
-        val supplier = FilePackResources.FileResourcesSupplier(packPath.toFile())
+        val supplier = FilePackResources.FileResourcesSupplier(extractedPack.toFile())
         val selection = PackSelectionConfig(true, Pack.Position.BOTTOM, true)
         return Pack.readMetaAndCreate(location, supplier, PackType.CLIENT_RESOURCES, selection)
             ?: error("Failed to load SkyBlock fallback pack")
