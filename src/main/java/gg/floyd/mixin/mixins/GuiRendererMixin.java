@@ -85,7 +85,7 @@ public abstract class GuiRendererMixin {
     }
 
     @Inject(method = "render", at = @At("TAIL"))
-    private void floydaddons$recyclePooledPipAfterGuiFrame(com.mojang.blaze3d.buffers.GpuBufferSlice gpuBufferSlice, CallbackInfo ci) {
+    private void floydaddons$recyclePooledPipAfterGuiFrame(CallbackInfo ci) {
         PooledPicturePIPRenderer.recycleAll();
     }
 }

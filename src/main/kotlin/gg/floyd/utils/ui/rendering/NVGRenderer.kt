@@ -65,15 +65,13 @@ object NVGRenderer {
     private var vg = -1L
 
     /**
-     * Escape hatch (design D7 step 5): `FLOYD_NVG_TEXT=1` restores the legacy NanoVG text path —
-     * rendering (`text`/`textShadow`/`drawWrappedString`) AND measurement
-     * (`textWidth`/`wrappedTextBounds`) flip as ONE unit, or layouts would shear against the
-     * renderer (the D6 invariant). Read once here; deleted with the NVG text code in step 7.
+     * Escape hatch for forcing the legacy immediate NanoVG text path during local diagnostics.
+     *
+     * This is a JVM property instead of an environment variable because launcher-level env leaks
+     * can force legacy text across unrelated production instances. Use
+     * `-Dfloyd.nvg.text.legacy=true` when the old path is intentionally needed for debugging.
      */
-    // 26.1.2 fallback: keep ClickGUI text on the native NVG path by default for now. The newer
-    // mc.font deferred replay path is active behind FLOYD_NVG_TEXT=0 once its PIP replay is
-    // fully revalidated on 26.1.2.
-    private val legacyNvgText: Boolean = System.getenv("FLOYD_NVG_TEXT") != "0"
+    private val legacyNvgText: Boolean = java.lang.Boolean.getBoolean("floyd.nvg.text.legacy")
 
     /** True when text calls are deferred for mc.font replay (the default; see [DeferredNvgText]). */
     val deferringText: Boolean get() = !legacyNvgText
@@ -114,7 +112,7 @@ object NVGRenderer {
         NvgTextReplay.deferralActive = !legacyNvgText
         if (legacyNvgText) {
             FloydAddonsMod.logger.warn(
-                "[NVGRenderer] FLOYD_NVG_TEXT=1 — legacy NanoVG text rendering AND measurement active (MSDF deferral bypassed)"
+                "[NVGRenderer] floyd.nvg.text.legacy=true — legacy NanoVG text rendering AND measurement active (MSDF deferral bypassed)"
             )
         }
     }

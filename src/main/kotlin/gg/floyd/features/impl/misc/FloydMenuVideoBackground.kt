@@ -54,6 +54,14 @@ object FloydMenuVideoBackground {
         return true
     }
 
+    @JvmStatic
+    fun renderDirect(context: GuiGraphics): Boolean {
+        val guiWidth = context.guiWidth()
+        val guiHeight = context.guiHeight()
+        if (guiWidth <= 0 || guiHeight <= 0) return false
+        return renderIntoBoundTarget(guiWidth, guiHeight, menuTimeSeconds())
+    }
+
     internal fun renderIntoCurrentPip(width: Int, height: Int, time: Float): Boolean {
         if (width <= 0 || height <= 0 || initFailed) return false
         if (!ensureInitialized()) return false
@@ -278,6 +286,7 @@ object FloydMenuVideoBackground {
         GlStateManager._activeTexture(GL13C.GL_TEXTURE0)
         for (unit in RESYNC_TEXTURE_UNITS - 1 downTo 0) {
             GlStateManager._activeTexture(GL13C.GL_TEXTURE0 + unit)
+            GL33C.glBindSampler(unit, 0)
             GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, 0)
             GlStateManager._bindTexture(0)
         }
@@ -299,6 +308,9 @@ object FloydMenuVideoBackground {
         GlStateManager._disableScissorTest()
         GlStateManager._blendFuncSeparate(1, 0, 1, 0)
         GlStateManager._blendFuncSeparate(770, 771, 1, 0)
+        for (unit in 0 until RESYNC_TEXTURE_UNITS) {
+            GL33C.glBindSampler(unit, 0)
+        }
         GlStateManager._activeTexture(GL13C.GL_TEXTURE0)
     }
 

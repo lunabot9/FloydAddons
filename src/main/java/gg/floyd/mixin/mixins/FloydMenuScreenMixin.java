@@ -14,6 +14,7 @@ public abstract class FloydMenuScreenMixin {
     @Inject(method = "extractBackground", at = @At("HEAD"), cancellable = true)
     private void floydaddons$renderMenuBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         Screen screen = (Screen) (Object) this;
+        if (FloydMenuScreenStyling.shouldUseDirectBackground(screen)) return;
         if (!FloydMenuScreenStyling.shouldReplaceBackground(screen)) return;
         // Only cancel the vanilla background once the media frame is actually on screen; while the
         // first frames are still decoding, let vanilla draw so there is no black flash.

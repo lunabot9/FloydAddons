@@ -199,14 +199,19 @@ void DoLighting(inout vec3 mat, in vec3 normal) {
 vec3 TerrainColour(vec3 pos, vec3 dir, vec3 normal, float dis, float type) {
     vec3 mat = u_grassPrimaryColor;
     if (type == 0.0) {
-        vec3 skyReflection = GetSky(reflect(dir, normal), vec2(0.5, 0.5));
-        float fresnel = pow(clamp(1.0 - max(dot(normal, -dir), 0.0), 0.0, 1.0), 3.0);
+        vec3 reflectionDir = reflect(dir, normal);
+        vec3 skyReflection = GetSky(reflectionDir, vec2(0.5, 0.5));
+        float viewFacing = clamp(max(dot(normal, -dir), 0.0), 0.0, 1.0);
+        float fresnel = pow(1.0 - viewFacing, 2.35);
         float foamMask = smoothstep(0.45, 0.88, FractalNoise(pos.xz * 0.05 + vec2(u_time * 0.04, u_time * 0.03)));
+        float sparkleNoise = smoothstep(0.42, 0.95, FractalNoise(pos.xz * 0.11 + vec2(u_time * 0.08, -u_time * 0.05)));
+        float sunGlint = pow(max(dot(reflectionDir, sunLight), 0.0), 28.0) * (0.4 + sparkleNoise * 0.6);
         vec3 deepWater = mix(u_grassPrimaryColor * vec3(0.35, 0.42, 0.52), u_grassPrimaryColor * vec3(0.75, 0.88, 1.05), Noise(pos.xz * 0.012));
         vec3 shallowTint = mix(u_grassSecondaryColor * vec3(0.72, 0.86, 1.0), u_grassSecondaryColor * vec3(1.0, 1.08, 1.12), max(normal.y, 0.0));
         vec3 foam = vec3(0.72, 0.82, 0.9) * foamMask * (1.0 - smoothstep(0.7, 0.98, normal.y));
-        mat = mix(deepWater, shallowTint, 0.45 + normal.y * 0.25);
-        mat = mix(mat, skyReflection, 0.48 + fresnel * 0.5);
+        mat = mix(deepWater, shallowTint, 0.42 + normal.y * 0.22);
+        mat = mix(mat, skyReflection, 0.58 + fresnel * 0.34);
+        mat += u_sunColor * sunGlint * (0.12 + fresnel * 0.18);
         mat += foam * 0.35;
         DoLighting(mat, normal);
     }
