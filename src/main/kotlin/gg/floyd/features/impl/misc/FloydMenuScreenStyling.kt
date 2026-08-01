@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.ChatScreen
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
 import net.minecraft.client.gui.screens.options.OptionsSubScreen
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen
 import java.lang.reflect.Field
@@ -154,6 +155,7 @@ object FloydMenuScreenStyling {
     private fun usesShaderWrapper(screen: Screen): Boolean {
         if (
             screen is FloydJoinMultiplayerScreen ||
+            screen is JoinMultiplayerScreen ||
             screen is FloydOptionsScreen ||
             screen is FloydSelectWorldScreen ||
             screen is OptionsSubScreen ||
@@ -164,6 +166,7 @@ object FloydMenuScreenStyling {
 
         return screenLinkChain(screen).any { linked ->
             linked is FloydJoinMultiplayerScreen ||
+                linked is JoinMultiplayerScreen ||
                 linked is FloydOptionsScreen ||
                 linked is FloydSelectWorldScreen
         }
