@@ -2,6 +2,8 @@ package gg.floyd.features.impl.misc
 
 import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.settings.impl.BooleanSetting
+import gg.floyd.clickgui.settings.impl.ColorSetting
+import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.ScreenEvent
 import gg.floyd.events.TickEvent
@@ -9,6 +11,7 @@ import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.impl.render.FloydRender
+import gg.floyd.utils.Color
 import net.minecraft.client.gui.screens.TitleScreen
 
 /**
@@ -32,15 +35,31 @@ object FloydCustomMainMenu : Module(
     description = "Replaces the vanilla title flow with Floyd's animated custom main menu.",
     toggled = true,
 ) {
+    val backgroundSpeed by NumberSetting("Background Speed", 1.0f, 0.2f, 3.0f, 0.05f, desc = "Playback speed of the landscape shader background.")
+    val backgroundContrast by NumberSetting("Background Contrast", 1.1f, 0.5f, 2.0f, 0.05f, desc = "Post-process contrast for the landscape shader.")
+    val backgroundSaturation by NumberSetting("Background Saturation", 1.3f, 0.0f, 2.5f, 0.05f, desc = "Post-process saturation for the landscape shader.")
+    val backgroundBrightness by NumberSetting("Background Brightness", 1.3f, 0.4f, 2.5f, 0.05f, desc = "Post-process brightness for the landscape shader.")
+    val backgroundVignette by NumberSetting("Background Vignette", 0.5f, 0.0f, 1.5f, 0.05f, desc = "Edge darkening strength for the landscape shader.")
+    val skyTopColor by ColorSetting("Sky Top Color", Color(44, 37, 102), desc = "Upper sky color for the custom main menu shader.")
+    val skyHorizonColor by ColorSetting("Sky Horizon Color", Color(63, 42, 122), desc = "Horizon color for the custom main menu shader.")
+    val grassPrimaryColor by ColorSetting("Water Primary Color", Color(56, 62, 128), desc = "Primary water color for the custom main menu shader.")
+    val grassSecondaryColor by ColorSetting("Water Secondary Color", Color(90, 61, 126), desc = "Secondary water color for the custom main menu shader.")
+    val fogColor by ColorSetting("Fog Color", Color(48, 58, 70), desc = "Fog blend color for the custom main menu shader.")
+    val sunColor by ColorSetting("Sun Color", Color(255, 255, 255), desc = "Sun and flare color for the custom main menu shader.")
+
     init {
         on<ScreenEvent.Open> {
             if (!enabled || !FloydCompatibility.shouldUseCustomMainMenu()) return@on
             if (screen is FloydMainMenuScreen) return@on
-            if (screen is TitleScreen && mc.screen === screen) mc.setScreen(FloydMainMenuScreen())
+            if (screen is TitleScreen) mc.setScreen(FloydMainMenuScreen())
         }
         on<TickEvent.ClientEnd> {
             if (!FloydCompatibility.shouldUseCustomMainMenu()) {
                 FloydMenuVideoBackground.shutdown()
+                return@on
+            }
+            if (enabled && mc.screen is TitleScreen) {
+                mc.setScreen(FloydMainMenuScreen())
                 return@on
             }
             FloydMenuVideoBackground.tick()

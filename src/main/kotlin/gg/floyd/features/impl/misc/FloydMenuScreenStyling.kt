@@ -4,6 +4,7 @@ import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.ChatScreen
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 
 object FloydMenuScreenStyling {
@@ -25,6 +26,7 @@ object FloydMenuScreenStyling {
     fun shouldReplaceBackground(screen: Screen): Boolean {
         if (!FloydCompatibility.shouldUseCustomMainMenu()) return false
         if (screen is FloydMainMenuScreen) return false
+        if (screen is TitleScreen) return false
         if (screen is AbstractContainerScreen<*>) return false
         if (screen is ChatScreen) return false
         if (isFloydScreen(screen)) return false

@@ -3,6 +3,7 @@ package gg.floyd.mixin.mixins;
 import gg.floyd.utils.render.ItemStateRenderer;
 import gg.floyd.utils.render.PanelBlurPIPRenderer;
 import gg.floyd.utils.render.RoundRectPIPRenderer;
+import gg.floyd.features.impl.misc.FloydMenuShaderPIPRenderer;
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer;
 import net.minecraft.client.gui.render.GuiRenderer;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
@@ -47,6 +48,7 @@ public abstract class GuiRendererMixin {
         addRenderer(extended, new RoundRectPIPRenderer(ignoredCollector));
         addRenderer(extended, new PanelBlurPIPRenderer(ignoredCollector));
         addRenderer(extended, new ItemStateRenderer(ignoredCollector));
+        addRenderer(extended, new FloydMenuShaderPIPRenderer(ignoredCollector));
         // Fabric API registers additional PIP renderers after GuiRenderer construction, so this
         // registry must stay mutable after we append Floyd's custom renderers.
         this.pictureInPictureRenderers = new LinkedHashMap<>(extended);
@@ -66,6 +68,7 @@ public abstract class GuiRendererMixin {
         addRenderer(extended, new RoundRectPIPRenderer(bufferSource));
         addRenderer(extended, new PanelBlurPIPRenderer(bufferSource));
         addRenderer(extended, new ItemStateRenderer(bufferSource));
+        addRenderer(extended, new FloydMenuShaderPIPRenderer(bufferSource));
         // Fabric API registers additional PIP renderers after GuiRenderer construction, so this
         // registry must stay mutable after we append Floyd's custom renderers.
         this.pictureInPictureRenderers = new LinkedHashMap<>(extended);

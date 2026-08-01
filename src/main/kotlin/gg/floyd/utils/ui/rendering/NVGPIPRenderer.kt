@@ -228,9 +228,11 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
         // RenderType.draw opens a fresh render pass (which also nulls the encoder's lastPipeline),
         // leaving lastProgram = debug-quads, so the replay's glyph draws always re-bind for real.
         //? if <26.2 {
-        val sacrificial = bufferSource.getBuffer(RenderTypes.debugQuads())
-        repeat(4) { sacrificial.addVertex(0f, 0f, 0f).setColor(0, 0, 0, 0) }
-        bufferSource.endBatch()
+        if (NVGRenderer.deferringText) {
+            val sacrificial = bufferSource.getBuffer(RenderTypes.debugQuads())
+            repeat(4) { sacrificial.addVertex(0f, 0f, 0f).setColor(0, 0, 0, 0) }
+            bufferSource.endBatch()
+        }
         //?}
     }
 

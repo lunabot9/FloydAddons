@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.jvm.tasks.Jar
 
 plugins {
@@ -10,7 +11,8 @@ plugins {
 group = property("maven_group") as String
 val modVersion = property("mod_version") as String
 val minecraftVersion = sc.current.version
-version = "$modVersion-$minecraftVersion"
+val artifactVersion = "$modVersion-$minecraftVersion"
+version = artifactVersion
 
 base {
     archivesName.set(property("archives_base_name") as String)
@@ -122,6 +124,11 @@ afterEvaluate {
 }
 
 tasks {
+    withType<AbstractArchiveTask>().configureEach {
+        archiveBaseName.set(project.property("archives_base_name") as String)
+        archiveVersion.set(artifactVersion)
+    }
+
     processResources {
         val resourceProps = mapOf(
             "mod_id" to project.property("mod_id").toString(),
@@ -142,6 +149,7 @@ tasks {
     }
 
     named<Jar>("jar") {
+        destinationDirectory.set(file("$buildDir/libs"))
         from(listOf("LICENSE", "THIRD_PARTY_NOTICES.md", "PROVENANCE.md")) {
             into("META-INF")
         }

@@ -38,21 +38,15 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
 
     override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         super.extractRenderState(context, mouseX, mouseY, deltaTicks)
-
         val scale = ClickGUIModule.getStandardGuiScale()
         val time = (System.currentTimeMillis() % 1_200_000L) / 1000f
         layout(scale)
         val cursorX = floydMouseX / scale
         val cursorY = floydMouseY / scale
 
+        FloydMenuVideoBackground.render(context)
         NVGPIPRenderer.draw(context, 0, 0, context.guiWidth(), context.guiHeight()) {
             NVGRenderer.scale(scale, scale)
-            FloydMenuVideoBackground.render(
-                width = FloydAddonsMod.mc.window.screenWidth / scale,
-                height = FloydAddonsMod.mc.window.screenHeight / scale,
-                time = time
-            )
-
             drawPanels(time, cursorX, cursorY)
 
             val titleWidth = NVGRenderer.textWidth(TITLE_TEXT, TITLE_SIZE, NVGRenderer.defaultFont)
@@ -94,9 +88,9 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
         buttons[0].layout(primaryLeft, primaryTop, panelWidth, primaryHeight)
         buttons[1].layout(primaryLeft, primaryTop + primaryHeight + primaryGap, panelWidth, primaryHeight)
 
-        val secondaryWidth = 66f
-        val secondaryHeight = 22f
-        val secondaryGap = 18f
+        val secondaryGap = 8f
+        val secondaryWidth = (panelWidth - secondaryGap) * 0.5f
+        val secondaryHeight = 26f
         val secondaryTop = buttons[1].y + buttons[1].height + 16f
         val secondaryLeft = titleX - secondaryWidth - secondaryGap * 0.5f
         buttons[2].layout(secondaryLeft, secondaryTop, secondaryWidth, secondaryHeight)
@@ -190,8 +184,8 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
 
     private companion object {
         const val TITLE_SIZE = 44f
-        const val PRIMARY_TEXT_SIZE = 16f
-        const val SECONDARY_TEXT_SIZE = 10.5f
+        const val PRIMARY_TEXT_SIZE = 17f
+        const val SECONDARY_TEXT_SIZE = 11.5f
         const val FOOTER_SIZE = 12f
         const val TITLE_TEXT = "Floyd Addons"
 

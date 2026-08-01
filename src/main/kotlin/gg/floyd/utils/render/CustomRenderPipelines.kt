@@ -13,6 +13,8 @@ import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
 
 object CustomRenderPipelines {
+    private fun id(path: String): Identifier = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, path)
+
     val LINES_ESP: RenderPipeline = RenderPipelines.register(
         RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
             .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, true))
@@ -55,9 +57,9 @@ object CustomRenderPipelines {
 
     val PIPELINE_ROUND_RECT: RenderPipeline = RenderPipelines.register(
         RenderPipeline.builder(RenderPipelines.GUI_SNIPPET)
-            .withLocation(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "pipeline/round_rect"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/round_rect"))
-            .withVertexShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/round_rect"))
+            .withLocation(id("pipeline/round_rect"))
+            .withFragmentShader(id("core/round_rect"))
+            .withVertexShader(id("core/round_rect"))
             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
             .withUniform("u", UniformType.UNIFORM_BUFFER)
             .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
@@ -70,9 +72,9 @@ object CustomRenderPipelines {
      */
     val PIPELINE_PANEL_BLUR: RenderPipeline = RenderPipelines.register(
         RenderPipeline.builder(RenderPipelines.GUI_SNIPPET)
-            .withLocation(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "pipeline/panel_blur"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/panel_blur"))
-            .withVertexShader(Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "core/panel_blur"))
+            .withLocation(id("pipeline/panel_blur"))
+            .withFragmentShader(id("core/panel_blur"))
+            .withVertexShader(id("core/panel_blur"))
             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
             .withUniform("u", UniformType.UNIFORM_BUFFER)
             .withSampler("Sampler0")

@@ -98,8 +98,9 @@ import net.minecraft.client.renderer.RenderPipelines
                 pose.translate(w / 2.0f, getTranslateY(h, windowScale), 0.0f)
                 val scale = windowScale * state.scale()
                 pose.scale(scale, scale, -scale)
-                renderToTexture(state, pose, slot.submits)
-                featureRenderDispatcher.renderAllFeatures(slot.submits)
+                val submits = net.minecraft.client.renderer.SubmitNodeStorage()
+                renderToTexture(state, pose, submits)
+                featureRenderDispatcher.renderAllFeatures(submits)
             } finally {
                 modelView.popMatrix()
             }
@@ -143,7 +144,7 @@ import net.minecraft.client.renderer.RenderPipelines
             { "Floyd PIP ${getTextureLabel()} depth" }, depthUsage, TextureFormat.DEPTH32, w, h, 1, 1
         )
         val depthView = device.createTextureView(depth)
-        return Slot(w, h, color, colorView, depth, depthView, net.minecraft.client.renderer.SubmitNodeStorage())
+        return Slot(w, h, color, colorView, depth, depthView)
     }
 
     private fun recycle() {
@@ -168,7 +169,6 @@ import net.minecraft.client.renderer.RenderPipelines
         val colorView: GpuTextureView,
         val depth: GpuTexture,
         val depthView: GpuTextureView,
-        val submits: net.minecraft.client.renderer.SubmitNodeStorage,
     ) {
         var lastUsedFrame = 0L
 
@@ -211,6 +211,7 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
     protected lateinit var submitNodeCollector: net.minecraft.client.renderer.SubmitNodeCollector
 
     protected abstract fun renderContent(state: T, poseStack: PoseStack)
+    protected open fun shouldEndBatchAfterRenderContent(): Boolean = true
 
     final override fun renderToTexture(state: T, poseStack: PoseStack) = renderContent(state, poseStack)
 
@@ -236,7 +237,9 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
             val f = windowScale * state.scale()
             pose.scale(f, f, -f)
             renderContent(state, pose)
-            bufferSource.endBatch()
+            if (shouldEndBatchAfterRenderContent()) {
+                bufferSource.endBatch()
+            }
         } finally {
             RenderSystem.outputColorTextureOverride = savedColorOverride
             RenderSystem.outputDepthTextureOverride = savedDepthOverride
