@@ -50,7 +50,6 @@ object FloydMenuVideoBackground {
         val guiWidth = context.guiWidth()
         val guiHeight = context.guiHeight()
         if (guiWidth <= 0 || guiHeight <= 0) return false
-        PooledPicturePIPRenderer.recycleAll()
         FloydMenuShaderPIPRenderer.submit(context, 0, 0, guiWidth, guiHeight, menuTimeSeconds())
         return true
     }

@@ -1,6 +1,9 @@
 package gg.floyd.features.impl.misc
 
 import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.blaze3d.textures.FilterMode
+import com.mojang.blaze3d.textures.GpuSampler
+import com.mojang.blaze3d.systems.RenderSystem
 import gg.floyd.utils.render.PooledPicturePIPRenderer
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.navigation.ScreenRectangle
@@ -14,20 +17,26 @@ class FloydMenuShaderPIPRenderer(
     //? if >=26.2 {
     /*ignored: Any?,
     *///?} else {
-    bufferSource: MultiBufferSource.BufferSource,
+    private val menuBufferSource: MultiBufferSource.BufferSource,
     //?}
 ) : PooledPicturePIPRenderer<FloydMenuShaderPIPRenderer.State>(
     //? if >=26.2 {
     /*ignored
     *///?} else {
-    bufferSource
+    menuBufferSource
     //?}
 ) {
 
     override fun getRenderStateClass(): Class<State> = State::class.java
+    //? if <26.2 {
+    override fun pipSampler(): GpuSampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+    //?}
     //? if >=26.2 {
     /*// 26.2 uses the base renderer behavior here.
     *///?} else {
+    // This renderer writes directly with GL and has no vertices of its own in bufferSource. The
+    // source is shared with the rest of the GUI, so flushing it while this PIP target is bound would
+    // steal vanilla widget/font batches from the main framebuffer and make them flicker black.
     override fun shouldEndBatchAfterRenderContent(): Boolean = false
     //?}
 

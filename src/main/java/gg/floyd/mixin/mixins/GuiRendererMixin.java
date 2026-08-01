@@ -2,6 +2,7 @@ package gg.floyd.mixin.mixins;
 
 import gg.floyd.utils.render.ItemStateRenderer;
 import gg.floyd.utils.render.PanelBlurPIPRenderer;
+import gg.floyd.utils.render.PooledPicturePIPRenderer;
 import gg.floyd.utils.render.RoundRectPIPRenderer;
 import gg.floyd.features.impl.misc.FloydMenuShaderPIPRenderer;
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer;
@@ -81,5 +82,10 @@ public abstract class GuiRendererMixin {
         PictureInPictureRenderer<?> renderer
     ) {
         renderers.put(renderer.getRenderStateClass(), renderer);
+    }
+
+    @Inject(method = "render", at = @At("TAIL"))
+    private void floydaddons$recyclePooledPipAfterGuiFrame(com.mojang.blaze3d.buffers.GpuBufferSlice gpuBufferSlice, CallbackInfo ci) {
+        PooledPicturePIPRenderer.recycleAll();
     }
 }

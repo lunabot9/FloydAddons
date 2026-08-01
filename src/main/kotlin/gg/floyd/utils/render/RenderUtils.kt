@@ -138,7 +138,6 @@ object RenderBatchManager {
                 renderConsumer.clear()
                 RoundRectPIPRenderer.clear()
                 PanelBlurPIPRenderer.clear()
-                PooledPicturePIPRenderer.recycleAll()
                 return@on
             }
             val matrix = context.poseStack()
@@ -206,11 +205,6 @@ object RenderBatchManager {
 
             RoundRectPIPRenderer.clear()
             PanelBlurPIPRenderer.clear()
-            // Recycle the pooled per-panel PIP textures now that the prior frame's GUI flush has drawn
-            // every blit, so this frame's panels each get their own live texture (fixes overlapping
-            // Floyd panels flickering / going black from the single shared vanilla PIP texture).
-            PooledPicturePIPRenderer.recycleAll()
-
             // Sole owner of the direct Floyd HUD compositor on 26.1.2. The later GameRenderer
             // GuiRenderState.reset seam no longer exists reliably; keeping this at END_MAIN makes
             // Inventory HUD, Day Tracker and Custom Scoreboard deterministic without double draws.

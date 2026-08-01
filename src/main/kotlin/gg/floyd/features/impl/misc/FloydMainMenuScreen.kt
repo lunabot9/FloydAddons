@@ -26,9 +26,9 @@ import net.minecraft.network.chat.Component
  */
 class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
     private val buttons = listOf(
-        MenuButton("Singleplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(SelectWorldScreen(screen)) }),
-        MenuButton("Multiplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(JoinMultiplayerScreen(screen)) }),
-        MenuButton("Options", ButtonStyle.SECONDARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(OptionsScreen(screen, FloydAddonsMod.mc.options, false)) }),
+        MenuButton("Singleplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(FloydSelectWorldScreen(screen)) }),
+        MenuButton("Multiplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(FloydJoinMultiplayerScreen(screen)) }),
+        MenuButton("Options", ButtonStyle.SECONDARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(FloydOptionsScreen(screen)) }),
         MenuButton("Quit", ButtonStyle.SECONDARY, onClick = { _ -> FloydAddonsMod.mc.stop() })
     )
 

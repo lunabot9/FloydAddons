@@ -3,6 +3,7 @@ package gg.floyd.utils.render
 import com.mojang.blaze3d.ProjectionType
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
+import com.mojang.blaze3d.textures.GpuSampler
 import com.mojang.blaze3d.textures.GpuTexture
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.textures.TextureFormat
@@ -212,6 +213,7 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
 
     protected abstract fun renderContent(state: T, poseStack: PoseStack)
     protected open fun shouldEndBatchAfterRenderContent(): Boolean = true
+    protected open fun pipSampler(): GpuSampler = RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)
 
     final override fun renderToTexture(state: T, poseStack: PoseStack) = renderContent(state, poseStack)
 
@@ -249,7 +251,7 @@ abstract class PooledPicturePIPRenderer<T : PictureInPictureRenderState>(
         guiRenderState.addBlitToCurrentLayer(
             BlitRenderState(
                 RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
-                TextureSetup.singleTexture(slot.colorView, RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
+                TextureSetup.singleTexture(slot.colorView, pipSampler()),
                 state.pose(),
                 state.x0(), state.y0(), state.x1(), state.y1(),
                 0.0f, 1.0f, 1.0f, 0.0f,
