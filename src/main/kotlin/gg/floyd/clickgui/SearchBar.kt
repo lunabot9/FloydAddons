@@ -35,6 +35,7 @@ object SearchBar {
     private const val SUBTITLE_SIZE = 7.5f
     private const val COMMUNITY_SIZE = 7.5f
     private const val LINK_SIZE = 8f
+    private const val FOOTER_CHROMA_OFFSET = 0f
 
     var currentSearch = ""
         private set(value) {
@@ -77,24 +78,28 @@ object SearchBar {
         val linksStartX = centerX - (githubWidth + LINKS_SPACING + discordWidth) / 2f
 
         NVGRenderer.text(TITLE_TEXT, centerX - titleWidth / 2f, titleY, TITLE_SIZE, chromaColor(0f), NVGRenderer.defaultFont)
-        NVGRenderer.text(COFFEE_TEXT, centerX - coffeeWidth / 2f, coffeeY, SUBTITLE_SIZE, chromaColor(0.08f), NVGRenderer.defaultFont)
+        NVGRenderer.text(COFFEE_TEXT, centerX - coffeeWidth / 2f, coffeeY, SUBTITLE_SIZE, chromaColor(FOOTER_CHROMA_OFFSET), NVGRenderer.defaultFont)
 
         ClickGUI.drawChrome(x, y, BAR_WIDTH, BAR_HEIGHT, 7f, hovered = true, accented = currentSearch.isNotEmpty())
 
-        val inputHeight = SEARCH_TEXT_SIZE + 4f
-        val inputY = y + (BAR_HEIGHT - inputHeight) / 2f
+        val inputHeight = BAR_HEIGHT
+        val inputY = y
         val inputWidth = BAR_WIDTH
         val centeredTextWidth = if (currentSearch.isEmpty()) placeHolderWidth.get() else searchWidth.get()
         val centeredPadding = ((BAR_WIDTH - centeredTextWidth) / 2f).coerceAtLeast(INNER_PADDING)
+        val textPaddingY = (BAR_HEIGHT - SEARCH_TEXT_SIZE) / 2f
 
         if (currentSearch.isEmpty()) {
-            NVGRenderer.text(
+            NVGRenderer.textCentered(
                 PLACEHOLDER_TEXT,
-                x + centeredPadding,
-                inputY + 1f,
+                x,
+                y,
+                BAR_WIDTH,
+                BAR_HEIGHT,
                 SEARCH_TEXT_SIZE,
                 ClickGUI.oringoTextMuted.rgba,
-                NVGRenderer.defaultFont
+                NVGRenderer.defaultFont,
+                placeHolderWidth.get()
             )
         }
         textInputHandler.x = x
@@ -102,6 +107,7 @@ object SearchBar {
         textInputHandler.width = inputWidth
         textInputHandler.height = inputHeight
         textInputHandler.textPaddingX = centeredPadding
+        textInputHandler.textPaddingY = textPaddingY
         textInputHandler.draw(mouseX, mouseY)
 
         NVGRenderer.text(COMMUNITY_TEXT, centerX - communityWidth / 2f, communityY, COMMUNITY_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
@@ -111,8 +117,9 @@ object SearchBar {
         val githubHovered = isAreaHovered(githubBounds.left.toFloat(), githubBounds.top.toFloat(), githubBounds.width.toFloat(), githubBounds.height.toFloat(), true)
         val discordHovered = isAreaHovered(discordBounds.left.toFloat(), discordBounds.top.toFloat(), discordBounds.width.toFloat(), discordBounds.height.toFloat(), true)
         val coffeeHovered = isAreaHovered(coffeeBounds.left.toFloat(), coffeeBounds.top.toFloat(), coffeeBounds.width.toFloat(), coffeeBounds.height.toFloat(), true)
-        NVGRenderer.text(GITHUB_TEXT, linksStartX, linkY, LINK_SIZE, if (githubHovered) Colors.WHITE.rgba else chromaColor(0f), NVGRenderer.defaultFont)
-        NVGRenderer.text(DISCORD_TEXT, linksStartX + githubWidth + LINKS_SPACING, linkY, LINK_SIZE, if (discordHovered) Colors.WHITE.rgba else chromaColor(0.12f), NVGRenderer.defaultFont)
+        val footerLinkColor = chromaColor(FOOTER_CHROMA_OFFSET)
+        NVGRenderer.text(GITHUB_TEXT, linksStartX, linkY, LINK_SIZE, if (githubHovered) Colors.WHITE.rgba else footerLinkColor, NVGRenderer.defaultFont)
+        NVGRenderer.text(DISCORD_TEXT, linksStartX + githubWidth + LINKS_SPACING, linkY, LINK_SIZE, if (discordHovered) Colors.WHITE.rgba else footerLinkColor, NVGRenderer.defaultFont)
         if (coffeeHovered) {
             NVGRenderer.text(COFFEE_TEXT, centerX - coffeeLinkWidth / 2f, coffeeY, SUBTITLE_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         }
