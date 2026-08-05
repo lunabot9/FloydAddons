@@ -5,8 +5,16 @@ import com.google.gson.JsonParser
 import com.mojang.authlib.GameProfile
 import com.mojang.authlib.properties.Property
 import com.mojang.authlib.properties.PropertyMap
-import gg.floyd.FloydAddonsMod
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.server.packs.FilePackResources
@@ -17,50 +25,208 @@ import net.minecraft.server.packs.repository.Pack
 import net.minecraft.server.packs.repository.PackSource
 import net.minecraft.server.packs.repository.RepositorySource
 import net.minecraft.world.item.component.ResolvableProfile
+import java.io.IOException
+import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.time.Duration
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import org.apache.logging.log4j.LogManager
 
-/** Vanilla fallbacks for Hypixel's custom item model components. */
+/** Bundled vanilla fallbacks plus an upstream-style local Hypixel pack repository source. */
 object FloydSkyBlockPackAssets {
-    private const val FALLBACK_RESOURCE = "/floyd_skyblock_pack_fallback.zip"
+    private const val MOD_ID = "floydaddons"
     private const val ITEM_DATA_RESOURCE = "/floyd_skyblock_items.json"
-    private const val FALLBACK_PACK_REVISION = "480bc658b73a9ca7"
-    private val vanillaPaper = Identifier.parse("minecraft:paper")
-    private val extractedPack = FabricLoader.getInstance().configDir
-        .resolve("floydaddons")
-        .resolve("skyblock-pack-models-$FALLBACK_PACK_REVISION.zip")
-    private val cacheDir = extractedPack.parent
+    private const val FALLBACK_PACK_RESOURCE = "/floyd_skyblock_pack_fallback.zip"
+    private const val DEFAULT_PACK_URL =
+        "https://resourcepacks.hypixel.net/SkyBlock/5c59e0a9-9865-4d4e-91d2-915515672cbd/84.zip"
 
-    val itemModels: Map<String, Identifier> by lazy { loadItemData().first }
-    val skullProfiles: Map<String, ResolvableProfile> by lazy { loadItemData().second }
-    @Volatile private var livePack = runCatching { FloydSkyBlockLivePackCache.latest(cacheDir) }
-        .onFailure { FloydAddonsMod.logger.warn("Failed to inspect cached live SkyBlock item pack", it) }
-        .getOrNull()
+    private val logger = LogManager.getLogger("FloydAddons")
+    private val livePackCacheDir = FabricLoader.getInstance().configDir.resolve(MOD_ID)
+    private val packDir = FabricLoader.getInstance().configDir.resolve(MOD_ID).resolve("skyblock-pack")
+    private val packFileA = packDir.resolve("pack-a.zip")
+    private val packFileB = packDir.resolve("pack-b.zip")
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineName("Floyd-SkyBlockPackLoader"))
+    private val httpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(10))
+        .followRedirects(HttpClient.Redirect.NORMAL)
+        .build()
 
     private val itemData by lazy {
-        val models = HashMap<String, Identifier>()
+        val models = HashMap<String, net.minecraft.resources.Identifier>()
         val profiles = HashMap<String, ResolvableProfile>()
         val stream = javaClass.getResourceAsStream(ITEM_DATA_RESOURCE)
             ?: error("Missing $ITEM_DATA_RESOURCE")
         stream.reader().use { reader ->
             for ((skyBlockId, value) in JsonParser.parseReader(reader).asJsonObject.entrySet()) {
                 val item = value.asJsonObject
-                item.get("model")?.asString?.let { models[skyBlockId] = Identifier.parse(it) }
+                item.get("model")?.asString?.let { models[skyBlockId] = net.minecraft.resources.Identifier.parse(it) }
                 item.get("texture")?.asString?.takeIf(String::isNotEmpty)?.let {
                     profiles[skyBlockId] = createProfile(skyBlockId, it)
                 }
             }
         }
         applySprayonatorAliases(models, profiles)
-        FloydAddonsMod.logger.info("Loaded ${models.size} SkyBlock vanilla item fallbacks")
+        logger.info("Loaded ${models.size} SkyBlock vanilla item fallbacks")
         models to profiles
     }
+    private val liveBaseModels by lazy {
+        runCatching { FloydSkyBlockLivePackCache.latest(livePackCacheDir)?.baseModels.orEmpty() }
+            .onFailure { logger.warn("Failed to inspect the cached live SkyBlock item pack", it) }
+            .getOrDefault(emptyMap())
+            .also {
+                if (it.isNotEmpty()) {
+                    logger.info("Loaded ${it.size} live SkyBlock base-model fallbacks")
+                }
+            }
+    }
 
-    private fun loadItemData() = itemData
+    @Volatile private var reloadJob: Job? = null
+    @Volatile private var packUrl: String? = null
+    @Volatile private var lastSeenPackUrl: String? = null
+    @Volatile private var activePackFile = getPackFile() ?: packFileA
+    @Volatile private var activePack = lazy {
+        runBlocking(scope.coroutineContext) {
+            preparePack(activePackFile, allowCachedFallback = true)
+                ?: error("Failed to prepare initial SkyBlock pack")
+        }
+    }
+
+    val itemModels: Map<String, net.minecraft.resources.Identifier> get() = itemData.first
+    val skullProfiles: Map<String, ResolvableProfile> get() = itemData.second
+    val liveItemBaseModels: Map<Identifier, Identifier> get() = liveBaseModels
+
+    @JvmStatic
+    fun refreshFromLivePack(url: String, expectedSha1: String) {
+        lastSeenPackUrl = url
+        if (packUrl == url) return
+        packUrl = url
+        reload()
+    }
+
+    @JvmStatic
+    fun reloadLastSeenLivePack(): Boolean {
+        val url = lastSeenPackUrl ?: return false
+        packUrl = url
+        reload()
+        return true
+    }
+
+    @JvmStatic
+    fun forceReload(onComplete: (Boolean) -> Unit = {}) {
+        reload(onComplete)
+    }
+
+    private fun reload(onComplete: (Boolean) -> Unit = {}) {
+        if (reloadJob?.isActive == true) return
+        reloadJob = scope.launch {
+            val targetFile = if (activePackFile == packFileA) packFileB else packFileA
+            val pack = preparePack(targetFile) ?: error("No valid Hypixel pack is available")
+            activePack = lazyOf(pack)
+            activePackFile = targetFile
+            Minecraft.getInstance().submit(Minecraft.getInstance()::reloadResourcePacks)
+        }
+        reloadJob?.invokeOnCompletion { error ->
+            if (error != null) {
+                logger.error("Failed to reload the local SkyBlock pack", error)
+            }
+            onComplete(error == null)
+            reloadJob = null
+        }
+    }
+
+    private suspend fun preparePack(targetFile: Path, allowCachedFallback: Boolean = false): Pack? {
+        withContext(Dispatchers.IO) { Files.createDirectories(packDir) }
+        val path = downloadPack(targetFile)
+            ?: if (allowCachedFallback) getPackFile() ?: targetFile else return null
+        if (!Files.exists(path)) {
+            logger.info("SkyBlock pack download unavailable, extracting bundled fallback pack")
+            javaClass.getResourceAsStream(FALLBACK_PACK_RESOURCE)?.use { input ->
+                withContext(Dispatchers.IO) {
+                    Files.copy(input, targetFile, StandardCopyOption.REPLACE_EXISTING)
+                }
+            } ?: error("Bundled SkyBlock fallback pack not found at $FALLBACK_PACK_RESOURCE")
+        }
+
+        return buildPack(path)
+    }
+
+    private suspend fun downloadPack(targetFile: Path): Path? {
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create(packUrl ?: DEFAULT_PACK_URL))
+            .header("Accept-Encoding", "gzip")
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build()
+        val tmp = withContext(Dispatchers.IO) { Files.createTempFile(packDir, "skyblock-pack", ".tmp") }
+        val response = runCatching {
+            withContext(Dispatchers.IO) {
+                httpClient.send(request, HttpResponse.BodyHandlers.ofFile(tmp))
+            }
+        }.onFailure {
+            logger.error("Failed to download Hypixel pack from ${request.uri()}", it)
+            Files.deleteIfExists(tmp)
+        }.getOrNull() ?: return null
+
+        if (response.statusCode() !in 200..299) {
+            logger.error(
+                "GET request to ${request.uri()} returned status ${response.statusCode()}, discarding"
+            )
+            withContext(Dispatchers.IO) { Files.deleteIfExists(tmp) }
+            return null
+        }
+
+        return try {
+            withContext(Dispatchers.IO) { Files.move(tmp, targetFile, StandardCopyOption.REPLACE_EXISTING) }
+            logger.info("Hypixel SkyBlock pack downloaded successfully")
+            targetFile
+        } catch (error: FileSystemException) {
+            if (!Files.isRegularFile(targetFile)) {
+                withContext(Dispatchers.IO) { Files.deleteIfExists(tmp) }
+                throw error
+            }
+            logger.warn("Cannot replace $targetFile; using fresh download for this session", error)
+            tmp.toFile().deleteOnExit()
+            tmp
+        } catch (error: IOException) {
+            logger.error("Failed to move downloaded Hypixel pack into place", error)
+            withContext(Dispatchers.IO) { Files.deleteIfExists(tmp) }
+            throw error
+        }
+    }
+
+    private fun buildPack(packPath: Path): Pack {
+        val locationInfo = PackLocationInfo(
+            "hypixel_skyblock",
+            Component.literal("FloydAddons: SkyBlock Pack"),
+            PackSource.BUILT_IN,
+            Optional.empty(),
+        )
+        val selectionConfig = PackSelectionConfig(
+            true,
+            Pack.Position.BOTTOM,
+            true,
+        )
+        val resourcesSupplier = FilePackResources.FileResourcesSupplier(packPath.toFile())
+        return Pack.readMetaAndCreate(
+            locationInfo,
+            resourcesSupplier,
+            PackType.CLIENT_RESOURCES,
+            selectionConfig,
+        ) ?: error("Failed to read pack metadata for $packPath")
+    }
+
+    private fun getPackFile(): Path? =
+        listOf(packFileA, packFileB)
+            .filter(Files::exists)
+            .maxByOrNull(Files::getLastModifiedTime)
 
     private fun createProfile(skyBlockId: String, texture: String): ResolvableProfile {
         val properties = PropertyMap(ImmutableMultimap.of("textures", Property("textures", texture)))
@@ -73,79 +239,25 @@ object FloydSkyBlockPackAssets {
     }
 
     private fun applySprayonatorAliases(
-        models: MutableMap<String, Identifier>,
+        models: MutableMap<String, net.minecraft.resources.Identifier>,
         profiles: MutableMap<String, ResolvableProfile>,
     ) {
         val sprayonatorModel = models["SPRAYONATOR"] ?: return
         val sprayonatorProfile = profiles["SPRAYONATOR"]
+        val vanillaPaper = net.minecraft.resources.Identifier.parse("minecraft:paper")
 
         for (upgradedId in listOf("JUICY_SPRAYONATOR", "SALTY_SPRAYONATOR")) {
             models.putIfAbsent(upgradedId, sprayonatorModel)
             sprayonatorProfile?.let { profiles.putIfAbsent(upgradedId, it) }
         }
-
         for (nozzleId in listOf("JUICY_NOZZLE", "SALTY_NOZZLE")) {
             models.putIfAbsent(nozzleId, vanillaPaper)
         }
     }
 
-    fun liveBaseModel(model: Identifier): Identifier? = livePack?.baseModels?.get(model)
-
-    @JvmStatic
-    fun refreshFromLivePack(url: String, expectedSha1: String) {
-        FloydSkyBlockLivePackDownloader.fetch(url, expectedSha1, cacheDir).whenComplete { downloaded, error ->
-            if (error != null) {
-                FloydAddonsMod.logger.error("Failed to refresh the live Hypixel item-only pack", error)
-                return@whenComplete
-            }
-            if (livePack?.path == downloaded.path) return@whenComplete
-
-            livePack = downloaded
-            FloydAddonsMod.logger.info(
-                "Loaded live Hypixel metadata with ${downloaded.baseModels.size} vanilla model mappings " +
-                    "from ${downloaded.copiedEntries} sanitized entries"
-            )
-            FloydAddonsMod.mc.execute {
-                FloydAddonsMod.mc.reloadResourcePacks().whenComplete { _, reloadError ->
-                    if (reloadError != null) {
-                        FloydAddonsMod.logger.error("Failed to reload the live Hypixel item-only pack", reloadError)
-                    } else {
-                        FloydAddonsMod.logger.info("Activated refreshed live Hypixel item-only pack")
-                    }
-                }
-            }
-        }
-    }
-
-    private fun buildPack(): Pack {
-        Files.createDirectories(extractedPack.parent)
-        javaClass.getResourceAsStream(FALLBACK_RESOURCE)?.use { input ->
-            FloydSkyBlockPackMaterializer.materialize(input, extractedPack)
-        } ?: error("Missing $FALLBACK_RESOURCE")
-        val location = PackLocationInfo(
-            "floyd_skyblock_model_fallbacks",
-            Component.literal("FloydAddons: vanilla SkyBlock item compatibility"),
-            PackSource.BUILT_IN,
-            Optional.empty(),
-        )
-        val supplier = FilePackResources.FileResourcesSupplier(extractedPack.toFile())
-        val selection = PackSelectionConfig(true, Pack.Position.BOTTOM, true)
-        return Pack.readMetaAndCreate(location, supplier, PackType.CLIENT_RESOURCES, selection)
-            ?: error("Failed to load SkyBlock fallback pack")
-    }
-
     class Repository : RepositorySource {
         override fun loadPacks(onLoad: Consumer<Pack>) {
-            onLoad.accept(buildPack())
+            onLoad.accept(activePack.value)
         }
-    }
-}
-
-internal object FloydSkyBlockPackMaterializer {
-    fun materialize(input: java.io.InputStream, target: Path) {
-        // FilePackResources keeps the ZIP mounted. Replacing that file on a repository refresh
-        // fails on Windows and aborts PackSelectionScreen before it can list the user's packs.
-        if (Files.exists(target)) return
-        Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING)
     }
 }

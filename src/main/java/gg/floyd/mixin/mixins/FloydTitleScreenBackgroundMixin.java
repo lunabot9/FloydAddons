@@ -1,5 +1,6 @@
 package gg.floyd.mixin.mixins;
 
+import gg.floyd.Branding;
 import gg.floyd.features.impl.misc.FloydCompatibility;
 import gg.floyd.features.impl.misc.FloydMenuScreenStyling;
 import gg.floyd.utils.ChromaCache;
@@ -21,7 +22,7 @@ public class FloydTitleScreenBackgroundMixin {
     @Inject(method = "extractRenderState", at = @At("HEAD"))
     private void floydaddons$useChromaSplash(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         int rgb = ChromaCache.INSTANCE.rgbFor(0.0f);
-        Component text = Component.literal("Floyd").withStyle(style -> style.withColor(TextColor.fromRgb(rgb)));
+        Component text = Component.literal(Branding.SPLASH_TEXT).withStyle(style -> style.withColor(TextColor.fromRgb(rgb)));
         this.splash = new SplashRenderer(text);
     }
 

@@ -48,13 +48,16 @@ class ExtendedSearchableListSetting(
     private val showActionsRow: Boolean = false,
 ) : SearchableListSetting(name, optionsProvider, selectedProvider, onToggle, desc) {
 
-    private val actionsH = 22f
+    private val actionsH = 20f
 
     // The id whose inline color editor is open, or null when none is. The editor row renders
     // directly under the viewport (and above the actions bar).
     private var colorEditId: String? = null
     private var colorText = ""
-    private val colorInput = TextInputHandler(textProvider = { colorText }, textSetter = { colorText = it.filter { c -> c in HEX_CHARS }.take(6) })
+    private val colorInput = TextInputHandler(textProvider = { colorText }, textSetter = { colorText = it.filter { c -> c in HEX_CHARS }.take(6) }).apply {
+        fontSizeOverride = 8f
+        textPaddingY = 2f
+    }
 
     override fun fullHeight(): Float =
         headerH + searchH + viewportH + pad +
@@ -82,10 +85,10 @@ class ExtendedSearchableListSetting(
         renderBase(x, y)
 
         val selected = selectedProvider()
-        NVGRenderer.text(name, x + 6f, y + headerH / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 4f, y + headerH / 2f - 5f, HEADER_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         val countLabel = "${selected.size} selected"
-        val countWidth = NVGRenderer.textWidth(countLabel, 14f, NVGRenderer.defaultFont)
-        NVGRenderer.text(countLabel, x + width - 6f - countWidth, y + headerH / 2f - 7f, 14f, ClickGUIModule.clickGUIColor.rgba, NVGRenderer.defaultFont)
+        val countWidth = NVGRenderer.textWidth(countLabel, COUNT_TEXT_SIZE, NVGRenderer.defaultFont)
+        NVGRenderer.text(countLabel, x + width - 4f - countWidth, y + headerH / 2f - 4f, COUNT_TEXT_SIZE, ClickGUIModule.clickGUIColor.rgba, NVGRenderer.defaultFont)
 
         if (!extended && !expandAnim.isAnimating()) return headerH
 
@@ -95,11 +98,13 @@ class ExtendedSearchableListSetting(
         val searchY = y + headerH + 2f
         NVGRenderer.rect(x + 6f, searchY, width - 12f, searchH - 4f, Colors.gray38.rgba, 4f)
         NVGRenderer.hollowRect(x + 6f, searchY, width - 12f, searchH - 4f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
-        if (searchText.isEmpty()) NVGRenderer.text("Search…", x + 10f, searchY + 3f, 14f, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
+        if (searchText.isEmpty()) NVGRenderer.text("Search...", x + 10f, searchY + 2.5f, SEARCH_TEXT_SIZE, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
         search.x = x + 10f
-        search.y = searchY + 2f
-        search.width = width - 20f
+        search.y = searchY + 1f
+        search.width = width - 22f
         search.height = searchH - 8f
+        search.fontSizeOverride = SEARCH_TEXT_SIZE
+        search.textPaddingY = 2f
         search.draw(mouseX, mouseY)
 
         // Viewport.
@@ -140,10 +145,10 @@ class ExtendedSearchableListSetting(
             NVGRenderer.hollowRect(x + 6f, editY, width - 12f, rowH, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
             // Live preview swatch of whatever is currently typed.
             val preview = if (colorText.length == 6) runCatching { Color("${colorText}FF") }.getOrNull() else null
-            NVGRenderer.rect(x + 10f, editY + 4f, 10f, 10f, (preview ?: Colors.gray38).rgba, 2f)
-            colorInput.x = x + 26f
-            colorInput.y = editY + 2f
-            colorInput.width = width - 40f
+            NVGRenderer.rect(x + 10f, editY + 2f, 8f, 8f, (preview ?: Colors.gray38).rgba, 2f)
+            colorInput.x = x + 22f
+            colorInput.y = editY + 1f
+            colorInput.width = width - 34f
             colorInput.height = rowH - 4f
             colorInput.draw(mouseX, mouseY)
             belowY = editY + rowH
@@ -178,7 +183,7 @@ class ExtendedSearchableListSetting(
         if (isAreaHovered(x + 6f, rowY, width - 18f, rowH, true)) NVGRenderer.hollowRect(x + 6f, rowY, width - 12f, rowH, 1f, ClickGUIModule.clickGUIColor.rgba, 3f)
 
         // Icon box (always reserved; gray placeholder when no image is available).
-        val iconX = x + 10f
+        val iconX = x + 9f
         val iconY = rowY + 1f
         val image = iconProvider?.invoke(id)
         if (image != null) NVGRenderer.image(image, iconX, iconY, ICON, ICON, 2f)
@@ -186,10 +191,14 @@ class ExtendedSearchableListSetting(
 
         // Friendly display name.
         val label = displayNameProvider?.invoke(id) ?: id
-        NVGRenderer.text(label, iconX + ICON + 6f, rowY + 3f, 14f, if (rowSelected) Colors.WHITE.rgba else Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
+        val checkX = x + width - 14f - 8f
+        val swatchReserved = if (colorProvider != null) SWATCH + 4f else 0f
+        val labelX = iconX + ICON + 5f
+        val maxLabelWidth = (checkX - swatchReserved) - labelX - 4f
+        val fitted = fittedTextSize(label, maxLabelWidth.coerceAtLeast(20f), ROW_TEXT_SIZE, 6f)
+        NVGRenderer.text(label, labelX, rowY + 1.5f, fitted, if (rowSelected) Colors.WHITE.rgba else Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
 
         // Trailing widgets: checkbox at the far right, color swatch just left of it when available.
-        val checkX = x + width - 16f - 8f
         val checkY = rowY + (rowH - CHECK) / 2f
         NVGRenderer.hollowRect(checkX, checkY, CHECK, CHECK, 1.5f, ClickGUIModule.clickGUIColor.rgba, 2f)
         if (rowSelected) NVGRenderer.rect(checkX + 2f, checkY + 2f, CHECK - 4f, CHECK - 4f, ClickGUIModule.clickGUIColor.rgba, 1f)
@@ -206,8 +215,9 @@ class ExtendedSearchableListSetting(
         val hovered = isAreaHovered(x, y, w, actionsH, true)
         NVGRenderer.rect(x, y, w, actionsH, Colors.gray38.rgba, 4f)
         NVGRenderer.hollowRect(x, y, w, actionsH, 1.5f, (if (hovered) ClickGUIModule.clickGUIColor else Colors.gray38).rgba, 4f)
-        val lw = NVGRenderer.textWidth(label, 14f, NVGRenderer.defaultFont)
-        NVGRenderer.textCentered(label, x, y, w, actionsH, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont, lw)
+        val fitted = fittedTextSize(label, w - 8f, ROW_TEXT_SIZE, 6f)
+        val lw = NVGRenderer.textWidth(label, fitted, NVGRenderer.defaultFont)
+        NVGRenderer.textCentered(label, x, y, w, actionsH, fitted, Colors.WHITE.rgba, NVGRenderer.defaultFont, lw)
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
@@ -313,9 +323,9 @@ class ExtendedSearchableListSetting(
     }
 
     private companion object {
-        const val ICON = 16f
-        const val CHECK = 12f
-        const val SWATCH = 8f
+        const val ICON = 10f
+        const val CHECK = 10f
+        const val SWATCH = 7f
         const val HEX_CHARS = "0123456789abcdefABCDEF"
     }
 }

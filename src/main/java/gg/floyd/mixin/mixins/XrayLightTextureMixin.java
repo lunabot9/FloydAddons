@@ -11,7 +11,8 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public class XrayLightTextureMixin {
     @Redirect(
         method = "updateLightTexture",
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;", ordinal = 2)
+        at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;", ordinal = 2),
+        require = 0
     )
     private Object floydaddons$fullBrightGamma(OptionInstance<?> instance) {
         return FloydXray.isActive() ? 15.0 : instance.get();

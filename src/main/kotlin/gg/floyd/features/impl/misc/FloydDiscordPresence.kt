@@ -3,6 +3,7 @@ package gg.floyd.features.impl.misc
 import club.minnced.discord.rpc.DiscordEventHandlers
 import club.minnced.discord.rpc.DiscordRPC
 import club.minnced.discord.rpc.DiscordRichPresence
+import gg.floyd.Branding
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.settings.impl.BooleanSetting
@@ -103,7 +104,7 @@ object FloydDiscordPresence : Module(
                     Thread.currentThread().interrupt()
                 }
             }
-        }, "FloydAddons-DiscordRPC").apply {
+        }, "${Branding.COMPACT_NAME}-DiscordRPC").apply {
             isDaemon = true
             start()
         }
@@ -119,7 +120,7 @@ object FloydDiscordPresence : Module(
         // not be able to stall the game.
         usingIpc = true
         desiredState = "In menus"
-        ipcThread = Thread(::runIpcLoop, "FloydAddons-DiscordIPC").apply {
+        ipcThread = Thread(::runIpcLoop, "${Branding.COMPACT_NAME}-DiscordIPC").apply {
             isDaemon = true
             start()
         }
@@ -157,9 +158,9 @@ object FloydDiscordPresence : Module(
     }
 
     private fun buildActivity(state: String): Map<String, Any?> = mapOf(
-        "details" to "Playing Floyd Addons",
+        "details" to "Playing ${Branding.DISPLAY_NAME}",
         "state" to state,
-        "assets" to mapOf("large_image" to largeImageKey, "large_text" to "Floyd Addons"),
+        "assets" to mapOf("large_image" to largeImageKey, "large_text" to Branding.DISPLAY_NAME),
         "timestamps" to mapOf("start" to sessionStart)
     )
 
@@ -187,10 +188,10 @@ object FloydDiscordPresence : Module(
 
     private fun updatePresenceNative(state: String) {
         val presence = DiscordRichPresence().apply {
-            details = "Playing Floyd Addons"
+            details = "Playing ${Branding.DISPLAY_NAME}"
             this.state = state
             largeImageKey = this@FloydDiscordPresence.largeImageKey
-            largeImageText = "Floyd Addons"
+            largeImageText = Branding.DISPLAY_NAME
             startTimestamp = sessionStart
         }
         rpc?.Discord_UpdatePresence(presence)

@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.Branding
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.HudSizeRegistry
 import gg.floyd.events.core.onReceive
@@ -54,7 +55,7 @@ object FloydCustomScoreboard : Module(
     toggled = false,
 ) {
     private const val SCOREBOARD_FONT_SIZE = 9f
-    // Per-letter phase step for the "FloydAddons" brand line so it sweeps left→right letter-by-letter
+    // Per-letter phase step for the branded line so it sweeps left→right letter-by-letter
     // using the panel's OWN border color (chroma rainbow / base↔fade gradient / flat solid).
     private const val BRAND_LETTER_PHASE_STEP = 0.04f
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
@@ -204,12 +205,12 @@ object FloydCustomScoreboard : Module(
 
         if (lines.isEmpty()) return if (example) exampleScoreboardRender() else null
 
-        return buildScoreboardLayout(objective.displayName, Component.literal("FloydAddons"), lines)
+        return buildScoreboardLayout(objective.displayName, Component.literal(Branding.COMPACT_NAME), lines)
     }
 
     private fun exampleScoreboardRender(): ScoreboardRender =
         buildScoreboardLayout(
-            Component.literal("SKYBLOCK"), Component.literal("FloydAddons"),
+            Component.literal("SKYBLOCK"), Component.literal(Branding.COMPACT_NAME),
             mutableListOf(scoreLine("Purse: 1,234,567"), scoreLine("Bits: 12,345"), scoreLine("Location: Dungeon Hub"))
         )
 
@@ -291,9 +292,10 @@ object FloydCustomScoreboard : Module(
     // from the world-end inline pass. In safe HUD-layer mode (used for SkyHanni compatibility), it
     // draws the scoreboard here instead so Floyd stays off the shared post-world override path.
     private fun GuiGraphics.drawScoreboardHud(example: Boolean): Pair<Int, Int> {
-        val r = when {
-            example -> scoreboardRender(example = true, requireVanillaSignal = false)
-            else -> cachedLayout ?: scoreboardRender(example = false, requireVanillaSignal = false)
+        val r = if (example) {
+            scoreboardRender(example = true, requireVanillaSignal = false)
+        } else {
+            currentCachedRender()
         } ?: return 0 to 0
         drawScoreboardGui(r)
         return r.boxWidth to r.boxHeight
@@ -346,14 +348,16 @@ object FloydCustomScoreboard : Module(
             drawScoreboardInline(r, allowBlur = true)
             return
         }
+        drawScoreboardInline(currentCachedRender() ?: return, allowBlur = true)
+    }
+
+    private fun currentCachedRender(): ScoreboardRender? {
         // The enabled gate used to live inside the per-frame scoreboardRender; with the cache it
-        // must be HERE or a disable keeps ghost-drawing the stale layout (alongside the returning
-        // vanilla sidebar) until the 1 Hz fallback. Also releases the cached layout on disable.
+        // must live ahead of both the world-end and safe-HUD-layer draw paths or a disable keeps
+        // ghost-drawing stale content until the fallback rebuild window expires.
         if (!shouldUseCustomScoreboard()) {
-            cachedLayout = null
-            cachedLayoutEpoch = -1L
-            cachedLayoutFont = null
-            return
+            clearCachedRender()
+            return null
         }
         val now = System.currentTimeMillis()
         val epoch = layoutEpoch.get()
@@ -365,7 +369,13 @@ object FloydCustomScoreboard : Module(
             lastLayoutMs = now
             cachedLayout = scoreboardRender(example = false, requireVanillaSignal = false)
         }
-        drawScoreboardInline(cachedLayout ?: return, allowBlur = true)
+        return cachedLayout
+    }
+
+    private fun clearCachedRender() {
+        cachedLayout = null
+        cachedLayoutEpoch = -1L
+        cachedLayoutFont = null
     }
 
     private fun scoreLine(name: String): ScoreLine {

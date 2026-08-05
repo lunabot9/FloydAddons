@@ -3,16 +3,13 @@ package gg.floyd.clickgui.settings.impl
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
-import gg.floyd.clickgui.ClickGUI.gray38
+import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.Panel
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.clickgui.settings.Saving
-import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Color
-import gg.floyd.utils.Color.Companion.brighter
 import gg.floyd.utils.Colors
 import gg.floyd.utils.font.FontEpochCache
-import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.TextInputHandler
 import gg.floyd.utils.ui.animations.EaseInOutAnimation
 import gg.floyd.utils.ui.isAreaHovered
@@ -28,6 +25,11 @@ class SelectorSetting(
     desc: String,
     private val optionDescriptions: Map<String, String> = emptyMap()
 ) : RenderableSetting<Int>(name, desc), Saving {
+    private companion object {
+        const val TEXT_SIZE = 10f
+        const val SEARCH_TEXT_SIZE = 9f
+        const val VALUE_TEXT_MIN = 7f
+    }
 
     private val baseDescription = desc
 
@@ -50,12 +52,11 @@ class SelectorSetting(
             index = optionIndex(value)
         }
 
-    private val elementWidths = FontEpochCache { options.map { NVGRenderer.textWidth(it, 16f, NVGRenderer.defaultFont) } }
+    private val elementWidths = FontEpochCache { options.map { NVGRenderer.textWidth(it, TEXT_SIZE, NVGRenderer.defaultFont) } }
     private val settingAnim = EaseInOutAnimation(200)
-    private val hover = HoverHandler(150)
     private val defaultHeight = Panel.HEIGHT
     private val maxVisibleOptions = 8
-    private val searchHeight = 24f
+    private val searchHeight = 18f
     private var extended = false
     private var scrollIndex = 0
     private var searchText = ""
@@ -65,26 +66,27 @@ class SelectorSetting(
             searchText = it
             scrollIndex = 0
         }
-    )
-
-    private val color: Color get() = gray38.brighter(1 + hover.percent() / 500f)
+    ).apply {
+        fontSizeOverride = SEARCH_TEXT_SIZE
+        textPaddingX = 4f
+        textPaddingY = 4f
+    }
 
     private fun isSettingHovered(index: Int): Boolean =
-        isAreaHovered(lastX, lastY + optionsStartOffset() + 32f * index, width, 32f, true)
+        isAreaHovered(lastX, lastY + optionsStartOffset() + Panel.HEIGHT * index, width, Panel.HEIGHT, true)
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         description = descriptionForHover(x, y, mouseX, mouseY)
         super.render(x, y, mouseX, mouseY)
 
         val widths = elementWidths.get()
-        val currentWidth = widths[index]
+        val maxValueWidth = (width - 34f).coerceAtLeast(18f)
+        val selectedTextSize = fittedValueTextSize(selected, maxValueWidth)
+        val currentWidth = NVGRenderer.textWidth(selected, selectedTextSize, NVGRenderer.defaultFont)
 
-        hover.handle(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 22f, true)
-        NVGRenderer.rect(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 20f, color.rgba, 5f)
-        NVGRenderer.hollowRect(x + width - 20f - currentWidth, y + defaultHeight / 2f - 10f, currentWidth + 12f, 20f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 5f)
-
-        NVGRenderer.text(name, x + 6f, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(selected, x + width - 14f - currentWidth, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.rect(x, y, width, defaultHeight, ClickGUI.settingBackground())
+        NVGRenderer.text(name, x + 4f, y + defaultHeight / 2f - 5f, TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(selected, x + width - 6f - currentWidth, y + defaultHeight / 2f - 4f, selectedTextSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         if (!extended && !settingAnim.isAnimating()) return defaultHeight
 
@@ -93,29 +95,31 @@ class SelectorSetting(
 
         val visibleOptions = visibleOptions()
         val visibleCount = visibleOptions.size
-        val dropdownHeight = searchOffset() + visibleCount * 32f
-        NVGRenderer.rect(x + 6, y + 37f, width - 12f, dropdownHeight, gray38.rgba, 5f)
+        val dropdownHeight = searchOffset() + visibleCount * Panel.HEIGHT
+        NVGRenderer.rect(x, y + defaultHeight, width, dropdownHeight, ClickGUI.bodyBackground())
 
         if (searchEnabled()) {
-            val searchY = y + 40f
-            NVGRenderer.rect(x + 10f, searchY, width - 20f, searchHeight - 6f, Colors.gray38.rgba, 4f)
-            NVGRenderer.hollowRect(x + 10f, searchY, width - 20f, searchHeight - 6f, 1.2f, ClickGUIModule.clickGUIColor.rgba, 4f)
+            val searchY = y + defaultHeight + 2f
+            NVGRenderer.rect(x + 4f, searchY, width - 8f, searchHeight, ClickGUI.settingBackground())
             if (searchText.isEmpty())
-                NVGRenderer.text("Search mobs…", x + 14f, searchY + 2f, 14f, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
-            search.x = x + 14f
-            search.y = searchY + 1f
-            search.width = width - 28f
-            search.height = searchHeight - 8f
+                NVGRenderer.text("Search...", x + 8f, searchY + 4f, SEARCH_TEXT_SIZE, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
+            search.x = x + 4f
+            search.y = searchY
+            search.width = width - 8f
+            search.height = searchHeight
             search.draw(mouseX, mouseY)
         }
 
         for (i in 0 until visibleCount) {
             val option = visibleOptions[i]
             val optionIndex = options.indexOf(option)
-            val optionY = y + optionsStartOffset() + 32 * i
-            if (i != visibleCount - 1) NVGRenderer.line(x + 18f, optionY + 32, x + width - 12f, optionY + 32, 1.5f, Colors.MINECRAFT_DARK_GRAY.rgba)
-            NVGRenderer.textCentered(option, x + 6f, optionY, width - 12f, 32f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont, widths[optionIndex])
-            if (isSettingHovered(i)) NVGRenderer.hollowRect(x + 6, optionY, width - 12f, 32f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
+            val optionY = y + optionsStartOffset() + Panel.HEIGHT * i
+            val selectedFill = if (optionIndex == index) ClickGUI.accentDark() else ClickGUI.settingBackground()
+            NVGRenderer.rect(x, optionY, width, Panel.HEIGHT, selectedFill)
+            NVGRenderer.textCentered(option, x, optionY, width, Panel.HEIGHT, TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont, widths[optionIndex])
+            if (isSettingHovered(i)) {
+                NVGRenderer.hollowRect(x + 0.5f, optionY + 0.5f, width - 1f, Panel.HEIGHT - 1f, 1f, ClickGUI.accent(), 0f)
+            }
         }
         if (settingAnim.isAnimating()) NVGRenderer.popScissor()
 
@@ -124,7 +128,7 @@ class SelectorSetting(
 
     private fun descriptionForHover(x: Float, y: Float, mouseX: Float, mouseY: Float): String {
         if (extended && mouseX >= x + 6f && mouseX <= x + width - 6f) {
-            val visibleIndex = ((mouseY - (y + optionsStartOffset())) / 32f).toInt()
+            val visibleIndex = ((mouseY - (y + optionsStartOffset())) / Panel.HEIGHT).toInt()
             val visibleOptions = visibleOptions()
             if (visibleIndex in visibleOptions.indices && mouseY >= y + optionsStartOffset())
                 return optionDescriptions[visibleOptions[visibleIndex]] ?: baseDescription
@@ -166,7 +170,7 @@ class SelectorSetting(
     }
 
     override fun mouseScrolled(amount: Int): Boolean {
-        if (!extended || !isAreaHovered(lastX, lastY + optionsStartOffset(), width, visibleOptionCount() * 32f, true)) return false
+        if (!extended || !isAreaHovered(lastX, lastY + optionsStartOffset(), width, visibleOptionCount() * Panel.HEIGHT, true)) return false
         val direction = when {
             amount > 0 -> -1
             amount < 0 -> 1
@@ -190,13 +194,13 @@ class SelectorSetting(
     override val isHovered: Boolean get() = isAreaHovered(lastX, lastY, width, defaultHeight, true)
 
     override fun getHeight(): Float =
-        settingAnim.get(defaultHeight, visibleOptionCount() * 32f + searchOffset() + 44, !extended)
+        settingAnim.get(defaultHeight, defaultHeight + visibleOptionCount() * Panel.HEIGHT + searchOffset(), !extended)
 
     private fun searchEnabled(): Boolean = options.size > maxVisibleOptions
 
-    private fun searchOffset(): Float = if (searchEnabled()) searchHeight else 0f
+    private fun searchOffset(): Float = if (searchEnabled()) searchHeight + 4f else 0f
 
-    private fun optionsStartOffset(): Float = 38f + searchOffset()
+    private fun optionsStartOffset(): Float = defaultHeight + searchOffset()
 
     private fun matchingOptions(): List<String> =
         if (searchText.isBlank()) options else options.filter { it.contains(searchText, ignoreCase = true) }
@@ -214,4 +218,12 @@ class SelectorSetting(
     fun selectedOption(): String = selected
 
     fun optionLabels(): List<String> = options.toList()
+
+    private fun fittedValueTextSize(text: String, maxWidth: Float): Float {
+        var size = TEXT_SIZE
+        while (size > VALUE_TEXT_MIN && NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont) > maxWidth) {
+            size -= 0.5f
+        }
+        return size.coerceAtLeast(VALUE_TEXT_MIN)
+    }
 }

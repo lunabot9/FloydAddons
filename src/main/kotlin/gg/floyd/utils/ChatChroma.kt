@@ -70,13 +70,16 @@ object ChatChroma {
 
         val now = System.currentTimeMillis()
         return FormattedCharSequence { sink ->
+            var charIndex = 0
             for (index in codePoints.indices) {
                 val style = if (index in chromaIndices) {
                     styles[index].withColor(TextColor.fromRgb(chromaRgb(now, index)))
                 } else {
                     styles[index]
                 }
-                if (!sink.accept(index, style, codePoints[index])) return@FormattedCharSequence false
+                val codePoint = codePoints[index]
+                if (!sink.accept(charIndex, style, codePoint)) return@FormattedCharSequence false
+                charIndex += Character.charCount(codePoint)
             }
             true
         }

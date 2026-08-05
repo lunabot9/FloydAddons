@@ -2,9 +2,11 @@ package gg.floyd.mixin.mixins;
 
 import gg.floyd.features.impl.render.FloydSkyBlockPackDisabler;
 import gg.floyd.features.impl.render.FloydSkyBlockPackAssets;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
 import net.minecraft.network.Connection;
+import net.minecraft.network.DisconnectionDetails;
+import net.minecraft.network.protocol.PacketUtils;
+import net.minecraft.network.protocol.common.ClientboundResourcePackPopPacket;
 import net.minecraft.network.protocol.common.ClientboundResourcePackPushPacket;
 import net.minecraft.network.protocol.common.ServerboundResourcePackPacket;
 import org.spongepowered.asm.mixin.Final;
@@ -20,21 +22,29 @@ public abstract class SkyBlockPackDisablerMixin {
 
     @Inject(
         method = "handleResourcePackPush",
-        at = @At("HEAD"),
+        at = @At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/network/PacketProcessor;)V",
+            shift = At.Shift.AFTER
+        ),
         cancellable = true
     )
     private void floydaddons$disableSkyBlockPack(ClientboundResourcePackPushPacket packet, CallbackInfo ci) {
         if (!FloydSkyBlockPackDisabler.shouldDisable(packet.url())) return;
 
-        // The packet handler is first entered on Netty's thread, where Minecraft's original body
-        // schedules it onto the render thread. Let that first call continue, then win at HEAD when
-        // the scheduled invocation re-enters. A high priority keeps lower-priority pack mixins from
-        // starting the download before Floyd can cancel it.
-        if (!Minecraft.getInstance().isSameThread()) return;
-
         FloydSkyBlockPackAssets.refreshFromLivePack(packet.url(), packet.hash());
         connection.send(new ServerboundResourcePackPacket(packet.id(), ServerboundResourcePackPacket.Action.ACCEPTED));
         connection.send(new ServerboundResourcePackPacket(packet.id(), ServerboundResourcePackPacket.Action.SUCCESSFULLY_LOADED));
         ci.cancel();
+    }
+
+    @Inject(method = "handleResourcePackPop", at = @At("TAIL"))
+    private void floydaddons$handleSkyBlockPackPop(ClientboundResourcePackPopPacket packet, CallbackInfo ci) {
+        // Floyd keeps its local compatibility pack mounted; pack pop only ends the server-forced phase.
+    }
+
+    @Inject(method = "onDisconnect", at = @At("HEAD"))
+    private void floydaddons$resetSkyBlockPackState(DisconnectionDetails details, CallbackInfo ci) {
+        // The next push packet will refresh the cached URL if Hypixel changes it.
     }
 }

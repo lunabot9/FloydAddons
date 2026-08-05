@@ -648,8 +648,11 @@ object FloydNickHider : Module(
             val finalCodePoints = codePoints.toList()
             val finalStyles = styles.toList()
             return FormattedCharSequence { visitor ->
+                var charIndex = 0
                 for (index in finalCodePoints.indices) {
-                    if (!visitor.accept(index, finalStyles[index], finalCodePoints[index])) return@FormattedCharSequence false
+                    val codePoint = finalCodePoints[index]
+                    if (!visitor.accept(charIndex, finalStyles[index], codePoint)) return@FormattedCharSequence false
+                    charIndex += Character.charCount(codePoint)
                 }
                 true
             }

@@ -3,14 +3,12 @@ package gg.floyd.clickgui.settings.impl
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
-import gg.floyd.clickgui.ClickGUI.gray38
+import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.Panel
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.clickgui.settings.Saving
-import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Colors
 import gg.floyd.utils.ui.HoverHandler
-import gg.floyd.utils.ui.animations.LinearAnimation
 import gg.floyd.utils.ui.isAreaHovered
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.KeyEvent
@@ -39,21 +37,14 @@ class NumberSetting<E>(
     private val minDouble = min.toDouble()
     private var maxDouble = max.toDouble()
 
-    private val sliderAnim = LinearAnimation<Float>(100)
     private val handler = HoverHandler(150)
 
     private var displayValue = ""
-    private var prevLocation = 0f
     private var valueWidth = -1f
-    private var isDragging = false
 
     private var sliderPercentage = 0f
         set(value) {
             if (sliderPercentage != value) {
-                if (!isDragging) {
-                    prevLocation = sliderAnim.get(prevLocation, sliderPercentage, false)
-                    sliderAnim.start()
-                }
                 displayValue = getDisplay()
                 valueWidth = -1f
             }
@@ -87,27 +78,22 @@ class NumberSetting<E>(
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
 
-        handler.handle(x, y + height / 2, width, height / 2, true)
-
         if (listening) {
-            val newPercentage = ((mouseX - (x + 6f)) / (width - 12f)).coerceIn(0f, 1f)
+            val newPercentage = ((mouseX - x) / width).coerceIn(0f, 1f)
             valueDouble = minDouble + newPercentage * (maxDouble - minDouble)
             sliderPercentage = newPercentage
         }
 
         if (valueWidth < 0) {
-            valueWidth = NVGRenderer.textWidth(displayValue, 16f, NVGRenderer.defaultFont)
+            valueWidth = NVGRenderer.textWidth(displayValue, 10f, NVGRenderer.defaultFont)
         }
 
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 15f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(displayValue, x + width - valueWidth - 4f, y + height / 2f - 15f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-
-        NVGRenderer.rect(x + 6f, y + 24f, width - 12f, 8f, gray38.rgba, 3f)
-
-        if (x + sliderPercentage * (width - 12f) > x + 6)
-            NVGRenderer.rect(x + 6f, y + 24f, sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), 8f, ClickGUIModule.clickGUIColor.rgba, 3f)
-
-        NVGRenderer.circle(x + 6f + sliderAnim.get(prevLocation, sliderPercentage, false) * (width - 12f), y + 28f, handler.anim.get(7f, 9f, !isHovered), Colors.WHITE.rgba)
+        NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackgroundBright())
+        if (sliderPercentage > 0f) {
+            NVGRenderer.rect(x, y, sliderPercentage * width, height, ClickGUI.accentBright())
+        }
+        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(displayValue, x + width - valueWidth - 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         return height
     }
@@ -116,20 +102,12 @@ class NumberSetting<E>(
         return if (click.button() != 0 || !isHovered) false
         else {
             listening = true
-            isDragging = true
-            prevLocation = sliderPercentage
-            sliderAnim.start()
             true
         }
     }
 
     override fun mouseReleased(click: MouseButtonEvent) {
         listening = false
-        if (isDragging) {
-            isDragging = false
-            prevLocation = sliderAnim.get(prevLocation, sliderPercentage, false)
-            sliderAnim.start()
-        }
     }
 
     override fun keyPressed(input: KeyEvent): Boolean {
@@ -149,9 +127,7 @@ class NumberSetting<E>(
 
     override val isHovered: Boolean
         get() =
-            isAreaHovered(lastX, lastY + getHeight() / 2, width, getHeight() / 2, true)
-
-    override fun getHeight(): Float = Panel.HEIGHT + 8f
+            isAreaHovered(lastX, lastY, width, getHeight(), true)
 
     override fun write(gson: Gson): JsonElement = JsonPrimitive(value)
 

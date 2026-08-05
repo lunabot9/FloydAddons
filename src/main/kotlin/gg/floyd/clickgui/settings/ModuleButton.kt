@@ -1,18 +1,14 @@
 package gg.floyd.clickgui.settings
 
 import gg.floyd.clickgui.ClickGUI
-import gg.floyd.clickgui.ClickGUI.gray26
 import gg.floyd.clickgui.Panel
 import gg.floyd.features.Module
-import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Color
 import gg.floyd.utils.Color.Companion.brighter
 import gg.floyd.utils.Colors
 import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.animations.ColorAnimation
 import gg.floyd.utils.ui.animations.EaseInOutAnimation
-import gg.floyd.utils.ui.mouseX
-import gg.floyd.utils.ui.mouseY
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -26,13 +22,16 @@ import kotlin.math.floor
  * see [RenderableSetting]
  */
 class ModuleButton(val module: Module, val panel: Panel) {
+    private companion object {
+        const val MODULE_TEXT_SIZE = 9.5f
+    }
 
     val representableSettings = module.settings.values.filterIsInstance<RenderableSetting<*>>()
     private val colorAnim = ColorAnimation(150)
 
     private val color: Color
         get() =
-            colorAnim.get(ClickGUIModule.clickGUIColor, gray26, module.enabled).brighter(1 + hover.percent() / 500f)
+            colorAnim.get(Color(ClickGUI.accent()), Color(ClickGUI.bodyBackground()), module.enabled).brighter(1 + hover.percent() / 700f)
 
     private val hoverHandler = HoverHandler(750)
     private val extendAnim = EaseInOutAnimation(250)
@@ -41,31 +40,22 @@ class ModuleButton(val module: Module, val panel: Panel) {
     private var lastY = 0f
     var extended = false
 
-    fun draw(x: Float, y: Float, lastModule: Boolean = false): Float {
+    fun draw(x: Float, y: Float, mouseX: Float, mouseY: Float, lastModule: Boolean = false): Float {
         lastX = x
         lastY = y
         hoverHandler.handle(x, y, Panel.WIDTH, Panel.HEIGHT - 1, true)
         hover.handle(x, y, Panel.WIDTH, Panel.HEIGHT - 1, true)
-
-        if (hoverHandler.percent() >= 100 && y >= panel.panelSetting.y + Panel.HEIGHT)
-            ClickGUI.setDescription(module.description, x + Panel.WIDTH + 10f, y, hoverHandler)
-
-        if (!ClickGUIModule.roundedPanelBottom && lastModule) {
-            NVGRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT - 10f, color.rgba)
-            NVGRenderer.drawHalfRoundedRect(x, y + Panel.HEIGHT - 10f, Panel.WIDTH, 10f, color.rgba, 5f, false)
-        } else {
-            NVGRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT, color.rgba)
-        }
+        NVGRenderer.rect(x, y, Panel.WIDTH, Panel.HEIGHT, color.rgba)
         NVGRenderer.textCentered(
             module.name,
             x,
             y,
             Panel.WIDTH,
             Panel.HEIGHT,
-            18f,
+            MODULE_TEXT_SIZE,
             Colors.WHITE.rgba,
             NVGRenderer.defaultFont,
-            NVGRenderer.textWidth(module.name, 18f, NVGRenderer.defaultFont)
+            NVGRenderer.textWidth(module.name, MODULE_TEXT_SIZE, NVGRenderer.defaultFont)
         )
 
         if (representableSettings.isEmpty()) return Panel.HEIGHT

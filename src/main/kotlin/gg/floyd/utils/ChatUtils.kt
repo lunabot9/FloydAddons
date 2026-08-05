@@ -1,12 +1,13 @@
 package gg.floyd.utils
 
+import gg.floyd.Branding
 import gg.floyd.FloydAddonsMod.mc
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.network.chat.Style
 
-private const val DEFAULT_PREFIX = "FloydAddons"
+private const val DEFAULT_PREFIX = Branding.COMPACT_NAME
 
 fun modMessage(message: Any?, prefix: String = DEFAULT_PREFIX, chatStyle: Style? = null) {
     val text = prefixComponent(prefix).append(Component.literal(message.toString()))

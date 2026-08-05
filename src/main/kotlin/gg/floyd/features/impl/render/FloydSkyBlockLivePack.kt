@@ -26,15 +26,18 @@ internal data class FloydSanitizedSkyBlockPack(
 )
 
 /**
- * Converts Hypixel's server pack into a metadata-only cache. Item definitions and model parents
- * are retained so new custom IDs can be mapped back to vanilla models, while Hypixel textures and
- * every global Minecraft override are omitted.
+ * Converts Hypixel's server pack into a compatibility-focused cache. Item definitions and model
+ * parents are retained so new custom IDs can be mapped back to vanilla models, and font resources
+ * are preserved so SkyBlock glyph icons still render. Unrelated textures and GUI overrides are
+ * omitted.
  */
 internal object FloydSkyBlockLivePackCache {
     private const val CACHE_PREFIX = "skyblock-live-items-"
     private const val CACHE_SUFFIX = ".zip"
     private const val ITEM_DEFINITION_PREFIX = "assets/hypixel_skyblock/items/"
     private const val MODEL_DEFINITION_PREFIX = "assets/hypixel_skyblock/models/"
+    private const val FONT_DIRECTORY_SEGMENT = "/font/"
+    private const val FONT_TEXTURE_DIRECTORY_SEGMENT = "/textures/font/"
     private const val MAX_ENTRY_COUNT = 50_000
     private const val MAX_UNCOMPRESSED_BYTES = 128L * 1024L * 1024L
 
@@ -174,6 +177,8 @@ internal object FloydSkyBlockLivePackCache {
 
     private fun isMetadataEntry(name: String): Boolean =
         name == "pack.mcmeta" ||
+            name.contains(FONT_DIRECTORY_SEGMENT) ||
+            name.contains(FONT_TEXTURE_DIRECTORY_SEGMENT) ||
             (name.startsWith(ITEM_DEFINITION_PREFIX) && name.endsWith(".json")) ||
             (name.startsWith(MODEL_DEFINITION_PREFIX) && name.endsWith(".json"))
 

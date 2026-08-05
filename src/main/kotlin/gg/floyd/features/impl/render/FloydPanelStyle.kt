@@ -53,11 +53,11 @@ object FloydPanelStyle : Module(
     val panelCornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Default rounded corner radius for every Floyd panel.").withDependency { !perPanelStyle }
     val panelBorderWidth by NumberSetting("Panel Border Width", 2, 0, 6, 1, desc = "Default outline width for every Floyd panel.").withDependency { !perPanelStyle }
     val panelPadding by NumberSetting("Panel Padding", 6, 0, 16, 1, desc = "Default internal padding between a panel's border and its contents.").withDependency { !perPanelStyle }
-    val panelBackgroundColor by ColorSetting("Panel Background Color", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color (with opacity) behind every Floyd panel.").withDependency { !perPanelStyle }
-    val panelBorderColor by ColorSetting("Panel Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for every Floyd panel — chroma and fade are configured inside the picker.").withDependency { !perPanelStyle }
+    val panelBackgroundColor by ColorSetting("Panel Background", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color (with opacity) behind every Floyd panel.").withDependency { !perPanelStyle }
+    val panelBorderColor by ColorSetting("Panel Border", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for every Floyd panel — chroma and fade are configured inside the picker.").withDependency { !perPanelStyle }
     val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a real blurred backdrop of the world behind every Floyd panel.").withDependency { !perPanelStyle }
     val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Blur radius of the backdrop behind Floyd panels.").withDependency { !perPanelStyle }
-    private val panelBlurType by SelectorSetting("Panel Blur Type", "Gaussian", blurTypes, desc = "Blur kernel used for the panel backdrop.").withDependency { !perPanelStyle }
+    private val panelBlurType by SelectorSetting("Panel Blur", "Gaussian", blurTypes, desc = "Blur kernel used for the panel backdrop.").withDependency { !perPanelStyle }
 
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
 
@@ -79,11 +79,11 @@ object FloydPanelStyle : Module(
             cornerRadius = registerSetting(NumberSetting("${target.label} Corner Radius", 4, 0, 20, 1, desc = "Rounded corner radius for the ${target.label} panel.")).withDependency(visible),
             borderWidth = registerSetting(NumberSetting("${target.label} Border Width", 2, 0, 6, 1, desc = "Outline width for the ${target.label} panel.")).withDependency(visible),
             padding = registerSetting(NumberSetting("${target.label} Padding", 6, 0, 16, 1, desc = "Internal padding for the ${target.label} panel.")).withDependency(visible),
-            background = registerSetting(ColorSetting("${target.label} Background Color", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color behind the ${target.label} panel.")).withDependency(visible),
-            border = registerSetting(ColorSetting("${target.label} Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for the ${target.label} panel — chroma/fade inside the picker.")).withDependency(visible),
+            background = registerSetting(ColorSetting("${target.label} Background", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color behind the ${target.label} panel.")).withDependency(visible),
+            border = registerSetting(ColorSetting("${target.label} Border", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for the ${target.label} panel — chroma/fade inside the picker.")).withDependency(visible),
             blur = registerSetting(BooleanSetting("${target.label} Blur", false, desc = "Blurred backdrop behind the ${target.label} panel.")).withDependency(visible),
             blurStrength = registerSetting(NumberSetting("${target.label} Blur Strength", 6, 0, 20, 1, desc = "Blur radius behind the ${target.label} panel.")).withDependency(visible),
-            blurType = registerSetting(SelectorSetting("${target.label} Blur Type", "Gaussian", blurTypes, desc = "Blur kernel for the ${target.label} panel.")).withDependency(visible),
+            blurType = registerSetting(SelectorSetting("${target.label} Blur", "Gaussian", blurTypes, desc = "Blur kernel for the ${target.label} panel.")).withDependency(visible),
         )
     }
 

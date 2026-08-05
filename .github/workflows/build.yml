@@ -49,15 +49,6 @@ jobs:
       - name: build and test
         run: ./gradlew ":${{ matrix.minecraft }}:build" --stacktrace
 
-      # Per-build artifact, handy for PRs / non-main pushes.
-      - name: upload build jar artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: FloydAddons-${{ matrix.minecraft }}-${{ github.sha }}
-          path: |
-            versions/${{ matrix.minecraft }}/build/libs/FloydAddons-*.jar
-            !versions/${{ matrix.minecraft }}/build/libs/FloydAddons-*-sources.jar
-
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
@@ -68,16 +59,8 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4
 
-      - name: download all versioned jars
-        uses: actions/download-artifact@v4
-        with:
-          pattern: FloydAddons-*-${{ github.sha }}
-          path: release-jars
-          merge-multiple: true
-
-      # Publish (or refresh) the GitHub Release with all three runtime jars on every push to main.
-      # The tag is derived from mod_version in gradle.properties (e.g. v2.1.0): bumping the
-      # version cuts a new release, re-pushing the same version refreshes all release jars.
+      # Publish or refresh a notes-only GitHub Release on every push to main.
+      # Jar distribution is handled outside GitHub Releases.
       - name: publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -86,37 +69,25 @@ jobs:
 
           version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
           tag="v${version}"
-
-          runtime_jars=()
-          for jar in release-jars/FloydAddons-*.jar; do
-            [[ "$jar" == *-sources.jar ]] && continue
-            runtime_jars+=("$jar")
-          done
-          expected=(
-            "release-jars/FloydAddons-${version}-26.1.jar"
-            "release-jars/FloydAddons-${version}-26.1.2.jar"
-            "release-jars/FloydAddons-${version}-26.2.jar"
-          )
-          if [[ "${#runtime_jars[@]}" -ne 3 ]]; then
-            printf 'found: %s\n' "${runtime_jars[@]:-<none>}"
-            echo "expected exactly three FloydAddons runtime jars" >&2
-            exit 1
-          fi
-          for jar in "${expected[@]}"; do
-            if [[ ! -f "$jar" ]]; then
-              echo "missing expected release jar: $jar" >&2
-              exit 1
-            fi
-          done
-          echo "Releasing ${expected[*]} as ${tag}"
+          notes_file="$(mktemp)"
+          {
+            echo "FloydAddons ${version}"
+            echo
+            echo "Release published from ${GITHUB_SHA}."
+            echo
+            echo "Artifacts are distributed outside GitHub Releases."
+          } > "$notes_file"
 
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release ${tag} exists — updating its jars."
-            gh release upload "$tag" "${expected[@]}" --clobber
+            echo "Release ${tag} exists — updating notes."
+            gh release edit "$tag" \
+              --title "FloydAddons ${version} (MC 26.1 / 26.1.2 / 26.2)" \
+              --notes-file "$notes_file" \
+              --target "$GITHUB_SHA"
           else
             echo "Creating release ${tag}."
-            gh release create "$tag" "${expected[@]}" \
+            gh release create "$tag" \
               --target "$GITHUB_SHA" \
               --title "FloydAddons ${version} (MC 26.1 / 26.1.2 / 26.2)" \
-              --notes "FloydAddons for Minecraft 26.1, 26.1.2, and 26.2. Built from ${GITHUB_SHA}."
+              --notes-file "$notes_file"
           fi

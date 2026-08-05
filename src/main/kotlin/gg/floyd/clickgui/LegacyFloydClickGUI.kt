@@ -2,6 +2,7 @@ package gg.floyd.clickgui
 
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.Branding
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import gg.floyd.clickgui.settings.Setting
@@ -52,6 +53,7 @@ import gg.floyd.features.impl.render.LegacyClickGUIModule
 import gg.floyd.features.impl.render.FloydAnimations
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydFloorDropEsp
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydTimeChanger
@@ -94,7 +96,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import org.lwjgl.glfw.GLFW
 
-object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
+object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     private const val hubPanelWidth = 480
     private const val hubPanelHeight = 270
     private const val borderThickness = 1
@@ -139,6 +141,9 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private const val modulePopupPadding = 6
     private const val modulePopupMinWidth = 180
     private const val modulePopupFilterMinWidth = 250
+    private const val modulePopupTextScale = 0.72f
+    private const val modulePopupHintScale = 0.66f
+    private const val modulePopupButtonTextScale = 0.68f
     private const val skinDropdownRowHeight = 16
     private const val skinDropdownMaxVisible = 5
     private const val skinPanelWidth = 320
@@ -220,10 +225,10 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private const val nickPanelWidth = 260
     private const val nickPanelHeight = 150
     private const val nickFullWidth = 220
-    private const val githubUrl = "https://github.com/lunabot9/FloydAddons"
-    private const val discordUrl = "https://discord.gg/FLOYD"
-    private const val coffeeUrl = "https://buymeacoffee.com/lunabot9"
-    private const val communityHeader = "Join the Floyd Addons Community"
+    private const val githubUrl = Branding.GITHUB_URL
+    private const val discordUrl = Branding.DISCORD_URL
+    private const val coffeeUrl = Branding.COFFEE_URL
+    private const val communityHeader = Branding.COMMUNITY_HEADER
     private const val githubLinkText = "github"
     private const val discordLinkText = ".gg/FLOYD"
     private const val coffeeLinkText = "Buy Me A Coffee!"
@@ -232,7 +237,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private val legacyClickGuiPanelType = object : TypeToken<Map<String, List<Int>>>() {}.type
     private val nickPresets = listOf("George Floyd", "Floyd", "Dream", "Technoblade", "Steve", "Alex")
 
-    private val background = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "textures/gui/floydbg.png")
+    private val background = Identifier.fromNamespaceAndPath(FloydAddonsMod.MOD_ID, Branding.LEGACY_BACKGROUND_PATH)
     private val labels = listOf("Cosmetic", "Render", "Neck Hider", "Camera", "QoL")
     private val labelHover = MutableList(labels.size) { 0f }
 
@@ -3190,7 +3195,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun drawModuleBrowserBottomTitle(context: GuiGraphics, alpha: Float) {
-        val title = "FloydAddons"
+        val title = Branding.COMPACT_NAME
         val textScale = 2.0f
         val titleWidth = (mc.font.width(title) * textScale).roundToInt()
         val titleX = (width - titleWidth) / 2f
@@ -3791,18 +3796,23 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         val hover = row.contains(hoverX, hoverY)
         if (hover) context.fill(row.left, row.top, row.right, row.bottom, applyAlpha(0xFF1A1A1A.toInt(), alpha))
         val labelColor = if (hover) legacyTextColor(0.15f, alpha) else applyAlpha(0xFFFFFFFF.toInt(), alpha)
-        val label = mc.font.plainSubstrByWidth(modulePopupSettingLabel(popup, setting), row.width - 16)
+        val label = mc.font.plainSubstrByWidth(modulePopupSettingLabel(popup, setting), scaledMaxWidth(row.width - 16, modulePopupTextScale))
+        val rowTextY = row.top + (row.height - scaledFontHeight(modulePopupTextScale)) / 2
         when (setting) {
             is BooleanSetting -> {
-                context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
+                drawScaledText(context, label, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
                 drawPopupDot(context, row, setting.enabled, alpha)
             }
             is RuntimeBooleanSetting -> {
-                context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
+                drawScaledText(context, label, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
                 drawPopupDot(context, row, setting.enabled, alpha)
             }
             is NumberSetting<*> -> {
-                context.drawString(mc.font, "$label: ${formatPopupNumber(setting.numericValue())}", row.left + 8, row.top + 2, labelColor, true)
+                val valueLabel = mc.font.plainSubstrByWidth(
+                    "$label: ${formatPopupNumber(setting.numericValue())}",
+                    scaledMaxWidth(row.width - 16, modulePopupTextScale)
+                )
+                drawScaledText(context, valueLabel, row.left + 8, row.top + 4, labelColor, modulePopupTextScale)
                 val bar = modulePopupSliderBounds(row)
                 val min = setting.minNumericValue()
                 val max = setting.maxNumericValue()
@@ -3811,38 +3821,39 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 context.fill(bar.left, bar.top, bar.left + (bar.width * percentage).roundToInt(), bar.bottom, applyAlpha(legacyStyleColor(StyleTarget.BUTTON_BORDER, 0f), alpha))
             }
             is SelectorSetting -> {
-                context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
-                val value = mc.font.plainSubstrByWidth(setting.selectedOption(), row.width / 2)
-                context.drawString(mc.font, value, row.right - mc.font.width(value) - 8, row.top + (row.height - mc.font.lineHeight) / 2, applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
+                drawScaledText(context, label, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
+                val value = mc.font.plainSubstrByWidth(setting.selectedOption(), scaledMaxWidth(row.width / 2, modulePopupTextScale))
+                drawScaledTextRightAligned(context, value, row.right - 8, rowTextY, applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
             }
             is KeybindSetting -> {
-                context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
+                drawScaledText(context, label, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
                 val value = if (setting.listening) "Press key..." else setting.value.displayName.string
-                val clipped = mc.font.plainSubstrByWidth(value, row.width / 2)
-                context.drawString(mc.font, clipped, row.right - mc.font.width(clipped) - 8, row.top + (row.height - mc.font.lineHeight) / 2, if (setting.listening) labelColor else applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
+                val clipped = mc.font.plainSubstrByWidth(value, scaledMaxWidth(row.width / 2, modulePopupTextScale))
+                drawScaledTextRightAligned(context, clipped, row.right - 8, rowTextY, if (setting.listening) labelColor else applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
             }
             is StringSetting -> {
                 if (legacyCycleStringOptions(setting) != null) {
-                    context.drawString(mc.font, label, row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
+                    drawScaledText(context, label, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
                     var value = setting.value.ifBlank { "None" }
-                    val maxValueWidth = max(20, row.width - mc.font.width(label) - 30)
+                    val maxValueWidth = scaledMaxWidth(row.width - scaledFontWidth(label, modulePopupTextScale) - 30, modulePopupTextScale).coerceAtLeast(3)
                     while (mc.font.width(value) > maxValueWidth && value.length > 3) value = value.dropLast(1)
-                    context.drawString(mc.font, value, row.right - mc.font.width(value) - 8, row.top + (row.height - mc.font.lineHeight) / 2, if (hover) labelColor else applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
+                    drawScaledTextRightAligned(context, value, row.right - 8, rowTextY, if (hover) labelColor else applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
                 } else {
                     val editing = activeModulePopupString?.setting === setting
                     var rawValue = if (editing) modulePopupStringBuffer else setting.value.ifBlank { "<empty>" }
                     val suffix = if (editing) "_" else ""
-                    val maxValueWidth = max(20, row.width - mc.font.width("$label:") - 28)
+                    val labelWithColon = "$label:"
+                    val maxValueWidth = max(20, scaledMaxWidth(row.width - scaledFontWidth(labelWithColon, modulePopupTextScale) - 28, modulePopupTextScale))
                     while (mc.font.width(rawValue + suffix) > maxValueWidth && rawValue.isNotEmpty()) rawValue = rawValue.drop(1)
                     val value = rawValue + suffix
-                    context.drawString(mc.font, "$label:", row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, labelColor, true)
-                    val valueX = row.left + 8 + mc.font.width("$label:") + 4
-                    context.drawString(mc.font, value, valueX, row.top + (row.height - mc.font.lineHeight) / 2, if (editing) applyAlpha(0xFFFFFFFF.toInt(), alpha) else applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
+                    drawScaledText(context, labelWithColon, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
+                    val valueX = row.left + 8 + scaledFontWidth(labelWithColon, modulePopupTextScale) + 4
+                    drawScaledText(context, value, valueX, rowTextY, if (editing) applyAlpha(0xFFFFFFFF.toInt(), alpha) else applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
                     if (editing) context.fill(valueX, row.bottom - 2, row.right - 8, row.bottom - 1, applyAlpha(legacyStyleColor(StyleTarget.BUTTON_BORDER, 0f), alpha))
                 }
             }
             is ColorSetting -> {
-                context.drawString(mc.font, label, row.left + 8, row.top + (modulePopupRowHeight - mc.font.lineHeight) / 2, labelColor, true)
+                drawScaledText(context, label, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
                 val sq = Rect(row.right - 20, row.top + (modulePopupRowHeight - 10) / 2, 10, 10)
                 context.fill(sq.left, sq.top, sq.right, sq.bottom, applyAlpha(setting.value.rgba, alpha))
                 drawButtonBorder(context, sq.left - 1, sq.top - 1, sq.right + 1, sq.bottom + 1, alpha)
@@ -3850,10 +3861,12 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             }
             is ActionSetting -> {
                 val actionLabel = "[${modulePopupSettingLabel(popup, setting)}]"
-                context.drawString(mc.font, mc.font.plainSubstrByWidth(actionLabel, row.width - 16), row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, if (hover) legacyTextColor(0.15f, alpha) else applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
+                val clipped = mc.font.plainSubstrByWidth(actionLabel, scaledMaxWidth(row.width - 16, modulePopupTextScale))
+                drawScaledText(context, clipped, row.left + 8, rowTextY, if (hover) legacyTextColor(0.15f, alpha) else applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
             }
             else -> {
-                context.drawString(mc.font, "$label: ${popupSettingSummary(setting)}", row.left + 8, row.top + (row.height - mc.font.lineHeight) / 2, applyAlpha(0xFF888888.toInt(), alpha), true)
+                val summary = mc.font.plainSubstrByWidth("$label: ${popupSettingSummary(setting)}", scaledMaxWidth(row.width - 16, modulePopupTextScale))
+                drawScaledText(context, summary, row.left + 8, rowTextY, applyAlpha(0xFF888888.toInt(), alpha), modulePopupTextScale)
             }
         }
         if (setting !is ActionSetting) {
@@ -3865,7 +3878,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
                 is SelectorSetting -> "Cycle"
                 else -> ""
             }
-            if (hint.isNotEmpty()) context.drawString(mc.font, hint, row.right - mc.font.width(hint) - 8, row.top + 2, applyAlpha(0xFF777777.toInt(), alpha), true)
+            if (hint.isNotEmpty()) drawScaledTextRightAligned(context, hint, row.right - 8, row.top + 3, applyAlpha(0xFF777777.toInt(), alpha), modulePopupHintScale)
         }
     }
 
@@ -3902,14 +3915,15 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             drawButtonBorder(context, fadePreview.left - 1, fadePreview.top - 1, fadePreview.right + 1, fadePreview.bottom + 1, if (modulePopupEditingFadeColor) alpha else alpha * 0.45f)
         }
         val hex = "#${activeColor.hex(includeAlpha = false)}"
-        context.drawString(mc.font, hex, basePreview.right + 6, basePreview.top + (basePreview.height - mc.font.lineHeight) / 2, applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
+        val hexY = basePreview.top + (basePreview.height - scaledFontHeight(modulePopupTextScale)) / 2
+        drawScaledText(context, hex, basePreview.right + 6, hexY, applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
         val chromaButton = modulePopupInlineColorChromaBounds(row)
-        drawButton(context, chromaButton, "Chroma: ${onOff(setting.value.chroma)}", alpha)
+        drawButton(context, chromaButton, "Chroma: ${onOff(setting.value.chroma)}", alpha, modulePopupButtonTextScale)
         modulePopupFadeToggleSetting(setting)?.let { fade ->
             val button = modulePopupInlineColorFadeBounds(row)
-            drawButton(context, button, "Fade: ${onOff(fade.enabled)}", alpha)
+            drawButton(context, button, "Fade: ${onOff(fade.enabled)}", alpha, modulePopupButtonTextScale)
             val edit = modulePopupInlineColorEditFadeBounds(row)
-            drawButton(context, edit, if (modulePopupEditingFadeColor) "Editing: Fade" else "Editing: Base", alpha)
+            drawButton(context, edit, if (modulePopupEditingFadeColor) "Editing: Fade" else "Editing: Base", alpha, modulePopupButtonTextScale)
         }
     }
 
@@ -4641,6 +4655,11 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
             headerRow("Mob ESP"),
             toggleModuleRow(FloydMobEsp, "Mob ESP", RowLayout.LEFT),
             navRow("Config", Page.MOB_ESP, RowLayout.RIGHT),
+            headerRow("Floor Drops"),
+            toggleModuleRow(FloydFloorDropEsp, "Floor Drop ESP", RowLayout.LEFT),
+            toggleSettingRow(FloydFloorDropEsp, "Tracers", "Drop Tracers", RowLayout.RIGHT),
+            toggleSettingRow(FloydFloorDropEsp, "Boxes", "Drop Boxes", RowLayout.LEFT),
+            colorRow(FloydFloorDropEsp, "Color", "Drop Color", RowLayout.FULL),
             headerRow("Other"),
             navRow("Hiders", Page.HIDERS, RowLayout.LEFT),
             navRow("Attack Animation", Page.ANIMATIONS, RowLayout.RIGHT),
@@ -6375,7 +6394,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     private fun Int.floorMod(size: Int): Int = ((this % size) + size) % size
 
     private fun pageTitle(page: Page): String = when (page) {
-        Page.HUB -> "FloydAddons"
+        Page.HUB -> Branding.COMPACT_NAME
         Page.RENDER -> "Render"
         Page.HIDERS -> "Hiders"
         Page.CAMERA -> "Camera"
@@ -6413,7 +6432,7 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
     }
 
     private fun drawTitle(context: GuiGraphics, centerX: Int, y: Int, alpha: Float) {
-        val title = "FloydAddons"
+        val title = Branding.COMPACT_NAME
         val titleScale = 1.75f
         context.pose().pushMatrix()
         context.pose().scale(titleScale, titleScale)
@@ -6502,19 +6521,34 @@ object LegacyFloydClickGUI : Screen(Component.literal("FloydAddons")) {
         context.drawString(mc.font, coffeeLinkText, coffeeX, coffeeY, applyAlpha(if (coffeeHovered) 0xFFFFFFFF.toInt() else chromaColor(0f), alpha), true)
     }
 
-    private fun drawButton(context: GuiGraphics, rect: Rect, label: String, alpha: Float) {
+    private fun drawButton(context: GuiGraphics, rect: Rect, label: String, alpha: Float, textScale: Float = 1f) {
         val hover = rect.contains(hoverX, hoverY)
         context.fill(rect.left, rect.top, rect.right, rect.bottom, applyAlpha(if (hover) 0xFF666666.toInt() else 0xFF4A4A4A.toInt(), alpha))
         drawButtonBorder(context, rect.left - 1, rect.top - 1, rect.right + 1, rect.bottom + 1, alpha)
-        context.drawString(
-            mc.font,
-            label,
-            rect.left + (rect.width - mc.font.width(label)) / 2,
-            rect.top + (rect.height - mc.font.lineHeight) / 2,
-            legacyTextColor(0f, alpha),
-            true
-        )
+        val clipped = mc.font.plainSubstrByWidth(label, scaledMaxWidth(rect.width - 6, textScale))
+        val textX = rect.left + (rect.width - scaledFontWidth(clipped, textScale)) / 2
+        val textY = rect.top + (rect.height - scaledFontHeight(textScale)) / 2
+        drawScaledText(context, clipped, textX, textY, legacyTextColor(0f, alpha), textScale)
     }
+
+    private fun drawScaledText(context: GuiGraphics, text: String, x: Int, y: Int, color: Int, scale: Float, shadow: Boolean = true) {
+        context.pose().pushMatrix()
+        context.pose().translate(x.toFloat(), y.toFloat())
+        context.pose().scale(scale, scale)
+        context.drawString(mc.font, text, 0, 0, color, shadow)
+        context.pose().popMatrix()
+    }
+
+    private fun drawScaledTextRightAligned(context: GuiGraphics, text: String, right: Int, y: Int, color: Int, scale: Float, shadow: Boolean = true) {
+        drawScaledText(context, text, right - scaledFontWidth(text, scale), y, color, scale, shadow)
+    }
+
+    private fun scaledFontWidth(text: String, scale: Float): Int = (mc.font.width(text) * scale).roundToInt()
+
+    private fun scaledFontHeight(scale: Float): Int = (mc.font.lineHeight * scale).roundToInt()
+
+    private fun scaledMaxWidth(width: Int, scale: Float): Int =
+        max(1, (width / scale).toInt())
 
     private fun drawChromaBorder(context: GuiGraphics, left: Int, top: Int, right: Int, bottom: Int, alpha: Float) {
         drawStyledBorder(context, left, top, right, bottom, alpha, StyleTarget.GUI_BORDER)

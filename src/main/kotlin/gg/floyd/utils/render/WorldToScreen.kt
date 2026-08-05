@@ -187,7 +187,7 @@ object WorldToScreen {
         view.transform(rel)
         if (rel.z > TRACER_VIEW_EPSILON) {
             if (!mirrorBehindCamera) return null
-            return behindCameraTracerTarget(distance)
+            return behindCameraTracerTarget(rel.x, rel.y, rel.z, distance)
         }
         val t = tracerPlaneScale(rel.z, distance, mirrorBehindCamera = false) ?: return null
         return Vec3(
@@ -208,12 +208,33 @@ object WorldToScreen {
         return -distance / viewZ
     }
 
+    internal fun behindCameraTracerTarget(viewX: Float, viewY: Float, viewZ: Float, distance: Float = 1f): Vec3? {
+        val edge = behindCameraScreenEdge(viewX, viewY, viewZ)
+        return tracerPlaneScreenPoint(edge.x, edge.y, distance)
+    }
+
     /**
-     * Center-bottom fallback for behind-camera tracers. This produces a stable point directly below the
-     * crosshair on the same tracer depth plane so turning away from a target draws downward instead of up.
+     * Picks the screen-edge direction for a behind-camera target using the same left/right/up/down
+     * orientation it had just before crossing the camera plane. Directly-behind targets still fall back
+     * to the center-bottom indicator because they have no lateral screen direction to preserve.
      */
-    internal fun behindCameraTracerTarget(distance: Float = 1f): Vec3? =
-        tracerPlaneScreenPoint(0f, TRACER_BEHIND_CAMERA_NDC_Y, distance)
+    internal fun behindCameraScreenEdge(viewX: Float, viewY: Float, viewZ: Float): ScreenPos {
+        val proj = projection
+        if (proj != null && viewZ > TRACER_VIEW_EPSILON) {
+            val clip = Vector4f(viewX, viewY, -viewZ, 1f)
+            proj.transform(clip)
+            if (kotlin.math.abs(clip.w) > TRACER_VIEW_EPSILON) {
+                val ndcX = clip.x / clip.w
+                val ndcY = clip.y / clip.w
+                val magnitude = kotlin.math.max(kotlin.math.abs(ndcX), kotlin.math.abs(ndcY))
+                if (magnitude > TRACER_VIEW_EPSILON) {
+                    val edgeScale = TRACER_EDGE_NDC / magnitude
+                    return ScreenPos(ndcX * edgeScale, ndcY * edgeScale)
+                }
+            }
+        }
+        return ScreenPos(0f, TRACER_BEHIND_CAMERA_NDC_Y)
+    }
 
     /**
      * World-space point on the tracer depth plane that projects to ([ndcX], [ndcY]). Uses the same clip
@@ -250,4 +271,5 @@ object WorldToScreen {
 
     private const val TRACER_VIEW_EPSILON = 1.0e-3f
     private const val TRACER_BEHIND_CAMERA_NDC_Y = -0.98f
+    private const val TRACER_EDGE_NDC = 0.98f
 }

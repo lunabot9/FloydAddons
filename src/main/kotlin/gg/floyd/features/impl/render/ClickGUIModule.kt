@@ -23,7 +23,7 @@ object ClickGUIModule : Module(
     private const val BOOTSTRAP_SCREEN_WIDTH = 1920f
     private const val BOOTSTRAP_SCREEN_HEIGHT = 1080f
     private const val BOOTSTRAP_DEVICE_PIXEL_RATIO = 1f
-    private const val SCREENSHOT_LAYOUT_TOP = 31f
+    private const val SCREENSHOT_LAYOUT_TOP = 10f
     private const val POSITION_MATCH_TOLERANCE = 0.5f
 
     val enableNotification by BooleanSetting("Chat notifications", true, desc = "Sends a message when you toggle a module with a keybind")
@@ -130,18 +130,33 @@ object ClickGUIModule : Module(
 
     private fun screenshotPanelLayout(activeCategories: List<Category>, availableWidth: Float): Map<String, PanelData> {
         val template = linkedMapOf(
-            Category.RENDER.name to PanelData(x = 6f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.HIDERS.name to PanelData(x = 266f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.COSMETIC.name to PanelData(x = 526f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.CAMERA.name to PanelData(x = 796f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.MISC.name to PanelData(x = 1086f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
-            Category.PVP.name to PanelData(x = 1356f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.RENDER.name to PanelData(x = 40f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.HIDERS.name to PanelData(x = 304f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.COSMETIC.name to PanelData(x = 582f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.CAMERA.name to PanelData(x = 866f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.MISC.name to PanelData(x = 1130f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
+            Category.PVP.name to PanelData(x = 1394f, y = SCREENSHOT_LAYOUT_TOP, extended = true),
         )
+        val ordered = listOf(
+            Category.RENDER,
+            Category.HIDERS,
+            Category.COSMETIC,
+            Category.CAMERA,
+            Category.MISC,
+            Category.PVP,
+        ).filter { it in activeCategories }
         val layout = linkedMapOf<String, PanelData>()
-        activeCategories.forEach { category ->
-            layout[category.name] = template[category.name]?.copy() ?: PanelData(10f, SCREENSHOT_LAYOUT_TOP, true)
+        ordered.forEach { category ->
+            layout[category.name] = template[category.name]?.copy() ?: PanelData(8f, SCREENSHOT_LAYOUT_TOP, true)
         }
-        return centeredPanelLayout(layout, availableWidth)
+        activeCategories.filter { it !in ordered }.forEachIndexed { index, category ->
+            layout[category.name] = PanelData(
+                x = 40f + (ordered.size + index) * (Panel.WIDTH + 8f),
+                y = SCREENSHOT_LAYOUT_TOP,
+                extended = true
+            )
+        }
+        return layout
     }
 
     internal fun centeredPanelLayout(layout: Map<String, PanelData>, availableWidth: Float): Map<String, PanelData> {
@@ -154,17 +169,18 @@ object ClickGUIModule : Module(
     }
 
     private fun wrappedPanelLayout(activeCategories: List<Category>, availableWidth: Float): Map<String, PanelData> {
-        val gap = 20f
-        val rowGap = 14f
-        var x = 10f
+        val gap = 8f
+        val rowGap = 12f
+        val startX = 8f
+        var x = startX
         var y = 10f
         var rowMaxHeight = 0f
         val layout = linkedMapOf<String, PanelData>()
         activeCategories.forEach { category ->
             // Wrap to a new row when the panel would extend past the right edge, so no panel is ever
             // pushed off-screen regardless of window width or how many categories exist.
-            if (x > 10f && x + Panel.WIDTH > availableWidth) {
-                x = 10f
+            if (x > startX && x + Panel.WIDTH > availableWidth) {
+                x = startX
                 y += rowMaxHeight + rowGap
                 rowMaxHeight = 0f
             }
@@ -180,18 +196,18 @@ object ClickGUIModule : Module(
             kotlin.math.abs(current.y - expected.y) <= POSITION_MATCH_TOLERANCE
 
     private fun alignsToWrappedColumn(x: Float): Boolean {
-        val columnStep = Panel.WIDTH + 20f
-        val columnIndex = (x - 10f) / columnStep
+        val columnStep = Panel.WIDTH + 8f
+        val columnIndex = (x - 8f) / columnStep
         return kotlin.math.abs(columnIndex - round(columnIndex)) <= POSITION_MATCH_TOLERANCE / columnStep
     }
 
     /** Rough extended-panel height (header + one row per module) used for default row-wrapping spacing. */
     private fun estimatedPanelHeight(category: Category): Float {
         val moduleCount = ModuleManager.modulesByCategory[category]?.size ?: 0
-        return Panel.HEIGHT + moduleCount * MODULE_ROW_HEIGHT
+        return Panel.HEADER_HEIGHT + 3f + moduleCount * MODULE_ROW_HEIGHT + Panel.FOOTER_HEIGHT
     }
 
-    private const val MODULE_ROW_HEIGHT = 16f
+    private const val MODULE_ROW_HEIGHT = 15f
 
     /**
      * The Click GUI accent color, honoring EVERY picker mode at [offset]: chroma cycles (the
@@ -216,10 +232,9 @@ object ClickGUIModule : Module(
     internal fun hoveredAccentColor(displayedAccent: Int): Int = Color(displayedAccent).brighter().rgba
 
     private fun currentAvailableWidth(): Float {
-        val screenWidth = currentScreenWidth()
-        val screenHeight = currentScreenHeight()
-        val devicePixelRatio = currentDevicePixelRatio(screenWidth)
-        return availableWidthForLayout(screenWidth, screenHeight, devicePixelRatio)
+        val guiWidth = currentGuiWidth()
+        val scale = getStandardGuiScale().coerceAtLeast(0.0001f)
+        return guiWidth / scale
     }
 
     fun getStandardGuiScale(): Float {
@@ -228,6 +243,8 @@ object ClickGUIModule : Module(
         val devicePixelRatio = currentDevicePixelRatio(screenWidth)
         return standardGuiScaleFor(screenWidth, screenHeight, devicePixelRatio)
     }
+
+    fun getClickGuiRenderScale(): Float = getStandardGuiScale() * mc.window.guiScale.toFloat()
 
     private fun currentScreenWidth(): Float =
         runCatching { mc.window.screenWidth.toFloat() }
@@ -240,6 +257,12 @@ object ClickGUIModule : Module(
             .getOrNull()
             ?.takeIf { it.isFinite() && it > 0f }
             ?: BOOTSTRAP_SCREEN_HEIGHT
+
+    private fun currentGuiWidth(): Float =
+        runCatching { mc.window.guiScaledWidth.toFloat() }
+            .getOrNull()
+            ?.takeIf { it.isFinite() && it > 0f }
+            ?: BOOTSTRAP_SCREEN_WIDTH
 
     private fun currentDevicePixelRatio(screenWidth: Float): Float {
         val windowWidth = runCatching { mc.window.width.toFloat() }
@@ -256,7 +279,7 @@ object ClickGUIModule : Module(
         // be penalized a second time by dividing through the device-pixel ratio.
         val verticalScale = screenHeight / BOOTSTRAP_SCREEN_HEIGHT
         val horizontalScale = screenWidth / BOOTSTRAP_SCREEN_WIDTH
-        return round(minOf(verticalScale, horizontalScale).coerceIn(0.5f, 1.5f) * 10f) / 10f
+        return round(minOf(verticalScale, horizontalScale).coerceIn(1f, 1.5f) * 10f) / 10f
     }
 
     internal fun availableWidthForLayout(screenWidth: Float, screenHeight: Float, devicePixelRatio: Float): Float =

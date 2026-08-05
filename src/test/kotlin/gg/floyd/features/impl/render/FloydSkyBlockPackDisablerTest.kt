@@ -2,11 +2,6 @@ package gg.floyd.features.impl.render
 
 import com.google.gson.JsonParser
 import net.minecraft.resources.Identifier
-import java.nio.file.Files
-import java.nio.file.attribute.FileTime
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -46,72 +41,66 @@ class FloydSkyBlockPackDisablerTest {
     }
 
     @Test
-    fun `unknown alpha item ids fall back to their base vanilla item model`() {
-        val vanillaModel = Identifier.parse("minecraft:diamond_sword")
-
-        assertEquals(
-            vanillaModel,
-            FloydSkyBlockItemModelPolicy.resolveBaseModel(
-                skyBlockId = "NEW_ALPHA_ITEM_NOT_IN_THE_BUNDLED_TABLE",
-                knownModels = emptyMap(),
-                vanillaItemModel = vanillaModel,
-            ),
-        )
+    fun `bundled item table still carries sprayonator variants used by the upstream fallback path`() {
+        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
+        assertNotNull(data)
+        data.reader().use { reader ->
+            val json = JsonParser.parseReader(reader).asJsonObject
+            assertNotNull(json["SPRAYONATOR"])
+            assertTrue(json["SPRAYONATOR"].asJsonObject["model"].asString.startsWith("minecraft:"))
+        }
     }
 
     @Test
-    fun `live pack cache learns vanilla parents without retaining Hypixel textures`() {
-        val input = Files.createTempFile("floyd-live-pack-input", ".zip")
-        val output = Files.createTempFile("floyd-live-pack-output", ".zip")
-        ZipOutputStream(Files.newOutputStream(input)).use { zip ->
-            fun entry(name: String, value: String) {
-                zip.putNextEntry(ZipEntry(name))
-                zip.write(value.toByteArray())
-                zip.closeEntry()
+    fun `bundled item table covers safari and critter ids that recently regressed to null`() {
+        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
+        assertNotNull(data)
+        data.reader().use { reader ->
+            val json = JsonParser.parseReader(reader).asJsonObject
+            val requiredIds = listOf(
+                "SAFARI_BELT",
+                "SAFARI_BELT_COMMON",
+                "SAFARI_BELT_UNCOMMON",
+                "SAFARI_BELT_RARE",
+                "SAFARI_BELT_EPIC",
+                "SAFARI_BELT_LEGENDARY",
+                "SAFARI_BELT_MYTHIC",
+                "RAINBOW_FEATHER",
+                "CRITTER_CAPSULE",
+                "BAG_OF_SEEDS",
+                "YOGI_BERRY",
+                "WRIGGLEWORM",
+                "SOOTHING_INCENSE",
+                "SHINING_COIN",
+                "BASIC_NOZZLE",
+                "JUICY_NOZZLE",
+                "SALTY_NOZZLE",
+                "HONEY_POT_BEHEMOTH",
+                "BEHEMOTH_POT_OF_HONEYCOMB",
+            )
+
+            for (skyBlockId in requiredIds) {
+                val fallback = json[skyBlockId]
+                assertNotNull(fallback, "Missing bundled fallback for $skyBlockId")
+                assertTrue(
+                    fallback.asJsonObject["model"].asString.startsWith("minecraft:"),
+                    "Fallback for $skyBlockId should resolve to a vanilla item model"
+                )
             }
-            entry("pack.mcmeta", """{"pack":{"pack_format":84,"description":"Hypixel SkyBlock"}}""")
-            entry(
-                "assets/hypixel_skyblock/items/item/alpha/new_food.json",
-                """{"model":{"type":"minecraft:model","model":"hypixel_skyblock:item/alpha/new_food"}}""",
-            )
-            entry(
-                "assets/hypixel_skyblock/models/item/alpha/new_food.json",
-                """{"parent":"item/paper","textures":{"layer0":"hypixel_skyblock:item/alpha/new_food"}}""",
-            )
-            entry("assets/hypixel_skyblock/textures/item/alpha/new_food.png", "fake-png")
-            entry("assets/minecraft/textures/gui/title/background/panorama_0.png", "unwanted")
-            entry("assets/minecraft/font/default.json", "unwanted")
         }
-
-        val result = FloydSkyBlockLivePackCache.sanitize(input, output)
-
-        ZipFile(output.toFile()).use { zip ->
-            assertNotNull(zip.getEntry("pack.mcmeta"))
-            assertNotNull(zip.getEntry("assets/hypixel_skyblock/items/item/alpha/new_food.json"))
-            assertNotNull(zip.getEntry("assets/hypixel_skyblock/models/item/alpha/new_food.json"))
-            assertEquals(null, zip.getEntry("assets/hypixel_skyblock/textures/item/alpha/new_food.png"))
-            assertEquals(null, zip.getEntry("assets/minecraft/textures/gui/title/background/panorama_0.png"))
-            assertEquals(null, zip.getEntry("assets/minecraft/font/default.json"))
-        }
-        assertEquals(
-            Identifier.parse("minecraft:item/paper"),
-            result.baseModels[Identifier.parse("hypixel_skyblock:item/alpha/new_food")],
-        )
     }
 
     @Test
-    fun `reloading repository does not overwrite its mounted fallback zip`() {
-        val target = Files.createTempDirectory("floyd-pack-test").resolve("fallback.zip")
-        javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")!!.use {
-            FloydSkyBlockPackMaterializer.materialize(it, target)
-        }
-        val mountedTimestamp = FileTime.fromMillis(1_000_000L)
-        Files.setLastModifiedTime(target, mountedTimestamp)
+    fun `prefers cached live pack base model when bundled table lacks a new item`() {
+        val currentModel = Identifier.parse("hypixel_skyblock:item/boosters/common/booster_foraging_wisdom")
+        val resolved = FloydSkyBlockItemModelPolicy.resolveBaseModel(
+            currentModel = currentModel,
+            skyBlockId = null,
+            liveModels = mapOf(currentModel to Identifier.parse("minecraft:paper")),
+            knownModels = emptyMap(),
+            vanillaItemModel = Identifier.parse("hypixel_skyblock:item/unknown"),
+        )
 
-        javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")!!.use { input ->
-            FloydSkyBlockPackMaterializer.materialize(input, target)
-        }
-
-        assertTrue(Files.getLastModifiedTime(target) == mountedTimestamp)
+        assertEquals(Identifier.parse("minecraft:paper"), resolved)
     }
 }

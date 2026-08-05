@@ -74,7 +74,7 @@ object FloydXray : Module(
         if (ClickGUIModule.enableNotification) moduleToggle(name, active)
     }
     private val opaqueBlockList by ExtendedSearchableListSetting(
-        "Opaque Block List",
+        "Block List",
         optionsProvider = { allBlockIds },
         selectedProvider = { opaqueBlockIds() },
         onToggle = { id ->

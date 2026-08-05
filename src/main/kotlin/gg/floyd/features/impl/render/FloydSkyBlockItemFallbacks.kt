@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.FloydAddonsMod
 import net.minecraft.client.Minecraft
 import net.minecraft.core.component.DataComponents
 import net.minecraft.nbt.CompoundTag
@@ -7,9 +8,13 @@ import net.minecraft.resources.Identifier
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.jvm.optionals.getOrNull
 
 object FloydSkyBlockItemFallbacks {
+    private const val MAX_DIAGNOSTIC_NBT_CHARS = 512
+    private val loggedUnresolvedModels = ConcurrentHashMap.newKeySet<String>()
+
     val ItemStack.customData: CompoundTag
         get() = getOrDefault(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY).copyTag()
 
@@ -49,6 +54,51 @@ object FloydSkyBlockItemFallbacks {
         }
         else -> fallback
     }
+
+    fun logUnresolvedModel(
+        currentModel: Identifier,
+        resolvedModel: Identifier,
+        stack: ItemStack,
+        customData: CompoundTag,
+        skyBlockId: String?,
+        vanillaItemModel: Identifier,
+        liveBaseModel: Identifier?,
+    ) {
+        if (resolvedModel.namespace != "hypixel_skyblock") return
+
+        val diagnosticKey = buildString {
+            append(currentModel)
+            append('|')
+            append(resolvedModel)
+            append('|')
+            append(skyBlockId ?: "<missing>")
+            append('|')
+            append(stack.item)
+            append('|')
+            append(skinId(customData) ?: "<missing>")
+        }
+        if (!loggedUnresolvedModels.add(diagnosticKey)) return
+
+        FloydAddonsMod.logger.warn(
+            "[SkyBlockPackDisabler] Unresolved hypixel_skyblock item model: currentModel={}, " +
+                "resolvedModel={}, skyBlockId={}, item={}, vanillaItemModel={}, liveBaseModel={}, " +
+                "knownFallback={}, skinId={}, quiverArrow={}, customData={}",
+            currentModel,
+            resolvedModel,
+            skyBlockId ?: "<missing>",
+            stack.item,
+            vanillaItemModel,
+            liveBaseModel ?: "<none>",
+            skyBlockId?.let(FloydSkyBlockPackAssets.itemModels::containsKey) == true,
+            skinId(customData) ?: "<missing>",
+            customData.contains("quiver_arrow"),
+            customData.toString().let(::truncateDiagnosticNbt),
+        )
+    }
+
+    private fun truncateDiagnosticNbt(nbt: String): String =
+        if (nbt.length <= MAX_DIAGNOSTIC_NBT_CHARS) nbt
+        else nbt.take(MAX_DIAGNOSTIC_NBT_CHARS - 3) + "..."
 
     private val Item.itemModel: Identifier
         get() = components()[DataComponents.ITEM_MODEL]!!

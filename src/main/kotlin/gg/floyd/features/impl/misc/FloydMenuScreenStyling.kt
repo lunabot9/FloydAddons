@@ -17,6 +17,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
 import net.minecraft.client.gui.screens.options.OptionsSubScreen
 import net.minecraft.client.gui.screens.packs.PackSelectionScreen
+import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen
 import java.lang.reflect.Field
 import java.util.IdentityHashMap
 import kotlin.math.ceil
@@ -29,6 +30,12 @@ object FloydMenuScreenStyling {
     private const val REESES_VIDEO_SETTINGS_SCREEN = "me.flashyreese.mods.reeses_sodium_options.client.gui.SodiumVideoOptionsScreen"
     private const val SODIUM_GUI_PREFIX = "net.caffeinemc.mods.sodium.client.gui."
     private const val REESES_GUI_PREFIX = "me.flashyreese.mods.reeses_sodium_options.client.gui."
+    private val THIRD_PARTY_MENU_PREFIXES = arrayOf(
+        "com.odtheking.",
+        "foo.starred.odinclient.",
+        "xyz.aerii.athen.",
+        "com.github.noamm9."
+    )
     private val pendingTextRuns = ArrayList<MenuTextRun>()
 
     /**
@@ -51,9 +58,10 @@ object FloydMenuScreenStyling {
         if (screen is TitleScreen) return false
         if (screen is AbstractContainerScreen<*>) return false
         if (screen is ChatScreen) return false
-        if (usesShaderWrapper(screen)) return true
+        if (isExplicitThirdPartyMenu(screen)) return false
+        if (usesShaderWrapper(screen) || isSupportedVanillaMenu(screen)) return true
         if (isFloydScreen(screen)) return false
-        return true
+        return false
     }
 
     /**
@@ -151,6 +159,32 @@ object FloydMenuScreenStyling {
 
     private fun isFloydScreen(screen: Screen): Boolean =
         screen.javaClass.name.startsWith("gg.floyd.")
+
+    private fun isSupportedVanillaMenu(screen: Screen): Boolean {
+        if (
+            screen is JoinMultiplayerScreen ||
+            screen is OptionsSubScreen ||
+            screen is PackSelectionScreen ||
+            screen is SelectWorldScreen
+        ) {
+            return true
+        }
+
+        return screenLinkChain(screen).any { linked ->
+            linked is FloydMainMenuScreen ||
+                linked is TitleScreen ||
+                linked is JoinMultiplayerScreen ||
+                linked is OptionsSubScreen ||
+                linked is PackSelectionScreen ||
+                linked is SelectWorldScreen
+        }
+    }
+
+    private fun isExplicitThirdPartyMenu(screen: Screen): Boolean =
+        screenLinkChain(screen).any { linked ->
+            val name = linked.javaClass.name
+            THIRD_PARTY_MENU_PREFIXES.any(name::startsWith)
+        }
 
     private fun usesShaderWrapper(screen: Screen): Boolean {
         if (

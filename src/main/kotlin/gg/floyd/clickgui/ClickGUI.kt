@@ -2,12 +2,12 @@ package gg.floyd.clickgui
 
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.settings.impl.ColorSetting
-import gg.floyd.features.Category
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Color
-import gg.floyd.utils.Colors
-import gg.floyd.utils.ui.HoverHandler
+import gg.floyd.utils.Color.Companion.brighter
+import gg.floyd.utils.Color.Companion.darker
+import gg.floyd.utils.Color.Companion.withAlpha
 import gg.floyd.utils.ui.animations.EaseOutAnimation
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
@@ -18,8 +18,6 @@ import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.network.chat.Component
-import java.awt.Desktop
-import java.net.URI
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.sign
@@ -30,109 +28,106 @@ import gg.floyd.utils.ui.mouseY as floydMouseY
  * Renders all the modules.
  */
 object ClickGUI : Screen(Component.literal("Click GUI")) {
-
-    private val panels: ArrayList<Panel> = arrayListOf<Panel>().apply {
-        ClickGUIModule.ensurePanelPositionsFit()
-        for (category in Category.categories.values.filter { ModuleManager.modulesByCategory.containsKey(it) }) add(Panel(category))
-    }
+    private val panels: ArrayList<Panel> = arrayListOf()
 
     private var openAnim = EaseOutAnimation(500)
     val gray38 = Color(38, 38, 38)
     val gray26 = Color(26, 26, 26)
+    val oringoPanelRaised = Color(37, 37, 37)
+    val oringoPanelBright = Color(52, 52, 52)
+    val oringoTextMuted = Color(143, 143, 143)
+    private val shadowStripe = Color(0, 0, 0, 40 / 255f)
 
-    private const val githubUrl = "https://github.com/lunabot9/FloydAddons"
-    private const val discordUrl = "https://discord.gg/FLOYD"
-    private const val coffeeUrl = "https://buymeacoffee.com/lunabot9"
-    // Clickable-link bounds (x, y, w, h) in the scaled GUI space, refreshed in place every frame.
-    private val communityGithubBounds = floatArrayOf(0f, 0f, 0f, 0f)
-    private val communityDiscordBounds = floatArrayOf(0f, 0f, 0f, 0f)
-    private val coffeeBounds = floatArrayOf(0f, 0f, 0f, 0f)
-
-    private fun setBounds(b: FloatArray, x: Float, y: Float, w: Float, h: Float) {
-        b[0] = x; b[1] = y; b[2] = w; b[3] = h
+    fun accent(alpha: Float = 1f): Int = Color(ClickGUIModule.guiAccentColor()).withAlpha(alpha).rgba
+    fun accentDark(): Int = Color(accent()).darker().rgba
+    fun accentBright(): Int = Color(accent()).brighter().rgba
+    fun bodyBackground(): Int = gray26.rgba
+    fun settingBackground(): Int = oringoPanelRaised.rgba
+    fun settingBackgroundBright(): Int = oringoPanelBright.rgba
+    fun shadowStripeColor(): Int = shadowStripe.rgba
+    fun rowFill(active: Boolean): Int = if (active) accent() else bodyBackground()
+    fun drawChrome(x: Float, y: Float, width: Float, height: Float, radius: Float, hovered: Boolean = false, accented: Boolean = false) {
+        NVGRenderer.rect(x, y, width, height, if (hovered) settingBackgroundBright() else settingBackground(), radius)
     }
 
     override fun extractRenderState(context: GuiGraphics, mouseX: Int, mouseY: Int, deltaTicks: Float) {
         val guiScale = ClickGUIModule.getStandardGuiScale()
         val minecraftGuiScale = mc.window.guiScale.toFloat()
-        val scaledMouseX = floydMouseX / guiScale
-        val scaledMouseY = floydMouseY / guiScale
-        val searchBarX = mc.window.screenWidth / (2f * guiScale) - 175f
-        val searchBarY = (mc.window.screenHeight - 110f) / guiScale - 20f
+        val renderScale = ClickGUIModule.getClickGuiRenderScale()
         val bounds = computeRenderBounds(
-            searchBarX,
-            searchBarY,
             context.guiWidth(),
             context.guiHeight(),
-            guiScale,
+            renderScale,
             minecraftGuiScale,
         )
 
         NVGPIPRenderer.draw(context, bounds.left, bounds.top, bounds.width, bounds.height) {
-            val scaledMouseX = floydMouseX / guiScale
-            val scaledMouseY = floydMouseY / guiScale
+            NVGRenderer.withImmediateText {
+                val scaledMouseX = floydMouseX / renderScale
+                val scaledMouseY = floydMouseY / renderScale
 
-            NVGRenderer.scale(guiScale, guiScale)
+                NVGRenderer.scale(renderScale, renderScale)
 
-            drawTitle(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
-            SearchBar.draw(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
-            drawCommunity(searchBarX, searchBarY, scaledMouseX, scaledMouseY)
+                if (openAnim.isAnimating()) {
+                    val scale = openAnim.get(0f, 1f)
 
-            if (openAnim.isAnimating()) {
-                val scale = openAnim.get(0f, 1f)
+                    val centerX = context.guiWidth().toFloat()
+                    val centerY = context.guiHeight().toFloat()
+                    NVGRenderer.translate(centerX, centerY)
+                    NVGRenderer.scale(scale, scale)
+                    NVGRenderer.translate(-centerX, -centerY)
+                }
 
-                val centerX = context.guiWidth().toFloat()
-                val centerY = context.guiHeight().toFloat()
-                NVGRenderer.translate(centerX, centerY)
-                NVGRenderer.scale(scale, scale)
-                NVGRenderer.translate(-centerX, -centerY)
-            }
+                val draggedPanel = panels.firstOrNull { it.dragging }
+                for (panel in panels) {
+                    if (panel == draggedPanel) continue
+                    // Per-panel text layer (D7 step 6 CORRECTION): bake everything queued so far —
+                    // the GUI-level text above (layer 0) and lower panels' text — into the PIP slot
+                    // BELOW this panel's shapes, so panels overlapping at rest occlude correctly.
+                    NVGRenderer.nextTextLayer()
+                    panel.draw(scaledMouseX, scaledMouseY)
+                }
 
-            val draggedPanel = panels.firstOrNull { it.dragging }
-            for (panel in panels) {
-                if (panel == draggedPanel) continue
-                // Per-panel text layer (D7 step 6 CORRECTION): bake everything queued so far —
-                // the GUI-level text above (layer 0) and lower panels' text — into the PIP slot
-                // BELOW this panel's shapes, so panels overlapping at rest occlude correctly.
+                // Topmost layers: dragged panel, then the tooltip — each behind its own boundary so
+                // the dragged panel's replayed text bakes BELOW the tooltip's box (otherwise it would
+                // composite over a live tooltip, the same bleed the per-panel boundaries fix at rest).
+                // Empty layers skip their boundary, so this is free when nothing is dragged.
                 NVGRenderer.nextTextLayer()
-                panel.draw(scaledMouseX, scaledMouseY)
+                draggedPanel?.draw(scaledMouseX, scaledMouseY)
+
+                NVGRenderer.nextTextLayer()
+                SearchBar.draw(context.guiWidth().toFloat(), context.guiHeight().toFloat(), scaledMouseX, scaledMouseY)
+
+                NVGRenderer.nextTextLayer()
+                NVGRenderer.resetTextLayers()
             }
-
-            // Topmost layers: dragged panel, then the tooltip — each behind its own boundary so
-            // the dragged panel's replayed text bakes BELOW the tooltip's box (otherwise it would
-            // composite over a live tooltip, the same bleed the per-panel boundaries fix at rest).
-            // Empty layers skip their boundary, so this is free when nothing is dragged.
-            NVGRenderer.nextTextLayer()
-            draggedPanel?.draw(scaledMouseX, scaledMouseY)
-
-            NVGRenderer.nextTextLayer()
-            desc.render()
-            NVGRenderer.resetTextLayers()
         }
         super.extractRenderState(context, mouseX, mouseY, deltaTicks)
     }
 
     private fun computeRenderBounds(
-        searchBarX: Float,
-        searchBarY: Float,
         guiWidth: Int,
         guiHeight: Int,
         renderScale: Float,
         minecraftGuiScale: Float,
     ): RenderBounds {
+        if (openAnim.isAnimating()) {
+            return RenderBounds().apply {
+                minX = 0f
+                minY = 0f
+                maxX = guiWidth.toFloat()
+                maxY = guiHeight.toFloat()
+            }
+        }
         val bounds = RenderBounds()
-        bounds.include(searchBarX, searchBarY - 22f - 16f, searchBarX + 350f, searchBarY + 40f + 8f + 15f + 3f + 15f)
         for (panel in panels) {
-            val panelBounds = panel.predictedBounds(SearchBar.currentSearch)
+            val panelBounds = panel.predictedBounds("")
             bounds.include(panelBounds[0], panelBounds[1], panelBounds[2], panelBounds[3])
         }
-        if (desc.text.isNotEmpty() && desc.hoverHandler.percent() >= 100) {
-            val area = NVGRenderer.wrappedTextBounds(desc.text, 300f, 16f, NVGRenderer.defaultFont)
-            bounds.include(desc.x, desc.y, desc.x + area[2] - area[0] + 16f, desc.y + area[3] - area[1] + 16f)
-        }
-        // A small safety margin avoids clipping shadows/borders and preserves hover text near edges.
+        val footerBounds = SearchBar.predictedBounds(guiWidth.toFloat(), guiHeight.toFloat())
+        bounds.include(footerBounds[0], footerBounds[1], footerBounds[2], footerBounds[3])
         return bounds
-            .inflate(20f)
+            .inflate(12f)
             .toGuiCoordinates(renderScale, minecraftGuiScale)
             .clampTo(guiWidth.toFloat(), guiHeight.toFloat())
     }
@@ -154,10 +149,9 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
         mouseButtonEvent: MouseButtonEvent,
         bl: Boolean
     ): Boolean {
-        val scaledMouseX = floydMouseX / ClickGUIModule.getStandardGuiScale()
-        val scaledMouseY = floydMouseY / ClickGUIModule.getStandardGuiScale()
-        if (mouseButtonEvent.button() == 0 && hitCommunityLink(scaledMouseX, scaledMouseY)) return true
-        SearchBar.mouseClicked(scaledMouseX, scaledMouseY, mouseButtonEvent)
+        val scaledMouseX = floydMouseX / ClickGUIModule.getClickGuiRenderScale()
+        val scaledMouseY = floydMouseY / ClickGUIModule.getClickGuiRenderScale()
+        if (SearchBar.mouseClicked(scaledMouseX, scaledMouseY, mouseButtonEvent)) return true
         for (i in panels.size - 1 downTo 0) {
             if (panels[i].mouseClicked(scaledMouseX, scaledMouseY, mouseButtonEvent)) return true
         }
@@ -173,7 +167,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     }
 
     override fun charTyped(characterEvent: CharacterEvent): Boolean {
-        SearchBar.keyTyped(characterEvent)
+        if (SearchBar.keyTyped(characterEvent)) return true
         for (i in panels.size - 1 downTo 0) {
             if (panels[i].keyTyped(characterEvent)) return true
         }
@@ -181,7 +175,7 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     }
 
     override fun keyPressed(keyEvent: KeyEvent): Boolean {
-        SearchBar.keyPressed(keyEvent)
+        if (SearchBar.keyPressed(keyEvent)) return true
         for (i in panels.size - 1 downTo 0) {
             if (panels[i].keyPressed(keyEvent)) return true
         }
@@ -191,6 +185,8 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     override fun init() {
         ClickGUIModule.ensurePanelPositionsFit()
         openAnim.start()
+        panels.clear()
+        panels.addAll(Panel.createActivePanels())
         super.init()
     }
 
@@ -218,132 +214,6 @@ object ClickGUI : Screen(Component.literal("Click GUI")) {
     }
 
     override fun isPauseScreen(): Boolean = false
-
-    private var desc = Description("", 0f, 0f, HoverHandler(150))
-
-    /** Sets the description without creating a new data class which isn't optimal */
-    fun setDescription(text: String, x: Float, y: Float, hoverHandler: HoverHandler) {
-        desc.text = text
-        desc.x = x
-        desc.y = y
-        desc.hoverHandler = hoverHandler
-    }
-
-    data class Description(var text: String, var x: Float, var y: Float, var hoverHandler: HoverHandler) {
-
-        fun render() {
-            if (text.isEmpty() || hoverHandler.percent() < 100) return
-            val area = NVGRenderer.wrappedTextBounds(text, 300f, 16f, NVGRenderer.defaultFont)
-            NVGRenderer.rect(x, y, area[2] - area[0] + 16f, area[3] - area[1] + 16f, gray38.rgba, 5f)
-            NVGRenderer.hollowRect(
-                x,
-                y,
-                area[2] - area[0] + 16f,
-                area[3] - area[1] + 16f,
-                1.5f,
-                ClickGUIModule.guiAccentColor(),
-                5f
-            )
-            NVGRenderer.drawWrappedString(text, x + 8f, y + 8f, 300f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        }
-    }
-
-    /**
-     * Renders "Join the Floyd Addons Community" below the search bar with two markdown-style text
-     * links — "github" and ".gg/FLOYD" — that open the repo / Discord. Link bounds are refreshed each
-     * frame for [hitCommunityLink] to hit-test in [mouseClicked].
-     */
-    // Constant-string widths cached per font epoch (these textWidth calls walk the live FontSet
-    // floats and used to run 4×/frame for never-changing strings).
-    private val communityWidths = gg.floyd.utils.font.FontEpochCache {
-        floatArrayOf(
-            NVGRenderer.textWidth("Join the Floyd Addons Community", 15f, NVGRenderer.defaultFont),
-            NVGRenderer.textWidth("    ", 15f, NVGRenderer.defaultFont),
-            NVGRenderer.textWidth("github", 15f, NVGRenderer.defaultFont),
-            NVGRenderer.textWidth(".gg/FLOYD", 15f, NVGRenderer.defaultFont),
-        )
-    }
-
-    private fun drawCommunity(searchBarX: Float, searchBarY: Float, mouseX: Float, mouseY: Float) {
-        val centerX = searchBarX + 175f
-        val size = 15f
-        val header = "Join the Floyd Addons Community"
-        val widths = communityWidths.get()
-        val headerWidth = widths[0]
-        val headerY = searchBarY + 40f + 8f
-        NVGRenderer.text(header, centerX - headerWidth / 2f, headerY, size, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-
-        val gap = widths[1]
-        val githubWidth = widths[2]
-        val discordWidth = widths[3]
-        val rowY = headerY + size + 3f
-        val githubX = centerX - (githubWidth + gap + discordWidth) / 2f
-        val discordX = githubX + githubWidth + gap
-
-        // Refresh the bounds arrays IN PLACE each frame for hit-testing (no per-frame arrays).
-        setBounds(communityGithubBounds, githubX, rowY, githubWidth, size)
-        setBounds(communityDiscordBounds, discordX, rowY, discordWidth, size)
-
-        // Phase 0 = the GUI's live accent (the same color the toggle pills/description borders
-        // show this frame). The old 0f/0.5f stagger put the discord link a half-cycle out — the
-        // OPPOSITE hue under chroma — instead of matching the GUI's actual current color.
-        val githubColor = if (inBounds(communityGithubBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor()
-        val discordColor = if (inBounds(communityDiscordBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor()
-        NVGRenderer.text("github", githubX, rowY, size, githubColor, NVGRenderer.defaultFont)
-        NVGRenderer.text(".gg/FLOYD", discordX, rowY, size, discordColor, NVGRenderer.defaultFont)
-    }
-
-    private fun inBounds(b: FloatArray, x: Float, y: Float): Boolean =
-        x >= b[0] && x <= b[0] + b[2] && y >= b[1] && y <= b[1] + b[3]
-
-    /** Opens the community link under the cursor, if any. Returns true if a link was hit. */
-    private fun hitCommunityLink(x: Float, y: Float): Boolean {
-        val url = when {
-            inBounds(coffeeBounds, x, y) -> coffeeUrl
-            inBounds(communityGithubBounds, x, y) -> githubUrl
-            inBounds(communityDiscordBounds, x, y) -> discordUrl
-            else -> return false
-        }
-        runCatching { Desktop.getDesktop().browse(URI(url)) }
-        return true
-    }
-
-    // Per-letter strings + widths of the static title, cached per font epoch — the per-char
-    // toString + textWidth loop used to allocate/walk ~23×/frame for a constant word.
-    private val titleChars = "FloydAddons".map { it.toString() }
-    private val titleWidths = gg.floyd.utils.font.FontEpochCache {
-        FloatArray(titleChars.size + 1).also { widths ->
-            widths[0] = NVGRenderer.textWidth("FloydAddons", 22f, NVGRenderer.defaultFont)
-            for (i in titleChars.indices) widths[i + 1] = NVGRenderer.textWidth(titleChars[i], 22f, NVGRenderer.defaultFont)
-        }
-    }
-
-    /**
-     * Renders the "FloydAddons" title above the search bar, tinted with the GUI accent
-     * (chroma-cycling per character). Size is fixed at 22f — the width cache is keyed to it.
-     */
-    private fun drawTitle(x: Float, searchBarY: Float, mouseX: Float, mouseY: Float) {
-        val size = 22f
-        val widths = titleWidths.get()
-        val titleWidth = widths[0]
-        val startX = x + 175f - titleWidth / 2f
-        var cursorX = startX
-        val titleY = searchBarY - size - 16f
-        for (i in titleChars.indices) {
-            val offset = 1f - ((cursorX - startX) / titleWidth)
-            NVGRenderer.text(titleChars[i], cursorX, titleY, size, ClickGUIModule.guiAccentColor(offset), NVGRenderer.defaultFont)
-            cursorX += widths[i + 1]
-        }
-
-        val coffeeText = "Buy Me A Coffee!"
-        val coffeeSize = 15f
-        val coffeeWidth = NVGRenderer.textWidth(coffeeText, coffeeSize, NVGRenderer.defaultFont)
-        val coffeeX = x + 175f - coffeeWidth / 2f
-        val coffeeY = titleY + size + 1f
-        setBounds(coffeeBounds, coffeeX, coffeeY, coffeeWidth, coffeeSize)
-        val coffeeColor = if (inBounds(coffeeBounds, mouseX, mouseY)) Colors.WHITE.rgba else ClickGUIModule.guiAccentColor()
-        NVGRenderer.text(coffeeText, coffeeX, coffeeY, coffeeSize, coffeeColor, NVGRenderer.defaultFont)
-    }
 
     private class RenderBounds {
         var minX = Float.POSITIVE_INFINITY

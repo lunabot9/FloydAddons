@@ -4,8 +4,8 @@ This repository combines:
 
 - Odin scaffold code from `odtheking/Odin`, licensed under BSD 3-Clause. See `LICENSE`.
 - Vendored FloydAddons source under `vendor/floydaddons-fabric`, whose Fabric metadata declares `MIT` licensing.
-- SkyBlock pack-disabling fallback logic and generated item data adapted from
-  `Noamm9/PackDisabler` at commit `4e14398ebc023d730dd8af06bbb05bacab8fe341`,
+- SkyBlock pack-disabling fallback logic and generated item data adapted from an
+  upstream PackDisabler codebase at commit `4e14398ebc023d730dd8af06bbb05bacab8fe341`,
   dedicated to the public domain under CC0-1.0. Its item data is sourced from
   `NotEnoughUpdates/NotEnoughUpdates-REPO`.
 - Auto Clicker behavior adapted from `skies-starred/OdinClient`, copyright 2026 Starred,

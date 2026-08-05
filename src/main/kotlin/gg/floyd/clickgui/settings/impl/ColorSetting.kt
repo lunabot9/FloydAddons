@@ -29,6 +29,22 @@ class ColorSetting(
     private var allowAlpha: Boolean = false,
     desc: String
 ) : RenderableSetting<Color>(name, desc), Saving {
+    private companion object {
+        const val HEADER_TEXT_SIZE = 10f
+        const val HEADER_TEXT_MIN = 7f
+        const val TOGGLE_TEXT_SIZE = 7.25f
+        const val TOGGLE_TEXT_MIN = 6f
+        const val HEX_TEXT_SIZE = 9f
+        const val PICKER_HEIGHT = 116f
+        const val BAR_HEIGHT = 10f
+        const val HEX_BOX_HEIGHT = 18f
+        const val TOGGLE_HEIGHT = 16f
+        const val PICKER_PADDING = 6f
+        const val SECTION_GAP = 6f
+        const val TOGGLE_GAP = 4f
+        const val TOGGLE_ROW_GAP = 5f
+        const val PICKER_RADIUS = 6f
+    }
 
     override var value: Color = default.copy()
 
@@ -58,7 +74,7 @@ class ColorSetting(
         set(value) {
             if (value == field) return
             field = value
-            hexWidth = NVGRenderer.textWidth(field, 16f, NVGRenderer.defaultFont)
+            hexWidth = NVGRenderer.textWidth(field, HEX_TEXT_SIZE, NVGRenderer.defaultFont)
         }
 
     private var hexWidth = -1f
@@ -83,78 +99,88 @@ class ColorSetting(
         super.render(x, y, mouseX, mouseY)
         if (hexWidth < 0) {
             hexString = value.hex(allowAlpha)
-            hexWidth = NVGRenderer.textWidth(hexString, 16f, NVGRenderer.defaultFont)
+            hexWidth = NVGRenderer.textWidth(hexString, HEX_TEXT_SIZE, NVGRenderer.defaultFont)
         }
 
-        NVGRenderer.text(name, x + 6f, y + defaultHeight / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.rect(x + width - 40f, y + defaultHeight / 2f - 10f, 34f, 20f, value.rgba, 5f)
-        NVGRenderer.hollowRect(x + width - 40f, y + defaultHeight / 2f - 10f, 34f, 20f, 2f, value.withAlpha(1f).darker().rgba, 5f)
+        val previewW = 14f
+        val previewH = 9f
+        val previewX = x + width - previewW - 5f
+        val labelMaxWidth = (previewX - (x + 4f) - 4f).coerceAtLeast(16f)
+        val labelSize = fittedHeaderTextSize(name, labelMaxWidth)
+        NVGRenderer.text(name, x + 4f, y + defaultHeight / 2f - 4f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.rect(previewX, y + defaultHeight / 2f - previewH / 2f, previewW, previewH, value.rgba, 3f)
+        NVGRenderer.hollowRect(previewX, y + defaultHeight / 2f - previewH / 2f, previewW, previewH, 1.25f, value.withAlpha(1f).darker().rgba, 3f)
 
         if (!extended && !expandAnim.isAnimating()) return defaultHeight
 
         if (expandAnim.isAnimating()) NVGRenderer.pushScissor(x, y + defaultHeight, width, getHeight() - defaultHeight)
+        val layout = layout(x, y, width)
+        handleColorDrag(mouseX, mouseY, layout)
         // The sliders edit the base color, or the fade color while in fade-edit mode.
         val target = editTarget()
         // SATURATION AND BRIGHTNESS
-        NVGRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 169f, Colors.WHITE.rgba, target.hsbMax().rgba, Gradient.LeftToRight, 5f)
-        NVGRenderer.gradientRect(x + 6f, y + defaultHeight + 4f, width - 12f, 170f, Colors.TRANSPARENT.rgba, Colors.BLACK.rgba, Gradient.TopToBottom, 5f)
+        NVGRenderer.gradientRect(layout.pickerX, layout.pickerY, layout.pickerWidth, PICKER_HEIGHT, Colors.WHITE.rgba, target.hsbMax().rgba, Gradient.LeftToRight, 4f)
+        NVGRenderer.gradientRect(layout.pickerX, layout.pickerY, layout.pickerWidth, PICKER_HEIGHT, Colors.TRANSPARENT.rgba, Colors.BLACK.rgba, Gradient.TopToBottom, 4f)
 
-        val animatedSat = mainSliderAnim.get(mainSliderPrevSat, target.saturation, false)
-        val animatedBright = mainSliderAnim.get(mainSliderPrevBright, target.brightness, false)
-        val sbPointer = Pair((x + 6f + animatedSat * 220), (y + 38f + (1 - animatedBright) * 170))
-        NVGRenderer.dropShadow(sbPointer.first - 8.5f, sbPointer.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
-        NVGRenderer.circle(sbPointer.first, sbPointer.second, 8f, Colors.WHITE.rgba)
-        NVGRenderer.circle(sbPointer.first, sbPointer.second, 7f, target.withAlpha(1f).rgba)
+        val satForRender = if (section == 0) target.saturation else mainSliderAnim.get(mainSliderPrevSat, target.saturation, false)
+        val brightForRender = if (section == 0) target.brightness else mainSliderAnim.get(mainSliderPrevBright, target.brightness, false)
+        val sbPointer = Pair(
+            (layout.pickerX + satForRender * layout.pickerWidth).coerceIn(layout.pickerX + PICKER_RADIUS, layout.pickerX + layout.pickerWidth - PICKER_RADIUS),
+            (layout.pickerY + (1f - brightForRender) * PICKER_HEIGHT).coerceIn(layout.pickerY + PICKER_RADIUS, layout.pickerY + PICKER_HEIGHT - PICKER_RADIUS)
+        )
+        NVGRenderer.dropShadow(sbPointer.first - 6.5f, sbPointer.second - 6.5f, 13f, 13f, 2f, 2f, 7f)
+        NVGRenderer.circle(sbPointer.first, sbPointer.second, PICKER_RADIUS, Colors.WHITE.rgba)
+        NVGRenderer.circle(sbPointer.first, sbPointer.second, PICKER_RADIUS - 1f, target.withAlpha(1f).rgba)
 
         // HUE
-        NVGRenderer.image(ClickGUI.hueImage, x + 6f, y + 212f, width - 12f, 15f, 5f)
-        NVGRenderer.hollowRect(x + 6f, y + 212f, width - 12f, 15f, 1f, gray38.rgba, 5f)
+        NVGRenderer.image(ClickGUI.hueImage, layout.pickerX, layout.hueY, layout.pickerWidth, BAR_HEIGHT, 4f)
+        NVGRenderer.hollowRect(layout.pickerX, layout.hueY, layout.pickerWidth, BAR_HEIGHT, 1f, gray38.rgba, 4f)
 
-        val huePos = x + 6f + hueSliderAnim.get(hueSliderPrev, target.hue, false) * 219f to y + 219f
-        NVGRenderer.dropShadow(huePos.first - 8.5f, huePos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
-        NVGRenderer.circle(huePos.first, huePos.second, 8f, Colors.WHITE.rgba)
-        NVGRenderer.circle(huePos.first, huePos.second, 7f, target.hsbMax().withAlpha(1f).rgba)
+        val hueForRender = if (section == 1) target.hue else hueSliderAnim.get(hueSliderPrev, target.hue, false)
+        val huePos = (layout.pickerX + hueForRender * layout.pickerWidth).coerceIn(layout.pickerX + PICKER_RADIUS, layout.pickerX + layout.pickerWidth - PICKER_RADIUS) to (layout.hueY + BAR_HEIGHT / 2f)
+        NVGRenderer.dropShadow(huePos.first - 6.5f, huePos.second - 6.5f, 13f, 13f, 2f, 2f, 7f)
+        NVGRenderer.circle(huePos.first, huePos.second, PICKER_RADIUS, Colors.WHITE.rgba)
+        NVGRenderer.circle(huePos.first, huePos.second, PICKER_RADIUS - 1f, target.hsbMax().withAlpha(1f).rgba)
 
         // ALPHA
         if (allowAlpha) {
-            NVGRenderer.gradientRect(x + 6f, y + 232f, width - 12f, 15f, Colors.TRANSPARENT.rgba, target.withAlpha(1f).rgba, Gradient.LeftToRight, 5f)
+            NVGRenderer.gradientRect(layout.pickerX, layout.alphaY, layout.pickerWidth, BAR_HEIGHT, Colors.TRANSPARENT.rgba, target.withAlpha(1f).rgba, Gradient.LeftToRight, 4f)
 
-            val alphaPos = Pair((x + 6f + alphaSliderAnim.get(alphaSliderPrev, target.alphaFloat, false) * 217f), y + 240f)
-            NVGRenderer.dropShadow(alphaPos.first - 8.5f, alphaPos.second - 8.5f, 17f, 17f, 2.5f, 2.5f, 9f)
-            NVGRenderer.circle(alphaPos.first, alphaPos.second, 8f, Colors.WHITE.darker(.5f).rgba)
-            NVGRenderer.circle(alphaPos.first, alphaPos.second, 7f, Colors.WHITE.rgba)
+            val alphaForRender = if (section == 2) target.alphaFloat else alphaSliderAnim.get(alphaSliderPrev, target.alphaFloat, false)
+            val alphaPos = Pair(
+                (layout.pickerX + alphaForRender * layout.pickerWidth).coerceIn(layout.pickerX + PICKER_RADIUS, layout.pickerX + layout.pickerWidth - PICKER_RADIUS),
+                layout.alphaY + BAR_HEIGHT / 2f
+            )
+            NVGRenderer.dropShadow(alphaPos.first - 6.5f, alphaPos.second - 6.5f, 13f, 13f, 2f, 2f, 7f)
+            NVGRenderer.circle(alphaPos.first, alphaPos.second, PICKER_RADIUS, Colors.WHITE.darker(.5f).rgba)
+            NVGRenderer.circle(alphaPos.first, alphaPos.second, PICKER_RADIUS - 1f, Colors.WHITE.rgba)
         }
-
-        handleColorDrag(mouseX, mouseY, x, y, width)
 
         if (section != null) hexString = target.hex(allowAlpha)
 
         // main width - text input
-        val sidePadding = (width - width / 2) / 2f
+        NVGRenderer.rect(layout.hexX, layout.hexY, layout.hexWidth, HEX_BOX_HEIGHT, gray38.rgba, 4f)
+        NVGRenderer.hollowRect(layout.hexX, layout.hexY, layout.hexWidth, HEX_BOX_HEIGHT, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
 
-        val rectX = x + sidePadding
-        val actualHeight = defaultHeight + if (allowAlpha) 250f else 230f
-
-        NVGRenderer.rect(rectX, y + actualHeight - 28f, width / 2, 24f, gray38.rgba, 4f)
-        NVGRenderer.hollowRect(rectX, y + actualHeight - 28f, width / 2, 24f, 2f, ClickGUIModule.clickGUIColor.rgba, 4f)
-
-        textInputHandler.x = rectX + (width / 4) - (hexWidth / 2)
-        textInputHandler.y = y + actualHeight - 26f
-        textInputHandler.width = width / 2
+        textInputHandler.x = layout.hexX + layout.hexWidth / 2f - hexWidth / 2f
+        textInputHandler.y = layout.hexY + 1f
+        textInputHandler.width = layout.hexWidth
+        textInputHandler.height = HEX_BOX_HEIGHT
+        textInputHandler.fontSizeOverride = HEX_TEXT_SIZE
+        textInputHandler.textPaddingY = 3f
         textInputHandler.draw(mouseX, mouseY)
 
         // Chroma + Fade toggles (both live inside the picker, not as sibling settings). Mutually exclusive.
-        val band = width / 2
-        val gap = 4f
+        val band = layout.hexWidth
+        val gap = TOGGLE_GAP
         val halfBtn = (band - gap) / 2f
-        val toggleY = y + actualHeight + 2f
-        renderToggle(rectX, toggleY, halfBtn, "Chroma", value.chroma)
-        renderToggle(rectX + halfBtn + gap, toggleY, halfBtn, "Fade", value.fade)
+        renderToggle(layout.hexX, layout.toggleY, halfBtn, "Chroma", value.chroma)
+        renderToggle(layout.hexX + halfBtn + gap, layout.toggleY, halfBtn, "Fade", value.fade)
 
         // When fade is on, choose whether the sliders edit the base or the (chroma-less) fade color.
         if (value.fade) {
             val editLabel = if (editingFade) "Edit: Fade" else "Edit: Base"
-            renderToggle(rectX, toggleY + 24f, band, editLabel, editingFade)
+            renderToggle(layout.hexX, layout.toggleY + TOGGLE_HEIGHT + TOGGLE_ROW_GAP, band, editLabel, editingFade)
         }
 
         if (expandAnim.isAnimating()) NVGRenderer.popScissor()
@@ -171,40 +197,39 @@ class ColorSetting(
         if (!extended) return false
         textInputHandler.mouseClicked(mouseX, mouseY, click)
 
-        val actualHeight = defaultHeight + if (allowAlpha) 250f else 230f
-        val rectX = lastX + (width - width / 2) / 2f
-        val band = width / 2
-        val gap = 4f
+        val layout = layout(lastX, lastY, width)
+        val band = layout.hexWidth
+        val gap = TOGGLE_GAP
         val halfBtn = (band - gap) / 2f
-        val toggleY = lastY + actualHeight + 2f
         // Chroma toggle (left) — mutually exclusive with fade.
-        if (isAreaHovered(rectX, toggleY, halfBtn, 20f, true)) {
+        if (contains(mouseX, mouseY, layout.hexX, layout.toggleY, halfBtn, TOGGLE_HEIGHT)) {
             value.chroma = !value.chroma
             if (value.chroma) value.fade = false
             syncEditTargetState()
             return true
         }
         // Fade toggle (right) — mutually exclusive with chroma.
-        if (isAreaHovered(rectX + halfBtn + gap, toggleY, halfBtn, 20f, true)) {
+        if (contains(mouseX, mouseY, layout.hexX + halfBtn + gap, layout.toggleY, halfBtn, TOGGLE_HEIGHT)) {
             value.fade = !value.fade
             if (value.fade) value.chroma = false else editingFade = false
             syncEditTargetState()
             return true
         }
         // Edit-target row (only when fade is on): switch the sliders between the base and fade color.
-        if (value.fade && isAreaHovered(rectX, toggleY + 24f, band, 20f, true)) {
+        if (value.fade && contains(mouseX, mouseY, layout.hexX, layout.toggleY + TOGGLE_HEIGHT + TOGGLE_ROW_GAP, band, TOGGLE_HEIGHT)) {
             editingFade = !editingFade
             syncEditTargetState()
             return true
         }
 
         section = when {
-            isAreaHovered(lastX + 6f, lastY + 36f, width - 12f, 170f, true) -> 0 // sat & brightness
-            isAreaHovered(lastX + 6f, lastY + 212f, width - 12f, 15f, true) -> 1 // hue
-            isAreaHovered(lastX + 6f, lastY + 232, width - 12f, 15f, true) && allowAlpha -> 2 // alpha
+            contains(mouseX, mouseY, layout.pickerX, layout.pickerY, layout.pickerWidth, PICKER_HEIGHT) -> 0 // sat & brightness
+            contains(mouseX, mouseY, layout.pickerX, layout.hueY, layout.pickerWidth, BAR_HEIGHT) -> 1 // hue
+            contains(mouseX, mouseY, layout.pickerX, layout.alphaY, layout.pickerWidth, BAR_HEIGHT) && allowAlpha -> 2 // alpha
             else -> null
         }
 
+        if (section != null) handleColorDrag(mouseX, mouseY, layout)
         return section != null
     }
 
@@ -224,17 +249,36 @@ class ColorSetting(
     }
 
     /** Extra height below the hex input: the toggle row, plus the fade-edit row when fade is on. */
-    private fun extrasHeight(): Float = 26f + if (value.fade) 24f else 0f
+    private fun extrasHeight(): Float = TOGGLE_HEIGHT + 4f + if (value.fade) TOGGLE_HEIGHT + TOGGLE_ROW_GAP else 0f
+
+    private fun contentHeight(): Float {
+        val alphaSectionHeight = if (allowAlpha) BAR_HEIGHT + SECTION_GAP else 0f
+        return defaultHeight + 4f + PICKER_HEIGHT + SECTION_GAP + BAR_HEIGHT + SECTION_GAP + alphaSectionHeight + HEX_BOX_HEIGHT
+    }
+
+    private fun layout(x: Float, y: Float, width: Float): PickerLayout {
+        val pickerX = x + PICKER_PADDING
+        val pickerWidth = width - PICKER_PADDING * 2f
+        val pickerY = y + defaultHeight + 4f
+        val hueY = pickerY + PICKER_HEIGHT + SECTION_GAP
+        val alphaY = hueY + BAR_HEIGHT + SECTION_GAP
+        val hexY = if (allowAlpha) alphaY + BAR_HEIGHT + SECTION_GAP else hueY + BAR_HEIGHT + SECTION_GAP
+        val hexWidth = width / 2f
+        val hexX = x + (width - hexWidth) / 2f
+        val toggleY = y + contentHeight() + 2f
+        return PickerLayout(pickerX, pickerWidth, pickerY, hueY, alphaY, hexX, hexWidth, hexY, toggleY)
+    }
 
     override fun getHeight(): Float =
-        expandAnim.get(defaultHeight, defaultHeight + (if (allowAlpha) 250f else 230f) + extrasHeight(), !extended)
+        expandAnim.get(defaultHeight, contentHeight() + extrasHeight(), !extended)
 
     /** A small labelled toggle button, highlighted when [on]. */
     private fun renderToggle(bx: Float, by: Float, bw: Float, label: String, on: Boolean) {
-        NVGRenderer.rect(bx, by, bw, 20f, gray38.rgba, 4f)
-        NVGRenderer.hollowRect(bx, by, bw, 20f, 2f, (if (on) ClickGUIModule.clickGUIColor else Colors.gray38).rgba, 4f)
-        val lw = NVGRenderer.textWidth(label, 14f, NVGRenderer.defaultFont)
-        NVGRenderer.textCentered(label, bx, by, bw, 20f, 14f, Colors.WHITE.rgba, NVGRenderer.defaultFont, lw)
+        NVGRenderer.rect(bx, by, bw, TOGGLE_HEIGHT, gray38.rgba, 4f)
+        NVGRenderer.hollowRect(bx, by, bw, TOGGLE_HEIGHT, 1.5f, (if (on) ClickGUIModule.clickGUIColor else Colors.gray38).rgba, 4f)
+        val size = fittedTextSize(label, bw - 8f, TOGGLE_TEXT_SIZE, TOGGLE_TEXT_MIN)
+        val lw = NVGRenderer.textWidth(label, size, NVGRenderer.defaultFont)
+        NVGRenderer.textCentered(label, bx, by, bw, TOGGLE_HEIGHT, size, Colors.WHITE.rgba, NVGRenderer.defaultFont, lw)
     }
 
     /** Re-seed the slider animations + hex box to the active edit target so switching never jumps. */
@@ -262,12 +306,12 @@ class ColorSetting(
         value = gson.fromJson(element, Color::class.java) ?: default.copy()
     }
 
-    private fun handleColorDrag(mouseX: Float, mouseY: Float, x: Float, y: Float, width: Float) {
+    private fun handleColorDrag(mouseX: Float, mouseY: Float, layout: PickerLayout) {
         val target = editTarget()
         when (section) {
             0 -> { // Saturation & Brightness
-                val newSaturation = ((mouseX - (x + 6f)) / (width - 12f)).coerceIn(0f, 1f)
-                val newBrightness = (1f - ((mouseY - (y + 38f)) / 170f)).coerceIn(0f, 1f)
+                val newSaturation = ((mouseX - layout.pickerX) / layout.pickerWidth).coerceIn(0f, 1f)
+                val newBrightness = (1f - ((mouseY - layout.pickerY) / PICKER_HEIGHT)).coerceIn(0f, 1f)
 
                 if (newSaturation != target.saturation || newBrightness != target.brightness) {
                     mainSliderPrevSat = mainSliderAnim.get(mainSliderPrevSat, target.saturation, false)
@@ -280,7 +324,7 @@ class ColorSetting(
             }
 
             1 -> { // Hue
-                val newHue = ((mouseX - (x + 6f)) / (width - 12f)).coerceIn(0f, 1f)
+                val newHue = ((mouseX - layout.pickerX) / layout.pickerWidth).coerceIn(0f, 1f)
                 if (newHue != target.hue) {
                     hueSliderPrev = hueSliderAnim.get(hueSliderPrev, target.hue, false)
                     hueSliderAnim.start()
@@ -289,7 +333,7 @@ class ColorSetting(
             }
 
             2 -> { // Alpha
-                val newAlpha = ((mouseX - (x + 6f)) / (width - 12f)).coerceIn(0f, 1f)
+                val newAlpha = ((mouseX - layout.pickerX) / layout.pickerWidth).coerceIn(0f, 1f)
                 if (newAlpha != target.alphaFloat) {
                     alphaSliderPrev = alphaSliderAnim.get(alphaSliderPrev, target.alphaFloat, false)
                     alphaSliderAnim.start()
@@ -298,4 +342,32 @@ class ColorSetting(
             }
         }
     }
+
+    private fun fittedHeaderTextSize(text: String, maxWidth: Float): Float {
+        return fittedTextSize(text, maxWidth, HEADER_TEXT_SIZE, HEADER_TEXT_MIN)
+    }
+
+    private fun fittedTextSize(text: String, maxWidth: Float, start: Float, minimum: Float): Float {
+        var size = start
+        while (size > minimum && NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont) > maxWidth) {
+            size -= 0.5f
+        }
+        return size.coerceAtLeast(minimum)
+    }
+
+    private fun contains(mouseX: Float, mouseY: Float, x: Float, y: Float, width: Float, height: Float): Boolean {
+        return mouseX in x..(x + width) && mouseY in y..(y + height)
+    }
+
+    private data class PickerLayout(
+        val pickerX: Float,
+        val pickerWidth: Float,
+        val pickerY: Float,
+        val hueY: Float,
+        val alphaY: Float,
+        val hexX: Float,
+        val hexWidth: Float,
+        val hexY: Float,
+        val toggleY: Float
+    )
 }

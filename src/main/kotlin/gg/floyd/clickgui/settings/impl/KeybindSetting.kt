@@ -5,10 +5,9 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import com.mojang.blaze3d.platform.InputConstants
 import gg.floyd.FloydAddonsMod.mc
-import gg.floyd.clickgui.ClickGUI.gray38
+import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.clickgui.settings.Saving
-import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.keybind.KeybindSync
 import gg.floyd.utils.Colors
 import gg.floyd.utils.ui.isAreaHovered
@@ -23,7 +22,6 @@ class KeybindSetting(
     override val default: InputConstants.Key,
     desc: String
 ) : RenderableSetting<InputConstants.Key>(name, desc), Saving {
-
     constructor(name: String, defaultKeyCode: Int, desc: String = "") : this(name, InputConstants.Type.KEYSYM.getOrCreate(defaultKeyCode), desc)
 
     override var value: InputConstants.Key = default
@@ -65,16 +63,16 @@ class KeybindSetting(
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
-        if (keyNameWidth < 0) keyNameWidth = NVGRenderer.textWidth(value.displayName.string, 16f, NVGRenderer.defaultFont)
         val height = getHeight()
 
-        val (rectX, rectY, rectWidth, rectHeight) = keybindRect(x, y, height)
-
-        NVGRenderer.rect(rectX, rectY, rectWidth, rectHeight, gray38.rgba, 5f)
-        NVGRenderer.hollowRect(rectX - 1, rectY - 1, rectWidth + 2f, rectHeight + 2f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
-
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(value.displayName.string, rectX + (rectWidth - keyNameWidth) / 2, rectY + rectHeight / 2 - 8f, 16f, if (listening) Colors.MINECRAFT_YELLOW.rgba else Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        val valueText = if (listening) "[...]" else "[${value.displayName.string}]"
+        val labelWidth = NVGRenderer.textWidth("Key", LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
+        val maxValueWidth = (width - labelWidth - 10f).coerceAtLeast(18f)
+        val valueTextSize = fittedTextSize(valueText, VALUE_TEXT_MAX, VALUE_TEXT_MIN, maxValueWidth)
+        keyNameWidth = NVGRenderer.textWidth(valueText, valueTextSize, NVGRenderer.defaultFont)
+        NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
+        NVGRenderer.text("Key", x + 3f, y + height / 2f - 5f, LABEL_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(valueText, x + width - keyNameWidth - 3f, y + height / 2f - 4f, valueTextSize, ClickGUI.oringoTextMuted.rgba, NVGRenderer.defaultFont)
 
         return height
     }
@@ -85,8 +83,13 @@ class KeybindSetting(
             listening = false
             return true
         } else {
-            val (rectX, rectY, rectWidth, rectHeight) = keybindRect(lastX, lastY, getHeight())
-            if (click.button() == 0 && mouseX in rectX..(rectX + rectWidth) && mouseY in rectY..(rectY + rectHeight)) {
+            val valueText = "[${value.displayName.string}]"
+            val labelWidth = NVGRenderer.textWidth("Key", LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
+            val maxValueWidth = (width - labelWidth - 10f).coerceAtLeast(18f)
+            val hitTextSize = fittedTextSize(valueText, VALUE_TEXT_MAX, VALUE_TEXT_MIN, maxValueWidth)
+            val hitWidth = NVGRenderer.textWidth(valueText, hitTextSize, NVGRenderer.defaultFont)
+            val rectX = lastX + width - hitWidth - 4f
+            if (click.button() == 0 && mouseX in rectX..(lastX + width) && mouseY in lastY..(lastY + getHeight())) {
                 listening = true
                 return true
             }
@@ -115,18 +118,7 @@ class KeybindSetting(
 
 
     override val isHovered: Boolean
-        get() {
-            val (rectX, rectY, rectWidth, rectHeight) = keybindRect(lastX, lastY, getHeight())
-            return isAreaHovered(rectX, rectY, rectWidth, rectHeight, true)
-        }
-
-    private fun keybindRect(x: Float, y: Float, height: Float): FloatArray =
-        floatArrayOf(
-            x + width - 20f - keyNameWidth,
-            y + height / 2f - 10f,
-            keyNameWidth + 12f,
-            20f
-        )
+        get() = isAreaHovered(lastX, lastY, width, getHeight(), true)
 
     override fun write(gson: Gson): JsonElement = JsonPrimitive(value.name)
 
@@ -138,7 +130,19 @@ class KeybindSetting(
         value = default
     }
 
+    private fun fittedTextSize(text: String, start: Float, min: Float, maxWidth: Float): Float {
+        var size = start
+        while (size > min && NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont) > maxWidth) {
+            size -= 0.5f
+        }
+        return size.coerceAtLeast(min)
+    }
+
     companion object {
+        private const val LABEL_TEXT_SIZE = 10f
+        private const val VALUE_TEXT_MAX = 9f
+        private const val VALUE_TEXT_MIN = 7f
+
         fun InputConstants.Key.isDown(): Boolean {
             val window = mc.window
             return if (value > 7) InputConstants.isKeyDown(window, value)

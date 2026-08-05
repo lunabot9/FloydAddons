@@ -3,11 +3,10 @@ package gg.floyd.clickgui.settings.impl
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
-import gg.floyd.clickgui.ClickGUI.gray38
+import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.Panel
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.clickgui.settings.Saving
-import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Colors
 import gg.floyd.utils.ui.TextInputHandler
 import gg.floyd.utils.ui.rendering.NVGRenderer
@@ -35,17 +34,25 @@ class StringSetting(
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
 
-        val rectStartX = x + 6f
+        val display = when {
+            listening -> "${value}_"
+            value.isBlank() -> "$name..."
+            else -> value
+        }
+        val displayWidth = NVGRenderer.textWidth(display, 10f, NVGRenderer.defaultFont)
 
-        NVGRenderer.text(name, rectStartX, y + 5f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-
-        NVGRenderer.rect(rectStartX, y + getHeight() - 35f, width - 12f, 30f, gray38.rgba, 4f)
-        NVGRenderer.hollowRect(rectStartX, y + getHeight() - 35f, width - 12f, 30f, 2f, ClickGUIModule.clickGUIColor.rgba, 4f)
-
-        textInputHandler.x = rectStartX
-        textInputHandler.y = y + getHeight() - 30f
-        textInputHandler.width = width - 16f
-        textInputHandler.draw(mouseX, mouseY)
+        NVGRenderer.rect(x, y, width, getHeight(), ClickGUI.settingBackground())
+        NVGRenderer.textCentered(
+            display,
+            x,
+            y,
+            width,
+            getHeight(),
+            10f,
+            if (value.isBlank() && !listening) ClickGUI.oringoTextMuted.rgba else Colors.WHITE.rgba,
+            NVGRenderer.defaultFont,
+            displayWidth
+        )
 
         return getHeight()
     }
@@ -66,8 +73,6 @@ class StringSetting(
     override fun keyTyped(input: CharacterEvent): Boolean {
         return textInputHandler.keyTyped(input)
     }
-
-    override fun getHeight(): Float = Panel.HEIGHT + 28f
 
     override fun write(gson: Gson): JsonElement = JsonPrimitive(value)
 

@@ -46,11 +46,11 @@ fun <T> withMouseOverride(x: Double, y: Double, block: () -> T): T {
 }
 
 fun isAreaHovered(x: Float, y: Float, w: Float, h: Float, scaled: Boolean = false): Boolean =
-    if (scaled) mouseX / ClickGUIModule.getStandardGuiScale() in x..(x + w) && mouseY / ClickGUIModule.getStandardGuiScale() in y..(y + h)
+    if (scaled) mouseX / ClickGUIModule.getClickGuiRenderScale() in x..(x + w) && mouseY / ClickGUIModule.getClickGuiRenderScale() in y..(y + h)
     else mouseX in x..(x + w) && mouseY in y..(y + h)
 
 fun isAreaHovered(x: Float, y: Float, w: Float, scaled: Boolean = false): Boolean =
-    if (scaled) mouseX / ClickGUIModule.getStandardGuiScale() in x..(x + w) && mouseY / ClickGUIModule.getStandardGuiScale() >= y
+    if (scaled) mouseX / ClickGUIModule.getClickGuiRenderScale() in x..(x + w) && mouseY / ClickGUIModule.getClickGuiRenderScale() >= y
     else mouseX in x..(x + w) && mouseY >= y
 
 fun getQuadrant(): Int =

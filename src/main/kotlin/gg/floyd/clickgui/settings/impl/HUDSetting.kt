@@ -27,6 +27,12 @@ class HUDSetting(
     description: String,
     val module: Module,
 ) : RenderableSetting<HudElement>(name, description), Saving {
+    private companion object {
+        const val LABEL_TEXT_SIZE = 10f
+        const val ICON_BOX = 16f
+        const val TOGGLE_W = 28f
+        const val TOGGLE_H = 16f
+    }
 
     constructor(
         name: String,
@@ -65,49 +71,49 @@ class HUDSetting(
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 4f, y + height / 2f - 5f, LABEL_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
-        val iconX = x + width - 30f
-        val iconY = y + height / 2f - 12f
-        hoverHandler.handle(iconX, iconY, 24f, 24f, true)
+        val iconX = x + width - 20f
+        val iconY = y + height / 2f - ICON_BOX / 2f
+        hoverHandler.handle(iconX, iconY, ICON_BOX, ICON_BOX, true)
 
-        val imageSize = 24f + (6f * hoverHandler.percent() / 100f)
-        val offset = (imageSize - 24f) / 2f
+        val imageSize = ICON_BOX + (3f * hoverHandler.percent() / 100f)
+        val offset = (imageSize - ICON_BOX) / 2f
 
         NVGRenderer.image(ClickGUI.movementImage, iconX - offset, iconY - offset, imageSize, imageSize)
 
         if (toggleable) {
-            val hovered = isAreaHovered(lastX + width - 70f, lastY + getHeight() / 2f - 10f, 34f, 20f, true)
-            NVGRenderer.rect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, if (hovered) gray38.brighter().rgba else gray38.rgba, 9f)
+            val hovered = isAreaHovered(lastX + width - 54f, lastY + getHeight() / 2f - TOGGLE_H / 2f, TOGGLE_W, TOGGLE_H, true)
+            NVGRenderer.rect(x + width - 54f, y + height / 2f - TOGGLE_H / 2f, TOGGLE_W, TOGGLE_H, if (hovered) gray38.brighter().rgba else gray38.rgba, 7f)
 
             if (value.enabled || toggleAnimation.isAnimating()) {
                 val accent = ClickGUIModule.guiAccentColor()
                 NVGRenderer.rect(
-                    x + width - 70f,
-                    y + height / 2f - 10f,
-                    toggleAnimation.get(34f, 9f, value.enabled),
-                    20f,
+                    x + width - 54f,
+                    y + height / 2f - TOGGLE_H / 2f,
+                    toggleAnimation.get(TOGGLE_W, 8f, value.enabled),
+                    TOGGLE_H,
                     if (hovered) ClickGUIModule.hoveredAccentColor(accent) else accent,
-                    9f
+                    7f
                 )
             }
 
-            NVGRenderer.hollowRect(x + width - 70f, y + height / 2f - 10f, 34f, 20f, 2f, ClickGUIModule.guiAccentColor(), 9f)
-            NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !value.enabled) - 30f, y + height / 2f, 6f, Colors.WHITE.rgba)
+            NVGRenderer.hollowRect(x + width - 54f, y + height / 2f - TOGGLE_H / 2f, TOGGLE_W, TOGGLE_H, 1.5f, ClickGUIModule.guiAccentColor(), 7f)
+            NVGRenderer.circle(x + width - toggleAnimation.get(24f, 12f, !value.enabled) - 26f, y + height / 2f, 4.5f, Colors.WHITE.rgba)
         }
         return height
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
         if (click.button() != 0) return false
-        val moveX = lastX + width - 30f
-        val moveY = lastY + getHeight() / 2f - 12f
-        val toggleX = lastX + width - 70f
-        val toggleY = lastY + getHeight() / 2f - 10f
-        return if (mouseX in moveX..(moveX + 24f) && mouseY in moveY..(moveY + 24f)) {
+        val moveX = lastX + width - 20f
+        val moveY = lastY + getHeight() / 2f - ICON_BOX / 2f
+        val toggleX = lastX + width - 54f
+        val toggleY = lastY + getHeight() / 2f - TOGGLE_H / 2f
+        return if (mouseX in moveX..(moveX + ICON_BOX) && mouseY in moveY..(moveY + ICON_BOX)) {
             mc.setScreen(HudManager)
             true
-        } else if (toggleable && mouseX in toggleX..(toggleX + 34f) && mouseY in toggleY..(toggleY + 20f)) {
+        } else if (toggleable && mouseX in toggleX..(toggleX + TOGGLE_W) && mouseY in toggleY..(toggleY + TOGGLE_H)) {
             toggleAnimation.start()
             value.enabled = !value.enabled
             true
@@ -115,7 +121,7 @@ class HUDSetting(
         } else false
     }
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 30F, lastY + getHeight() / 2f - 12f, 24f, 24f, true)
+    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 20f, lastY + getHeight() / 2f - ICON_BOX / 2f, ICON_BOX, ICON_BOX, true)
 
     override fun write(gson: Gson): JsonElement = JsonObject().apply {
         addProperty("x", value.x)

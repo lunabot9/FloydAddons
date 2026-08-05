@@ -1,8 +1,7 @@
 package gg.floyd.clickgui.settings.impl
 
-import gg.floyd.clickgui.ClickGUI.gray38
+import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.settings.RenderableSetting
-import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.Color.Companion.darker
 import gg.floyd.utils.Colors
 import gg.floyd.utils.font.FontEpochCache
@@ -19,24 +18,23 @@ class ActionSetting(
 
     var action: () -> Unit by this::value
 
-    private val textWidth = FontEpochCache { NVGRenderer.textWidth(name, 16f, NVGRenderer.defaultFont) }
+    private val textWidth = FontEpochCache { NVGRenderer.textWidth(name, 10f, NVGRenderer.defaultFont) }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
 
-        NVGRenderer.rect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, gray38.rgba, 6f)
-        NVGRenderer.hollowRect(x + 4f, y + height / 2f - 13f, width - 8f, 26f, 2f, ClickGUIModule.clickGUIColor.rgba, 6f)
+        NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
         NVGRenderer.textCentered(
             name,
-            x + 4f,
-            y + height / 2f - 13f,
-            width - 8f,
-            26f,
-            16f,
+            x,
+            y,
+            width,
+            height,
+            10f,
             if (isHovered) Colors.WHITE.darker().rgba else Colors.WHITE.rgba,
             NVGRenderer.defaultFont,
-            textWidth.get()
+            NVGRenderer.textWidth(name, 10f, NVGRenderer.defaultFont)
         )
         return height
     }

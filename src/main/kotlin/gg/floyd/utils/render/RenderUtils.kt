@@ -363,7 +363,6 @@ private fun PoseStack.renderQueuedTracerFans(fans: List<TracerFanData>, bufferSo
             val ox = origin.x.toFloat()
             val oy = origin.y.toFloat()
             val oz = origin.z.toFloat()
-            val behindCameraTarget = if (fan.mirrorBehindCamera) WorldToScreen.behindCameraTracerTarget() else null
             for (i in targets.indices) {
                 val t = targets[i]
                 val relX = t.x - cam.x
@@ -372,7 +371,14 @@ private fun PoseStack.renderQueuedTracerFans(fans: List<TracerFanData>, bufferSo
                 tracerFanScratch.set(relX.toFloat(), relY.toFloat(), relZ.toFloat(), 1f)
                 view.transform(tracerFanScratch)
                 if (tracerFanScratch.z > 1.0e-3f) {
-                    val fallback = behindCameraTarget ?: continue
+                    val fallback = if (fan.mirrorBehindCamera) {
+                        WorldToScreen.behindCameraTracerTarget(
+                            tracerFanScratch.x,
+                            tracerFanScratch.y,
+                            tracerFanScratch.z
+                        )
+                    } else null
+                    fallback ?: continue
                     PrimitiveRenderer.renderLine(
                         last, buffer,
                         ox, oy, oz,

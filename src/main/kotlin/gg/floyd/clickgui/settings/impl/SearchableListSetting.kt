@@ -29,6 +29,12 @@ open class SearchableListSetting(
     protected val onToggle: (String) -> Unit,
     desc: String
 ) : RenderableSetting<Unit>(name, desc) {
+    protected companion object {
+        const val HEADER_TEXT_SIZE = 10f
+        const val COUNT_TEXT_SIZE = 8f
+        const val ROW_TEXT_SIZE = 8.25f
+        const val SEARCH_TEXT_SIZE = 8.25f
+    }
 
     override val default: Unit = Unit
     override var value: Unit = Unit
@@ -37,14 +43,18 @@ open class SearchableListSetting(
     protected var extended = false
 
     protected var searchText = ""
-    protected val search = TextInputHandler(textProvider = { searchText }, textSetter = { searchText = it })
+    protected val search = TextInputHandler(textProvider = { searchText }, textSetter = { searchText = it }).apply {
+        fontSizeOverride = SEARCH_TEXT_SIZE
+        textPaddingX = 4f
+        textPaddingY = 2f
+    }
 
     protected var scrollOffset = 0f
     protected var draggingScrollbar = false
 
     protected val headerH = Panel.HEIGHT
-    protected val searchH = 24f
-    protected val rowH = 18f
+    protected val searchH = 16f
+    protected val rowH = 12f
     protected val maxRows = 7
     protected val viewportH = maxRows * rowH
     protected val pad = 6f
@@ -63,10 +73,10 @@ open class SearchableListSetting(
 
         // Snapshot the selected set once per frame (callers' set is cheap; avoids O(n^2) membership rebuilds).
         val selected = selectedProvider()
-        NVGRenderer.text(name, x + 6f, y + headerH / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 4f, y + headerH / 2f - 5f, HEADER_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         val countLabel = "${selected.size} selected"
-        val countWidth = NVGRenderer.textWidth(countLabel, 14f, NVGRenderer.defaultFont)
-        NVGRenderer.text(countLabel, x + width - 6f - countWidth, y + headerH / 2f - 7f, 14f, ClickGUIModule.clickGUIColor.rgba, NVGRenderer.defaultFont)
+        val countWidth = NVGRenderer.textWidth(countLabel, COUNT_TEXT_SIZE, NVGRenderer.defaultFont)
+        NVGRenderer.text(countLabel, x + width - 4f - countWidth, y + headerH / 2f - 4f, COUNT_TEXT_SIZE, ClickGUIModule.clickGUIColor.rgba, NVGRenderer.defaultFont)
 
         // Collapsed: only the header (+count) is drawn; the full option list is never built.
         if (!extended && !expandAnim.isAnimating()) return headerH
@@ -77,11 +87,13 @@ open class SearchableListSetting(
         val searchY = y + headerH + 2f
         NVGRenderer.rect(x + 6f, searchY, width - 12f, searchH - 4f, Colors.gray38.rgba, 4f)
         NVGRenderer.hollowRect(x + 6f, searchY, width - 12f, searchH - 4f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
-        if (searchText.isEmpty()) NVGRenderer.text("Search…", x + 10f, searchY + 3f, 14f, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
-        search.x = x + 10f
-        search.y = searchY + 2f
-        search.width = width - 20f
-        search.height = searchH - 8f
+        if (searchText.isEmpty()) NVGRenderer.text("Search...", x + 10f, searchY + 2.5f, SEARCH_TEXT_SIZE, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
+        search.x = x + 8f
+        search.y = searchY + 1f
+        search.width = width - 16f
+        search.height = searchH - 4f
+        search.fontSizeOverride = SEARCH_TEXT_SIZE
+        search.textPaddingY = 2f
         search.draw(mouseX, mouseY)
 
         // Viewport (option list built only while expanded)
@@ -102,7 +114,9 @@ open class SearchableListSetting(
                 val rowSelected = option in selected
                 if (rowSelected) NVGRenderer.rect(x + 6f, rowY, width - 12f, rowH, ClickGUIModule.clickGUIColor.withAlpha(0.3f).rgba, 3f)
                 if (isAreaHovered(x + 6f, rowY, width - 18f, rowH, true)) NVGRenderer.hollowRect(x + 6f, rowY, width - 12f, rowH, 1f, ClickGUIModule.clickGUIColor.rgba, 3f)
-                NVGRenderer.text(option, x + 12f, rowY + 3f, 14f, if (rowSelected) Colors.WHITE.rgba else Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
+                val maxLabelWidth = width - 28f
+                val fitted = fittedTextSize(option, maxLabelWidth, ROW_TEXT_SIZE, 6.5f)
+                NVGRenderer.text(option, x + 10f, rowY + 1.5f, fitted, if (rowSelected) Colors.WHITE.rgba else Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
             }
             rowY += rowH
         }
@@ -171,5 +185,13 @@ open class SearchableListSetting(
     override fun keyPressed(input: KeyEvent): Boolean {
         if (!extended) return false
         return search.keyPressed(input)
+    }
+
+    protected fun fittedTextSize(text: String, maxWidth: Float, start: Float, minimum: Float): Float {
+        var size = start
+        while (size > minimum && NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont) > maxWidth) {
+            size -= 0.5f
+        }
+        return size.coerceAtLeast(minimum)
     }
 }

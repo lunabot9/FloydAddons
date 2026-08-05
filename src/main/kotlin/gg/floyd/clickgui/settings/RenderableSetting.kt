@@ -31,9 +31,6 @@ abstract class RenderableSetting<T>(
         lastY = y
         val height = getHeight()
         hoverHandler.handle(x, y, width, height, true)
-        if (hoverHandler.percent() > 0)
-            ClickGUI.setDescription(description, x + width + 10f, y, hoverHandler)
-
         return height
     }
 

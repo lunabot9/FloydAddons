@@ -106,12 +106,12 @@ public final class FloydFontProviders {
     private static volatile Path lastMsdfByoPath = null;
 
     /**
-     * The global minecraft font override should cover normal readable text, but special glyph packs
+     * Floyd's custom-font surfaces should cover normal readable text, but special glyph packs
      * (SkyBlock icons, emoji, legacy symbols) need to fall through to the underlying provider
      * stack. Keep Floyd on basic Latin + extended Latin/punctuation and let everything else resolve
      * from the pack stack behind it.
      */
-    private static boolean shouldUseGlobalCustomGlyph(int codepoint) {
+    static boolean shouldUseCustomFontGlyph(int codepoint) {
         return (codepoint >= 0x20 && codepoint <= 0x7E)
                 || (codepoint >= 0x00A0 && codepoint <= 0x024F)
                 || (codepoint >= 0x2000 && codepoint <= 0x206F);
@@ -216,8 +216,9 @@ public final class FloydFontProviders {
 
     /**
      * The custom-override chain for one bundled-TTF entry, at the module's runtime metrics:
-     * MSDF(BYO-or-bundled) → BYO TTF → bundled TTF. Shared by the {@code minecraft:default}
-     * override and the never-dropped panel font so the two surfaces always render identically.
+     * MSDF(BYO-or-bundled) → BYO TTF → bundled TTF. Every custom-font surface filters this provider
+     * to normal readable codepoints so server-pack icons/emoji can still fall through to the
+     * bundled fallback providers that already sit behind it in the JSON stack.
      */
     private static GlyphProviderDefinition.Conditional customOverrideConditional(
             GlyphProviderDefinition.Conditional original,
@@ -226,16 +227,17 @@ public final class FloydFontProviders {
         Path byoPath = FloydFont.customFontPath();
         TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
         if (!latched && msdfAvailable()) {
-            GlyphProviderDefinition.Conditional msdfReplacement = msdfConditional(original, runtimeMetrics, byoPath);
+            GlyphProviderDefinition.Conditional msdfReplacement = selectiveMsdfConditional(original, runtimeMetrics, byoPath);
             if (msdfReplacement != null) return msdfReplacement;
             // MSDF definition could not be built; fall through to the TTF paths.
         }
         if (byoPath != null) {
-            GlyphProviderDefinition.Conditional replacement = byoConditional(original, runtimeMetrics, byoPath);
+            GlyphProviderDefinition.Conditional replacement =
+                    selectiveConditional(original, resourceManager -> wrapCustomFontGlyphs(loadFromFile(byoPath, runtimeMetrics)));
             if (replacement != null) return replacement;
             // Replacement could not be built; fall through and keep the bundled provider.
         }
-        return new GlyphProviderDefinition.Conditional(runtimeMetrics, original.filter());
+        return selectiveConditional(original, resourceManager -> wrapCustomFontGlyphs(loadBundled(resourceManager, runtimeMetrics)));
     }
 
     /**
@@ -255,9 +257,9 @@ public final class FloydFontProviders {
             if (msdfReplacement != null) return msdfReplacement;
         }
         if (byoPath != null) {
-            return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadFromFile(byoPath, runtimeMetrics)));
+            return selectiveConditional(original, resourceManager -> wrapCustomFontGlyphs(loadFromFile(byoPath, runtimeMetrics)));
         }
-        return selectiveConditional(original, resourceManager -> wrapGlobalDefaultGlyphs(loadBundled(resourceManager, runtimeMetrics)));
+        return selectiveConditional(original, resourceManager -> wrapCustomFontGlyphs(loadBundled(resourceManager, runtimeMetrics)));
     }
 
     /**
@@ -348,18 +350,18 @@ public final class FloydFontProviders {
         return new GlyphProviderDefinition.Conditional(definition, original.filter());
     }
 
-    private static GlyphProvider wrapGlobalDefaultGlyphs(GlyphProvider delegate) {
+    private static GlyphProvider wrapCustomFontGlyphs(GlyphProvider delegate) {
         return new GlyphProvider() {
             @Override
             public UnbakedGlyph getGlyph(int codepoint) {
-                return shouldUseGlobalCustomGlyph(codepoint) ? delegate.getGlyph(codepoint) : null;
+                return shouldUseCustomFontGlyph(codepoint) ? delegate.getGlyph(codepoint) : null;
             }
 
             @Override
             public IntSet getSupportedGlyphs() {
                 IntOpenHashSet filtered = new IntOpenHashSet();
                 for (int codepoint : delegate.getSupportedGlyphs()) {
-                    if (shouldUseGlobalCustomGlyph(codepoint)) filtered.add(codepoint);
+                    if (shouldUseCustomFontGlyph(codepoint)) filtered.add(codepoint);
                 }
                 return filtered;
             }
@@ -445,18 +447,18 @@ public final class FloydFontProviders {
         try {
             return selectiveConditional(original, resourceManager -> {
                 try {
-                    return wrapGlobalDefaultGlyphs(loadMsdfProvider(resourceManager, metrics, byoPath));
+                    return wrapCustomFontGlyphs(loadMsdfProvider(resourceManager, metrics, byoPath));
                 } catch (Throwable t) {
                     LOGGER.warn("Floyd MSDF provider failed to load{}", byoPath != null ? " for custom font " + byoPath : "", t);
                     if (byoPath != null) {
                         try {
-                            return wrapGlobalDefaultGlyphs(loadMsdfProvider(resourceManager, metrics, null));
+                            return wrapCustomFontGlyphs(loadMsdfProvider(resourceManager, metrics, null));
                         } catch (Throwable bundledFailure) {
                             LOGGER.warn("Floyd bundled MSDF fallback also failed, falling back to the TTF chain", bundledFailure);
                         }
-                        return wrapGlobalDefaultGlyphs(loadFromFile(byoPath, metrics));
+                        return wrapCustomFontGlyphs(loadFromFile(byoPath, metrics));
                     }
-                    return wrapGlobalDefaultGlyphs(loadBundled(resourceManager, metrics));
+                    return wrapCustomFontGlyphs(loadBundled(resourceManager, metrics));
                 }
             });
         } catch (Throwable t) {

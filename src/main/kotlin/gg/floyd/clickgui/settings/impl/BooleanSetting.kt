@@ -3,13 +3,10 @@ package gg.floyd.clickgui.settings.impl
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
-import gg.floyd.clickgui.ClickGUI.gray38
+import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.clickgui.settings.Saving
-import gg.floyd.features.impl.render.ClickGUIModule
-import gg.floyd.utils.Color.Companion.brighter
 import gg.floyd.utils.Colors
-import gg.floyd.utils.ui.animations.LinearAnimation
 import gg.floyd.utils.ui.isAreaHovered
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.MouseButtonEvent
@@ -23,38 +20,16 @@ class BooleanSetting(
     override var value: Boolean = default
     var enabled: Boolean by this::value
 
-    private val toggleAnimation = LinearAnimation<Float>(200)
-
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
 
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-
-        NVGRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
-
-        if (enabled || toggleAnimation.isAnimating()) {
-            val accent = ClickGUIModule.guiAccentColor()
-            NVGRenderer.rect(
-                x + width - 40f,
-                y + height / 2f - 10f,
-                toggleAnimation.get(34f, 9f, enabled),
-                20f,
-                if (isHovered) ClickGUIModule.hoveredAccentColor(accent) else accent,
-                9f
-            )
-        }
-
-        NVGRenderer.hollowRect(
-            x + width - 40f,
-            y + height / 2f - 10f,
-            34f,
-            20f,
-            2f,
-            ClickGUIModule.guiAccentColor(),
-            9f
-        )
-        NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)
+        NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
+        val boxX = x + width - 12f
+        val boxY = y + height / 2f - 4f
+        NVGRenderer.rect(boxX, boxY, 8f, 8f, if (enabled) ClickGUI.accentBright() else ClickGUI.settingBackground(), 2f)
+        NVGRenderer.hollowRect(boxX, boxY, 8f, 8f, 2f, ClickGUI.accent(), 3f)
+        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         return height
     }
@@ -62,13 +37,12 @@ class BooleanSetting(
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
         return if (click.button() != 0 || !isHovered) false
         else {
-            toggleAnimation.start()
             enabled = !enabled
             true
         }
     }
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 43f, lastY + getHeight() / 2f - 10f, 34f, 20f, true)
+    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 12f, lastY + getHeight() / 2f - 4f, 8f, 8f, true)
 
     override fun write(gson: Gson): JsonElement = JsonPrimitive(enabled)
 
@@ -86,38 +60,16 @@ class RuntimeBooleanSetting(
     override var value: Boolean = default
     var enabled: Boolean by this::value
 
-    private val toggleAnimation = LinearAnimation<Float>(200)
-
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
 
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-
-        NVGRenderer.rect(x + width - 40f, y + height / 2f - 10f, 34f, 20f, if (isHovered) gray38.brighter().rgba else gray38.rgba, 9f)
-
-        if (enabled || toggleAnimation.isAnimating()) {
-            val accent = ClickGUIModule.guiAccentColor()
-            NVGRenderer.rect(
-                x + width - 40f,
-                y + height / 2f - 10f,
-                toggleAnimation.get(34f, 9f, enabled),
-                20f,
-                if (isHovered) ClickGUIModule.hoveredAccentColor(accent) else accent,
-                9f
-            )
-        }
-
-        NVGRenderer.hollowRect(
-            x + width - 40f,
-            y + height / 2f - 10f,
-            34f,
-            20f,
-            2f,
-            ClickGUIModule.guiAccentColor(),
-            9f
-        )
-        NVGRenderer.circle(x + width - toggleAnimation.get(30f, 14f, !enabled), y + height / 2f, 6f, Colors.WHITE.rgba)
+        NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
+        val boxX = x + width - 12f
+        val boxY = y + height / 2f - 4f
+        NVGRenderer.rect(boxX, boxY, 8f, 8f, if (enabled) ClickGUI.accentBright() else ClickGUI.settingBackground(), 2f)
+        NVGRenderer.hollowRect(boxX, boxY, 8f, 8f, 2f, ClickGUI.accent(), 3f)
+        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         return height
     }
@@ -125,11 +77,10 @@ class RuntimeBooleanSetting(
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
         return if (click.button() != 0 || !isHovered) false
         else {
-            toggleAnimation.start()
             enabled = !enabled
             true
         }
     }
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 43f, lastY + getHeight() / 2f - 10f, 34f, 20f, true)
+    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 12f, lastY + getHeight() / 2f - 4f, 8f, 8f, true)
 }

@@ -21,6 +21,9 @@ class TextInputHandler(
     var y = 0f
     var width = 0f
     var height = 18f
+    var fontSizeOverride = 0f
+    var textPaddingX = 4f
+    var textPaddingY = 2f
 
     private var caret = text.length
         set(value) {
@@ -56,7 +59,7 @@ class TextInputHandler(
 
         NVGRenderer.pushScissor(x, y, width, height)
         if (selectionWidth != 0f) NVGRenderer.rect(
-            x + caretX + 4f,
+            x + caretX + textPaddingX,
             y,
             selectionWidth,
             height,
@@ -67,21 +70,23 @@ class TextInputHandler(
 
         if (listening) {
             val time = System.currentTimeMillis()
-            if (time - caretBlinkTime < 500)
+            if (time - caretBlinkTime < 500) {
+                val caretTop = (y + textPaddingY - 1f).coerceAtLeast(y)
+                val caretBottom = (caretTop + renderedTextSize() + 2f).coerceAtMost(y + height)
                 NVGRenderer.line(
-                    x + caretX + 4f - textOffset,
-                    y,
-                    x + caretX + 4f - textOffset,
-                    y + height,
+                    x + caretX + textPaddingX - textOffset,
+                    caretTop,
+                    x + caretX + textPaddingX - textOffset,
+                    caretBottom,
                     2f,
                     Colors.WHITE.rgba
                 )
-            else if (time - caretBlinkTime > 1000)
+            } else if (time - caretBlinkTime > 1000)
                 caretBlinkTime = System.currentTimeMillis()
         }
         NVGRenderer.pushScissor(x, y, width, height)
 
-        NVGRenderer.text(text, x + 4f - textOffset, y + 2f, height - 2, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(text, x + textPaddingX - textOffset, y + textPaddingY, renderedTextSize(), Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         NVGRenderer.popScissor()
     }
@@ -266,7 +271,7 @@ class TextInputHandler(
     }
 
     private fun caretFromMouse(mouseX: Float) {
-        val mx = mouseX - (x + textOffset)
+        val mx = mouseX - (x + textPaddingX - textOffset)
 
         var currWidth = 0f
         var newCaret = 0
@@ -339,7 +344,9 @@ class TextInputHandler(
         return end
     }
 
-    private fun textWidth(text: String): Float = NVGRenderer.textWidth(text, height - 2, NVGRenderer.defaultFont)
+    private fun textWidth(text: String): Float = NVGRenderer.textWidth(text, renderedTextSize(), NVGRenderer.defaultFont)
+
+    private fun renderedTextSize(): Float = if (fontSizeOverride > 0f) fontSizeOverride else height - 2f
 
     private fun resetState() {
         listening = false

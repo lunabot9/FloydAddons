@@ -3,7 +3,6 @@ package gg.floyd.clickgui.settings.impl
 import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.utils.Colors
-import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.animations.LinearAnimation
 import gg.floyd.utils.ui.isAreaHovered
 import gg.floyd.utils.ui.rendering.NVGRenderer
@@ -19,29 +18,34 @@ class DropdownSetting(
     override val default: Boolean = false,
     desc: String = ""
 ) : RenderableSetting<Boolean>(name, desc) {
+    private companion object {
+        const val TEXT_SIZE = 10f
+    }
 
     override var value: Boolean = default
     private var enabled: Boolean by this::value
 
     private val toggleAnimation = LinearAnimation<Float>(200)
-    private val hoverHandler = HoverHandler(150)
-
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
 
-        NVGRenderer.text(name, x + 6f, y + height / 2f - 8f, 16f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-
-        hoverHandler.handle(lastX + width - 30f, lastY + getHeight() / 2f - 16f, 24f, 24f, true)
-
-        val imageSize = 24f + (6f * hoverHandler.percent() / 100f)
-        val offset = (imageSize - 24f) / 2f
+        NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
+        NVGRenderer.text(name, x + 4f, y + height / 2f - 5f, TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(
+            if (enabled) "-" else "+",
+            x + width - 14f,
+            y + height / 2f - 5f,
+            TEXT_SIZE,
+            ClickGUI.accentBright(),
+            NVGRenderer.defaultFont
+        )
 
         NVGRenderer.push()
-        NVGRenderer.translate(x + width - 18f, y + height / 2f - 4f)
+        NVGRenderer.translate(x + width - 11f, y + height / 2f)
         NVGRenderer.rotate(toggleAnimation.get(0f, Math.PI.toFloat() / 2f, enabled))
-        NVGRenderer.translate(-(12f + offset), -(12f + offset))
-        NVGRenderer.image(ClickGUI.chevronImage, 0f, 0f, imageSize, imageSize)
+        NVGRenderer.translate(-4f, -4f)
+        NVGRenderer.image(ClickGUI.chevronImage, 0f, 0f, 8f, 8f)
         NVGRenderer.pop()
 
         return height
@@ -54,5 +58,5 @@ class DropdownSetting(
         return true
     }
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 30f, lastY + getHeight() / 2f - 16f, 24f, 24f, true)
+    override val isHovered: Boolean get() = isAreaHovered(lastX, lastY, width, getHeight(), true)
 }

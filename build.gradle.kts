@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.jvm.tasks.Jar
+import java.nio.charset.StandardCharsets
 
 plugins {
     id("net.fabricmc.fabric-loom")
@@ -14,8 +15,65 @@ val minecraftVersion = sc.current.version
 val artifactVersion = "$modVersion-$minecraftVersion"
 version = artifactVersion
 
+data class BrandSpec(
+    val key: String,
+    val archiveBaseName: String,
+    val displayName: String,
+    val compactName: String,
+    val splashText: String,
+    val legacyGuiName: String,
+    val legacyGuiDescription: String,
+    val description: String,
+    val authors: String,
+    val iconPath: String,
+    val legacyBackgroundPath: String,
+    val menuBackgroundPath: String,
+    val githubUrl: String,
+    val discordUrl: String,
+    val coffeeUrl: String,
+)
+
+val brands = mapOf(
+    "floyd" to BrandSpec(
+        key = "floyd",
+        archiveBaseName = "FloydAddons",
+        displayName = "Floyd Addons",
+        compactName = "FloydAddons",
+        splashText = "FloydAddons",
+        legacyGuiName = "Floyd GUI",
+        legacyGuiDescription = "Customizes and opens the fullscreen Floyd GUI.",
+        description = "Floyd Addons - Fabric client module suite (ClickGUI, HUD, ESP, PvP).",
+        authors = "Gobs, FloydAddons contributors",
+        iconPath = "assets/floydaddons/icons/taskbar_icon_128x128.png",
+        legacyBackgroundPath = "textures/gui/floydbg.png",
+        menuBackgroundPath = "textures/gui/menu_sun_floyd.png",
+        githubUrl = "https://github.com/lunabot9/FloydAddons",
+        discordUrl = "https://discord.gg/FLOYD",
+        coffeeUrl = "https://buymeacoffee.com/lunabot9",
+    ),
+    "ginger" to BrandSpec(
+        key = "ginger",
+        archiveBaseName = "FoidAddons",
+        displayName = "Foid Addons",
+        compactName = "FoidAddons",
+        splashText = "FoidAddons",
+        legacyGuiName = "Foid Gui",
+        legacyGuiDescription = "Customizes and opens the fullscreen Foid Gui.",
+        description = "Foid Addons - Fabric client module suite (ClickGUI, HUD, ESP, PvP).",
+        authors = "Gobs, FoidAddons contributors",
+        iconPath = "assets/floydaddons/icons/taskbar_icon_128x128.png",
+        legacyBackgroundPath = "textures/gui/floydbg.png",
+        menuBackgroundPath = "textures/gui/menu_sun_floyd.png",
+        githubUrl = "https://github.com/lunabot9/FloydAddons",
+        discordUrl = "https://discord.gg/FLOYD",
+        coffeeUrl = "https://buymeacoffee.com/lunabot9",
+    )
+)
+val activeBrand = brands[(findProperty("brand") as String?)?.lowercase() ?: "floyd"]
+    ?: error("Unknown brand '${findProperty("brand")}'. Expected one of: ${brands.keys.sorted().joinToString(", ")}")
+
 base {
-    archivesName.set(property("archives_base_name") as String)
+    archivesName.set(activeBrand.archiveBaseName)
 }
 
 repositories {
@@ -124,28 +182,117 @@ afterEvaluate {
 }
 
 tasks {
+    val generatedBrandingDir = layout.buildDirectory.dir("generated/sources/branding/kotlin")
+    val generatedBrandingResourcesDir = layout.buildDirectory.dir("generated/resources/branding")
+
+    val generateBrandingSources by registering {
+        inputs.property("brandKey", activeBrand.key)
+        inputs.property("brandDisplayName", activeBrand.displayName)
+        inputs.property("brandCompactName", activeBrand.compactName)
+        inputs.property("brandSplashText", activeBrand.splashText)
+        inputs.property("brandLegacyGuiName", activeBrand.legacyGuiName)
+        inputs.property("brandLegacyGuiDescription", activeBrand.legacyGuiDescription)
+        inputs.property("brandDescription", activeBrand.description)
+        outputs.dir(generatedBrandingDir)
+        doLast {
+            val outDir = generatedBrandingDir.get().file("gg/floyd").asFile
+            outDir.mkdirs()
+            val file = outDir.resolve("Branding.kt")
+            file.writeText(
+                """
+                package gg.floyd
+
+                object Branding {
+                    const val FLAVOR = "${activeBrand.key}"
+                    const val ARCHIVE_BASE_NAME = "${activeBrand.archiveBaseName}"
+                    const val DISPLAY_NAME = "${activeBrand.displayName}"
+                    const val COMPACT_NAME = "${activeBrand.compactName}"
+                    const val SPLASH_TEXT = "${activeBrand.splashText}"
+                    const val LEGACY_GUI_NAME = "${activeBrand.legacyGuiName}"
+                    const val LEGACY_GUI_DESCRIPTION = "${activeBrand.legacyGuiDescription}"
+                    const val DESCRIPTION = "${activeBrand.description}"
+                    const val GITHUB_URL = "${activeBrand.githubUrl}"
+                    const val DISCORD_URL = "${activeBrand.discordUrl}"
+                    const val COFFEE_URL = "${activeBrand.coffeeUrl}"
+                    const val LEGACY_BACKGROUND_PATH = "${activeBrand.legacyBackgroundPath}"
+                    const val MENU_BACKGROUND_PATH = "${activeBrand.menuBackgroundPath}"
+                    const val COMMUNITY_HEADER = "Join the ${activeBrand.displayName} Community"
+                    const val VERSION = "${modVersion}"
+                    val IS_GINGER: Boolean get() = FLAVOR == "ginger"
+                }
+                """.trimIndent() + "\n",
+                StandardCharsets.UTF_8
+            )
+        }
+    }
+
+    val generateBrandingResources by registering {
+        inputs.property("brandKey", activeBrand.key)
+        outputs.dir(generatedBrandingResourcesDir)
+        doLast {
+            val root = generatedBrandingResourcesDir.get().asFile
+            root.deleteRecursively()
+            root.mkdirs()
+            if (activeBrand.key == "ginger") {
+                val sourceDir = rootProject.file("branding/ginger")
+                val targetDir = root.resolve("assets/floydaddons")
+                targetDir.mkdirs()
+                copy {
+                    from(sourceDir.resolve("floydbg.png"))
+                    into(targetDir.resolve("textures/gui"))
+                }
+                copy {
+                    from(sourceDir.resolve("menu_sun_floyd.png"))
+                    into(targetDir.resolve("textures/gui"))
+                }
+                copy {
+                    from(
+                        sourceDir.resolve("taskbar_icon_16x16.png"),
+                        sourceDir.resolve("taskbar_icon_32x32.png"),
+                        sourceDir.resolve("taskbar_icon_48x48.png"),
+                        sourceDir.resolve("taskbar_icon_128x128.png"),
+                    )
+                    into(targetDir.resolve("icons"))
+                }
+            }
+        }
+    }
+
+    sourceSets.named("main") {
+        kotlin.srcDir(generatedBrandingDir)
+    }
+
     withType<AbstractArchiveTask>().configureEach {
-        archiveBaseName.set(project.property("archives_base_name") as String)
+        archiveBaseName.set(activeBrand.archiveBaseName)
         archiveVersion.set(artifactVersion)
     }
 
     processResources {
+        dependsOn(generateBrandingResources)
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        from(generatedBrandingResourcesDir)
         val resourceProps = mapOf(
             "mod_id" to project.property("mod_id").toString(),
             // Keep the in-game mod version release-oriented while the artifact name also
             // identifies which Minecraft version it was compiled against.
             "mod_version" to modVersion,
-            "mod_name" to project.property("mod_name").toString(),
-            "mod_description" to project.property("mod_description").toString(),
+            "mod_name" to activeBrand.displayName,
+            "mod_description" to activeBrand.description,
+            "brand_authors" to activeBrand.authors,
+            "brand_icon" to activeBrand.iconPath,
             "loader_version" to project.property("loader_version").toString(),
             "fabric_api_version" to project.property("fabric_api_version").toString(),
             "minecraft_version" to minecraftVersion,
             "fabric_kotlin_version" to project.property("fabric_kotlin_version").toString(),
         )
         inputs.properties(resourceProps)
-        filesMatching("fabric.mod.json") {
+        filesMatching(listOf("fabric.mod.json", "assets/floydaddons/lang/en_us.json")) {
             expand(resourceProps)
         }
+    }
+
+    compileKotlin {
+        dependsOn(generateBrandingSources)
     }
 
     named<Jar>("jar") {
@@ -184,6 +331,7 @@ java {
 }
 
 tasks.named<Jar>("sourcesJar") {
+    dependsOn("generateBrandingSources", "generateBrandingResources")
     from(listOf("LICENSE", "THIRD_PARTY_NOTICES.md", "PROVENANCE.md")) {
         into("META-INF")
     }
@@ -193,7 +341,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "floydaddons"
-            artifactId = "FloydAddons"
+            artifactId = activeBrand.archiveBaseName
             version = version
             from(components["java"])
         }

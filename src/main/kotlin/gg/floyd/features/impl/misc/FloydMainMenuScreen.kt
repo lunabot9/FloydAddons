@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.misc
 
+import gg.floyd.Branding
 import gg.floyd.FloydAddonsMod
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
@@ -24,7 +25,7 @@ import net.minecraft.network.chat.Component
  * (`floydMouseX / scale`). The previous impl drew in that NVG space but hit-tested in MC's
  * gui-scaled space, so the button hitboxes were offset by the gui-scale factor and nothing clicked.
  */
-class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
+class FloydMainMenuScreen : Screen(Component.literal(Branding.COMPACT_NAME)) {
     private val buttons = listOf(
         MenuButton("Singleplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(FloydSelectWorldScreen(screen)) }),
         MenuButton("Multiplayer", ButtonStyle.PRIMARY, onClick = { screen -> FloydAddonsMod.mc.setScreen(FloydJoinMultiplayerScreen(screen)) }),
@@ -62,8 +63,8 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
             }
 
             NVGRenderer.textImmediate(
-                "Floyd Addons v${FloydAddonsMod.MOD_VERSION}",
-                footerX - NVGRenderer.textWidth("Floyd Addons v${FloydAddonsMod.MOD_VERSION}", FOOTER_SIZE, NVGRenderer.defaultFont) * 0.5f,
+                "${Branding.DISPLAY_NAME} v${FloydAddonsMod.MOD_VERSION}",
+                footerX - NVGRenderer.textWidth("${Branding.DISPLAY_NAME} v${FloydAddonsMod.MOD_VERSION}", FOOTER_SIZE, NVGRenderer.defaultFont) * 0.5f,
                 footerY,
                 FOOTER_SIZE,
                 0x8ED4D4D4.toInt(),
@@ -187,7 +188,7 @@ class FloydMainMenuScreen : Screen(Component.literal("FloydAddons")) {
         const val PRIMARY_TEXT_SIZE = 17f
         const val SECONDARY_TEXT_SIZE = 11.5f
         const val FOOTER_SIZE = 12f
-        const val TITLE_TEXT = "Floyd Addons"
+        const val TITLE_TEXT = Branding.DISPLAY_NAME
 
         private fun argb(alpha: Int, red: Int, green: Int, blue: Int): Int =
             (alpha.coerceIn(0, 255) shl 24) or

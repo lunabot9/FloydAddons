@@ -24,7 +24,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 
 object FloydAddonsMod : ClientModInitializer {
 
-    val logger: Logger = LogManager.getLogger("FloydAddons")
+    val logger: Logger = LogManager.getLogger(Branding.COMPACT_NAME)
 
     @JvmStatic
     val mc: Minecraft = Minecraft.getInstance()
@@ -44,8 +44,8 @@ object FloydAddonsMod : ClientModInitializer {
     }
 
     const val MOD_ID = "floydaddons"
-    const val MOD_NAME = "Floyd Addons"
-    const val MOD_VERSION = "2.4.0"
+    const val MOD_NAME = Branding.DISPLAY_NAME
+    const val MOD_VERSION = Branding.VERSION
 
     val scope = CoroutineScope(SupervisorJob() + EmptyCoroutineContext)
 

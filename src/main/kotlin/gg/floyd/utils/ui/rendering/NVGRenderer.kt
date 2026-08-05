@@ -67,14 +67,20 @@ object NVGRenderer {
     /**
      * Escape hatch for forcing the legacy immediate NanoVG text path during local diagnostics.
      *
-     * This is a JVM property instead of an environment variable because launcher-level env leaks
-     * can force legacy text across unrelated production instances. Use
-     * `-Dfloyd.nvg.text.legacy=true` when the old path is intentionally needed for debugging.
+     * This stays as a JVM property instead of an environment variable so launcher-wide env leaks
+     * cannot silently flip unrelated instances. Deferred mc.font replay remains the default.
      */
-    private val legacyNvgText: Boolean = java.lang.Boolean.getBoolean("floyd.nvg.text.legacy")
+    private val legacyNvgText: Boolean =
+        System.getProperty("floyd.nvg.text.legacy")?.trim()?.lowercase()?.let {
+            when (it) {
+                "true", "1", "yes", "on" -> true
+                "false", "0", "no", "off" -> false
+                else -> false
+            }
+        } ?: false
 
     /** True when text calls are deferred for mc.font replay (the default; see [DeferredNvgText]). */
-    val deferringText: Boolean get() = !legacyNvgText
+    val deferringText: Boolean get() = !shouldUseImmediateText()
 
     /**
      * Deferred text queue for the current PIP frame, drained per layer by NVGPIPRenderer.
@@ -100,6 +106,9 @@ object NVGRenderer {
      */
     internal var layerBoundary: (() -> Unit)? = null
 
+    /** Explicit per-render override for screens that must bypass deferred mc.font replay. */
+    private var immediateTextOverrideDepth = 0
+
 
     init {
         // nvgCreate builds the fontstash atlas texture with RAW binds (bind new tex -> upload ->
@@ -112,7 +121,7 @@ object NVGRenderer {
         NvgTextReplay.deferralActive = !legacyNvgText
         if (legacyNvgText) {
             FloydAddonsMod.logger.warn(
-                "[NVGRenderer] floyd.nvg.text.legacy=true — legacy NanoVG text rendering AND measurement active (MSDF deferral bypassed)"
+                "[NVGRenderer] legacy NanoVG text rendering AND measurement active (set -Dfloyd.nvg.text.legacy=true only when intentionally bypassing deferred replay)"
             )
         }
     }
@@ -146,7 +155,7 @@ object NVGRenderer {
      * A no-op on the legacy NVG-text path (immediate draws layer naturally by paint order).
      */
     fun nextTextLayer() {
-        if (legacyNvgText) return
+        if (!deferringText) return
         textLayer++
         layerBoundary?.invoke()
     }
@@ -154,6 +163,15 @@ object NVGRenderer {
     /** Resets the layer counter — end of the ClickGUI pass, or re-arming an aborted PIP frame. */
     fun resetTextLayers() {
         textLayer = 0
+    }
+
+    fun <T> withImmediateText(block: () -> T): T {
+        immediateTextOverrideDepth++
+        return try {
+            block()
+        } finally {
+            immediateTextOverrideDepth--
+        }
     }
 
     /** True when text runs are queued awaiting replay (an empty layer's boundary is skippable). */
@@ -378,7 +396,7 @@ object NVGRenderer {
     }
 
     fun text(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
-        if (legacyNvgText) {
+        if (shouldUseImmediateText(font)) {
             drawImmediateText(text, x, y, size, color, font)
             return
         }
@@ -416,16 +434,18 @@ object NVGRenderer {
     }
 
     fun textShadow(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
-        if (legacyNvgText) {
-            nvgFontFaceId(vg, getFontID(font))
-            nvgFontSize(vg, size)
-            color(-16777216)
-            nvgFillColor(vg, nvgColor)
-            nvgText(vg, round(x + 2f), round(y + 2f), text)
+        if (shouldUseImmediateText(font)) {
+            withCoherentTextureUnit {
+                nvgFontFaceId(vg, getFontID(font))
+                nvgFontSize(vg, size)
+                color(-16777216)
+                nvgFillColor(vg, nvgColor)
+                nvgText(vg, round(x + 2f), round(y + 2f), text)
 
-            color(color)
-            nvgFillColor(vg, nvgColor)
-            nvgText(vg, round(x), round(y), text)
+                color(color)
+                nvgFillColor(vg, nvgColor)
+                nvgText(vg, round(x), round(y), text)
+            }
             return
         }
         deferText(text, round(x + 2f), round(y + 2f), size, -16777216)
@@ -433,10 +453,12 @@ object NVGRenderer {
     }
 
     fun textWidth(text: String, size: Float, font: Font): Float {
-        if (legacyNvgText) {
-            nvgFontSize(vg, size)
-            nvgFontFaceId(vg, getFontID(font))
-            return nvgTextBounds(vg, 0f, 0f, text, fontBounds)
+        if (shouldUseImmediateText(font)) {
+            return withCoherentTextureUnit {
+                nvgFontSize(vg, size)
+                nvgFontFaceId(vg, getFontID(font))
+                nvgTextBounds(vg, 0f, 0f, text, fontBounds)
+            }
         }
         // Float widths from the live FontSet (design D6) at the replay's exact size/9 mapping —
         // the pinned ClickGUI FontSet, the same one NvgTextReplay draws with.
@@ -453,13 +475,15 @@ object NVGRenderer {
         font: Font,
         lineHeight: Float = 1f
     ) {
-        if (legacyNvgText) {
-            nvgFontSize(vg, size)
-            nvgFontFaceId(vg, getFontID(font))
-            nvgTextLineHeight(vg, lineHeight)
-            color(color)
-            nvgFillColor(vg, nvgColor)
-            nvgTextBox(vg, x, y, w, text)
+        if (shouldUseImmediateText(font)) {
+            withCoherentTextureUnit {
+                nvgFontSize(vg, size)
+                nvgFontFaceId(vg, getFontID(font))
+                nvgTextLineHeight(vg, lineHeight)
+                color(color)
+                nvgFillColor(vg, nvgColor)
+                nvgTextBox(vg, x, y, w, text)
+            }
             return
         }
         deferText(text, x, y, size, color, wrapWidth = w, lineHeight = lineHeight)
@@ -472,12 +496,14 @@ object NVGRenderer {
         font: Font,
         lineHeight: Float = 1f
     ): FloatArray {
-        if (legacyNvgText) {
+        if (shouldUseImmediateText(font)) {
             val bounds = FloatArray(4)
-            nvgFontSize(vg, size)
-            nvgFontFaceId(vg, getFontID(font))
-            nvgTextLineHeight(vg, lineHeight)
-            nvgTextBoxBounds(vg, 0f, 0f, w, text, bounds)
+            withCoherentTextureUnit {
+                nvgFontSize(vg, size)
+                nvgFontFaceId(vg, getFontID(font))
+                nvgTextLineHeight(vg, lineHeight)
+                nvgTextBoxBounds(vg, 0f, 0f, w, text, bounds)
+            }
             return bounds // [minX, minY, maxX, maxY]
         }
         // Same Font.split wrapping the replay draws with (the pinned ClickGUI font), so the sized
@@ -504,12 +530,42 @@ object NVGRenderer {
     }
 
     private fun drawImmediateText(text: String, x: Float, y: Float, size: Float, color: Int, font: Font) {
-        nvgFontSize(vg, size)
-        nvgFontFaceId(vg, getFontID(font))
-        color(color)
-        nvgFillColor(vg, nvgColor)
-        nvgText(vg, x, y + .5f, text)
+        withCoherentTextureUnit {
+            nvgFontSize(vg, size)
+            nvgFontFaceId(vg, getFontID(font))
+            color(color)
+            nvgFillColor(vg, nvgColor)
+            nvgText(vg, x, y + .5f, text)
+        }
     }
+
+    /**
+     * The deferred replay path is still brittle on Floyd's own ClickGUI package when the PIP
+     * capture carries a non-identity render scale (for example Minecraft GUI scale 2). Keep the
+     * immediate NVG escape hatch scoped to those screens and explicit overrides; every other NVG
+     * text surface should defer through mc.font so emoji / unifont fallback can render normally.
+     */
+    private fun shouldUseImmediateText(font: Font): Boolean =
+        shouldUseImmediateText()
+
+    private fun shouldUseImmediateText(): Boolean =
+        shouldUseImmediateTextPolicy(
+            legacyNvgText = legacyNvgText,
+            immediateTextOverrideDepth = immediateTextOverrideDepth,
+            screenClassName = mc.screen?.javaClass?.name,
+        )
+
+    private fun isImmediateGuiScreen(): Boolean =
+        mc.screen?.javaClass?.name?.startsWith("gg.floyd.clickgui.") == true
+
+    internal fun shouldUseImmediateTextPolicy(
+        legacyNvgText: Boolean,
+        immediateTextOverrideDepth: Int,
+        screenClassName: String?,
+    ): Boolean =
+        legacyNvgText ||
+            immediateTextOverrideDepth > 0 ||
+            screenClassName?.startsWith("gg.floyd.clickgui.") == true
 
     /**
      * Runs [block] (raw NVG/GL texture binds — image/font creation binds on whatever unit is
@@ -648,7 +704,7 @@ object NVGRenderer {
     private fun getFontID(font: Font): Int {
         return fontMap.getOrPut(font) {
             val buffer = font.buffer()
-            NVGFont(nvgCreateFontMem(vg, font.name, buffer, false), buffer)
+            NVGFont(withCoherentTextureUnit { nvgCreateFontMem(vg, font.name, buffer, false) }, buffer)
         }.id
     }
 

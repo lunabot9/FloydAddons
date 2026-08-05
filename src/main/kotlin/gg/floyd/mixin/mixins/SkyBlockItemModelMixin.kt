@@ -3,6 +3,7 @@ package gg.floyd.mixin.mixins
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation
 import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.customData
+import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.logUnresolvedModel
 import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.resolveDynamic
 import gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.skyBlockId
 import gg.floyd.features.impl.render.FloydSkyBlockItemModelPolicy
@@ -37,21 +38,29 @@ abstract class SkyBlockItemModelMixin {
         }
         val customData = stack.customData
         val skyBlockId = skyBlockId(customData)
-        val liveBaseModel = FloydSkyBlockPackAssets.liveBaseModel(currentModel)
         val vanillaItemModel = stack.item.components()[DataComponents.ITEM_MODEL] ?: currentModel
-        val vanillaModel = when {
-            skyBlockId != null && FloydSkyBlockPackAssets.itemModels.containsKey(skyBlockId) ->
-                FloydSkyBlockPackAssets.itemModels.getValue(skyBlockId)
-            liveBaseModel != null -> liveBaseModel
-            skyBlockId != null -> FloydSkyBlockItemModelPolicy.resolveBaseModel(
-                skyBlockId = skyBlockId,
-                knownModels = FloydSkyBlockPackAssets.itemModels,
-                vanillaItemModel = vanillaItemModel,
-            )
-            customData.contains("quiver_arrow") -> Items.ARROW.components()[DataComponents.ITEM_MODEL]
-            else -> vanillaItemModel
-        } ?: vanillaItemModel
+        val liveBaseModel = FloydSkyBlockPackAssets.liveItemBaseModels[currentModel]
+        val vanillaModel = FloydSkyBlockItemModelPolicy.resolveBaseModel(
+            currentModel = currentModel,
+            skyBlockId = skyBlockId,
+            liveModels = FloydSkyBlockPackAssets.liveItemBaseModels,
+            knownModels = FloydSkyBlockPackAssets.itemModels,
+            vanillaItemModel = vanillaItemModel,
+            quiverArrowModel = customData
+                .takeIf { it.contains("quiver_arrow") }
+                ?.let { Items.ARROW.components()[DataComponents.ITEM_MODEL] },
+        )
 
-        return skyBlockId?.let { resolveDynamic(it, stack, customData, vanillaModel) } ?: vanillaModel
+        val resolvedModel = skyBlockId?.let { resolveDynamic(it, stack, customData, vanillaModel) } ?: vanillaModel
+        logUnresolvedModel(
+            currentModel = currentModel,
+            resolvedModel = resolvedModel,
+            stack = stack,
+            customData = customData,
+            skyBlockId = skyBlockId,
+            vanillaItemModel = vanillaItemModel,
+            liveBaseModel = liveBaseModel,
+        )
+        return resolvedModel
     }
 }

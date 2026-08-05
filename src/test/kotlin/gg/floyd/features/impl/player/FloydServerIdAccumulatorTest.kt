@@ -6,7 +6,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.FontDescription
 import net.minecraft.network.chat.Style
+import net.minecraft.resources.Identifier
 import net.minecraft.util.FormattedCharSequence
 
 class FloydServerIdAccumulatorTest {
@@ -125,6 +127,29 @@ class FloydServerIdAccumulatorTest {
     }
 
     @Test
+    fun `sequence replacement preserves supplementary emoji offsets and explicit icon fonts`() {
+        val base = Style.EMPTY.withColor(ChatFormatting.WHITE)
+        val iconFont = FontDescription.Resource(Identifier.fromNamespaceAndPath("hypixel_skyblock", "icons"))
+        val icon = Style.EMPTY.withColor(ChatFormatting.GOLD).withFont(iconFont)
+        val sequence = sequenceOf(
+            "😀 " to base,
+            "mini28D" to base,
+            "\uE001" to icon
+        )
+
+        val replaced = FloydNickHider.replaceInSequenceForTest(sequence, "mini28D", "fL0YD")
+        val visited = mutableListOf<Triple<Int, String, Style>>()
+        replaced.accept { index, style, codePoint ->
+            visited += Triple(index, String(Character.toChars(codePoint)), style)
+            true
+        }
+
+        assertEquals(listOf(0, 2, 3, 4, 5, 6, 7, 8), visited.map { it.first })
+        assertEquals(listOf("😀", " ", "f", "L", "0", "Y", "D", "\uE001"), visited.map { it.second })
+        assertEquals(iconFont, visited.last().third.font)
+    }
+
+    @Test
     fun `component replacement preserves styles inside component segments`() {
         val red = Style.EMPTY.withColor(ChatFormatting.RED)
         val blue = Style.EMPTY.withColor(ChatFormatting.BLUE)
@@ -147,7 +172,8 @@ class FloydServerIdAccumulatorTest {
                 val codePoints = text.codePoints().iterator()
                 while (codePoints.hasNext()) {
                     val codePoint = codePoints.nextInt()
-                    if (!visitor.accept(index++, style, codePoint)) return@FormattedCharSequence false
+                    if (!visitor.accept(index, style, codePoint)) return@FormattedCharSequence false
+                    index += Character.charCount(codePoint)
                 }
             }
             true

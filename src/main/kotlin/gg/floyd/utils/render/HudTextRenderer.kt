@@ -120,15 +120,37 @@ object HudTextRenderer {
 
     /** One run of same-colored text; per-segment color ints carry per-char chroma and style colors. */
     data class Segment(val text: String, val color: Int, val style: Style = Style.EMPTY) {
+        @Transient
+        private var formattedCache: FormattedCharSequence? = null
+
+        @Transient
+        private var widthCacheFont: Font? = null
+
+        @Transient
+        private var widthCache = Float.NaN
+
         /** Keeps explicit resource-pack font ids attached to icon/emoji runs. */
-        fun formatted(): FormattedCharSequence = FormattedCharSequence { visitor ->
-            var index = 0
-            while (index < text.length) {
-                val codePoint = text.codePointAt(index)
-                if (!visitor.accept(index, style, codePoint)) return@FormattedCharSequence false
-                index += Character.charCount(codePoint)
+        fun formatted(): FormattedCharSequence {
+            formattedCache?.let { return it }
+            return FormattedCharSequence { visitor ->
+                var index = 0
+                while (index < text.length) {
+                    val codePoint = text.codePointAt(index)
+                    if (!visitor.accept(index, style, codePoint)) return@FormattedCharSequence false
+                    index += Character.charCount(codePoint)
+                }
+                true
             }
-            true
+                .also { formattedCache = it }
+        }
+
+        /** Width of this immutable run in the given [font], cached by font instance identity. */
+        fun unitWidth(font: Font = mc.font): Float {
+            if (widthCacheFont === font && !widthCache.isNaN()) return widthCache
+            return MsdfFontMetrics.unitWidth(formatted(), font).also {
+                widthCacheFont = font
+                widthCache = it
+            }
         }
     }
 
@@ -198,11 +220,11 @@ object HudTextRenderer {
         val buffer = mc.renderBuffers().bufferSource()
         var segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.formatted(), font) }
+            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + s.unitWidth(font) }
         }
         for (segment in segments) {
             font.drawInBatch(segment.formatted(), segX, 0f, segment.color, false, deferredPose, buffer, displayMode, 0, light)
-            segX += MsdfFontMetrics.unitWidth(segment.formatted(), font)
+            segX += segment.unitWidth(font)
         }
     }
 
@@ -229,11 +251,11 @@ object HudTextRenderer {
         val buffer = mc.renderBuffers().bufferSource()
         var segX = when (alignment) {
             Alignment.LEFT -> 0f
-            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + MsdfFontMetrics.unitWidth(s.formatted(), font) }
+            Alignment.RIGHT -> -segments.fold(0f) { acc, s -> acc + s.unitWidth(font) }
         }
         for (segment in segments) {
             font.drawInBatch(segment.formatted(), segX, 0f, segment.color, false, pose, buffer, displayMode, 0, light)
-            segX += MsdfFontMetrics.unitWidth(segment.formatted(), font)
+            segX += segment.unitWidth(font)
         }
         buffer.endBatch()
         PostHudOverlay.bindMainFbo()

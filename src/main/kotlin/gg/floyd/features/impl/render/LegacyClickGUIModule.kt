@@ -1,5 +1,6 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.Branding
 import gg.floyd.clickgui.LegacyFloydClickGUI
 import gg.floyd.clickgui.settings.AlwaysActive
 import gg.floyd.clickgui.settings.impl.*
@@ -18,8 +19,8 @@ import org.lwjgl.glfw.GLFW
  */
 @AlwaysActive
 object LegacyClickGUIModule : Module(
-    name = "Floyd GUI",
-    description = "Customizes and opens the fullscreen Floyd GUI.",
+    name = Branding.LEGACY_GUI_NAME,
+    description = Branding.LEGACY_GUI_DESCRIPTION,
     key = GLFW.GLFW_KEY_RIGHT_SHIFT
 ) {
     val buttonTextColor by ColorSetting("Button Text Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Floyd GUI button text color — toggle chroma/fade inside the picker.")
