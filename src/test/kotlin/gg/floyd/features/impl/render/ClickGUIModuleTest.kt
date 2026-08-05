@@ -53,7 +53,10 @@ class ClickGUIModuleTest {
 
         val minX = centered.minOf { it.value.x }
         val maxRight = centered.maxOf { it.value.x + Panel.WIDTH }
-        assertEquals(119f, minX)
-        assertEquals(1589f, maxRight)
+        val leftMargin = minX
+        val rightMargin = 1708f - maxRight
+
+        assertEquals(leftMargin, rightMargin, 0.001f)
+        assertEquals(120f, leftMargin)
     }
 }
