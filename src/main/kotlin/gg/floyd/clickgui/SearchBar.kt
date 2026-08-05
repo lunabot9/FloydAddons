@@ -2,6 +2,7 @@ package gg.floyd.clickgui
 
 import gg.floyd.Branding
 import gg.floyd.features.impl.render.ClickGUIModule
+import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Colors
 import gg.floyd.utils.font.FontEpochCache
 import gg.floyd.utils.ui.TextInputHandler
@@ -75,8 +76,8 @@ object SearchBar {
         val linkY = communityY + LINKS_GAP
         val linksStartX = centerX - (githubWidth + LINKS_SPACING + discordWidth) / 2f
 
-        NVGRenderer.text(TITLE_TEXT, centerX - titleWidth / 2f, titleY, TITLE_SIZE, ClickGUI.accent(), NVGRenderer.defaultFont)
-        NVGRenderer.text(COFFEE_TEXT, centerX - coffeeWidth / 2f, coffeeY, SUBTITLE_SIZE, ClickGUI.accentBright(), NVGRenderer.defaultFont)
+        NVGRenderer.text(TITLE_TEXT, centerX - titleWidth / 2f, titleY, TITLE_SIZE, chromaColor(0f), NVGRenderer.defaultFont)
+        NVGRenderer.text(COFFEE_TEXT, centerX - coffeeWidth / 2f, coffeeY, SUBTITLE_SIZE, chromaColor(0.08f), NVGRenderer.defaultFont)
 
         ClickGUI.drawChrome(x, y, BAR_WIDTH, BAR_HEIGHT, 7f, hovered = true, accented = currentSearch.isNotEmpty())
 
@@ -110,8 +111,8 @@ object SearchBar {
         val githubHovered = isAreaHovered(githubBounds.left.toFloat(), githubBounds.top.toFloat(), githubBounds.width.toFloat(), githubBounds.height.toFloat(), true)
         val discordHovered = isAreaHovered(discordBounds.left.toFloat(), discordBounds.top.toFloat(), discordBounds.width.toFloat(), discordBounds.height.toFloat(), true)
         val coffeeHovered = isAreaHovered(coffeeBounds.left.toFloat(), coffeeBounds.top.toFloat(), coffeeBounds.width.toFloat(), coffeeBounds.height.toFloat(), true)
-        NVGRenderer.text(GITHUB_TEXT, linksStartX, linkY, LINK_SIZE, if (githubHovered) Colors.WHITE.rgba else ClickGUI.accent(), NVGRenderer.defaultFont)
-        NVGRenderer.text(DISCORD_TEXT, linksStartX + githubWidth + LINKS_SPACING, linkY, LINK_SIZE, if (discordHovered) Colors.WHITE.rgba else ClickGUI.accentBright(), NVGRenderer.defaultFont)
+        NVGRenderer.text(GITHUB_TEXT, linksStartX, linkY, LINK_SIZE, if (githubHovered) Colors.WHITE.rgba else chromaColor(0f), NVGRenderer.defaultFont)
+        NVGRenderer.text(DISCORD_TEXT, linksStartX + githubWidth + LINKS_SPACING, linkY, LINK_SIZE, if (discordHovered) Colors.WHITE.rgba else chromaColor(0.12f), NVGRenderer.defaultFont)
         if (coffeeHovered) {
             NVGRenderer.text(COFFEE_TEXT, centerX - coffeeLinkWidth / 2f, coffeeY, SUBTITLE_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         }
@@ -156,6 +157,8 @@ object SearchBar {
     fun keyTyped(input: CharacterEvent): Boolean {
         return textInputHandler.keyTyped(input)
     }
+
+    private fun chromaColor(offset: Float): Int = 0xFF000000.toInt() or ChromaCache.rgbFor(offset)
 
     private data class LinkRect(val left: Float, val top: Float, val width: Float, val height: Float) {
         fun contains(x: Float, y: Float): Boolean = x >= left && x <= left + width && y >= top && y <= top + height

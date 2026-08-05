@@ -549,7 +549,7 @@ object NVGRenderer {
         shouldUseImmediateText()
 
     private fun shouldUseImmediateText(): Boolean =
-        shouldUseImmediateTextPolicy(
+        gg.floyd.utils.ui.rendering.shouldUseImmediateTextPolicy(
             legacyNvgText = legacyNvgText,
             immediateTextOverrideDepth = immediateTextOverrideDepth,
             screenClassName = mc.screen?.javaClass?.name,
@@ -557,15 +557,6 @@ object NVGRenderer {
 
     private fun isImmediateGuiScreen(): Boolean =
         mc.screen?.javaClass?.name?.startsWith("gg.floyd.clickgui.") == true
-
-    internal fun shouldUseImmediateTextPolicy(
-        legacyNvgText: Boolean,
-        immediateTextOverrideDepth: Int,
-        screenClassName: String?,
-    ): Boolean =
-        legacyNvgText ||
-            immediateTextOverrideDepth > 0 ||
-            screenClassName?.startsWith("gg.floyd.clickgui.") == true
 
     /**
      * Runs [block] (raw NVG/GL texture binds — image/font creation binds on whatever unit is

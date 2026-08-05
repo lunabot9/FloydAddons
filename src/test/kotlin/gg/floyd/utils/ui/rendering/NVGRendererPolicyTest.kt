@@ -9,7 +9,7 @@ class NVGRendererPolicyTest {
     @Test
     fun `default NVG text defers outside Floyd clickgui screens`() {
         assertFalse(
-            NVGRenderer.shouldUseImmediateTextPolicy(
+            shouldUseImmediateTextPolicy(
                 legacyNvgText = false,
                 immediateTextOverrideDepth = 0,
                 screenClassName = "net.minecraft.client.gui.screens.inventory.ContainerScreen",
@@ -20,7 +20,7 @@ class NVGRendererPolicyTest {
     @Test
     fun `Floyd clickgui screens still force immediate NVG text`() {
         assertTrue(
-            NVGRenderer.shouldUseImmediateTextPolicy(
+            shouldUseImmediateTextPolicy(
                 legacyNvgText = false,
                 immediateTextOverrideDepth = 0,
                 screenClassName = "gg.floyd.clickgui.ClickGUI",
@@ -31,14 +31,14 @@ class NVGRendererPolicyTest {
     @Test
     fun `explicit override and legacy flag still force immediate text`() {
         assertTrue(
-            NVGRenderer.shouldUseImmediateTextPolicy(
+            shouldUseImmediateTextPolicy(
                 legacyNvgText = true,
                 immediateTextOverrideDepth = 0,
                 screenClassName = null,
             )
         )
         assertTrue(
-            NVGRenderer.shouldUseImmediateTextPolicy(
+            shouldUseImmediateTextPolicy(
                 legacyNvgText = false,
                 immediateTextOverrideDepth = 1,
                 screenClassName = null,

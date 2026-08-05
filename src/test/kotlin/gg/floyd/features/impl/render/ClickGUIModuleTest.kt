@@ -28,17 +28,17 @@ class ClickGUIModuleTest {
 
     @Test
     fun `short windows scale the click gui down to keep its content visible`() {
-        assertEquals(0.6f, ClickGUIModule.standardGuiScaleFor(1920f, 600f, 1f))
-        assertEquals(3200f, ClickGUIModule.availableWidthForLayout(1920f, 600f, 1f), 0.001f)
+        assertEquals(1f, ClickGUIModule.standardGuiScaleFor(1920f, 600f, 1f))
+        assertEquals(1920f, ClickGUIModule.availableWidthForLayout(1920f, 600f, 1f), 0.001f)
 
-        assertEquals(0.5f, ClickGUIModule.standardGuiScaleFor(854f, 480f, 1f))
-        assertEquals(1708f, ClickGUIModule.availableWidthForLayout(854f, 480f, 1f))
+        assertEquals(1f, ClickGUIModule.standardGuiScaleFor(854f, 480f, 1f))
+        assertEquals(854f, ClickGUIModule.availableWidthForLayout(854f, 480f, 1f))
     }
 
     @Test
     fun `retina logical points are not double-penalized`() {
-        assertEquals(0.8f, ClickGUIModule.standardGuiScaleFor(1512f, 982f, 2f))
-        assertEquals(1890f, ClickGUIModule.availableWidthForLayout(1512f, 982f, 2f))
+        assertEquals(1f, ClickGUIModule.standardGuiScaleFor(1512f, 982f, 2f))
+        assertEquals(1512f, ClickGUIModule.availableWidthForLayout(1512f, 982f, 2f))
     }
 
     @Test
@@ -53,7 +53,7 @@ class ClickGUIModuleTest {
 
         val minX = centered.minOf { it.value.x }
         val maxRight = centered.maxOf { it.value.x + Panel.WIDTH }
-        assertEquals(59f, minX)
-        assertEquals(1649f, maxRight)
+        assertEquals(119f, minX)
+        assertEquals(1589f, maxRight)
     }
 }

@@ -581,24 +581,21 @@ object FloydNickHider : Module(
         fun replaceIgnoreCase(find: String, replace: String, styleTransform: ((Int, Style) -> Style)? = null): Boolean {
             if (find.isEmpty()) return false
             val text = string()
-            if (text.length != codePoints.size) return replaceWholeIfChanged(text.replace(Regex(Pattern.quote(find), RegexOption.IGNORE_CASE), replace))
-            val lowerText = text.lowercase(Locale.ROOT)
-            val lowerFind = find.lowercase(Locale.ROOT)
-            if (!lowerText.contains(lowerFind)) return false
+            val matcher = Pattern.compile(Pattern.quote(find), Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE).matcher(text)
+            if (!matcher.find()) return false
+            val charToCodePoint = charToCodePointBoundaries(text)
 
             val resultCodePoints = mutableListOf<Int>()
             val resultStyles = mutableListOf<Style>()
-            var index = 0
-            while (index < codePoints.size) {
-                val hit = lowerText.indexOf(lowerFind, index)
-                if (hit < 0) {
-                    appendRange(index, codePoints.size, resultCodePoints, resultStyles)
-                    break
-                }
-                appendRange(index, hit, resultCodePoints, resultStyles)
-                appendReplacement(replace, styles.getOrElse(hit) { Style.EMPTY }, resultCodePoints, resultStyles, styleTransform)
-                index = hit + find.length
-            }
+            var codePointIndex = 0
+            do {
+                val hitStart = charToCodePoint[matcher.start()]
+                val hitEnd = charToCodePoint[matcher.end()]
+                appendRange(codePointIndex, hitStart, resultCodePoints, resultStyles)
+                appendReplacement(replace, styles.getOrElse(hitStart) { Style.EMPTY }, resultCodePoints, resultStyles, styleTransform)
+                codePointIndex = hitEnd
+            } while (matcher.find())
+            appendRange(codePointIndex, codePoints.size, resultCodePoints, resultStyles)
             replaceWith(resultCodePoints, resultStyles)
             return true
         }
@@ -607,18 +604,19 @@ object FloydNickHider : Module(
             val text = string()
             val matcher = pattern.matcher(text)
             if (!matcher.find()) return false
-            if (text.length != codePoints.size) return replaceWholeIfChanged(matcher.replaceAll(replace))
+            val charToCodePoint = charToCodePointBoundaries(text)
 
             val resultCodePoints = mutableListOf<Int>()
             val resultStyles = mutableListOf<Style>()
-            matcher.reset()
-            var index = 0
-            while (matcher.find()) {
-                appendRange(index, matcher.start(), resultCodePoints, resultStyles)
-                appendReplacement(replace, styles.getOrElse(matcher.start()) { Style.EMPTY }, resultCodePoints, resultStyles)
-                index = matcher.end()
-            }
-            appendRange(index, codePoints.size, resultCodePoints, resultStyles)
+            var codePointIndex = 0
+            do {
+                val hitStart = charToCodePoint[matcher.start()]
+                val hitEnd = charToCodePoint[matcher.end()]
+                appendRange(codePointIndex, hitStart, resultCodePoints, resultStyles)
+                appendReplacement(replace, styles.getOrElse(hitStart) { Style.EMPTY }, resultCodePoints, resultStyles)
+                codePointIndex = hitEnd
+            } while (matcher.find())
+            appendRange(codePointIndex, codePoints.size, resultCodePoints, resultStyles)
             replaceWith(resultCodePoints, resultStyles)
             return true
         }
@@ -634,12 +632,15 @@ object FloydNickHider : Module(
             while (end < text.length && !text[end].isWhitespace()) end++
             val candidate = text.substring(start, end)
             if (candidate.none(Char::isDigit)) return false
+            val charToCodePoint = charToCodePointBoundaries(text)
 
             val resultCodePoints = mutableListOf<Int>()
             val resultStyles = mutableListOf<Style>()
-            appendRange(0, start, resultCodePoints, resultStyles)
-            appendReplacement(replace, styles.getOrElse(start) { Style.EMPTY }, resultCodePoints, resultStyles)
-            appendRange(end, codePoints.size, resultCodePoints, resultStyles)
+            val startCodePoint = charToCodePoint[start]
+            val endCodePoint = charToCodePoint[end]
+            appendRange(0, startCodePoint, resultCodePoints, resultStyles)
+            appendReplacement(replace, styles.getOrElse(startCodePoint) { Style.EMPTY }, resultCodePoints, resultStyles)
+            appendRange(endCodePoint, codePoints.size, resultCodePoints, resultStyles)
             replaceWith(resultCodePoints, resultStyles)
             return true
         }
@@ -702,6 +703,23 @@ object FloydNickHider : Module(
                 styles.add(style)
             }
             return true
+        }
+
+        private fun charToCodePointBoundaries(text: String): IntArray {
+            val boundaries = IntArray(text.length + 1)
+            var charIndex = 0
+            var codePointIndex = 0
+            while (charIndex < text.length) {
+                boundaries[charIndex] = codePointIndex
+                val codePoint = text.codePointAt(charIndex)
+                charIndex += Character.charCount(codePoint)
+                codePointIndex++
+            }
+            boundaries[text.length] = codePointIndex
+            for (index in text.length - 1 downTo 0) {
+                if (boundaries[index] == 0 && index != 0) boundaries[index] = boundaries[index + 1]
+            }
+            return boundaries
         }
 
         companion object {
