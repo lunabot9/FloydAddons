@@ -778,7 +778,7 @@ object FloydLocalControl : Module(
         val screen = requiredString(readJson(exchange), "screen")
         callClient {
             when (screen) {
-                "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(LegacyFloydClickGUI.openHub())
+                "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(ClickGUI)
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
                 "calculator", "calc" -> FloydCalculator.toggleVisibility()

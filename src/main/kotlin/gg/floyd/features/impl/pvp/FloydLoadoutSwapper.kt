@@ -109,6 +109,9 @@ object FloydLoadoutSwapper : Module(
     internal fun autoCloseSetting(): BooleanSetting =
         settings["Auto Close"] as BooleanSetting
 
+    internal fun canActivateLoadout(playerAvailable: Boolean = mc.player != null): Boolean =
+        enabled && playerAvailable
+
     internal fun configuredBaseDelayMs(): Long =
         (swapDelay * 1000f).toLong().coerceAtLeast(0L)
 
@@ -119,6 +122,7 @@ object FloydLoadoutSwapper : Module(
         configuredBaseDelayMs() + sampleRandomization(configuredRandomizationMs())
 
     private fun activateLoadout(index: Int) {
+        if (!canActivateLoadout()) return
         val player = mc.player ?: return
         val currentScreen = mc.screen as? AbstractContainerScreen<*>
         val currentMenu = currentScreen?.menu as? ChestMenu

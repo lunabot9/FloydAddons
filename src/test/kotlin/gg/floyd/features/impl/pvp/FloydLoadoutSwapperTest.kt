@@ -3,6 +3,7 @@ package gg.floyd.features.impl.pvp
 import com.mojang.blaze3d.platform.InputConstants
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FloydLoadoutSwapperTest {
@@ -32,6 +33,28 @@ class FloydLoadoutSwapperTest {
     fun `loadout title matcher accepts the hypixel menu title`() {
         assertTrue(FloydLoadoutSwapper.isLoadoutScreen("(1/2) Loadouts"))
         assertTrue(FloydLoadoutSwapper.isLoadoutScreen("(1/1) Loadout"))
+    }
+
+    @Test
+    fun `disabled module rejects loadout activation even when a player is present`() {
+        val wasEnabled = FloydLoadoutSwapper.enabled
+        try {
+            if (FloydLoadoutSwapper.enabled) FloydLoadoutSwapper.toggle()
+            assertFalse(FloydLoadoutSwapper.canActivateLoadout(playerAvailable = true))
+        } finally {
+            if (FloydLoadoutSwapper.enabled != wasEnabled) FloydLoadoutSwapper.toggle()
+        }
+    }
+
+    @Test
+    fun `enabled module accepts loadout activation when a player is present`() {
+        val wasEnabled = FloydLoadoutSwapper.enabled
+        try {
+            if (!FloydLoadoutSwapper.enabled) FloydLoadoutSwapper.toggle()
+            assertTrue(FloydLoadoutSwapper.canActivateLoadout(playerAvailable = true))
+        } finally {
+            if (FloydLoadoutSwapper.enabled != wasEnabled) FloydLoadoutSwapper.toggle()
+        }
     }
 
     @Test

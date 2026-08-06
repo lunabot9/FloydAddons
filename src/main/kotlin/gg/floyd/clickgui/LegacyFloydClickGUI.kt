@@ -355,6 +355,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     private var nickInputBounds = Rect.ZERO
     private var nickInputFocused = false
     private var pendingMappingReal: String? = null
+    private var requestedStartPage = Page.HUB
     private var currentPage = Page.HUB
         set(value) {
             val previousWidth = panelWidth()
@@ -423,7 +424,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
         panelX = (width - panelWidth()) / 2
         panelY = (height - panelHeight()) / 2
         dragging = false
-        currentPage = Page.HUB
+        currentPage = requestedStartPage
         labelHover.indices.forEach { labelHover[it] = 0f }
         textEditor = null
         colorPicker = null
@@ -478,6 +479,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
         openStartMs = System.currentTimeMillis()
         closeStartMs = 0L
         closing = false
+        requestedStartPage = Page.HUB
         currentPage = Page.HUB
         dragging = false
         textEditor = null
@@ -527,6 +529,13 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
         nickInputBounds = Rect.ZERO
         nickInputFocused = false
         pendingMappingReal = null
+        return this
+    }
+
+    fun openModuleBrowser(): LegacyFloydClickGUI {
+        openHub()
+        requestedStartPage = Page.MODULE_BROWSER
+        currentPage = Page.MODULE_BROWSER
         return this
     }
 
@@ -749,7 +758,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     )
 
     private fun debugPageRows(): List<Map<String, Any?>> {
-        if (currentPage == Page.HUB) return emptyList()
+        if (currentPage == Page.HUB || currentPage == Page.MODULE_BROWSER) return emptyList()
         val contentWidth = 240
         val contentLeft = panelX + (panelWidth() - contentWidth) / 2
         val contentTop = panelY + 26
@@ -823,6 +832,12 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
             pageRows = emptyList()
             pageBackButton = Rect.ZERO
             pageDoneButton = Rect.ZERO
+        } else if (currentPage == Page.MODULE_BROWSER) {
+            labelBounds = emptyList()
+            linkBounds = Rect.ZERO
+            discordLinkBounds = Rect.ZERO
+            coffeeLinkBounds = Rect.ZERO
+            drawModuleBrowserPage(context, alpha)
         } else {
             labelBounds = emptyList()
             linkBounds = Rect.ZERO
@@ -947,6 +962,11 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
 
         if (currentPage == Page.GUI_STYLE && button == 0) {
             points.firstOrNull { point -> handleGuiStyleClick(point.first, point.second) }?.let { return true }
+        }
+
+        if (currentPage == Page.MODULE_BROWSER) {
+            points.firstOrNull { point -> handleModuleBrowserChromeClick(point.first, point.second, button) }?.let { return true }
+            points.firstOrNull { point -> handleModuleBrowserClick(point.first, point.second, button) }?.let { return true }
         }
 
         when {
@@ -1423,6 +1443,13 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
             updateCosmeticSlider(activeCosmeticSlider ?: return true, clickPoints(mouseButtonEvent).first().first)
             return true
         }
+        if (mouseButtonEvent.button() == 0 && draggingModuleBrowserCategory != null) {
+            val category = draggingModuleBrowserCategory ?: return true
+            val state = moduleBrowserPanelState(category)
+            state.x = (mouseButtonEvent.x() - moduleBrowserDragOffsetX).roundToInt().coerceIn(0, max(0, width - moduleBrowserPanelWidth(category)))
+            state.y = (mouseButtonEvent.y() - moduleBrowserDragOffsetY).roundToInt().coerceIn(0, max(0, height - moduleBrowserHeaderHeight))
+            return true
+        }
         if (dragging && mouseButtonEvent.button() == 0) {
             panelX = (dragStartPanelX + (mouseButtonEvent.x() - dragStartMouseX).roundToInt()).coerceIn(0, max(0, width - panelWidth()))
             panelY = (dragStartPanelY + (mouseButtonEvent.y() - dragStartMouseY).roundToInt()).coerceIn(0, max(0, height - panelHeight()))
@@ -1483,7 +1510,21 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, horizontalAmount: Double, verticalAmount: Double): Boolean {
-        if (currentPage == Page.HUB || textEditor != null || colorPicker != null) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
+        if (textEditor != null || colorPicker != null) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
+        if (currentPage == Page.HUB) return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
+        if (currentPage == Page.MODULE_BROWSER) {
+            val hoveredCategory = moduleBrowserHeaderHitEntries.firstOrNull { it.bounds.contains(mouseX, mouseY) }?.category
+                ?: moduleBrowserHitEntries.firstOrNull { it.bounds.contains(mouseX, mouseY) }?.category
+            hoveredCategory?.let { category ->
+                val state = moduleBrowserPanelState(category)
+                val maxScroll = moduleBrowserMaxScroll(category)
+                if (!state.collapsed && maxScroll > 0) {
+                    state.scroll = (state.scroll - (verticalAmount * moduleBrowserRowHeight).roundToInt()).coerceIn(0, maxScroll)
+                    return true
+                }
+            }
+            return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)
+        }
         if (currentPage == Page.SKIN && skinDropdownOpen && skinDropdownList.contains(mouseX, mouseY)) {
             val maxScroll = max(0, FloydSkin.availableSkinFiles().size - skinDropdownMaxVisible)
             skinDropdownScroll = (skinDropdownScroll - verticalAmount.roundToInt()).coerceIn(0, maxScroll)
@@ -1520,6 +1561,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
 
     private fun panelWidth(): Int = when (currentPage) {
         Page.HUB -> hubPanelWidth
+        Page.MODULE_BROWSER -> width
         Page.SKIN -> skinPanelWidth
         Page.CAPE -> 240
         Page.CONE_HAT -> coneControlsWidth + conePreviewWidth
@@ -1540,6 +1582,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
 
     private fun panelHeight(): Int = when (currentPage) {
         Page.HUB -> hubPanelHeight
+        Page.MODULE_BROWSER -> height
         Page.SKIN -> skinPanelHeight
         Page.CAPE -> 140
         Page.CONE_HAT -> 246
@@ -1570,6 +1613,10 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     }
 
     private fun drawPage(context: GuiGraphics, left: Int, top: Int, bottom: Int, alpha: Float) {
+        if (currentPage == Page.MODULE_BROWSER) {
+            drawModuleBrowserPage(context, alpha)
+            return
+        }
         if (currentPage == Page.CAPE) {
             drawCapePage(context, left, top, bottom, alpha)
             return
@@ -4614,7 +4661,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     }
 
     private fun rowsFor(page: Page): List<LegacyRow> = when (page) {
-        Page.HUB -> emptyList()
+        Page.HUB, Page.MODULE_BROWSER -> emptyList()
         Page.GUI_STYLE -> emptyList()
         Page.PVP -> listOf(
             headerRow("Loadout Swapper"),
@@ -6395,6 +6442,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
 
     private fun pageTitle(page: Page): String = when (page) {
         Page.HUB -> Branding.COMPACT_NAME
+        Page.MODULE_BROWSER -> Branding.COMPACT_NAME
         Page.RENDER -> "Render"
         Page.HIDERS -> "Hiders"
         Page.CAMERA -> "Camera"
@@ -6414,6 +6462,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     }
 
     private fun pageParent(page: Page): Page = pageReturnOverrides[page] ?: when (page) {
+        Page.MODULE_BROWSER -> Page.HUB
         Page.HIDERS, Page.MOB_ESP, Page.ANIMATIONS, Page.XRAY -> Page.RENDER
         Page.MOB_ESP_FILTERS -> Page.MOB_ESP
         Page.SKIN, Page.CAPE, Page.CONE_HAT -> Page.COSMETIC
@@ -6651,6 +6700,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
 
     private enum class Page {
         HUB,
+        MODULE_BROWSER,
         RENDER,
         HIDERS,
         CAMERA,

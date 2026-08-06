@@ -77,16 +77,7 @@ object FloydSkyBlockPackAssets {
         logger.info("Loaded ${models.size} SkyBlock vanilla item fallbacks")
         models to profiles
     }
-    private val liveBaseModels by lazy {
-        runCatching { FloydSkyBlockLivePackCache.latest(livePackCacheDir)?.baseModels.orEmpty() }
-            .onFailure { logger.warn("Failed to inspect the cached live SkyBlock item pack", it) }
-            .getOrDefault(emptyMap())
-            .also {
-                if (it.isNotEmpty()) {
-                    logger.info("Loaded ${it.size} live SkyBlock base-model fallbacks")
-                }
-            }
-    }
+    @Volatile private var liveBaseModelsCache: Pair<Path, Map<Identifier, Identifier>>? = null
 
     @Volatile private var reloadJob: Job? = null
     @Volatile private var packUrl: String? = null
@@ -101,7 +92,8 @@ object FloydSkyBlockPackAssets {
 
     val itemModels: Map<String, net.minecraft.resources.Identifier> get() = itemData.first
     val skullProfiles: Map<String, ResolvableProfile> get() = itemData.second
-    val liveItemBaseModels: Map<Identifier, Identifier> get() = liveBaseModels
+    val liveItemBaseModels: Map<Identifier, Identifier>
+        get() = loadLiveBaseModels()
 
     @JvmStatic
     fun refreshFromLivePack(url: String, expectedSha1: String) {
@@ -228,6 +220,21 @@ object FloydSkyBlockPackAssets {
             .filter(Files::exists)
             .maxByOrNull(Files::getLastModifiedTime)
 
+    private fun loadLiveBaseModels(): Map<Identifier, Identifier> {
+        val packPath = getPackFile() ?: return emptyMap()
+        liveBaseModelsCache?.takeIf { it.first == packPath }?.let { return it.second }
+
+        return runCatching { FloydSkyBlockLivePackCache.inspect(packPath).baseModels }
+            .onFailure { logger.warn("Failed to inspect the cached live SkyBlock item pack at {}", packPath, it) }
+            .getOrDefault(emptyMap())
+            .also { models ->
+                if (models.isNotEmpty()) {
+                    logger.info("Loaded ${models.size} live SkyBlock base-model fallbacks from $packPath")
+                }
+                liveBaseModelsCache = packPath to models
+            }
+    }
+
     private fun createProfile(skyBlockId: String, texture: String): ResolvableProfile {
         val properties = PropertyMap(ImmutableMultimap.of("textures", Property("textures", texture)))
         val profile = GameProfile(
@@ -244,14 +251,14 @@ object FloydSkyBlockPackAssets {
     ) {
         val sprayonatorModel = models["SPRAYONATOR"] ?: return
         val sprayonatorProfile = profiles["SPRAYONATOR"]
-        val vanillaPaper = net.minecraft.resources.Identifier.parse("minecraft:paper")
+        val vanillaGlassBottle = net.minecraft.resources.Identifier.parse("minecraft:glass_bottle")
 
         for (upgradedId in listOf("JUICY_SPRAYONATOR", "SALTY_SPRAYONATOR")) {
             models.putIfAbsent(upgradedId, sprayonatorModel)
             sprayonatorProfile?.let { profiles.putIfAbsent(upgradedId, it) }
         }
-        for (nozzleId in listOf("JUICY_NOZZLE", "SALTY_NOZZLE")) {
-            models.putIfAbsent(nozzleId, vanillaPaper)
+        for (nozzleId in listOf("BASIC_NOZZLE", "JUICY_NOZZLE", "SALTY_NOZZLE")) {
+            models.putIfAbsent(nozzleId, vanillaGlassBottle)
         }
     }
 

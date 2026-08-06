@@ -31,7 +31,7 @@ object ClickGUIModule : Module(
 
     val roundedPanelBottom by BooleanSetting("Rounded Panel Bottoms", true, desc = "Whether to extend panels to make them rounded at the bottom.")
     private val openGuiKey by KeybindSetting("Open GUI Key", GLFW.GLFW_KEY_N, desc = "FloydAddons alternate GUI key.").onPress {
-        mc.setScreen(ClickGUI)
+        openConfiguredGui()
     }
 
     override fun onKeybind() {
@@ -39,7 +39,7 @@ object ClickGUIModule : Module(
     }
 
     override fun onEnable() {
-        mc.setScreen(ClickGUI)
+        openConfiguredGui()
         super.onEnable()
         toggle()
     }
@@ -230,6 +230,10 @@ object ClickGUIModule : Module(
 
     /** Brightens the color already resolved for this frame without falling back to its base hue. */
     internal fun hoveredAccentColor(displayedAccent: Int): Int = Color(displayedAccent).brighter().rgba
+
+    fun openConfiguredGui() {
+        mc.setScreen(ClickGUI)
+    }
 
     private fun currentAvailableWidth(): Float {
         val guiWidth = currentGuiWidth()

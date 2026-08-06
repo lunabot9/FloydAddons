@@ -6,7 +6,6 @@ import com.github.stivais.commodore.utils.SyntaxException
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.HudManager
-import gg.floyd.clickgui.LegacyFloydClickGUI
 import gg.floyd.config.FloydSidecarConfig
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.player.FloydNickHider
@@ -23,7 +22,7 @@ import net.minecraft.core.registries.BuiltInRegistries
 
 val mainCommand = Commodore("floydaddons", "floyd", "fa") {
     runs {
-        schedule(0) { mc.setScreen(LegacyFloydClickGUI.openHub()) }
+        schedule(0) { mc.setScreen(ClickGUI) }
     }
 
     literal("edithud").runs {
@@ -35,11 +34,11 @@ val mainCommand = Commodore("floydaddons", "floyd", "fa") {
     }
 
     literal("legacygui").runs {
-        schedule(0) { mc.setScreen(LegacyFloydClickGUI.openHub()) }
+        schedule(0) { mc.setScreen(ClickGUI) }
     }
 
     literal("oldgui").runs {
-        schedule(0) { mc.setScreen(LegacyFloydClickGUI.openHub()) }
+        schedule(0) { mc.setScreen(ClickGUI) }
     }
 
     literal("reset") {

@@ -66,12 +66,12 @@ class KeybindSetting(
         val height = getHeight()
 
         val valueText = if (listening) "[...]" else "[${value.displayName.string}]"
-        val labelWidth = NVGRenderer.textWidth("Key", LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
+        val labelWidth = NVGRenderer.textWidth(name, LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
         val maxValueWidth = (width - labelWidth - 10f).coerceAtLeast(18f)
         val valueTextSize = fittedTextSize(valueText, VALUE_TEXT_MAX, VALUE_TEXT_MIN, maxValueWidth)
         keyNameWidth = NVGRenderer.textWidth(valueText, valueTextSize, NVGRenderer.defaultFont)
         NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
-        NVGRenderer.text("Key", x + 3f, y + height / 2f - 5f, LABEL_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, LABEL_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         NVGRenderer.text(valueText, x + width - keyNameWidth - 3f, y + height / 2f - 4f, valueTextSize, ClickGUI.oringoTextMuted.rgba, NVGRenderer.defaultFont)
 
         return height
@@ -84,7 +84,7 @@ class KeybindSetting(
             return true
         } else {
             val valueText = "[${value.displayName.string}]"
-            val labelWidth = NVGRenderer.textWidth("Key", LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
+            val labelWidth = NVGRenderer.textWidth(name, LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
             val maxValueWidth = (width - labelWidth - 10f).coerceAtLeast(18f)
             val hitTextSize = fittedTextSize(valueText, VALUE_TEXT_MAX, VALUE_TEXT_MIN, maxValueWidth)
             val hitWidth = NVGRenderer.textWidth(valueText, hitTextSize, NVGRenderer.defaultFont)
