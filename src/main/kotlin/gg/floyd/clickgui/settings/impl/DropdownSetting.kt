@@ -29,9 +29,10 @@ class DropdownSetting(
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
+        val labelSize = fitTextToWidth(name, width - 26f, TEXT_SIZE, 6f)
 
         NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
-        NVGRenderer.text(name, x + 4f, y + height / 2f - 5f, TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 4f, y + (height - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         NVGRenderer.text(
             if (enabled) "-" else "+",
             x + width - 14f,

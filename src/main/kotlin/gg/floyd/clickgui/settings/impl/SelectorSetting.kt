@@ -80,13 +80,15 @@ class SelectorSetting(
         super.render(x, y, mouseX, mouseY)
 
         val widths = elementWidths.get()
-        val maxValueWidth = (width - 34f).coerceAtLeast(18f)
+        val maxValueWidth = (width * 0.44f).coerceAtLeast(18f)
         val selectedTextSize = fittedValueTextSize(selected, maxValueWidth)
         val currentWidth = NVGRenderer.textWidth(selected, selectedTextSize, NVGRenderer.defaultFont)
+        val labelMaxWidth = (width - 4f - 4f - currentWidth - 6f).coerceAtLeast(18f)
+        val labelSize = fitTextToWidth(name, labelMaxWidth, TEXT_SIZE, 6f)
 
         NVGRenderer.rect(x, y, width, defaultHeight, ClickGUI.settingBackground())
-        NVGRenderer.text(name, x + 4f, y + defaultHeight / 2f - 5f, TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(selected, x + width - 6f - currentWidth, y + defaultHeight / 2f - 4f, selectedTextSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 4f, y + (defaultHeight - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(selected, x + width - 6f - currentWidth, y + (defaultHeight - selectedTextSize) / 2f, selectedTextSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         if (!extended && !settingAnim.isAnimating()) return defaultHeight
 
@@ -101,7 +103,7 @@ class SelectorSetting(
         if (searchEnabled()) {
             val searchY = y + defaultHeight + 2f
             NVGRenderer.rect(x + 4f, searchY, width - 8f, searchHeight, ClickGUI.settingBackground())
-            if (searchText.isEmpty())
+            if (searchText.isEmpty() && !search.isListening)
                 NVGRenderer.text("Search...", x + 8f, searchY + 4f, SEARCH_TEXT_SIZE, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
             search.x = x + 4f
             search.y = searchY

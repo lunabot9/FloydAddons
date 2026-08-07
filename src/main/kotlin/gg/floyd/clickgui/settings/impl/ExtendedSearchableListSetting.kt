@@ -85,27 +85,17 @@ class ExtendedSearchableListSetting(
         renderBase(x, y)
 
         val selected = selectedProvider()
-        NVGRenderer.text(name, x + 4f, y + headerH / 2f - 5f, HEADER_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         val countLabel = "${selected.size} selected"
         val countWidth = NVGRenderer.textWidth(countLabel, COUNT_TEXT_SIZE, NVGRenderer.defaultFont)
+        val labelSize = fitTextToWidth(name, width - 12f - countWidth, HEADER_TEXT_SIZE, HEADER_TEXT_MIN)
+        NVGRenderer.text(name, x + 4f, y + (headerH - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         NVGRenderer.text(countLabel, x + width - 4f - countWidth, y + headerH / 2f - 4f, COUNT_TEXT_SIZE, ClickGUIModule.clickGUIColor.rgba, NVGRenderer.defaultFont)
 
         if (!extended && !expandAnim.isAnimating()) return headerH
 
         if (expandAnim.isAnimating()) NVGRenderer.pushScissor(x, y + headerH, width, getHeight() - headerH)
 
-        // Search box.
-        val searchY = y + headerH + 2f
-        NVGRenderer.rect(x + 6f, searchY, width - 12f, searchH - 4f, Colors.gray38.rgba, 4f)
-        NVGRenderer.hollowRect(x + 6f, searchY, width - 12f, searchH - 4f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
-        if (searchText.isEmpty()) NVGRenderer.text("Search...", x + 10f, searchY + 2.5f, SEARCH_TEXT_SIZE, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
-        search.x = x + 10f
-        search.y = searchY + 1f
-        search.width = width - 22f
-        search.height = searchH - 8f
-        search.fontSizeOverride = SEARCH_TEXT_SIZE
-        search.textPaddingY = 2f
-        search.draw(mouseX, mouseY)
+        drawSearchBox(x, y, mouseX, mouseY)
 
         // Viewport.
         val viewportY = y + headerH + searchH

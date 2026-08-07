@@ -4,6 +4,7 @@ import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.Panel
 import gg.floyd.utils.ui.HoverHandler
 import gg.floyd.utils.ui.isAreaHovered
+import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -41,6 +42,19 @@ abstract class RenderableSetting<T>(
     open fun keyTyped(input: CharacterEvent): Boolean = false
     open fun keyPressed(input: KeyEvent): Boolean = false
     open fun getHeight(): Float = Panel.HEIGHT
+
+    protected fun fitTextToWidth(
+        text: String,
+        maxWidth: Float,
+        preferredSize: Float = 10f,
+        minimumSize: Float = 6f,
+    ): Float {
+        var size = preferredSize
+        while (size > minimumSize && NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont) > maxWidth) {
+            size -= 0.5f
+        }
+        return size.coerceAtLeast(minimumSize)
+    }
 
     open val isHovered get() = isAreaHovered(lastX, lastY, width, getHeight(), true)
 }

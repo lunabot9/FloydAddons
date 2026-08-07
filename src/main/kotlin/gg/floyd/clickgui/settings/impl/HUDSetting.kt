@@ -71,7 +71,9 @@ class HUDSetting(
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
         val height = getHeight()
-        NVGRenderer.text(name, x + 4f, y + height / 2f - 5f, LABEL_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        val controlsX = x + width - if (toggleable) 54f else 20f
+        val labelSize = fitTextToWidth(name, controlsX - (x + 4f) - 4f, LABEL_TEXT_SIZE, 6f)
+        NVGRenderer.text(name, x + 4f, y + (height - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         val iconX = x + width - 20f
         val iconY = y + height / 2f - ICON_BOX / 2f

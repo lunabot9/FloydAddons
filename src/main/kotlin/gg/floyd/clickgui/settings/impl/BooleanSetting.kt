@@ -27,9 +27,10 @@ class BooleanSetting(
         NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
         val boxX = x + width - 12f
         val boxY = y + height / 2f - 4f
+        val labelSize = fitTextToWidth(name, boxX - (x + 3f) - 4f)
         NVGRenderer.rect(boxX, boxY, 8f, 8f, if (enabled) ClickGUI.accentBright() else ClickGUI.settingBackground(), 2f)
         NVGRenderer.hollowRect(boxX, boxY, 8f, 8f, 2f, ClickGUI.accent(), 3f)
-        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 3f, y + (height - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         return height
     }
@@ -67,9 +68,10 @@ class RuntimeBooleanSetting(
         NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
         val boxX = x + width - 12f
         val boxY = y + height / 2f - 4f
+        val labelSize = fitTextToWidth(name, boxX - (x + 3f) - 4f)
         NVGRenderer.rect(boxX, boxY, 8f, 8f, if (enabled) ClickGUI.accentBright() else ClickGUI.settingBackground(), 2f)
         NVGRenderer.hollowRect(boxX, boxY, 8f, 8f, 2f, ClickGUI.accent(), 3f)
-        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 3f, y + (height - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         return height
     }

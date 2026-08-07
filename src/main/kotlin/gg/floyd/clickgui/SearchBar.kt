@@ -4,7 +4,6 @@ import gg.floyd.Branding
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.utils.ChromaCache
 import gg.floyd.utils.Colors
-import gg.floyd.utils.font.FontEpochCache
 import gg.floyd.utils.ui.TextInputHandler
 import gg.floyd.utils.ui.isAreaHovered
 import gg.floyd.utils.ui.rendering.NVGRenderer
@@ -41,12 +40,7 @@ object SearchBar {
         private set(value) {
             if (value == field || value.length > 16) return
             field = value
-            searchWidth.invalidate()
         }
-
-    // Epoch-checked so the cached widths re-measure after a mid-session font reload.
-    private val placeHolderWidth = FontEpochCache { NVGRenderer.textWidth(PLACEHOLDER_TEXT, SEARCH_TEXT_SIZE, NVGRenderer.defaultFont) }
-    private val searchWidth = FontEpochCache { NVGRenderer.textWidth(currentSearch, SEARCH_TEXT_SIZE, NVGRenderer.defaultFont) }
 
     private val textInputHandler = TextInputHandler(
         textProvider = { currentSearch },
@@ -85,11 +79,12 @@ object SearchBar {
         val inputHeight = BAR_HEIGHT
         val inputY = y
         val inputWidth = BAR_WIDTH
-        val centeredTextWidth = if (currentSearch.isEmpty()) placeHolderWidth.get() else searchWidth.get()
+        val centeredText = currentSearch.ifEmpty { PLACEHOLDER_TEXT }
+        val centeredTextWidth = NVGRenderer.textWidth(centeredText, SEARCH_TEXT_SIZE, NVGRenderer.defaultFont)
         val centeredPadding = ((BAR_WIDTH - centeredTextWidth) / 2f).coerceAtLeast(INNER_PADDING)
         val textPaddingY = (BAR_HEIGHT - SEARCH_TEXT_SIZE) / 2f
 
-        if (currentSearch.isEmpty()) {
+        if (currentSearch.isEmpty() && !textInputHandler.isListening) {
             NVGRenderer.textCentered(
                 PLACEHOLDER_TEXT,
                 x,
@@ -99,7 +94,7 @@ object SearchBar {
                 SEARCH_TEXT_SIZE,
                 ClickGUI.oringoTextMuted.rgba,
                 NVGRenderer.defaultFont,
-                placeHolderWidth.get()
+                centeredTextWidth
             )
         }
         textInputHandler.x = x

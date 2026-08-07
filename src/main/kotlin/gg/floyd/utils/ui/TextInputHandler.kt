@@ -40,6 +40,7 @@ class TextInputHandler(
     private var caretBlinkTime = System.currentTimeMillis()
     private var lastClickTime = 0L
     private var listening = false
+    val isListening: Boolean get() = listening
     private var dragging = false
     private var clickCount = 1
 

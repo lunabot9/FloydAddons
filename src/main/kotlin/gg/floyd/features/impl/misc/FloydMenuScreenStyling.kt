@@ -87,11 +87,11 @@ object FloydMenuScreenStyling {
         }
 
         val multiplier = Minecraft.getInstance().window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
-        queueScreenTitle(screen)
-        if (usesShaderWrapper(screen)) {
-            widgetTree(screen)
-                .forEach { (widget, clip) -> queueWidgetLabel(widget, clip) }
+        val queuedWidgets = if (usesShaderWrapper(screen)) widgetTree(screen).toList() else emptyList()
+        if (queuedWidgets.none { (widget, clip) -> isScreenTitleWidget(screen, widget, clip) }) {
+            queueScreenTitle(screen)
         }
+        queuedWidgets.forEach { (widget, clip) -> queueWidgetLabel(widget, clip) }
 
         if (pendingTextRuns.isEmpty()) return
 
@@ -295,6 +295,8 @@ object FloydMenuScreenStyling {
         val textWidth = NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont)
         val x = widget.x + (widget.width - textWidth) * 0.5f
         val y = widget.y + (widget.height - size) * 0.5f + 1f
+        val slotLeft = if (widget is StringWidget) floor(x.toDouble()).toInt() - 4 else widget.x
+        val slotWidth = if (widget is StringWidget) ceil(textWidth.toDouble()).toInt() + 8 else widget.width
         pendingTextRuns.add(
             MenuTextRun(
                 text = text,
@@ -302,12 +304,18 @@ object FloydMenuScreenStyling {
                 y = y,
                 color = color,
                 size = size,
-                slotLeft = widget.x,
+                slotLeft = slotLeft,
                 slotTop = widget.y,
-                slotWidth = widget.width,
+                slotWidth = slotWidth,
                 slotHeight = widget.height
             )
         )
+    }
+
+    private fun isScreenTitleWidget(screen: Screen, widget: AbstractWidget, clip: ClipRect): Boolean {
+        if (widget !is StringWidget) return false
+        if (!clip.contains(widget.x, widget.y, widget.width, widget.height)) return false
+        return sanitizeQueuedText(screen, widget.message.string) == sanitizeQueuedText(screen, screen.title.string)
     }
 
     private fun widgetTree(screen: Screen): Sequence<QueuedWidget> = sequence {

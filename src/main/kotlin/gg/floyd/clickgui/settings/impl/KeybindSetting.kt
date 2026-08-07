@@ -28,13 +28,9 @@ class KeybindSetting(
         set(newKey) {
             if (newKey == field) return
             field = newKey
-            // Invalidate the cached label width; render() recomputes it lazily (line ~66). Computing it
-            // here would touch NVGRenderer during config load — before the GL context exists — and crash.
-            keyNameWidth = -1f
             if (!suppressSync && !KeybindSync.isSyncing()) KeybindSync.syncFromSetting(this, newKey)
         }
     var onPress: (() -> Unit)? = null
-    private var keyNameWidth = -1f
 
     /** The vanilla [KeyMapping] this setting is mirrored to, if [KeybindSync.register] has run. */
     internal var keyMapping: KeyMapping? = null
@@ -66,13 +62,10 @@ class KeybindSetting(
         val height = getHeight()
 
         val valueText = if (listening) "[...]" else "[${value.displayName.string}]"
-        val labelWidth = NVGRenderer.textWidth(name, LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
-        val maxValueWidth = (width - labelWidth - 10f).coerceAtLeast(18f)
-        val valueTextSize = fittedTextSize(valueText, VALUE_TEXT_MAX, VALUE_TEXT_MIN, maxValueWidth)
-        keyNameWidth = NVGRenderer.textWidth(valueText, valueTextSize, NVGRenderer.defaultFont)
+        val layout = textLayout(valueText)
         NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackground())
-        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, LABEL_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(valueText, x + width - keyNameWidth - 3f, y + height / 2f - 4f, valueTextSize, ClickGUI.oringoTextMuted.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 3f, y + (height - layout.labelSize) / 2f, layout.labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(valueText, x + width - layout.valueWidth - 3f, y + (height - layout.valueSize) / 2f, layout.valueSize, ClickGUI.oringoTextMuted.rgba, NVGRenderer.defaultFont)
 
         return height
     }
@@ -84,11 +77,7 @@ class KeybindSetting(
             return true
         } else {
             val valueText = "[${value.displayName.string}]"
-            val labelWidth = NVGRenderer.textWidth(name, LABEL_TEXT_SIZE, NVGRenderer.defaultFont)
-            val maxValueWidth = (width - labelWidth - 10f).coerceAtLeast(18f)
-            val hitTextSize = fittedTextSize(valueText, VALUE_TEXT_MAX, VALUE_TEXT_MIN, maxValueWidth)
-            val hitWidth = NVGRenderer.textWidth(valueText, hitTextSize, NVGRenderer.defaultFont)
-            val rectX = lastX + width - hitWidth - 4f
+            val rectX = lastX + width - textLayout(valueText).valueWidth - 4f
             if (click.button() == 0 && mouseX in rectX..(lastX + width) && mouseY in lastY..(lastY + getHeight())) {
                 listening = true
                 return true
@@ -130,18 +119,23 @@ class KeybindSetting(
         value = default
     }
 
-    private fun fittedTextSize(text: String, start: Float, min: Float, maxWidth: Float): Float {
-        var size = start
-        while (size > min && NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont) > maxWidth) {
-            size -= 0.5f
-        }
-        return size.coerceAtLeast(min)
+    private fun textLayout(valueText: String): TextLayout {
+        val valueSize = fitTextToWidth(valueText, width * VALUE_WIDTH_FRACTION, VALUE_TEXT_MAX, VALUE_TEXT_MIN)
+        val valueWidth = NVGRenderer.textWidth(valueText, valueSize, NVGRenderer.defaultFont)
+        val labelMaxWidth = (width - 3f - TEXT_GAP - valueWidth - 3f).coerceAtLeast(18f)
+        val labelSize = fitTextToWidth(name, labelMaxWidth, LABEL_TEXT_SIZE, LABEL_TEXT_MIN)
+        return TextLayout(labelSize, valueSize, valueWidth)
     }
+
+    private data class TextLayout(val labelSize: Float, val valueSize: Float, val valueWidth: Float)
 
     companion object {
         private const val LABEL_TEXT_SIZE = 10f
+        private const val LABEL_TEXT_MIN = 6f
         private const val VALUE_TEXT_MAX = 9f
-        private const val VALUE_TEXT_MIN = 7f
+        private const val VALUE_TEXT_MIN = 6.5f
+        private const val VALUE_WIDTH_FRACTION = 0.44f
+        private const val TEXT_GAP = 4f
 
         fun InputConstants.Key.isDown(): Boolean {
             val window = mc.window

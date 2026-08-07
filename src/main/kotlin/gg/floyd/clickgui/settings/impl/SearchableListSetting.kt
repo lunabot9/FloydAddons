@@ -31,6 +31,7 @@ open class SearchableListSetting(
 ) : RenderableSetting<Unit>(name, desc) {
     protected companion object {
         const val HEADER_TEXT_SIZE = 10f
+        const val HEADER_TEXT_MIN = 6f
         const val COUNT_TEXT_SIZE = 8f
         const val ROW_TEXT_SIZE = 8.25f
         const val SEARCH_TEXT_SIZE = 8.25f
@@ -73,9 +74,10 @@ open class SearchableListSetting(
 
         // Snapshot the selected set once per frame (callers' set is cheap; avoids O(n^2) membership rebuilds).
         val selected = selectedProvider()
-        NVGRenderer.text(name, x + 4f, y + headerH / 2f - 5f, HEADER_TEXT_SIZE, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         val countLabel = "${selected.size} selected"
         val countWidth = NVGRenderer.textWidth(countLabel, COUNT_TEXT_SIZE, NVGRenderer.defaultFont)
+        val labelSize = fitTextToWidth(name, width - 12f - countWidth, HEADER_TEXT_SIZE, HEADER_TEXT_MIN)
+        NVGRenderer.text(name, x + 4f, y + (headerH - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
         NVGRenderer.text(countLabel, x + width - 4f - countWidth, y + headerH / 2f - 4f, COUNT_TEXT_SIZE, ClickGUIModule.clickGUIColor.rgba, NVGRenderer.defaultFont)
 
         // Collapsed: only the header (+count) is drawn; the full option list is never built.
@@ -83,18 +85,7 @@ open class SearchableListSetting(
 
         if (expandAnim.isAnimating()) NVGRenderer.pushScissor(x, y + headerH, width, getHeight() - headerH)
 
-        // Search box
-        val searchY = y + headerH + 2f
-        NVGRenderer.rect(x + 6f, searchY, width - 12f, searchH - 4f, Colors.gray38.rgba, 4f)
-        NVGRenderer.hollowRect(x + 6f, searchY, width - 12f, searchH - 4f, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
-        if (searchText.isEmpty()) NVGRenderer.text("Search...", x + 10f, searchY + 2.5f, SEARCH_TEXT_SIZE, Colors.MINECRAFT_GRAY.rgba, NVGRenderer.defaultFont)
-        search.x = x + 8f
-        search.y = searchY + 1f
-        search.width = width - 16f
-        search.height = searchH - 4f
-        search.fontSizeOverride = SEARCH_TEXT_SIZE
-        search.textPaddingY = 2f
-        search.draw(mouseX, mouseY)
+        drawSearchBox(x, y, mouseX, mouseY)
 
         // Viewport (option list built only while expanded)
         val viewportY = y + headerH + searchH
@@ -185,6 +176,37 @@ open class SearchableListSetting(
     override fun keyPressed(input: KeyEvent): Boolean {
         if (!extended) return false
         return search.keyPressed(input)
+    }
+
+    protected fun drawSearchBox(x: Float, y: Float, mouseX: Float, mouseY: Float) {
+        val fieldX = x + 6f
+        val fieldY = y + headerH + 2f
+        val fieldWidth = width - 12f
+        val fieldHeight = searchH - 4f
+        val textPaddingX = 4f
+        val textPaddingY = (fieldHeight - SEARCH_TEXT_SIZE) / 2f
+
+        NVGRenderer.rect(fieldX, fieldY, fieldWidth, fieldHeight, Colors.gray38.rgba, 4f)
+        NVGRenderer.hollowRect(fieldX, fieldY, fieldWidth, fieldHeight, 1.5f, ClickGUIModule.clickGUIColor.rgba, 4f)
+        if (searchText.isEmpty() && !search.isListening) {
+            NVGRenderer.text(
+                "Search...",
+                fieldX + textPaddingX,
+                fieldY + textPaddingY,
+                SEARCH_TEXT_SIZE,
+                Colors.MINECRAFT_GRAY.rgba,
+                NVGRenderer.defaultFont,
+            )
+        }
+
+        search.x = fieldX
+        search.y = fieldY
+        search.width = fieldWidth
+        search.height = fieldHeight
+        search.fontSizeOverride = SEARCH_TEXT_SIZE
+        search.textPaddingX = textPaddingX
+        search.textPaddingY = textPaddingY
+        search.draw(mouseX, mouseY)
     }
 
     protected fun fittedTextSize(text: String, maxWidth: Float, start: Float, minimum: Float): Float {

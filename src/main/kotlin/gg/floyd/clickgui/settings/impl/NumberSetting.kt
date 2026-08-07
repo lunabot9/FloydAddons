@@ -40,13 +40,11 @@ class NumberSetting<E>(
     private val handler = HoverHandler(150)
 
     private var displayValue = ""
-    private var valueWidth = -1f
 
     private var sliderPercentage = 0f
         set(value) {
             if (sliderPercentage != value) {
                 displayValue = getDisplay()
-                valueWidth = -1f
             }
             field = value
         }
@@ -84,16 +82,17 @@ class NumberSetting<E>(
             sliderPercentage = newPercentage
         }
 
-        if (valueWidth < 0) {
-            valueWidth = NVGRenderer.textWidth(displayValue, 10f, NVGRenderer.defaultFont)
-        }
+        val valueSize = fitTextToWidth(displayValue, width * 0.38f, 10f, 6.5f)
+        val valueWidth = NVGRenderer.textWidth(displayValue, valueSize, NVGRenderer.defaultFont)
+        val labelMaxWidth = (width - 3f - 4f - valueWidth - 3f).coerceAtLeast(18f)
+        val labelSize = fitTextToWidth(name, labelMaxWidth, 10f, 6f)
 
         NVGRenderer.rect(x, y, width, height, ClickGUI.settingBackgroundBright())
         if (sliderPercentage > 0f) {
             NVGRenderer.rect(x, y, sliderPercentage * width, height, ClickGUI.accentBright())
         }
-        NVGRenderer.text(name, x + 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
-        NVGRenderer.text(displayValue, x + width - valueWidth - 3f, y + height / 2f - 5f, 10f, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(name, x + 3f, y + (height - labelSize) / 2f, labelSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
+        NVGRenderer.text(displayValue, x + width - valueWidth - 3f, y + (height - valueSize) / 2f, valueSize, Colors.WHITE.rgba, NVGRenderer.defaultFont)
 
         return height
     }
