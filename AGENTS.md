@@ -1,0 +1,12 @@
+# Repository expectations
+
+- For user-visible gameplay, rendering, HUD, GUI, font, or integration changes, use
+  `$floyd-client-testing`.
+- Never launch the root multi-version `runClient`; use exactly one configured
+  version-specific client.
+- Do not claim a user-visible change complete without a fresh `/state` assertion and
+  screenshot from the changed build.
+- Treat Modrinth/Prism profile deployment as a separate action that requires explicit
+  user authorization.
+- Never kill broad Java or Minecraft processes; stop only a PID proven to own the
+  configured bridge and instance.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Floyd Client Testing"
+  short_description: "Live-test FloydAddons in Minecraft clients"
+  default_prompt: "Use $floyd-client-testing to build and verify this FloydAddons change in a real Minecraft client."

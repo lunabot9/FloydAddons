@@ -69,14 +69,19 @@ jobs:
 
           version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
           tag="v${version}"
-          notes_file="$(mktemp)"
-          {
-            echo "FloydAddons ${version}"
-            echo
-            echo "Release published from ${GITHUB_SHA}."
-            echo
-            echo "Artifacts are distributed outside GitHub Releases."
-          } > "$notes_file"
+          release_notes="release-notes-${version}.md"
+          if [[ -f "$release_notes" ]]; then
+            notes_file="$release_notes"
+          else
+            notes_file="$(mktemp)"
+            {
+              echo "FloydAddons ${version}"
+              echo
+              echo "Release published from ${GITHUB_SHA}."
+              echo
+              echo "Artifacts are distributed outside GitHub Releases."
+            } > "$notes_file"
+          fi
 
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release ${tag} exists — updating notes."

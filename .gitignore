@@ -12,4 +12,4 @@ node_modules/
 .wrangler/
 
 # machine-local skill config (per-machine values; create from local.example.md)
-.claude/skills/floyd-client-testing/local.md
+.agents/skills/floyd-client-testing/local.md

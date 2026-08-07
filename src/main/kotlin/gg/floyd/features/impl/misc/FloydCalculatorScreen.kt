@@ -71,7 +71,10 @@ object FloydCalculatorScreen {
                 localCoordinates = true,
                 backdropBlur = HudPanel.nvgBlur(PANEL_WIDTH_INT, PANEL_HEIGHT_INT, target),
             ) {
-                drawCalculator(mouseX, mouseY)
+                // The calculator is captured through a scaled HUD PIP. Deferred mc.font replay
+                // is unreliable for non-identity PIP transforms, so keep its text in the same
+                // NanoVG frame as its shapes (the scoped escape hatch used by other Floyd GUIs).
+                NVGRenderer.withImmediateText { drawCalculator(mouseX, mouseY) }
                 NVGRenderer.resetTextLayers()
             }
             return PANEL_WIDTH_INT to PANEL_HEIGHT_INT
