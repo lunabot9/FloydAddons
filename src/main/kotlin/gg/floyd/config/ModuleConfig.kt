@@ -46,6 +46,8 @@ class ModuleConfig internal constructor(file: File) {
                 // Remap keys that moved between modules in the HUD/GUI reorg before reading them.
                 // Persisted immediately so the on-disk config uses the new keys on subsequent loads.
                 var migrated = migrateMovedKeys(jsonArray)
+                migrated = migratePanelBlurTypeNames(jsonArray) || migrated
+                migrated = migrateSparklingCritterEsp(jsonArray) || migrated
                 migrated = migratePlayerModelAliases(jsonArray) || migrated
                 migrated = migratePanelBorderFadeChroma(jsonArray) || migrated
                 migrated = migrateCollapsedEnabledToggles(jsonArray) || migrated
@@ -207,6 +209,45 @@ class ModuleConfig internal constructor(file: File) {
         )
 
         /**
+         * Older Panel Style configs stored the blur kernel selector under the same key as the blur
+         * toggle. Move string values to the new `... Blur Type` keys so the boolean toggle can be
+         * registered and loaded independently. Boolean values from still older configs stay put.
+         */
+        private fun migratePanelBlurTypeNames(jsonArray: JsonArray): Boolean {
+            val panelStyle = jsonArray.asSequence()
+                .mapNotNull { it as? JsonObject }
+                .firstOrNull { canonicalModuleName(it.get("name")?.asString ?: return@firstOrNull false) == "panel style" }
+                ?: return false
+            val settings = panelStyle.get("settings")
+                ?.takeIf { it.isJsonObject }
+                ?.asJsonObject
+                ?: return false
+
+            var changed = false
+            for (prefix in panelBlurSettingPrefixes) {
+                val oldKey = "$prefix Blur"
+                val oldValue = settings.get(oldKey)
+                    ?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }
+                    ?: continue
+                val typeKey = "$prefix Blur Type"
+                if (!settings.has(typeKey)) settings.add(typeKey, oldValue.deepCopy())
+                settings.remove(oldKey)
+                changed = true
+            }
+            return changed
+        }
+
+        private val panelBlurSettingPrefixes = listOf(
+            "Panel",
+            "Scoreboard",
+            "Inventory HUD",
+            "Day Tracker",
+            "Calculator",
+            "Music Overlay",
+            "ESP Overhead",
+        )
+
+        /**
          * Destination of a relocated setting key: the canonical (lowercased) name of the module that
          * now owns it, and the setting key it is serialized under there ([toKey], same as the source
          * key unless the setting was also renamed).
@@ -344,6 +385,52 @@ class ModuleConfig internal constructor(file: File) {
         }
 
         /**
+         * Promotes Mob ESP's former inner Sparkling Critters toggle into its own module while
+         * preserving the old effective state and visual settings. The new module stays disabled
+         * unless both the old Mob ESP module and its inner toggle were enabled.
+         */
+        private fun migrateSparklingCritterEsp(jsonArray: JsonArray): Boolean {
+            val moduleObjects = jsonArray.asSequence()
+                .mapNotNull { it as? JsonObject }
+                .filter { it.get("name")?.asString != null }
+                .associateByTo(hashMapOf()) { canonicalModuleName(it.get("name").asString) }
+            val source = moduleObjects["mob esp"] ?: return false
+            val sourceSettings = source.get("settings")
+                ?.takeIf { it.isJsonObject }
+                ?.asJsonObject
+                ?: return false
+            val legacyToggle = sourceSettings.get(SPARKLING_CRITTER_LEGACY_KEY) ?: return false
+            val wasEnabled = runCatching { source.get("enabled")?.asBoolean }.getOrNull() == true &&
+                runCatching { legacyToggle.asBoolean }.getOrDefault(false)
+            sourceSettings.remove(SPARKLING_CRITTER_LEGACY_KEY)
+
+            val destination = moduleObjects[SPARKLING_CRITTER_MODULE] ?: JsonObject().apply {
+                addProperty("name", "Sparkling Critter ESP")
+                add("settings", JsonObject())
+                jsonArray.add(this)
+                moduleObjects[SPARKLING_CRITTER_MODULE] = this
+            }
+            if (!destination.has("enabled")) destination.addProperty("enabled", wasEnabled)
+            val destinationSettings = destination.get("settings")
+                ?.takeIf { it.isJsonObject }
+                ?.asJsonObject
+                ?: JsonObject().also { destination.add("settings", it) }
+            for ((sourceKey, destinationKey) in sparklingCritterCopiedSettings) {
+                if (!destinationSettings.has(destinationKey) && sourceSettings.has(sourceKey)) {
+                    destinationSettings.add(destinationKey, sourceSettings.get(sourceKey).deepCopy())
+                }
+            }
+
+            if (loggedMovedKeys.add("mob esp:$SPARKLING_CRITTER_LEGACY_KEY")) {
+                migrationLogger.info(
+                    "Promoted Mob ESP setting '{}' into the standalone Sparkling Critter ESP module.",
+                    SPARKLING_CRITTER_LEGACY_KEY
+                )
+            }
+            return true
+        }
+
+        /**
          * Rewrites legacy Player Model option labels to their current selector entry names before the
          * settings are read. SelectorSetting falls back to the first option when a saved string is no
          * longer present, so these aliases must be normalized first to avoid silently selecting the
@@ -372,6 +459,14 @@ class ModuleConfig internal constructor(file: File) {
         // lifecycle moved to the Server ID Hider module — its toggle now gates only nick replacement.
         private val collapsedEnabledModules =
             setOf("custom cape", "cone hat", "x-ray", "discord presence", "local control", "neck hider")
+
+        private const val SPARKLING_CRITTER_LEGACY_KEY = "Sparkling Critters"
+        private const val SPARKLING_CRITTER_MODULE = "sparkling critter esp"
+        private val sparklingCritterCopiedSettings = mapOf(
+            "Tracers" to "Tracers",
+            "Hitboxes" to "Hitboxes",
+            "Default ESP Color" to "Color"
+        )
 
         /**
          * Collapses the removed inner "Enabled" toggle into the module's own on/off, preserving each

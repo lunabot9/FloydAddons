@@ -46,7 +46,6 @@ object FloydMobEsp : Module(
     val tracers by BooleanSetting("Tracers", false, desc = "Draws mob ESP tracers.")
     val hitboxes by BooleanSetting("Hitboxes", false, desc = "Draws mob ESP hitboxes.")
     val starMobs by BooleanSetting("Star Mobs", false, desc = "Highlights starred mob labels and nearby mobs.")
-    val sparklingCritters by BooleanSetting("Sparkling Critters", false, desc = "Highlights critters whose nametag contains SPARKLING.")
     private val toggleKey by KeybindSetting("Toggle Mob ESP", GLFW.GLFW_KEY_UNKNOWN, desc = "Floyd Mob ESP toggle key.").onPress {
         toggle()
         if (ClickGUIModule.enableNotification) moduleToggle(name, enabled)
@@ -206,9 +205,8 @@ object FloydMobEsp : Module(
             val isStar = starMobs && (
                 isStarMobLabelText(label.name.string) || isStarMobLabelText(label.displayName.string)
                 )
-            val isSparkling = sparklingCritters && isSparklingCritterLabel(label)
             val isFilteredName = matchesNameFilter(label)
-            if (!isStar && !isSparkling && !isFilteredName) continue
+            if (!isStar && !isFilteredName) continue
             val color = if (isFilteredName) filterColorFor(label)?.toColor() ?: defaultColor else defaultColor
             val box = starNametagBox(label.x, label.y, label.z)
             matchedRenderHits.incrementAndGet()
@@ -259,7 +257,7 @@ object FloydMobEsp : Module(
 
         val labels = level.entitiesForRendering()
             .filterIsInstance<ArmorStand>()
-            .filter { isStarMobLabel(it) || isSparklingCritterLabel(it) || matchesNameFilter(it) }
+            .filter { isStarMobLabel(it) || matchesNameFilter(it) }
             .toList()
         val entities = level.entitiesForRendering()
             .filterIsInstance<LivingEntity>()
@@ -300,7 +298,7 @@ object FloydMobEsp : Module(
     }
 
     private fun hasFilters(): Boolean =
-        activeNameFilters().isNotEmpty() || activeTypeFilters().isNotEmpty() || starMobs || sparklingCritters
+        activeNameFilters().isNotEmpty() || activeTypeFilters().isNotEmpty() || starMobs
 
     // Reusable per-frame target list — the old mapNotNull/filterNot/mapTo chain allocated three
     // collections + boxed ids EVERY frame. Render-thread-only; consumed within the Extract pass.
@@ -341,16 +339,6 @@ object FloydMobEsp : Module(
                 isStarMobLabelText(entity.displayName.string) ||
                 entity.customName?.string?.let(::isStarMobLabelText) == true
             )
-
-    private fun isSparklingCritterLabel(entity: Entity): Boolean =
-        sparklingCritters && (
-            isSparklingCritterLabelText(entity.name.string) ||
-                isSparklingCritterLabelText(entity.displayName.string) ||
-                entity.customName?.string?.let(::isSparklingCritterLabelText) == true
-            )
-
-    internal fun isSparklingCritterLabelText(text: String): Boolean =
-        stripFormatting(text).contains(SPARKLING_CRITTER_MARKER, ignoreCase = true)
 
     private fun pairArmorStandLabel(label: ArmorStand, mob: LivingEntity) {
         armorStandToMob[label.id] = mob.id
@@ -520,7 +508,6 @@ object FloydMobEsp : Module(
 
     fun filterListSummary(): String {
         val starMobsState = if (starMobs) "ON" else "OFF"
-        val sparklingCrittersState = if (sparklingCritters) "ON" else "OFF"
         return buildString {
             appendLine("--- Mob ESP Filters ---")
             if (nameFilterIds().isEmpty() && typeFilterIds().isEmpty()) {
@@ -529,8 +516,7 @@ object FloydMobEsp : Module(
                 for (name in nameFilterIds()) appendLine("name: $name")
                 for (type in typeFilterIds()) appendLine("type: $type")
             }
-            appendLine("Star mobs: $starMobsState")
-            append("Sparkling critters: $sparklingCrittersState")
+            append("Star mobs: $starMobsState")
         }
     }
 
@@ -586,7 +572,6 @@ object FloydMobEsp : Module(
             "tracers" to tracers,
             "hitboxes" to hitboxes,
             "starMobs" to starMobs,
-            "sparklingCritters" to sparklingCritters,
             "nameFilters" to nameFilterIds().toList(),
             "typeFilters" to typeFilterIds().toList(),
             "filterColors" to mapOf(
@@ -988,7 +973,6 @@ object FloydMobEsp : Module(
     private const val STAR_NAMETAG_BOX_HALF_WIDTH = 0.45
     private const val STAR_NAMETAG_BOX_HEIGHT = 2.0
     private const val STAR_MOB_MARKER = "✯"
-    private const val SPARKLING_CRITTER_MARKER = "SPARKLING"
 
     private val knownMinibossNames: Set<String> = setOf(
         "shadow assassin",

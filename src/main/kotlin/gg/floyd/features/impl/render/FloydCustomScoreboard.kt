@@ -3,6 +3,7 @@ package gg.floyd.features.impl.render
 import gg.floyd.Branding
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.HudSizeRegistry
+import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.events.core.onReceive
 import gg.floyd.features.Category
 import gg.floyd.features.Module
@@ -60,6 +61,13 @@ object FloydCustomScoreboard : Module(
     private const val BRAND_LETTER_PHASE_STEP = 0.04f
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
 
+    private var scoreboardLarp by StringSetting(
+        "Scoreboard Larp",
+        Branding.COMPACT_NAME,
+        64,
+        desc = "Changes the text shown at the bottom of the custom scoreboard."
+    )
+
     // toggleable = false: the module toggle is the single on/off (no redundant inner toggle).
     private val scoreboardHud by HUD("Scoreboard HUD", "Displays a movable Floyd-styled scoreboard.", false, 10, 80, 1f) { example ->
         drawScoreboardHud(example)
@@ -97,6 +105,7 @@ object FloydCustomScoreboard : Module(
         return mapOf(
             "enabled" to enabled,
             "shouldUseCustomScoreboard" to shouldUseCustomScoreboard(),
+            "scoreboardLarp" to scoreboardLarp,
             "scoreboardHud" to mapOf(
                 "enabled" to (shouldUseCustomScoreboard() && scoreboardHud.enabled),
                 "sidebarObjective" to objective?.name,
@@ -159,6 +168,7 @@ object FloydCustomScoreboard : Module(
     private val layoutEpoch = java.util.concurrent.atomic.AtomicLong()
     private var cachedLayoutEpoch = -1L
     private var cachedLayout: ScoreboardRender? = null
+    private var cachedScoreboardLarp: String? = null
     // The Font the cached layout was measured with: a per-panel font toggle swaps the instance
     // (FloydFont.panelFont), and the cached widths must never be drawn with a different font.
     private var cachedLayoutFont: net.minecraft.client.gui.Font? = null
@@ -205,14 +215,16 @@ object FloydCustomScoreboard : Module(
 
         if (lines.isEmpty()) return if (example) exampleScoreboardRender() else null
 
-        return buildScoreboardLayout(objective.displayName, Component.literal(Branding.COMPACT_NAME), lines)
+        return buildScoreboardLayout(objective.displayName, Component.literal(scoreboardLarpText()), lines)
     }
 
     private fun exampleScoreboardRender(): ScoreboardRender =
         buildScoreboardLayout(
-            Component.literal("SKYBLOCK"), Component.literal(Branding.COMPACT_NAME),
+            Component.literal("SKYBLOCK"), Component.literal(scoreboardLarpText()),
             mutableListOf(scoreLine("Purse: 1,234,567"), scoreLine("Bits: 12,345"), scoreLine("Location: Dungeon Hub"))
         )
+
+    internal fun scoreboardLarpText(): String = scoreboardLarp
 
     private fun buildScoreboardLayout(title: Component, brand: Component, lines: List<ScoreLine>): ScoreboardRender {
         val titleText = styledText(title.visualOrderText)
@@ -362,10 +374,11 @@ object FloydCustomScoreboard : Module(
         val now = System.currentTimeMillis()
         val epoch = layoutEpoch.get()
         val font = panelFont()
-        if (epoch != cachedLayoutEpoch || font !== cachedLayoutFont || now < rebuildWindowEndMs || now - lastLayoutMs > FALLBACK_REBUILD_MS) {
+        if (epoch != cachedLayoutEpoch || font !== cachedLayoutFont || scoreboardLarp != cachedScoreboardLarp || now < rebuildWindowEndMs || now - lastLayoutMs > FALLBACK_REBUILD_MS) {
             if (epoch != cachedLayoutEpoch) rebuildWindowEndMs = now + REBUILD_WINDOW_MS
             cachedLayoutEpoch = epoch
             cachedLayoutFont = font
+            cachedScoreboardLarp = scoreboardLarp
             lastLayoutMs = now
             cachedLayout = scoreboardRender(example = false, requireVanillaSignal = false)
         }
@@ -376,6 +389,7 @@ object FloydCustomScoreboard : Module(
         cachedLayout = null
         cachedLayoutEpoch = -1L
         cachedLayoutFont = null
+        cachedScoreboardLarp = null
     }
 
     private fun scoreLine(name: String): ScoreLine {

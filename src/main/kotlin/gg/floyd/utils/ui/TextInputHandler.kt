@@ -93,7 +93,7 @@ class TextInputHandler(
     }
 
     fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {
-        if (!isAreaHovered(x, y, width, height, true)) {
+        if (mouseX !in x..(x + width) || mouseY !in y..(y + height)) {
             resetState()
             return false
         }

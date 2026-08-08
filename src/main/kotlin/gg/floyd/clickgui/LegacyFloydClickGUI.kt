@@ -58,6 +58,7 @@ import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydTimeChanger
 import gg.floyd.features.impl.render.FloydMobEsp
+import gg.floyd.features.impl.render.FloydSparklingCritterEsp
 import gg.floyd.features.impl.render.FloydSkyBlockPackDisabler
 import gg.floyd.features.impl.misc.FloydWindowModule
 import gg.floyd.features.impl.render.FloydRender
@@ -2245,13 +2246,11 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
         drawMobEspFullButton(context, hits, controlLeft, top, 1, "Tracers: ${onOff(booleanSetting(FloydMobEsp, "Tracers")?.enabled ?: false)}", "Tracers", MobEspHitKind.TOGGLE, alpha)
         drawMobEspFullButton(context, hits, controlLeft, top, 2, "Hitboxes: ${onOff(booleanSetting(FloydMobEsp, "Hitboxes")?.enabled ?: false)}", "Hitboxes", MobEspHitKind.TOGGLE, alpha)
         drawMobEspFullButton(context, hits, controlLeft, top, 3, "Star Mobs (*): ${onOff(booleanSetting(FloydMobEsp, "Star Mobs")?.enabled ?: false)}", "Star Mobs", MobEspHitKind.TOGGLE, alpha)
-        drawMobEspFullButton(context, hits, controlLeft, top, 4, "Sparkling Critters: ${onOff(booleanSetting(FloydMobEsp, "Sparkling Critters")?.enabled ?: false)}", "Sparkling Critters", MobEspHitKind.TOGGLE, alpha)
+        drawMobEspHeader(context, controlLeft, mobEspRowY(top, 4), "Colors", alpha)
+        drawMobEspColorRow(context, hits, controlLeft, mobEspRowY(top, 5), "Default ESP Color", "Default ESP Color", alpha)
+        drawMobEspColorRow(context, hits, controlLeft, mobEspRowY(top, 6), "Stalk Tracer Color", "Tracer Color", alpha)
 
-        drawMobEspHeader(context, controlLeft, mobEspRowY(top, 5), "Colors", alpha)
-        drawMobEspColorRow(context, hits, controlLeft, mobEspRowY(top, 6), "Default ESP Color", "Default ESP Color", alpha)
-        drawMobEspColorRow(context, hits, controlLeft, mobEspRowY(top, 7), "Stalk Tracer Color", "Tracer Color", alpha)
-
-        drawMobEspFullButton(context, hits, controlLeft, top, 8, "Edit Filters", "Edit Filters", MobEspHitKind.NAV_FILTERS, alpha)
+        drawMobEspFullButton(context, hits, controlLeft, top, 7, "Edit Filters", "Edit Filters", MobEspHitKind.NAV_FILTERS, alpha)
 
         pageBackButton = Rect.ZERO
         pageDoneButton = Rect(left + (panelWidth() - 100) / 2, bottom - 30, 100, mobEspRowHeight)
@@ -4004,7 +4003,6 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
                             booleanSetting(FloydMobEsp, "Tracers"),
                             booleanSetting(FloydMobEsp, "Hitboxes"),
                             booleanSetting(FloydMobEsp, "Star Mobs"),
-                            booleanSetting(FloydMobEsp, "Sparkling Critters"),
                             colorSetting(FloydMobEsp, "Default ESP Color")
                         )
                     else -> popupVisibleSettings(entry.module)
@@ -4552,6 +4550,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
             Category.RENDER -> listOf(
                 moduleEntry(FloydXray),
                 moduleEntry(FloydMobEsp),
+                moduleEntry(FloydSparklingCritterEsp),
                 moduleEntry(FloydBlockSearch),
                 moduleEntry(FloydSkyBlockPackDisabler),
                 LegacyModuleBrowserEntry(FloydProfileIdHider, "Profile ID Hider", LegacyModuleBrowserKind.RENDER_HIDER_BOOLEAN, "Profile ID Hider"),
@@ -4702,6 +4701,11 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
             headerRow("Mob ESP"),
             toggleModuleRow(FloydMobEsp, "Mob ESP", RowLayout.LEFT),
             navRow("Config", Page.MOB_ESP, RowLayout.RIGHT),
+            headerRow("Sparkling Critters"),
+            toggleModuleRow(FloydSparklingCritterEsp, "Sparkling Critter ESP", RowLayout.LEFT),
+            toggleSettingRow(FloydSparklingCritterEsp, "Tracers", "Critter Tracers", RowLayout.RIGHT),
+            toggleSettingRow(FloydSparklingCritterEsp, "Hitboxes", "Critter Hitboxes", RowLayout.LEFT),
+            colorRow(FloydSparklingCritterEsp, "Color", "Critter Color", RowLayout.FULL),
             headerRow("Floor Drops"),
             toggleModuleRow(FloydFloorDropEsp, "Floor Drop ESP", RowLayout.LEFT),
             toggleSettingRow(FloydFloorDropEsp, "Tracers", "Drop Tracers", RowLayout.RIGHT),
@@ -4786,7 +4790,6 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
             toggleSettingRow(FloydMobEsp, "Tracers", "Tracers"),
             toggleSettingRow(FloydMobEsp, "Hitboxes", "Hitboxes"),
             toggleSettingRow(FloydMobEsp, "Star Mobs", "Star Mobs"),
-            toggleSettingRow(FloydMobEsp, "Sparkling Critters", "Sparkling Critters"),
             headerRow("Colors"),
             colorRow(FloydMobEsp, "Default ESP Color", "Default ESP Color", RowLayout.FULL),
             colorRow(FloydMobEsp, "Tracer Color", "Stalk Tracer Color", RowLayout.FULL),

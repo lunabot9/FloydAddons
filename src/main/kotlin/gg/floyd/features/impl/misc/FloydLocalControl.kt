@@ -20,11 +20,14 @@ import gg.floyd.features.Module
 import gg.floyd.features.impl.camera.FloydCamera
 import gg.floyd.features.impl.hiders.FloydHiders
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydFellNotification
 import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
 import gg.floyd.features.impl.render.FloydMobEsp
+import gg.floyd.features.impl.render.FloydSparklingCritterEsp
 import gg.floyd.features.impl.render.FloydMusicOverlay
+import gg.floyd.features.impl.render.FloydPanelStyle
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
@@ -469,10 +472,13 @@ object FloydLocalControl : Module(
             "animations" to FloydAnimations.state(),
             "hiders" to FloydHiders.state(),
             "mobEsp" to FloydMobEsp.state(),
+            "sparklingCritterEsp" to FloydSparklingCritterEsp.state(),
+            "fellNotification" to FloydFellNotification.state(),
             "hud" to FloydHud.state(),
             "inventoryHud" to FloydInventoryHud.state(),
             "customScoreboard" to FloydCustomScoreboard.state(),
-            "musicOverlay" to FloydMusicOverlay.state()
+            "musicOverlay" to FloydMusicOverlay.state(),
+            "panelStyle" to FloydPanelStyle.state()
         )
         root["qol"] = emptyMap<String, Any?>()
         root["cosmetics"] = mapOf(
@@ -778,7 +784,7 @@ object FloydLocalControl : Module(
         val screen = requiredString(readJson(exchange), "screen")
         callClient {
             when (screen) {
-                "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(ClickGUI)
+                "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(LegacyFloydClickGUI.openHub())
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
                 "calculator", "calc" -> FloydCalculator.toggleVisibility()

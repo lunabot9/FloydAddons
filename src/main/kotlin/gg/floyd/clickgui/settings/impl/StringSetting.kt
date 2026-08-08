@@ -4,10 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import gg.floyd.clickgui.ClickGUI
-import gg.floyd.clickgui.Panel
 import gg.floyd.clickgui.settings.RenderableSetting
 import gg.floyd.clickgui.settings.Saving
-import gg.floyd.utils.Colors
 import gg.floyd.utils.ui.TextInputHandler
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.input.CharacterEvent
@@ -29,32 +27,43 @@ class StringSetting(
     private val textInputHandler = TextInputHandler(
         textProvider = { value },
         textSetter = { value = it }
-    )
+    ).apply {
+        fontSizeOverride = 10f
+        textPaddingX = 3f
+        textPaddingY = 2f
+    }
+
+    internal val isEditing: Boolean get() = textInputHandler.isListening
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)
-
-        val display = when {
-            listening -> "${value}_"
-            value.isBlank() -> "$name..."
-            else -> value
-        }
-        val displayWidth = NVGRenderer.textWidth(display, 10f, NVGRenderer.defaultFont)
+        updateTextInputLayout(x, y)
 
         NVGRenderer.rect(x, y, width, getHeight(), ClickGUI.settingBackground())
-        NVGRenderer.textCentered(
-            display,
-            x,
-            y,
-            width,
-            getHeight(),
-            10f,
-            if (value.isBlank() && !listening) ClickGUI.oringoTextMuted.rgba else Colors.WHITE.rgba,
-            NVGRenderer.defaultFont,
-            displayWidth
-        )
+        textInputHandler.draw(mouseX, mouseY)
+        if (value.isBlank() && !textInputHandler.isListening) {
+            val placeholder = "$name..."
+            NVGRenderer.textCentered(
+                placeholder,
+                x,
+                y,
+                width,
+                getHeight(),
+                10f,
+                ClickGUI.oringoTextMuted.rgba,
+                NVGRenderer.defaultFont,
+                NVGRenderer.textWidth(placeholder, 10f, NVGRenderer.defaultFont)
+            )
+        }
 
         return getHeight()
+    }
+
+    internal fun updateTextInputLayout(x: Float, y: Float) {
+        textInputHandler.x = x
+        textInputHandler.y = y
+        textInputHandler.width = width
+        textInputHandler.height = getHeight()
     }
 
     override fun mouseClicked(mouseX: Float, mouseY: Float, click: MouseButtonEvent): Boolean {

@@ -203,6 +203,42 @@ class ModuleConfigTest {
     }
 
     @Test
+    fun `Mob ESP sparkling toggle migrates into standalone critter module without losing visuals`() {
+        val mobEsp = LegacyMobEspModule()
+        val sparklingCritterEsp = MigratedSparklingCritterEspModule()
+        val configPath = tempDir.resolve("floydaddons-config.json")
+        java.nio.file.Files.writeString(
+            configPath,
+            """
+            [
+              {
+                "name": "Mob ESP",
+                "enabled": true,
+                "settings": {
+                  "Sparkling Critters": true,
+                  "Tracers": true,
+                  "Hitboxes": false,
+                  "Default ESP Color": "#112233FF"
+                }
+              }
+            ]
+            """.trimIndent()
+        )
+        val config = ModuleConfig(configPath.toFile())
+        for (module in listOf(mobEsp, sparklingCritterEsp)) config.modules[module.name.lowercase()] = module
+
+        config.load()
+
+        assertTrue(sparklingCritterEsp.enabled)
+        assertTrue(sparklingCritterEsp.tracers)
+        assertFalse(sparklingCritterEsp.hitboxes)
+        assertEquals(Color("112233FF"), sparklingCritterEsp.color)
+        val rewritten = java.nio.file.Files.readString(configPath)
+        assertTrue("Sparkling Critters" !in jsonForModule(rewritten, "Mob ESP"))
+        assertTrue("Sparkling Critter ESP" in rewritten)
+    }
+
+    @Test
     fun `legacy player setting names load into Floyd GUI setting names`() {
         val neckHider = LegacyNeckHiderModule()
         loadLegacyConfigEntry(
@@ -441,6 +477,27 @@ class ModuleConfigTest {
         assertFalse(panelStyle.borderColor.fade)
     }
 
+    @Test
+    fun `legacy blur kernel keys migrate without replacing blur toggles`() {
+        val panelStyle = PanelBlurMigrationModule()
+
+        loadLegacyConfigEntry(
+            "Panel Style",
+            panelStyle,
+            """
+            {
+              "Panel Blur": "Box",
+              "Scoreboard Blur": "Gaussian"
+            }
+            """.trimIndent()
+        )
+
+        assertFalse(panelStyle.panelBlur)
+        assertEquals(1, panelStyle.panelBlurType)
+        assertFalse(panelStyle.scoreboardBlur)
+        assertEquals(0, panelStyle.scoreboardBlurType)
+    }
+
     private fun jsonForModule(configJson: String, moduleName: String): String {
         val array = com.google.gson.JsonParser.parseString(configJson).asJsonArray
         val obj = array.first { it.asJsonObject.get("name").asString == moduleName }.asJsonObject
@@ -562,8 +619,22 @@ class ModuleConfigTest {
         description = "Test module for legacy mob ESP setting aliases.",
         toggled = false
     ) {
+        val tracers by BooleanSetting("Tracers", false, desc = "Test tracers.")
+        val hitboxes by BooleanSetting("Hitboxes", false, desc = "Test hitboxes.")
+        val sparklingCritters by BooleanSetting("Sparkling Critters", false, desc = "Test legacy sparkling toggle.")
         val defaultEspColor by ColorSetting("Default ESP Color", Color(0xFFFFFFFF.toInt()), desc = "Test color.")
         val tracerColor by ColorSetting("Tracer Color", Color(0xFFFFFFFF.toInt()), desc = "Test color.")
+    }
+
+    private class MigratedSparklingCritterEspModule : Module(
+        name = "Sparkling Critter ESP",
+        category = Category.RENDER,
+        description = "Test module for the promoted sparkling critter ESP.",
+        toggled = false
+    ) {
+        val tracers by BooleanSetting("Tracers", false, desc = "Test tracers.")
+        val hitboxes by BooleanSetting("Hitboxes", true, desc = "Test hitboxes.")
+        val color by ColorSetting("Color", Color(0xFFFFFFFF.toInt()), desc = "Test color.")
     }
 
     private class LegacyNeckHiderModule : Module(
@@ -643,5 +714,17 @@ class ModuleConfigTest {
         val cornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Test corner radius.")
         val borderColor by ColorSetting("Panel Border Color", Color(0xFFFFFFFF.toInt()), desc = "Test border color.")
         val padding by NumberSetting("Panel Padding", 6, 0, 16, 1, desc = "Test padding.")
+    }
+
+    private class PanelBlurMigrationModule : Module(
+        name = "Panel Style",
+        category = Category.RENDER,
+        description = "Test module for split panel blur settings.",
+        toggled = true
+    ) {
+        val panelBlur by BooleanSetting("Panel Blur", false, desc = "Test blur toggle.")
+        val panelBlurType by SelectorSetting("Panel Blur Type", "Gaussian", listOf("Gaussian", "Box"), desc = "Test blur type.")
+        val scoreboardBlur by BooleanSetting("Scoreboard Blur", false, desc = "Test scoreboard blur toggle.")
+        val scoreboardBlurType by SelectorSetting("Scoreboard Blur Type", "Box", listOf("Gaussian", "Box"), desc = "Test scoreboard blur type.")
     }
 }

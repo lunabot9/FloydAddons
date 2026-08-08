@@ -57,7 +57,7 @@ object FloydPanelStyle : Module(
     val panelBorderColor by ColorSetting("Panel Border", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for every Floyd panel — chroma and fade are configured inside the picker.").withDependency { !perPanelStyle }
     val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a real blurred backdrop of the world behind every Floyd panel.").withDependency { !perPanelStyle }
     val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Blur radius of the backdrop behind Floyd panels.").withDependency { !perPanelStyle }
-    private val panelBlurType by SelectorSetting("Panel Blur", "Gaussian", blurTypes, desc = "Blur kernel used for the panel backdrop.").withDependency { !perPanelStyle }
+    private val panelBlurType by SelectorSetting("Panel Blur Type", "Gaussian", blurTypes, desc = "Blur kernel used for the panel backdrop.").withDependency { !perPanelStyle }
 
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
 
@@ -83,7 +83,7 @@ object FloydPanelStyle : Module(
             border = registerSetting(ColorSetting("${target.label} Border", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for the ${target.label} panel — chroma/fade inside the picker.")).withDependency(visible),
             blur = registerSetting(BooleanSetting("${target.label} Blur", false, desc = "Blurred backdrop behind the ${target.label} panel.")).withDependency(visible),
             blurStrength = registerSetting(NumberSetting("${target.label} Blur Strength", 6, 0, 20, 1, desc = "Blur radius behind the ${target.label} panel.")).withDependency(visible),
-            blurType = registerSetting(SelectorSetting("${target.label} Blur", "Gaussian", blurTypes, desc = "Blur kernel for the ${target.label} panel.")).withDependency(visible),
+            blurType = registerSetting(SelectorSetting("${target.label} Blur Type", "Gaussian", blurTypes, desc = "Blur kernel for the ${target.label} panel.")).withDependency(visible),
         )
     }
 

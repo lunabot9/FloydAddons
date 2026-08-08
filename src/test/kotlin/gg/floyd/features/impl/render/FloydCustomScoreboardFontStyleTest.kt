@@ -1,5 +1,7 @@
 package gg.floyd.features.impl.render
 
+import gg.floyd.Branding
+import gg.floyd.clickgui.settings.impl.StringSetting
 import net.minecraft.network.chat.FontDescription
 import net.minecraft.network.chat.Style
 import net.minecraft.resources.Identifier
@@ -8,6 +10,20 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class FloydCustomScoreboardFontStyleTest {
+    @Test
+    fun `scoreboard larp defaults to the current footer and controls its text`() {
+        val setting = FloydCustomScoreboard.settings["Scoreboard Larp"] as StringSetting
+        val previous = setting.value
+
+        try {
+            assertEquals(Branding.COMPACT_NAME, setting.default)
+            setting.value = "My Custom Footer"
+            assertEquals("My Custom Footer", FloydCustomScoreboard.scoreboardLarpText())
+        } finally {
+            setting.value = previous
+        }
+    }
+
     @Test
     fun `brand keeps one stable segment per glyph when fade colors match`() {
         val segments = FloydCustomScoreboard.scoreboardBrandSegments(

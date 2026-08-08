@@ -24,13 +24,6 @@ class FloydMobEspDebugTest {
     }
 
     @Test
-    fun `sparkling critter labels match formatted sparkling nametags only`() {
-        assertTrue(FloydMobEsp.isSparklingCritterLabelText("§6SPARKLING §cSolsnatcher"))
-        assertTrue(FloydMobEsp.isSparklingCritterLabelText("Sparkling Hermit Crab"))
-        assertFalse(FloydMobEsp.isSparklingCritterLabelText("Solsnatcher"))
-    }
-
-    @Test
     fun `hypixel star labels prefer the preceding base entity from live dungeon data`() {
         assertEquals(1_075_815, FloydMobEsp.starLabelBaseEntityId(1_075_816))
         assertEquals(1_075_823, FloydMobEsp.starLabelBaseEntityId(1_075_824))
