@@ -293,4 +293,15 @@ class FloydSkyBlockPackDisablerTest {
 
         assertEquals(Identifier.parse("minecraft:glass_bottle"), resolved)
     }
+
+    @Test
+    fun `missing item model passes through for synthetic cross mod HUD previews`() {
+        assertFalse(
+            FloydSkyBlockItemModelPolicy.shouldReplaceCurrentModel(
+                currentModel = null,
+                packDisablerEnabled = true,
+                stackEmpty = false,
+            )
+        )
+    }
 }

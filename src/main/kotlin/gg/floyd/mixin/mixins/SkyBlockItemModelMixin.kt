@@ -30,12 +30,18 @@ abstract class SkyBlockItemModelMixin {
     private fun replaceSkyBlockItemModel(
         stack: ItemStack,
         componentType: DataComponentType<*>,
-        original: Operation<Identifier>,
-    ): Any {
-        val currentModel = original.call(stack, componentType)
-        if (!FloydSkyBlockPackDisabler.enabled || stack.isEmpty || currentModel.namespace != "hypixel_skyblock") {
+        original: Operation<Identifier?>,
+    ): Any? {
+        val currentModel: Identifier? = original.call(stack, componentType)
+        if (!FloydSkyBlockItemModelPolicy.shouldReplaceCurrentModel(
+                currentModel = currentModel,
+                packDisablerEnabled = FloydSkyBlockPackDisabler.enabled,
+                stackEmpty = stack.isEmpty,
+            )
+        ) {
             return currentModel
         }
+        checkNotNull(currentModel)
         val customData = stack.customData
         val skyBlockId = skyBlockId(customData)
         val vanillaItemModel = stack.item.components()[DataComponents.ITEM_MODEL] ?: currentModel

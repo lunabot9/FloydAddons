@@ -80,6 +80,13 @@ internal object FloydSkyBlockPackPolicy {
 }
 
 internal object FloydSkyBlockItemModelPolicy {
+    fun shouldReplaceCurrentModel(
+        currentModel: Identifier?,
+        packDisablerEnabled: Boolean,
+        stackEmpty: Boolean,
+    ): Boolean =
+        packDisablerEnabled && !stackEmpty && currentModel?.namespace == "hypixel_skyblock"
+
     fun resolveBaseModel(
         currentModel: Identifier,
         skyBlockId: String?,
