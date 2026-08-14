@@ -134,7 +134,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
     private const val modulePopupTitleHeight = 20
     private const val modulePopupRowHeight = 18
     private const val modulePopupSliderRowHeight = 28
-    private const val modulePopupColorExpandedHeight = 160
+    private const val modulePopupColorExpandedHeight = 176 // BUG 3 fix: was 160, Fade/Edit buttons need +16px
     private const val modulePopupColorSvSize = 100
     private const val modulePopupColorHueWidth = 10
     private const val modulePopupFilterMaxVisibleHeight = 180
@@ -1444,6 +1444,28 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
             updateCosmeticSlider(activeCosmeticSlider ?: return true, clickPoints(mouseButtonEvent).first().first)
             return true
         }
+        // Module popup slider drag (BUG 1 fix: sliders were click-only, not drag-updatable)
+        if (mouseButtonEvent.button() == 0 && activeModulePopupSlider != null) {
+            updateModulePopupSlider(activeModulePopupSlider!!, clickPoints(mouseButtonEvent).first().first)
+            return true
+        }
+        // Module popup inline color picker drag (BUG 1 fix: color picker was click-only)
+        if (mouseButtonEvent.button() == 0 && activeModulePopupColorDrag != null) {
+            val point = clickPoints(mouseButtonEvent).first()
+            updateModulePopupColorDrag(point.first, point.second)
+            return true
+        }
+        // Module popup drag (BUG 2 fix: popup position was captured but never updated during drag)
+        if (mouseButtonEvent.button() == 0 && draggingModulePopup) {
+            val popup = modulePopup ?: return true
+            popup.bounds = Rect(
+                (mouseButtonEvent.x() - modulePopupDragOffsetX).roundToInt().coerceIn(0, max(0, width - popup.bounds.width)),
+                (mouseButtonEvent.y() - modulePopupDragOffsetY).roundToInt().coerceIn(0, max(0, height - popup.bounds.height)),
+                popup.bounds.width,
+                popup.bounds.height,
+            )
+            return true
+        }
         if (mouseButtonEvent.button() == 0 && draggingModuleBrowserCategory != null) {
             val category = draggingModuleBrowserCategory ?: return true
             val state = moduleBrowserPanelState(category)
@@ -1730,8 +1752,13 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
             context.drawString(mc.font, indicator, left + (panelWidth() - mc.font.width(indicator)) / 2, bottom - 51, applyAlpha(0xFFAAAAAA.toInt(), alpha), true)
         }
 
-        pageBackButton = Rect(left + 96, bottom - 30, 82, buttonHeight)
-        pageDoneButton = Rect(left + panelWidth() - 178, bottom - 30, 82, buttonHeight)
+        // BUG 12 fix: on narrow panels (< 356px), Back and Done buttons overlapped.
+        // Now space them evenly: each gets half the panel minus padding, side by side.
+        val btnGap = 8
+        val btnW = minOf(82, (panelWidth() - btnGap * 3) / 2)
+        val btnY = bottom - 30
+        pageBackButton = Rect(left + btnGap, btnY, btnW, buttonHeight)
+        pageDoneButton = Rect(left + panelWidth() - btnW - btnGap, btnY, btnW, buttonHeight)
         drawButton(context, pageBackButton, "Back", alpha)
         drawButton(context, pageDoneButton, "Done", alpha)
     }
@@ -2126,7 +2153,9 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
         val display = mc.font.plainSubstrByWidth(text, input.width - 6)
         context.drawString(mc.font, display, input.right - 4 - mc.font.width(display), input.top + (input.height - mc.font.lineHeight) / 2, applyAlpha(0xFFCCCCCC.toInt(), alpha), true)
         if (editing && (System.currentTimeMillis() / 500L) % 2L == 0L) {
-            val cursorX = input.right - 4
+            // BUG 11 fix: cursor was always at input.right - 4 regardless of buffer length.
+            // Now position it right after the last typed character (text is right-aligned).
+            val cursorX = input.right - 4 - mc.font.width(display) + mc.font.width(coneEditBuffer)
             context.fill(cursorX, input.top + 3, cursorX + 1, input.bottom - 3, applyAlpha(0xFFFFFFFF.toInt(), alpha))
         }
     }
@@ -3215,6 +3244,16 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
                     rowY += moduleBrowserRowHeight
                 }
                 context.disableScissor()
+                // BUG 8 fix: draw a scrollbar thumb when content overflows the viewport
+                if (contentHeight > moduleBrowserMaxPanelContentHeight) {
+                    val trackH = visibleContentHeight.toFloat()
+                    val thumbH = (trackH * (trackH / contentHeight)).coerceAtLeast(12f)
+                    val maxScrollF = (contentHeight - moduleBrowserMaxPanelContentHeight).toFloat()
+                    val thumbY = state.y + moduleBrowserHeaderHeight + (state.scroll / maxScrollF) * (trackH - thumbH)
+                    val trackX = right - 4
+                    context.fill(trackX, state.y + moduleBrowserHeaderHeight, trackX + 2, bottom, applyAlpha(0xFF333333.toInt(), alpha))
+                    context.fill(trackX, thumbY.toInt(), trackX + 2, (thumbY + thumbH).toInt(), applyAlpha(legacyStyleColor(StyleTarget.TEXT, 0.1f), alpha))
+                }
             } else if (!state.collapsed && entries.isEmpty()) {
                 val empty = "No matches"
                 context.drawString(mc.font, empty, state.x + (panelWidth - mc.font.width(empty)) / 2, state.y + moduleBrowserHeaderHeight + 6, applyAlpha(0xFF888888.toInt(), alpha), true)
@@ -3867,7 +3906,13 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
                 context.fill(bar.left, bar.top, bar.left + (bar.width * percentage).roundToInt(), bar.bottom, applyAlpha(legacyStyleColor(StyleTarget.BUTTON_BORDER, 0f), alpha))
             }
             is SelectorSetting -> {
-                drawScaledText(context, label, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
+                // BUG 6 fix: clip the label to reserve space for the right-aligned value
+                val valueWidth = mc.font.width(setting.selectedOption())
+                val labelMaxWidth = scaledMaxWidth(row.width - 16, modulePopupTextScale).coerceAtMost(
+                    scaledMaxWidth(row.width, modulePopupTextScale) - scaledMaxWidth(row.width / 2, modulePopupTextScale) - 16
+                ).coerceAtLeast(20)
+                val clippedLabel = mc.font.plainSubstrByWidth(label, labelMaxWidth)
+                drawScaledText(context, clippedLabel, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
                 val value = mc.font.plainSubstrByWidth(setting.selectedOption(), scaledMaxWidth(row.width / 2, modulePopupTextScale))
                 drawScaledTextRightAligned(context, value, row.right - 8, rowTextY, applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
             }
@@ -3890,8 +3935,10 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
                     val suffix = if (editing) "_" else ""
                     val labelWithColon = "$label:"
                     val maxValueWidth = max(20, scaledMaxWidth(row.width - scaledFontWidth(labelWithColon, modulePopupTextScale) - 28, modulePopupTextScale))
-                    while (mc.font.width(rawValue + suffix) > maxValueWidth && rawValue.isNotEmpty()) rawValue = rawValue.drop(1)
-                    val value = rawValue + suffix
+                    // BUG 5 fix: was rawValue.drop(1) (front-truncation hiding the start of user input);
+                    // now keep the leading characters visible, matching the rest of the codebase.
+                    val clippedValue = mc.font.plainSubstrByWidth(rawValue + suffix, maxValueWidth)
+                    val value = clippedValue
                     drawScaledText(context, labelWithColon, row.left + 8, rowTextY, labelColor, modulePopupTextScale)
                     val valueX = row.left + 8 + scaledFontWidth(labelWithColon, modulePopupTextScale) + 4
                     drawScaledText(context, value, valueX, rowTextY, if (editing) applyAlpha(0xFFFFFFFF.toInt(), alpha) else applyAlpha(0xFFAAAAAA.toInt(), alpha), modulePopupTextScale)
@@ -6577,7 +6624,15 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
         val hover = rect.contains(hoverX, hoverY)
         context.fill(rect.left, rect.top, rect.right, rect.bottom, applyAlpha(if (hover) 0xFF666666.toInt() else 0xFF4A4A4A.toInt(), alpha))
         drawButtonBorder(context, rect.left - 1, rect.top - 1, rect.right + 1, rect.bottom + 1, alpha)
-        val clipped = mc.font.plainSubstrByWidth(label, scaledMaxWidth(rect.width - 6, textScale))
+        // BUG 7 fix: if the label is truncated, append "…" so the user knows text was cut.
+        var clipped = mc.font.plainSubstrByWidth(label, scaledMaxWidth(rect.width - 6, textScale))
+        val fullWidth = mc.font.width(label)
+        if (clipped.length < label.length && clipped.isNotEmpty()) {
+            val ellipsis = "…"
+            val ellipsisWidth = mc.font.width(ellipsis)
+            // Re-clip leaving room for the ellipsis, then append it.
+            clipped = mc.font.plainSubstrByWidth(label, scaledMaxWidth(rect.width - 6, textScale) - ellipsisWidth) + ellipsis
+        }
         val textX = rect.left + (rect.width - scaledFontWidth(clipped, textScale)) / 2
         val textY = rect.top + (rect.height - scaledFontHeight(textScale)) / 2
         drawScaledText(context, clipped, textX, textY, legacyTextColor(0f, alpha), textScale)
