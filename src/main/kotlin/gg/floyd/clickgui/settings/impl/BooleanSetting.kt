@@ -43,7 +43,7 @@ class BooleanSetting(
         }
     }
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 12f, lastY + getHeight() / 2f - 4f, 8f, 8f, true)
+    override val isHovered: Boolean get() = isAreaHovered(lastX, lastY, width, getHeight(), true)
 
     override fun write(gson: Gson): JsonElement = JsonPrimitive(enabled)
 
@@ -84,5 +84,5 @@ class RuntimeBooleanSetting(
         }
     }
 
-    override val isHovered: Boolean get() = isAreaHovered(lastX + width - 12f, lastY + getHeight() / 2f - 4f, 8f, 8f, true)
+    override val isHovered: Boolean get() = isAreaHovered(lastX, lastY, width, getHeight(), true)
 }
