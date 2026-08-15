@@ -91,22 +91,29 @@ object FloydMenuScreenStyling {
         if (queuedWidgets.none { (widget, clip) -> isScreenTitleWidget(screen, widget, clip) }) {
             queueScreenTitle(screen)
         }
-        queuedWidgets.forEach { (widget, clip) -> queueWidgetLabel(widget, clip) }
+        queuedWidgets.forEach { (widget, clip) -> queueWidgetLabel(screen, widget, clip) }
 
         if (pendingTextRuns.isEmpty()) return
 
         val runs = ArrayList(pendingTextRuns)
         pendingTextRuns.clear()
         for (run in runs) {
-            val textWidth = ceil(NVGRenderer.textWidth(run.text, run.size, NVGRenderer.defaultFont).toDouble()).toInt()
-            if (textWidth <= 0) continue
-            val left = run.slotLeft ?: floor(run.x.toDouble()).toInt() - 8
-            val top = (run.slotTop?.minus(4)) ?: (floor(run.y.toDouble()).toInt() - 8)
-            val width = run.slotWidth ?: (textWidth + 16)
-            val height = (run.slotHeight?.plus(8)) ?: (ceil(run.size.toDouble()).toInt() + 16)
-            if (width <= 0 || height <= 0) continue
-            NVGPIPRenderer.draw(context, left, top, width, height, multiplier, localCoordinates = true) {
-                NVGRenderer.textImmediate(run.text, run.x - left, run.y - top, run.size, run.color, NVGRenderer.defaultFont)
+            val slot = run.slot
+            if (slot.width <= 0 || slot.height <= 0) continue
+            NVGPIPRenderer.draw(context, slot.left, slot.top, slot.width, slot.height, multiplier, localCoordinates = true) {
+                val immediateWidth = NVGRenderer.textWidthImmediate(run.text, run.size, NVGRenderer.defaultFont)
+                NVGRenderer.textImmediate(
+                    run.text,
+                    if (run.centered) {
+                        FloydMenuTextLayout.centeredLocalX(run.anchorX, slot.left, immediateWidth)
+                    } else {
+                        run.anchorX - slot.left
+                    },
+                    run.y - slot.top,
+                    run.size,
+                    run.color,
+                    NVGRenderer.defaultFont,
+                )
             }
         }
     }
@@ -154,7 +161,23 @@ object FloydMenuScreenStyling {
         if (screen == null || (!usesShaderWrapper(screen) && !shouldUseQueuedCustomText(screen))) return
         val cleanText = sanitizeQueuedText(screen, text)
         if (cleanText.isBlank()) return
-        pendingTextRuns.add(MenuTextRun(cleanText, x.toFloat(), y.toFloat(), color, size))
+        val approximateWidth = ceil(NVGRenderer.textWidth(cleanText, size, NVGRenderer.defaultFont).toDouble()).toInt()
+        pendingTextRuns.add(
+            MenuTextRun(
+                text = cleanText,
+                anchorX = x.toFloat(),
+                y = y.toFloat(),
+                color = color,
+                size = size,
+                slot = FloydMenuTextLayout.widgetSlot(
+                    left = floor(x.toDouble()).toInt(),
+                    top = floor(y.toDouble()).toInt(),
+                    width = approximateWidth,
+                    height = ceil(size.toDouble()).toInt(),
+                ),
+                centered = false,
+            )
+        )
     }
 
     private fun isFloydScreen(screen: Screen): Boolean =
@@ -216,19 +239,14 @@ object FloydMenuScreenStyling {
         if (title.isBlank()) return
 
         val size = 11f
-        val textWidth = NVGRenderer.textWidth(title, size, NVGRenderer.defaultFont)
-        val x = (screen.width - textWidth) * 0.5f
         pendingTextRuns.add(
             MenuTextRun(
                 text = title,
-                x = x,
+                anchorX = screen.width * 0.5f,
                 y = 15f,
                 color = 0xFFD8D8D8.toInt(),
                 size = size,
-                slotLeft = 0,
-                slotTop = 0,
-                slotWidth = screen.width,
-                slotHeight = 28
+                slot = FloydMenuTextLayout.screenTitleSlot(screen.width, top = 0, height = 28),
             )
         )
     }
@@ -275,7 +293,7 @@ object FloydMenuScreenStyling {
         }.getOrNull()
     }
 
-    private fun queueWidgetLabel(widget: AbstractWidget, clip: ClipRect) {
+    private fun queueWidgetLabel(screen: Screen, widget: AbstractWidget, clip: ClipRect) {
         if (widget is AbstractSliderButton) return
         if (!clip.contains(widget.x, widget.y, widget.width, widget.height)) return
         val text = widget.message.string
@@ -292,22 +310,25 @@ object FloydMenuScreenStyling {
             }
             else -> 0xFFD8D8D8.toInt()
         }
-        val textWidth = NVGRenderer.textWidth(text, size, NVGRenderer.defaultFont)
-        val x = widget.x + (widget.width - textWidth) * 0.5f
         val y = widget.y + (widget.height - size) * 0.5f + 1f
-        val slotLeft = if (widget is StringWidget) floor(x.toDouble()).toInt() - 4 else widget.x
-        val slotWidth = if (widget is StringWidget) ceil(textWidth.toDouble()).toInt() + 8 else widget.width
+        val titleWidget = isScreenTitleWidget(screen, widget, clip)
+        val slot = if (titleWidget) {
+            FloydMenuTextLayout.screenTitleSlot(
+                screenWidth = screen.width,
+                top = max(0, widget.y - 4),
+                height = widget.height + 8,
+            )
+        } else {
+            FloydMenuTextLayout.widgetSlot(widget.x, widget.y, widget.width, widget.height)
+        }
         pendingTextRuns.add(
             MenuTextRun(
                 text = text,
-                x = x,
+                anchorX = if (titleWidget) screen.width * 0.5f else widget.x + widget.width * 0.5f,
                 y = y,
                 color = color,
                 size = size,
-                slotLeft = slotLeft,
-                slotTop = widget.y,
-                slotWidth = slotWidth,
-                slotHeight = widget.height
+                slot = slot,
             )
         )
     }
@@ -376,14 +397,12 @@ object FloydMenuScreenStyling {
 
     private data class MenuTextRun(
         val text: String,
-        val x: Float,
+        val anchorX: Float,
         val y: Float,
         val color: Int,
         val size: Float,
-        val slotLeft: Int? = null,
-        val slotTop: Int? = null,
-        val slotWidth: Int? = null,
-        val slotHeight: Int? = null
+        val slot: FloydMenuTextLayout.Slot,
+        val centered: Boolean = true,
     )
 
     private fun sanitizeQueuedText(screen: Screen, text: String): String {

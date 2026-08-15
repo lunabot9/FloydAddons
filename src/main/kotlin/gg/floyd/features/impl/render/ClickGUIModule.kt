@@ -88,6 +88,16 @@ object ClickGUIModule : Module(
             val current = panelSetting[category.name] ?: return@all false
             alignsToWrappedColumn(current.x)
         }
+        val shouldResetStaleWrappedRows = shouldResetStaleWrappedRows(
+            currentRows = distinctRows,
+            compactRows = wrappedFallbackLayout.values.map { it.y },
+            usesLegacyWrappedColumns = usesLegacyWrappedRows,
+        )
+        val shouldCollapseExpandedWrappedFallback = shouldResetExpandedWrappedFallback(
+            usesWrappedFallback = usesWrappedFallback,
+            currentExpanded = activeCategories.mapNotNull { category -> panelSetting[category.name]?.extended },
+            expectedExpanded = activeCategories.mapNotNull { category -> wrappedFallbackLayout[category.name]?.extended },
+        )
         val hasStackedDefaults = activeCategories
             .mapNotNull { category -> panelSetting[category.name]?.let { category.name to it } }
             .groupBy { (_, panel) -> panel.x to panel.y }
@@ -96,7 +106,8 @@ object ClickGUIModule : Module(
         val screenshotFits = screenshotPanelLayout(activeCategories, availableWidth).values
             .all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }
         if (removedPlayerPanel || hasMissing || hasOffscreen || hasStackedDefaults ||
-            (screenshotFits && (usesWrappedFallback || usesLegacyWrappedRows))
+            (screenshotFits && (usesWrappedFallback || usesLegacyWrappedRows)) ||
+            shouldResetStaleWrappedRows || shouldCollapseExpandedWrappedFallback
         ) resetPositions()
     }
 
@@ -106,11 +117,18 @@ object ClickGUIModule : Module(
     }
 
     fun resetPositions() {
-        defaultPanelLayout().forEach { (categoryName, layout) ->
-            val setting = panelSetting.getOrPut(categoryName) { PanelData() }
-            setting.x = layout.x
-            setting.y = layout.y
-            setting.extended = true
+        applyPanelLayout(panelSetting, defaultPanelLayout())
+    }
+
+    internal fun applyPanelLayout(
+        target: MutableMap<String, PanelData>,
+        layout: Map<String, PanelData>,
+    ) {
+        layout.forEach { (categoryName, panelLayout) ->
+            val setting = target.getOrPut(categoryName) { PanelData() }
+            setting.x = panelLayout.x
+            setting.y = panelLayout.y
+            setting.extended = panelLayout.extended
         }
     }
 
@@ -169,6 +187,17 @@ object ClickGUIModule : Module(
     }
 
     private fun wrappedPanelLayout(activeCategories: List<Category>, availableWidth: Float): Map<String, PanelData> {
+        return wrappedPanelLayoutData(
+            panels = activeCategories.map { category -> category.name to estimatedPanelHeight(category) },
+            availableWidth = availableWidth,
+        )
+    }
+
+    internal fun wrappedPanelLayoutData(
+        panels: List<Pair<String, Float>>,
+        availableWidth: Float,
+        defaultExpanded: Boolean = false,
+    ): Map<String, PanelData> {
         val gap = 8f
         val rowGap = 12f
         val startX = 8f
@@ -176,7 +205,7 @@ object ClickGUIModule : Module(
         var y = 10f
         var rowMaxHeight = 0f
         val layout = linkedMapOf<String, PanelData>()
-        activeCategories.forEach { category ->
+        panels.forEach { (categoryName, estimatedHeight) ->
             // Wrap to a new row when the panel would extend past the right edge, so no panel is ever
             // pushed off-screen regardless of window width or how many categories exist.
             if (x > startX && x + Panel.WIDTH > availableWidth) {
@@ -184,8 +213,13 @@ object ClickGUIModule : Module(
                 y += rowMaxHeight + rowGap
                 rowMaxHeight = 0f
             }
-            layout[category.name] = PanelData(x = x, y = y, extended = true)
-            rowMaxHeight = max(rowMaxHeight, estimatedPanelHeight(category))
+            layout[categoryName] = PanelData(x = x, y = y, extended = defaultExpanded)
+            val panelHeight = if (defaultExpanded) {
+                estimatedHeight
+            } else {
+                Panel.HEADER_HEIGHT + Panel.FOOTER_HEIGHT
+            }
+            rowMaxHeight = max(rowMaxHeight, panelHeight)
             x += Panel.WIDTH + gap
         }
         return layout
@@ -194,6 +228,24 @@ object ClickGUIModule : Module(
     private fun positionsMatch(current: PanelData, expected: PanelData): Boolean =
         kotlin.math.abs(current.x - expected.x) <= POSITION_MATCH_TOLERANCE &&
             kotlin.math.abs(current.y - expected.y) <= POSITION_MATCH_TOLERANCE
+
+    internal fun shouldResetStaleWrappedRows(
+        currentRows: Collection<Float>,
+        compactRows: Collection<Float>,
+        usesLegacyWrappedColumns: Boolean,
+    ): Boolean = usesLegacyWrappedColumns &&
+        currentRows.distinct().size > 1 &&
+        compactRows.distinct().size <= 1
+
+    internal fun shouldResetExpandedWrappedFallback(
+        usesWrappedFallback: Boolean,
+        currentExpanded: Collection<Boolean>,
+        expectedExpanded: Collection<Boolean>,
+    ): Boolean = usesWrappedFallback &&
+        currentExpanded.isNotEmpty() &&
+        currentExpanded.all { it } &&
+        expectedExpanded.isNotEmpty() &&
+        expectedExpanded.none { it }
 
     private fun alignsToWrappedColumn(x: Float): Boolean {
         val columnStep = Panel.WIDTH + 8f

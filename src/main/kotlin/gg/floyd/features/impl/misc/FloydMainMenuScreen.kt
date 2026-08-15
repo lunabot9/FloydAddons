@@ -50,7 +50,7 @@ class FloydMainMenuScreen : Screen(Component.literal(Branding.COMPACT_NAME)) {
             NVGRenderer.scale(scale, scale)
             drawPanels(time, cursorX, cursorY)
 
-            val titleWidth = NVGRenderer.textWidth(TITLE_TEXT, TITLE_SIZE, NVGRenderer.defaultFont)
+            val titleWidth = NVGRenderer.textWidthImmediate(TITLE_TEXT, TITLE_SIZE, NVGRenderer.defaultFont)
             NVGRenderer.textImmediate(TITLE_TEXT, titleX - titleWidth * 0.5f, titleY, TITLE_SIZE, 0xFFD2D2D2.toInt(), NVGRenderer.defaultFont)
 
             for (button in buttons) {
@@ -59,12 +59,15 @@ class FloydMainMenuScreen : Screen(Component.literal(Branding.COMPACT_NAME)) {
                     ButtonStyle.PRIMARY -> if (hovered) 0xFFFFFFFF.toInt() else 0xE8ECECEC.toInt()
                     ButtonStyle.SECONDARY -> if (hovered) 0xFFFFFFFF.toInt() else 0xCFCFCFCF.toInt()
                 }
-                NVGRenderer.textImmediate(button.label, button.labelX, button.labelY, button.textSize, color, NVGRenderer.defaultFont)
+                val labelWidth = NVGRenderer.textWidthImmediate(button.label, button.textSize, NVGRenderer.defaultFont)
+                val labelX = button.x + (button.width - labelWidth) * 0.5f
+                NVGRenderer.textImmediate(button.label, labelX, button.labelY, button.textSize, color, NVGRenderer.defaultFont)
             }
 
+            val footerText = "${Branding.DISPLAY_NAME} v${FloydAddonsMod.MOD_VERSION}"
             NVGRenderer.textImmediate(
-                "${Branding.DISPLAY_NAME} v${FloydAddonsMod.MOD_VERSION}",
-                footerX - NVGRenderer.textWidth("${Branding.DISPLAY_NAME} v${FloydAddonsMod.MOD_VERSION}", FOOTER_SIZE, NVGRenderer.defaultFont) * 0.5f,
+                footerText,
+                footerX - NVGRenderer.textWidthImmediate(footerText, FOOTER_SIZE, NVGRenderer.defaultFont) * 0.5f,
                 footerY,
                 FOOTER_SIZE,
                 0x8ED4D4D4.toInt(),
@@ -159,7 +162,6 @@ class FloydMainMenuScreen : Screen(Component.literal(Branding.COMPACT_NAME)) {
         var y: Float = 0f,
         var width: Float = 0f,
         var height: Float = 0f,
-        var labelX: Float = 0f,
         var labelY: Float = 0f
     ) {
         val textSize: Float
@@ -172,8 +174,6 @@ class FloydMainMenuScreen : Screen(Component.literal(Branding.COMPACT_NAME)) {
             this.y = y
             this.width = width
             this.height = height
-            val labelWidth = NVGRenderer.textWidth(label, textSize, NVGRenderer.defaultFont)
-            labelX = x + (width - labelWidth) * 0.5f
             labelY = y + (height - textSize) * 0.5f + if (style == ButtonStyle.PRIMARY) 1f else 1.5f
         }
 

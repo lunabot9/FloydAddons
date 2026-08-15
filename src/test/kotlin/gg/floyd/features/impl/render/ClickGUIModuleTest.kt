@@ -5,6 +5,8 @@ import gg.floyd.utils.Color
 import gg.floyd.utils.Color.Companion.brighter
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ClickGUIModuleTest {
     @Test
@@ -58,5 +60,85 @@ class ClickGUIModuleTest {
 
         assertEquals(leftMargin, rightMargin, 0.001f)
         assertEquals(120f, leftMargin)
+    }
+
+    @Test
+    fun `stale wrapped rows reset once the compact layout fits one row`() {
+        assertTrue(
+            ClickGUIModule.shouldResetStaleWrappedRows(
+                currentRows = listOf(10f, 10f, 10f, 332f, 332f, 332f),
+                compactRows = List(6) { 10f },
+                usesLegacyWrappedColumns = true,
+            )
+        )
+    }
+
+    @Test
+    fun `wrapped rows remain when the compact layout also needs wrapping`() {
+        assertFalse(
+            ClickGUIModule.shouldResetStaleWrappedRows(
+                currentRows = listOf(10f, 10f, 332f, 332f),
+                compactRows = listOf(10f, 10f, 332f, 332f),
+                usesLegacyWrappedColumns = true,
+            )
+        )
+    }
+
+    @Test
+    fun `narrow wrapped defaults collapse panels and keep both rows above the footer`() {
+        val layout = ClickGUIModule.wrappedPanelLayoutData(
+            panels = listOf(
+                "Render" to 390f,
+                "Hiders" to 280f,
+                "Camera" to 120f,
+                "Cosmetic" to 240f,
+                "QoL" to 180f,
+                "Misc" to 260f,
+            ),
+            availableWidth = 427f,
+        )
+
+        assertEquals(listOf(10f, 10f, 10f, 44f, 44f, 44f), layout.values.map { it.y })
+        assertTrue(layout.values.none { it.extended })
+    }
+
+    @Test
+    fun `resetting panel positions preserves collapsed narrow layout state`() {
+        val target = linkedMapOf(
+            "Render" to ClickGUIModule.PanelData(x = 638f, y = 10f, extended = true),
+        )
+        val layout = linkedMapOf(
+            "Render" to ClickGUIModule.PanelData(x = 8f, y = 10f, extended = false),
+            "Misc" to ClickGUIModule.PanelData(x = 8f, y = 44f, extended = false),
+        )
+
+        ClickGUIModule.applyPanelLayout(target, layout)
+
+        assertEquals(layout, target)
+    }
+
+    @Test
+    fun `legacy expanded wrapped fallback resets to collapsed defaults`() {
+        assertTrue(
+            ClickGUIModule.shouldResetExpandedWrappedFallback(
+                usesWrappedFallback = true,
+                currentExpanded = List(6) { true },
+                expectedExpanded = List(6) { false },
+            )
+        )
+        assertFalse(
+            ClickGUIModule.shouldResetExpandedWrappedFallback(
+                usesWrappedFallback = true,
+                currentExpanded = List(6) { false },
+                expectedExpanded = List(6) { false },
+            )
+        )
+        assertFalse(
+            ClickGUIModule.shouldResetExpandedWrappedFallback(
+                usesWrappedFallback = true,
+                currentExpanded = listOf(true, false, false, false, false, false),
+                expectedExpanded = List(6) { false },
+            )
+        )
     }
 }

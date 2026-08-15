@@ -68,6 +68,7 @@ import gg.floyd.features.impl.render.FloydDayTrackerModule
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydMusicOverlay
 import gg.floyd.features.impl.render.FloydSkyBlockPackDisabler
+import gg.floyd.features.impl.render.FloydSkyBlockLevel7Guide
 import gg.floyd.features.impl.render.FloydSparklingCritterEsp
 import gg.floyd.features.impl.render.ClickGUIModule
 import gg.floyd.features.impl.render.LegacyClickGUIModule
@@ -116,7 +117,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
+            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,

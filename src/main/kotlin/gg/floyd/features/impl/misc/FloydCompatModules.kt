@@ -40,12 +40,12 @@ object FloydCustomMainMenu : Module(
     val backgroundSaturation by NumberSetting("Background Saturation", 1.3f, 0.0f, 2.5f, 0.05f, desc = "Post-process saturation for the landscape shader.")
     val backgroundBrightness by NumberSetting("Background Brightness", 1.3f, 0.4f, 2.5f, 0.05f, desc = "Post-process brightness for the landscape shader.")
     val backgroundVignette by NumberSetting("Background Vignette", 0.5f, 0.0f, 1.5f, 0.05f, desc = "Edge darkening strength for the landscape shader.")
-    val skyTopColor by ColorSetting("Sky Top Color", Color(44, 37, 102), desc = "Upper sky color for the custom main menu shader.")
-    val skyHorizonColor by ColorSetting("Sky Horizon Color", Color(63, 42, 122), desc = "Horizon color for the custom main menu shader.")
-    val grassPrimaryColor by ColorSetting("Water Primary Color", Color(56, 62, 128), desc = "Primary water color for the custom main menu shader.")
-    val grassSecondaryColor by ColorSetting("Water Secondary Color", Color(90, 61, 126), desc = "Secondary water color for the custom main menu shader.")
-    val fogColor by ColorSetting("Fog Color", Color(48, 58, 70), desc = "Fog blend color for the custom main menu shader.")
-    val sunColor by ColorSetting("Sun Color", Color(255, 255, 255), desc = "Sun and flare color for the custom main menu shader.")
+    val skyTopColor by ColorSetting("Sky Top Color", Color(10, 7, 3), desc = "Upper sky color for the custom main menu shader.")
+    val skyHorizonColor by ColorSetting("Sky Horizon Color", Color(27, 20, 8), desc = "Horizon color for the custom main menu shader.")
+    val grassPrimaryColor by ColorSetting("Water Primary Color", Color(10, 7, 3), desc = "Primary water color for the custom main menu shader.")
+    val grassSecondaryColor by ColorSetting("Water Secondary Color", Color(27, 20, 8), desc = "Secondary water color for the custom main menu shader.")
+    val fogColor by ColorSetting("Fog Color", Color(27, 20, 8), desc = "Fog blend color for the custom main menu shader.")
+    val sunColor by ColorSetting("Sun Color", Color(255, 184, 77), desc = "Sun and flare color for the custom main menu shader.")
 
     init {
         on<ScreenEvent.Open> {

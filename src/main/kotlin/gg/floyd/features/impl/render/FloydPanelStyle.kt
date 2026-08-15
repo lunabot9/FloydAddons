@@ -38,6 +38,7 @@ object FloydPanelStyle : Module(
         DAY_TRACKER("Day Tracker"),
         CALCULATOR("Calculator"),
         MUSIC_OVERLAY("Music Overlay"),
+        SKYBLOCK_LEVEL_7_GUIDE("SkyBlock LVL 7 Guide"),
         ESP_OVERHEAD("ESP Overhead"),
     }
 

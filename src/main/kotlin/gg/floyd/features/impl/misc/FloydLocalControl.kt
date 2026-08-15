@@ -24,6 +24,7 @@ import gg.floyd.features.impl.render.FloydFellNotification
 import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
+import gg.floyd.features.impl.render.FloydSkyBlockLevel7Guide
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydSparklingCritterEsp
 import gg.floyd.features.impl.render.FloydMusicOverlay
@@ -476,6 +477,7 @@ object FloydLocalControl : Module(
             "fellNotification" to FloydFellNotification.state(),
             "hud" to FloydHud.state(),
             "inventoryHud" to FloydInventoryHud.state(),
+            "skyBlockLevel7Guide" to FloydSkyBlockLevel7Guide.state(),
             "customScoreboard" to FloydCustomScoreboard.state(),
             "musicOverlay" to FloydMusicOverlay.state(),
             "panelStyle" to FloydPanelStyle.state()

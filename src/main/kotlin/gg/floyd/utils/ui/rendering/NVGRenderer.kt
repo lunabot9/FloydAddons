@@ -454,15 +454,18 @@ object NVGRenderer {
 
     fun textWidth(text: String, size: Float, font: Font): Float {
         if (shouldUseImmediateText(font)) {
-            return withCoherentTextureUnit {
-                nvgFontSize(vg, size)
-                nvgFontFaceId(vg, getFontID(font))
-                nvgTextBounds(vg, 0f, 0f, text, fontBounds)
-            }
+            return textWidthImmediate(text, size, font)
         }
         // Float widths from the live FontSet (design D6) at the replay's exact size/9 mapping —
         // the pinned ClickGUI FontSet, the same one NvgTextReplay draws with.
         return MsdfFontMetrics.width(text, size, ClickGuiFont.font)
+    }
+
+    /** Measures the same NanoVG font path used by [textImmediate]. Call from an active NVG frame. */
+    fun textWidthImmediate(text: String, size: Float, font: Font): Float = withCoherentTextureUnit {
+        nvgFontSize(vg, size)
+        nvgFontFaceId(vg, getFontID(font))
+        nvgTextBounds(vg, 0f, 0f, text, fontBounds)
     }
 
     fun drawWrappedString(
