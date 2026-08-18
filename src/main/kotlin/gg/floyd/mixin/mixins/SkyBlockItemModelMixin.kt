@@ -58,15 +58,20 @@ abstract class SkyBlockItemModelMixin {
         )
 
         val resolvedModel = skyBlockId?.let { resolveDynamic(it, stack, customData, vanillaModel) } ?: vanillaModel
+        val renderableModel = FloydSkyBlockItemModelPolicy.selectRenderableModel(
+            resolvedModel = resolvedModel,
+            isPackDefinedHead = FloydSkyBlockPackAssets.liveHeadSkins.containsKey(currentModel),
+            playerHeadModel = Items.PLAYER_HEAD.components()[DataComponents.ITEM_MODEL] ?: resolvedModel,
+        )
         logUnresolvedModel(
             currentModel = currentModel,
-            resolvedModel = resolvedModel,
+            resolvedModel = renderableModel,
             stack = stack,
             customData = customData,
             skyBlockId = skyBlockId,
             vanillaItemModel = vanillaItemModel,
             liveBaseModel = liveBaseModel,
         )
-        return resolvedModel
+        return renderableModel
     }
 }

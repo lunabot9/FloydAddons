@@ -312,6 +312,43 @@ class FloydSkyBlockPackDisablerTest {
         )
     }
 
+    @Test
+    fun `selectRenderableModel coerces pack-defined heads to the vanilla head model`() {
+        val playerHead = Identifier.parse("minecraft:item/player_head")
+        val deadPackModel = Identifier.parse("hypixel_skyblock:item/abiphones/x/abiphone_x_blue")
+        assertEquals(
+            playerHead,
+            FloydSkyBlockItemModelPolicy.selectRenderableModel(
+                resolvedModel = deadPackModel,
+                isPackDefinedHead = true,
+                playerHeadModel = playerHead,
+            ),
+        )
+    }
+
+    @Test
+    fun `selectRenderableModel leaves non-head and already-vanilla models untouched`() {
+        val playerHead = Identifier.parse("minecraft:item/player_head")
+        // Non-head custom item resolving to a dead pack model must NOT become a head.
+        assertEquals(
+            Identifier.parse("hypixel_skyblock:item/swords/aspect_of_the_void"),
+            FloydSkyBlockItemModelPolicy.selectRenderableModel(
+                resolvedModel = Identifier.parse("hypixel_skyblock:item/swords/aspect_of_the_void"),
+                isPackDefinedHead = false,
+                playerHeadModel = playerHead,
+            ),
+        )
+        // An already-vanilla head model is fine as-is.
+        assertEquals(
+            playerHead,
+            FloydSkyBlockItemModelPolicy.selectRenderableModel(
+                resolvedModel = playerHead,
+                isPackDefinedHead = true,
+                playerHeadModel = playerHead,
+            ),
+        )
+    }
+
     private fun syntheticPack(withHeadTexture: Boolean): Path {
         val path = Files.createTempFile("floyd-live-heads-", ".zip")
         ZipOutputStream(Files.newOutputStream(path)).use { zip ->
