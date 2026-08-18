@@ -2,11 +2,18 @@ package gg.floyd.features.impl.render
 
 import com.google.gson.JsonParser
 import net.minecraft.resources.Identifier
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class FloydSkyBlockPackDisablerTest {
@@ -303,5 +310,87 @@ class FloydSkyBlockPackDisablerTest {
                 stackEmpty = false,
             )
         )
+    }
+
+    private fun syntheticPack(withHeadTexture: Boolean): Path {
+        val path = Files.createTempFile("floyd-live-heads-", ".zip")
+        ZipOutputStream(Files.newOutputStream(path)).use { zip ->
+            fun write(name: String, content: ByteArray) {
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content)
+                zip.closeEntry()
+            }
+            write("pack.mcmeta", """{"pack":{"pack_format":42,"description":"test"}}""".toByteArray())
+            // A regular item def (direct model ref) so the pack has resolvable base models, like a real pack.
+            write(
+                "assets/hypixel_skyblock/items/item/misc/paper.json",
+                """{"model":"minecraft:item/paper"}""".toByteArray(),
+            )
+            write(
+                "assets/hypixel_skyblock/items/item/abiphones/abiphone_basic.json",
+                (
+                    """{"model":{"type":"minecraft:special","base":"minecraft:item/template_skull",""" +
+                        """"model":{"type":"minecraft:head","kind":"player","texture":"hypixel_skyblock:abiphone/abiphone_basic"}}}"""
+                ).toByteArray(),
+            )
+            if (withHeadTexture) {
+                write("assets/hypixel_skyblock/textures/abiphone/abiphone_basic.png", byteArrayOf(1, 2, 3, 4))
+            }
+            write("assets/hypixel_skyblock/textures/gui/irrelevant.png", byteArrayOf(9, 9, 9))
+        }
+        return path
+    }
+
+    @Test
+    fun `inspect auto-discovers head skin references from the live pack`() {
+        val input = syntheticPack(withHeadTexture = true)
+        try {
+            val result = FloydSkyBlockLivePackCache.inspect(input)
+            assertEquals(
+                Identifier.parse("hypixel_skyblock:abiphone/abiphone_basic"),
+                result.headSkins[Identifier.parse("hypixel_skyblock:item/abiphones/abiphone_basic")],
+            )
+        } finally {
+            Files.deleteIfExists(input)
+        }
+    }
+
+    @Test
+    fun `sanitize preserves head skin textures while still stripping unrelated textures`() {
+        val input = syntheticPack(withHeadTexture = true)
+        val output = Files.createTempFile("floyd-live-sanitized-", ".zip")
+        try {
+            val result = FloydSkyBlockLivePackCache.sanitize(input, output)
+            ZipFile(output.toFile()).use { zip ->
+                assertNotNull(
+                    zip.getEntry("assets/hypixel_skyblock/textures/abiphone/abiphone_basic.png"),
+                    "head skin texture must be preserved so new heads render",
+                )
+                assertNull(
+                    zip.getEntry("assets/hypixel_skyblock/textures/gui/irrelevant.png"),
+                    "unrelated textures must stay stripped",
+                )
+            }
+            assertNotNull(result.headSkins[Identifier.parse("hypixel_skyblock:item/abiphones/abiphone_basic")])
+        } finally {
+            Files.deleteIfExists(input)
+            Files.deleteIfExists(output)
+        }
+    }
+
+    @Test
+    fun `bundled fallback pack auto-discovers its head skin definitions`() {
+        val resource = javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")
+        assertNotNull(resource)
+        val tmp = Files.createTempFile("floyd-fallback-", ".zip")
+        try {
+            Files.copy(resource, tmp, StandardCopyOption.REPLACE_EXISTING)
+            val result = FloydSkyBlockLivePackCache.inspect(tmp)
+            val headSkin = result.headSkins[Identifier.parse("hypixel_skyblock:item/abiphones/abiphone_basic")]
+            assertNotNull(headSkin, "bundled fallback pack head skins should auto-resolve")
+            assertEquals(Identifier.parse("hypixel_skyblock:abiphone/abiphone_basic"), headSkin)
+        } finally {
+            Files.deleteIfExists(tmp)
+        }
     }
 }
