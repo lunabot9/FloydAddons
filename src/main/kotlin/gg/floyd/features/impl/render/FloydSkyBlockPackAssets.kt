@@ -78,6 +78,7 @@ object FloydSkyBlockPackAssets {
         models to profiles
     }
     @Volatile private var liveBaseModelsCache: Pair<Path, Map<Identifier, Identifier>>? = null
+    @Volatile private var liveHeadSkinsCache: Pair<Path, Map<Identifier, Identifier>>? = null
 
     @Volatile private var reloadJob: Job? = null
     @Volatile private var packUrl: String? = null
@@ -94,6 +95,8 @@ object FloydSkyBlockPackAssets {
     val skullProfiles: Map<String, ResolvableProfile> get() = itemData.second
     val liveItemBaseModels: Map<Identifier, Identifier>
         get() = loadLiveBaseModels()
+    val liveHeadSkins: Map<Identifier, Identifier>
+        get() = loadLiveHeadSkins()
 
     @JvmStatic
     fun refreshFromLivePack(url: String, expectedSha1: String) {
@@ -232,6 +235,26 @@ object FloydSkyBlockPackAssets {
                     logger.info("Loaded ${models.size} live SkyBlock base-model fallbacks from $packPath")
                 }
                 liveBaseModelsCache = packPath to models
+            }
+    }
+
+    /**
+     * Auto-derived player-head skin references from the cached live pack, keyed by head item model
+     * id (e.g. `hypixel_skyblock:abiphone/abiphone_basic`). This mirrors [liveItemBaseModels] and is
+     * what lets new SkyBlock heads resolve without a hand-maintained registry entry.
+     */
+    private fun loadLiveHeadSkins(): Map<Identifier, Identifier> {
+        val packPath = getPackFile() ?: return emptyMap()
+        liveHeadSkinsCache?.takeIf { it.first == packPath }?.let { return it.second }
+
+        return runCatching { FloydSkyBlockLivePackCache.inspect(packPath).headSkins }
+            .onFailure { logger.warn("Failed to inspect cached live SkyBlock head skins at {}", packPath, it) }
+            .getOrDefault(emptyMap())
+            .also { skins ->
+                if (skins.isNotEmpty()) {
+                    logger.info("Auto-resolved {} SkyBlock head skins from $packPath", skins.size)
+                }
+                liveHeadSkinsCache = packPath to skins
             }
     }
 

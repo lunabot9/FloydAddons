@@ -23,6 +23,7 @@ internal data class FloydSanitizedSkyBlockPack(
     val path: Path,
     val baseModels: Map<Identifier, Identifier>,
     val copiedEntries: Int,
+    val headSkins: Map<Identifier, Identifier> = emptyMap(),
 )
 
 /**
@@ -44,6 +45,11 @@ internal object FloydSkyBlockLivePackCache {
     fun sanitize(input: Path, output: Path): FloydSanitizedSkyBlockPack {
         var copiedEntries = 0
         var copiedBytes = 0L
+        // Preserve the skin textures that `minecraft:head` item definitions reference so new
+        // SkyBlock player heads keep rendering their intended texture. Without these the head
+        // item defs point at missing resources and render as a null/empty head. Everything else
+        // non-metadata is still stripped.
+        val neededHeadTextures = headTexturePaths(input)
 
         ZipFile(input.toFile()).use { source ->
             ZipOutputStream(Files.newOutputStream(output)).use { target ->
@@ -51,7 +57,7 @@ internal object FloydSkyBlockLivePackCache {
                 while (entries.hasMoreElements()) {
                     val entry = entries.nextElement()
                     if (entry.isDirectory || !isSafeEntryName(entry.name)) continue
-                    if (!isMetadataEntry(entry.name)) continue
+                    if (!isMetadataEntry(entry.name) && !neededHeadTextures.contains(entry.name)) continue
                     if (++copiedEntries > MAX_ENTRY_COUNT) error("Hypixel item pack contains too many entries")
 
                     target.putNextEntry(ZipEntry(entry.name))
@@ -78,6 +84,7 @@ internal object FloydSkyBlockLivePackCache {
     fun inspect(path: Path): FloydSanitizedSkyBlockPack {
         val itemDefinitions = linkedMapOf<Identifier, Identifier>()
         val modelParents = linkedMapOf<Identifier, Identifier>()
+        val headSkins = linkedMapOf<Identifier, Identifier>()
         var entries = 0
         ZipFile(path.toFile()).use { zip ->
             val iterator = zip.entries()
@@ -89,6 +96,7 @@ internal object FloydSkyBlockLivePackCache {
                 itemModelId(entry.name)?.let { itemId ->
                     val root = zip.getInputStream(entry).reader().use(JsonParser::parseReader)
                     findModelReference(root)?.let { itemDefinitions[itemId] = it }
+                    findHeadTexture(root)?.let { headSkins[itemId] = it }
                 }
                 modelDefinitionId(entry.name)?.let { modelId ->
                     val root = zip.getInputStream(entry).reader().use(JsonParser::parseReader)
@@ -107,7 +115,7 @@ internal object FloydSkyBlockLivePackCache {
             resolveVanillaParent(modelId, modelParents)?.let { itemId to it }
         }.toMap()
         require(baseModels.isNotEmpty()) { "Cached Hypixel item pack contains no resolvable vanilla item parents" }
-        return FloydSanitizedSkyBlockPack(path, baseModels, entries)
+        return FloydSanitizedSkyBlockPack(path, baseModels, entries, headSkins)
     }
 
     fun latest(cacheDir: Path): FloydSanitizedSkyBlockPack? {
@@ -159,6 +167,48 @@ internal object FloydSkyBlockLivePackCache {
             }
         }
         return null
+    }
+
+    private fun headTexturePaths(input: Path): Set<String> {
+        ZipFile(input.toFile()).use { zip ->
+            val needed = linkedSetOf<String>()
+            val iterator = zip.entries()
+            while (iterator.hasMoreElements()) {
+                val entry = iterator.nextElement()
+                if (entry.isDirectory) continue
+                if (!entry.name.startsWith(ITEM_DEFINITION_PREFIX) || !entry.name.endsWith(".json")) continue
+                val root = zip.getInputStream(entry).reader().use(JsonParser::parseReader)
+                val texture = findHeadTexture(root) ?: continue
+                val resourcePath = textureResourcePath(texture) ?: continue
+                if (zip.getEntry(resourcePath) != null) needed.add(resourcePath)
+            }
+            return needed
+        }
+    }
+
+    private fun findHeadTexture(element: JsonElement): Identifier? {
+        if (element.isJsonObject) {
+            val obj = element.asJsonObject
+            if (obj.get("type")?.takeIf(JsonElement::isJsonPrimitive)?.asString == "minecraft:special") {
+                val inner = obj.get("model")?.takeIf(JsonElement::isJsonObject)?.asJsonObject
+                if (inner?.get("type")?.takeIf(JsonElement::isJsonPrimitive)?.asString == "minecraft:head") {
+                    inner.get("texture")
+                        ?.takeIf(JsonElement::isJsonPrimitive)
+                        ?.asString
+                        ?.let(Identifier::tryParse)
+                        ?.let { return it }
+                }
+            }
+            for ((_, value) in obj.entrySet()) findHeadTexture(value)?.let { return it }
+        } else if (element.isJsonArray) {
+            for (value in element.asJsonArray) findHeadTexture(value)?.let { return it }
+        }
+        return null
+    }
+
+    private fun textureResourcePath(texture: Identifier): String? {
+        if (texture.namespace != "hypixel_skyblock" && texture.namespace != "minecraft") return null
+        return "assets/${texture.namespace}/textures/${texture.path}.png"
     }
 
     private fun resolveVanillaParent(
