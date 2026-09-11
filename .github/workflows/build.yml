@@ -1,5 +1,9 @@
 name: build
-on: [ pull_request, push ]
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
 
 jobs:
   build:
@@ -49,8 +53,19 @@ jobs:
       - name: build and test
         run: ./gradlew ":${{ matrix.minecraft }}:build" --stacktrace
 
+      # Every commit (PR, main, tag) leaves a downloadable runtime jar for this Minecraft version,
+      # so a fix can be grabbed without cutting a release. Releases are tag-driven (see below).
+      - name: upload runtime jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: FloydAddons-${{ matrix.minecraft }}
+          path: versions/${{ matrix.minecraft }}/build/libs/FloydAddons-*-${{ matrix.minecraft }}.jar
+          if-no-files-found: error
+
   release:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Releases are tag-driven: pushing v<mod_version> publishes the jar set for that exact commit.
+    # Merging to main never bumps a version or publishes a release on its own.
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -59,8 +74,29 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4
 
-      # Publish or refresh a notes-only GitHub Release on every push to main.
-      # Jar distribution is handled outside GitHub Releases.
+      - name: verify tag matches mod_version
+        run: |
+          set -euo pipefail
+          version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
+          if [[ "v${version}" != "${GITHUB_REF_NAME}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match mod_version ${version}." >&2
+            exit 1
+          fi
+
+      - name: download runtime jars
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: checksum runtime jars
+        run: |
+          set -euo pipefail
+          version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
+          cd dist
+          sha256sum FloydAddons-*.jar > "SHA256SUMS-v${version}.txt"
+          cat "SHA256SUMS-v${version}.txt"
+
       - name: publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,29 +106,22 @@ jobs:
           version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
           tag="v${version}"
           release_notes="release-notes-${version}.md"
-          if [[ -f "$release_notes" ]]; then
-            notes_file="$release_notes"
-          else
-            notes_file="$(mktemp)"
-            {
-              echo "FloydAddons ${version}"
-              echo
-              echo "Release published from ${GITHUB_SHA}."
-              echo
-              echo "Artifacts are distributed outside GitHub Releases."
-            } > "$notes_file"
+          if [[ ! -f "$release_notes" ]]; then
+            echo "Missing ${release_notes}; refusing to publish a release without notes." >&2
+            exit 1
           fi
 
           if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release ${tag} exists — updating notes."
+            echo "Release ${tag} exists — refreshing notes and assets."
             gh release edit "$tag" \
               --title "FloydAddons ${version} (MC 26.1 / 26.1.2 / 26.2)" \
-              --notes-file "$notes_file" \
-              --target "$GITHUB_SHA"
+              --notes-file "$release_notes"
+            gh release upload "$tag" dist/FloydAddons-*.jar "dist/SHA256SUMS-v${version}.txt" --clobber
           else
             echo "Creating release ${tag}."
             gh release create "$tag" \
-              --target "$GITHUB_SHA" \
+              --verify-tag \
               --title "FloydAddons ${version} (MC 26.1 / 26.1.2 / 26.2)" \
-              --notes-file "$notes_file"
+              --notes-file "$release_notes" \
+              dist/FloydAddons-*.jar "dist/SHA256SUMS-v${version}.txt"
           fi
