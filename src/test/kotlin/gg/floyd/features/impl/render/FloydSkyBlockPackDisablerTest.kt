@@ -277,16 +277,20 @@ class FloydSkyBlockPackDisablerTest {
     }
 
     @Test
-    fun `bundled fallback pack auto-discovers its head skin definitions`() {
+    fun `bundled fallback pack keeps complete abiphone model and texture`() {
         val resource = javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")
         assertNotNull(resource)
         val tmp = Files.createTempFile("floyd-fallback-", ".zip")
         try {
             Files.copy(resource, tmp, StandardCopyOption.REPLACE_EXISTING)
             val result = FloydSkyBlockLivePackCache.inspect(tmp)
-            val headSkin = result.headSkins[Identifier.parse("hypixel_skyblock:item/abiphones/abiphone_basic")]
-            assertNotNull(headSkin, "bundled fallback pack head skins should auto-resolve")
-            assertEquals(Identifier.parse("hypixel_skyblock:abiphone/abiphone_basic"), headSkin)
+            val item = Identifier.parse("hypixel_skyblock:item/abiphones/abiphone_basic")
+            assertEquals(Identifier.parse("minecraft:item/paper"), result.baseModels[item])
+            ZipFile(tmp.toFile()).use { zip ->
+                assertNotNull(zip.getEntry("assets/hypixel_skyblock/models/item/abiphones/abiphone_basic.json"))
+                assertNotNull(zip.getEntry("assets/hypixel_skyblock/textures/item/abiphones/abiphone_basic.png"))
+            }
+            assertEquals(item, FloydSkyBlockItemModelPolicy.resolveBaseModel(item, "UNKNOWN_ABIPHONE", emptyMap()))
         } finally {
             Files.deleteIfExists(tmp)
         }
