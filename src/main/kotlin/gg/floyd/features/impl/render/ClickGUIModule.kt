@@ -30,8 +30,22 @@ object ClickGUIModule : Module(
     val clickGUIColor by ColorSetting("Color", Color(50, 150, 220).also { it.chroma = true }, desc = "The color of the Click GUI — toggle chroma/fade inside the picker.")
 
     val roundedPanelBottom by BooleanSetting("Rounded Panel Bottoms", true, desc = "Whether to extend panels to make them rounded at the bottom.")
-    private val openGuiKey by KeybindSetting("Open GUI Key", GLFW.GLFW_KEY_N, desc = "FloydAddons alternate GUI key.").onPress {
+    private val openGuiKey by KeybindSetting("Open GUI Key", GLFW.GLFW_KEY_RIGHT_SHIFT, desc = "Opens the secondary panel Click GUI.").onPress {
         openConfiguredGui()
+    }
+    private var oneConfigKeysMigrated by BooleanSetting("OneConfig Menu Keys Migrated", false, desc = "Menu key migration marker.").hide()
+
+    fun migrateMenuKeys() {
+        if (oneConfigKeysMigrated) return
+        val primary = LegacyClickGUIModule.settings["Keybind"] as? KeybindSetting
+        val secondary = settings["Open GUI Key"] as? KeybindSetting
+        if (primary?.value?.value == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+            primary.value = com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_N)
+        }
+        if (secondary?.value?.value == GLFW.GLFW_KEY_N) {
+            secondary.value = com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_RIGHT_SHIFT)
+        }
+        oneConfigKeysMigrated = true
     }
 
     override fun onKeybind() {
@@ -69,6 +83,13 @@ object ClickGUIModule : Module(
         val removedPlayerPanel = Category.PLAYER !in activeCategories && panelSetting.remove(Category.PLAYER.name) != null
         val availableWidth = currentAvailableWidth()
         val wrappedFallbackLayout = wrappedPanelLayout(activeCategories, availableWidth)
+        // Older defaults deliberately collapsed every panel, with header-only row spacing.
+        // Recognize that layout before reopening it so existing installs gain the expanded defaults.
+        val collapsedFallbackLayout = wrappedPanelLayoutData(
+            panels = activeCategories.map { it.name to estimatedPanelHeight(it) },
+            availableWidth = availableWidth,
+            defaultExpanded = false,
+        )
         val distinctRows = activeCategories
             .mapNotNull { category -> panelSetting[category.name]?.y }
             .distinct()
@@ -93,8 +114,13 @@ object ClickGUIModule : Module(
             compactRows = wrappedFallbackLayout.values.map { it.y },
             usesLegacyWrappedColumns = usesLegacyWrappedRows,
         )
-        val shouldCollapseExpandedWrappedFallback = shouldResetExpandedWrappedFallback(
-            usesWrappedFallback = usesWrappedFallback,
+        val usesCollapsedWrappedFallback = activeCategories.all { category ->
+            val current = panelSetting[category.name] ?: return@all false
+            val collapsed = collapsedFallbackLayout[category.name] ?: return@all false
+            positionsMatch(current, collapsed)
+        }
+        val shouldExpandCollapsedWrappedFallback = shouldResetCollapsedWrappedFallback(
+            usesWrappedFallback = usesCollapsedWrappedFallback,
             currentExpanded = activeCategories.mapNotNull { category -> panelSetting[category.name]?.extended },
             expectedExpanded = activeCategories.mapNotNull { category -> wrappedFallbackLayout[category.name]?.extended },
         )
@@ -107,7 +133,7 @@ object ClickGUIModule : Module(
             .all { it.x >= 0f && it.x + Panel.WIDTH <= availableWidth }
         if (removedPlayerPanel || hasMissing || hasOffscreen || hasStackedDefaults ||
             (screenshotFits && (usesWrappedFallback || usesLegacyWrappedRows)) ||
-            shouldResetStaleWrappedRows || shouldCollapseExpandedWrappedFallback
+            shouldResetStaleWrappedRows || shouldExpandCollapsedWrappedFallback
         ) resetPositions()
     }
 
@@ -196,7 +222,7 @@ object ClickGUIModule : Module(
     internal fun wrappedPanelLayoutData(
         panels: List<Pair<String, Float>>,
         availableWidth: Float,
-        defaultExpanded: Boolean = false,
+        defaultExpanded: Boolean = true,
     ): Map<String, PanelData> {
         val gap = 8f
         val rowGap = 12f
@@ -237,15 +263,15 @@ object ClickGUIModule : Module(
         currentRows.distinct().size > 1 &&
         compactRows.distinct().size <= 1
 
-    internal fun shouldResetExpandedWrappedFallback(
+    internal fun shouldResetCollapsedWrappedFallback(
         usesWrappedFallback: Boolean,
         currentExpanded: Collection<Boolean>,
         expectedExpanded: Collection<Boolean>,
     ): Boolean = usesWrappedFallback &&
         currentExpanded.isNotEmpty() &&
-        currentExpanded.all { it } &&
+        currentExpanded.none { it } &&
         expectedExpanded.isNotEmpty() &&
-        expectedExpanded.none { it }
+        expectedExpanded.all { it }
 
     private fun alignsToWrappedColumn(x: Float): Boolean {
         val columnStep = Panel.WIDTH + 8f

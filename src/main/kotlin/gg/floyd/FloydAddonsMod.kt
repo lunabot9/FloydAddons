@@ -73,6 +73,9 @@ object FloydAddonsMod : ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register {
             onClientStopping()
         }
+        ClientLifecycleEvents.CLIENT_STARTED.register {
+            gg.floyd.clickgui.FloydOneConfig.initialize()
+        }
     }
 
     internal fun onClientStopping() {

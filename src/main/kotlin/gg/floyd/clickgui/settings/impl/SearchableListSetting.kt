@@ -40,6 +40,13 @@ open class SearchableListSetting(
     override val default: Unit = Unit
     override var value: Unit = Unit
 
+    internal fun availableOptions(): List<String> = optionsProvider()
+    internal fun selectedOptions(): Set<String> = selectedProvider()
+    internal fun replaceSelection(selected: Set<String>) {
+        (selectedProvider() union selected).filter { (it in selectedProvider()) != (it in selected) }
+            .forEach(onToggle)
+    }
+
     protected val expandAnim = EaseInOutAnimation(200)
     protected var extended = false
 

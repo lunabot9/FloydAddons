@@ -16,12 +16,11 @@ import kotlin.math.roundToInt
 object FloydFellNotification : Module(
     name = "Fell Notification",
     category = Category.RENDER,
-    description = "Flashes the Woodpecker, Petalfall, or Timber tree-fell message above the crosshair.",
+    description = "Flashes the Timber tree-fell message in dark red above the crosshair.",
     toggled = false,
 ) {
     private const val HUD_NAME = "Fell Notification HUD"
-    private const val DARK_GREEN_RGB = 0x00AA00
-    private const val BRIGHT_GREEN_RGB = 0x55FF55
+    private const val DARK_RED_RGB = 0xAA0000
     private const val DISPLAY_DURATION_MS = 2_500L
     private const val FADE_DURATION_MS = 500L
     private const val DEFAULT_SCALE = 3f
@@ -32,9 +31,7 @@ object FloydFellNotification : Module(
     private data class NotificationStyle(val label: String, val colorRgb: Int)
 
     private val stylesByMessage = linkedMapOf(
-        "WOODPECKER! You felled the entire Tree!" to NotificationStyle("WOODPECKER!", DARK_GREEN_RGB),
-        "PETALFALL! You felled the entire Tree!" to NotificationStyle("PETALFALL!", DARK_GREEN_RGB),
-        "TIMBER! You felled the entire Tree!" to NotificationStyle("TIMBER!", BRIGHT_GREEN_RGB),
+        "TIMBER! You felled the entire Helix Tree!" to NotificationStyle("TIMBER!", DARK_RED_RGB),
     )
 
     private data class ActiveNotification(
@@ -111,7 +108,7 @@ object FloydFellNotification : Module(
         val alpha: Int
         if (example) {
             label = "TIMBER!"
-            colorRgb = BRIGHT_GREEN_RGB
+            colorRgb = DARK_RED_RGB
             alpha = 255
         } else if (current != null) {
             label = current.label

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import net.minecraft.resources.Identifier
 import java.net.URI
+import java.io.InputStream
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -17,7 +18,57 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+
+/** Reject the incomplete legacy override pack cached by older Floyd builds. */
+internal object FloydSkyBlockPackContentPolicy {
+    fun hasCompleteItemAssets(path: Path): Boolean = runCatching {
+        ZipFile(path.toFile()).use { zip ->
+            zip.entries().asSequence().any {
+                it.name.startsWith("assets/hypixel_skyblock/models/") && it.name.endsWith(".json")
+            }
+        }
+    }.getOrDefault(false)
+
+    /** Live definitions win; bundled compatibility assets fill gaps in older server packs. */
+    fun supplementMissingAssets(path: Path, bundled: InputStream): Path {
+        val missing = linkedMapOf<String, ByteArray>()
+        ZipFile(path.toFile()).use { current ->
+            ZipInputStream(bundled).use { fallback ->
+                while (true) {
+                    val entry = fallback.nextEntry ?: break
+                    if (entry.isDirectory || !entry.name.startsWith("assets/")) continue
+                    if (current.getEntry(entry.name) == null) missing[entry.name] = fallback.readBytes()
+                }
+            }
+            if (missing.isEmpty()) return path
+
+            val merged = Files.createTempFile(path.parent, "skyblock-compatible-", ".zip")
+            try {
+                ZipOutputStream(Files.newOutputStream(merged)).use { target ->
+                    for (entry in current.entries().asSequence()) {
+                        target.putNextEntry(ZipEntry(entry.name))
+                        if (!entry.isDirectory) current.getInputStream(entry).use { it.copyTo(target) }
+                        target.closeEntry()
+                    }
+                    for ((name, bytes) in missing) {
+                        target.putNextEntry(ZipEntry(name))
+                        target.write(bytes)
+                        target.closeEntry()
+                    }
+                }
+            } catch (error: Throwable) {
+                Files.deleteIfExists(merged)
+                throw error
+            }
+            // Resource reloads can keep the original ZIP open on Windows. Mount the completed
+            // companion file directly instead of replacing an in-use archive or losing assets.
+            merged.toFile().deleteOnExit()
+            return merged
+        }
+    }
+}
 
 internal data class FloydSanitizedSkyBlockPack(
     val path: Path,

@@ -6,27 +6,23 @@ import kotlin.test.assertNull
 
 class FloydFellNotificationTest {
     @Test
-    fun `all three exact tree-fell chat messages select their matching labels and colors`() {
+    fun `exact Timber Helix tree-fell chat message selects its label in dark red`() {
         assertEquals(
-            "WOODPECKER!" to 0x00AA00,
-            FloydFellNotification.notificationForChat("WOODPECKER! You felled the entire Tree!"),
+            "TIMBER!" to 0xAA0000,
+            FloydFellNotification.notificationForChat("TIMBER! You felled the entire Helix Tree!"),
         )
         assertEquals(
-            "PETALFALL!" to 0x00AA00,
-            FloydFellNotification.notificationForChat("PETALFALL! You felled the entire Tree!"),
-        )
-        assertEquals(
-            "TIMBER!" to 0x55FF55,
-            FloydFellNotification.notificationForChat("TIMBER! You felled the entire Tree!"),
-        )
-        assertEquals(
-            "TIMBER!" to 0x55FF55,
-            FloydFellNotification.notificationForChat("  TIMBER! You felled the entire Tree!  "),
+            "TIMBER!" to 0xAA0000,
+            FloydFellNotification.notificationForChat("  TIMBER! You felled the entire Helix Tree!  "),
         )
     }
 
     @Test
-    fun `near-miss chat messages do not trigger the notification`() {
+    fun `other tree-fell and near-miss chat messages do not trigger the notification`() {
+        assertNull(FloydFellNotification.notificationForChat("WOODPECKER! You felled the entire Tree!"))
+        assertNull(FloydFellNotification.notificationForChat("PETALFALL! You felled the entire Tree!"))
+        assertNull(FloydFellNotification.notificationForChat("TIMBER! You felled the entire Tree!"))
+        assertNull(FloydFellNotification.notificationForChat("TIMBER! You felled the entire Helix tree!"))
         assertNull(FloydFellNotification.notificationForChat("TIMBER! You felled the entire tree!"))
         assertNull(FloydFellNotification.notificationForChat("TIMBER! You felled a Tree!"))
         assertNull(FloydFellNotification.notificationForChat("WOODPECKER!"))

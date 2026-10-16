@@ -73,7 +73,6 @@ object FloydSkyBlockPackAssets {
                 }
             }
         }
-        applySprayonatorAliases(models, profiles)
         logger.info("Loaded ${models.size} SkyBlock vanilla item fallbacks")
         models to profiles
     }
@@ -138,16 +137,19 @@ object FloydSkyBlockPackAssets {
         withContext(Dispatchers.IO) { Files.createDirectories(packDir) }
         val path = downloadPack(targetFile)
             ?: if (allowCachedFallback) getPackFile() ?: targetFile else return null
-        if (!Files.exists(path)) {
-            logger.info("SkyBlock pack download unavailable, extracting bundled fallback pack")
+        if (!Files.exists(path) || !FloydSkyBlockPackContentPolicy.hasCompleteItemAssets(path)) {
+            logger.info("SkyBlock pack unavailable or missing model assets, extracting bundled fallback pack")
             javaClass.getResourceAsStream(FALLBACK_PACK_RESOURCE)?.use { input ->
                 withContext(Dispatchers.IO) {
-                    Files.copy(input, targetFile, StandardCopyOption.REPLACE_EXISTING)
+                    Files.copy(input, path, StandardCopyOption.REPLACE_EXISTING)
                 }
             } ?: error("Bundled SkyBlock fallback pack not found at $FALLBACK_PACK_RESOURCE")
         }
 
-        return buildPack(path)
+        val compatiblePath = javaClass.getResourceAsStream(FALLBACK_PACK_RESOURCE)?.use {
+            FloydSkyBlockPackContentPolicy.supplementMissingAssets(path, it)
+        } ?: error("Bundled SkyBlock fallback pack not found at $FALLBACK_PACK_RESOURCE")
+        return buildPack(compatiblePath)
     }
 
     private suspend fun downloadPack(targetFile: Path): Path? {
@@ -243,23 +245,6 @@ object FloydSkyBlockPackAssets {
             properties,
         )
         return ResolvableProfile.createResolved(profile)
-    }
-
-    private fun applySprayonatorAliases(
-        models: MutableMap<String, net.minecraft.resources.Identifier>,
-        profiles: MutableMap<String, ResolvableProfile>,
-    ) {
-        val sprayonatorModel = models["SPRAYONATOR"] ?: return
-        val sprayonatorProfile = profiles["SPRAYONATOR"]
-        val vanillaGlassBottle = net.minecraft.resources.Identifier.parse("minecraft:glass_bottle")
-
-        for (upgradedId in listOf("JUICY_SPRAYONATOR", "SALTY_SPRAYONATOR")) {
-            models.putIfAbsent(upgradedId, sprayonatorModel)
-            sprayonatorProfile?.let { profiles.putIfAbsent(upgradedId, it) }
-        }
-        for (nozzleId in listOf("BASIC_NOZZLE", "JUICY_NOZZLE", "SALTY_NOZZLE")) {
-            models.putIfAbsent(nozzleId, vanillaGlassBottle)
-        }
     }
 
     class Repository : RepositorySource {

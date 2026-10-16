@@ -24,6 +24,7 @@
     "floydaddons.loader.mixins.json"
   ],
   "depends": {
+    "oneconfig": ">=1.4.2",
     "fabricloader": ">=${loader_version}",
     "fabric-api": ">=${fabric_api_version}",
     "minecraft": "~${minecraft_version}",

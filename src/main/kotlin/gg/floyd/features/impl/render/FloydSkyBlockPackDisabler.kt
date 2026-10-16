@@ -90,14 +90,14 @@ internal object FloydSkyBlockItemModelPolicy {
     fun resolveBaseModel(
         currentModel: Identifier,
         skyBlockId: String?,
-        liveModels: Map<Identifier, Identifier>,
         knownModels: Map<String, Identifier>,
-        vanillaItemModel: Identifier,
         quiverArrowModel: Identifier? = null,
     ): Identifier = when {
         skyBlockId != null && knownModels.containsKey(skyBlockId) -> knownModels.getValue(skyBlockId)
-        liveModels.containsKey(currentModel) -> liveModels.getValue(currentModel)
         quiverArrowModel != null -> quiverArrowModel
-        else -> vanillaItemModel
+        // Unknown items include menu controls and new items whose base item is often paper.
+        // Like Noamm's PackDisabler, keep their complete server-pack definition instead of
+        // guessing a vanilla model from a model parent (e.g. item/generated or template_skull).
+        else -> currentModel
     }
 }

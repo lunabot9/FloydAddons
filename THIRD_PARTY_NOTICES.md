@@ -2,12 +2,20 @@
 
 This repository combines:
 
+- OneConfig 1.4.2 by Polyfrost, distributed unmodified as a nested dependency,
+  licensed under LGPL-3.0 and the Additional Terms Applicable to OneConfig.
+  Its Compose runtime bundle and dependency licenses remain in the upstream jars.
+  Source: https://github.com/Polyfrost/OneConfig
+  Additional terms: https://polyfrost.org/legal/oneconfig/additional-terms
+
 - Odin scaffold code from `odtheking/Odin`, licensed under BSD 3-Clause. See `LICENSE`.
 - Vendored FloydAddons source under `vendor/floydaddons-fabric`, whose Fabric metadata declares `MIT` licensing.
 - SkyBlock pack-disabling fallback logic and generated item data adapted from an
-  upstream PackDisabler codebase at commit `4e14398ebc023d730dd8af06bbb05bacab8fe341`,
+  upstream `Noamm9/PackDisabler` codebase at commit `20633a24cdb490c9d6d4fcb2ddb215636e298069`,
   dedicated to the public domain under CC0-1.0. Its item data is sourced from
   `NotEnoughUpdates/NotEnoughUpdates-REPO`.
+  Hypixel fallback pack assets retain their separate license inside the ZIP;
+  see `src/main/resources/floyd_skyblock_pack_CREDITS.txt` for pack provenance.
 - Auto Clicker behavior adapted from `skies-starred/OdinClient`, copyright 2026 Starred,
   licensed under the BSD 3-Clause License.
 

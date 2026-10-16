@@ -85,7 +85,7 @@ class ClickGUIModuleTest {
     }
 
     @Test
-    fun `narrow wrapped defaults collapse panels and keep both rows above the footer`() {
+    fun `narrow wrapped defaults expand panels and space rows by their content`() {
         val layout = ClickGUIModule.wrappedPanelLayoutData(
             panels = listOf(
                 "Render" to 390f,
@@ -98,8 +98,8 @@ class ClickGUIModuleTest {
             availableWidth = 427f,
         )
 
-        assertEquals(listOf(10f, 10f, 10f, 44f, 44f, 44f), layout.values.map { it.y })
-        assertTrue(layout.values.none { it.extended })
+        assertEquals(listOf(10f, 10f, 10f, 412f, 412f, 412f), layout.values.map { it.y })
+        assertTrue(layout.values.all { it.extended })
     }
 
     @Test
@@ -118,26 +118,33 @@ class ClickGUIModuleTest {
     }
 
     @Test
-    fun `legacy expanded wrapped fallback resets to collapsed defaults`() {
+    fun `legacy collapsed wrapped fallback resets to expanded defaults`() {
         assertTrue(
-            ClickGUIModule.shouldResetExpandedWrappedFallback(
-                usesWrappedFallback = true,
-                currentExpanded = List(6) { true },
-                expectedExpanded = List(6) { false },
-            )
-        )
-        assertFalse(
-            ClickGUIModule.shouldResetExpandedWrappedFallback(
+            ClickGUIModule.shouldResetCollapsedWrappedFallback(
                 usesWrappedFallback = true,
                 currentExpanded = List(6) { false },
-                expectedExpanded = List(6) { false },
+                expectedExpanded = List(6) { true },
             )
         )
         assertFalse(
-            ClickGUIModule.shouldResetExpandedWrappedFallback(
+            ClickGUIModule.shouldResetCollapsedWrappedFallback(
+                usesWrappedFallback = true,
+                currentExpanded = List(6) { true },
+                expectedExpanded = List(6) { true },
+            )
+        )
+        assertFalse(
+            ClickGUIModule.shouldResetCollapsedWrappedFallback(
                 usesWrappedFallback = true,
                 currentExpanded = listOf(true, false, false, false, false, false),
-                expectedExpanded = List(6) { false },
+                expectedExpanded = List(6) { true },
+            )
+        )
+        assertFalse(
+            ClickGUIModule.shouldResetCollapsedWrappedFallback(
+                usesWrappedFallback = false,
+                currentExpanded = List(6) { false },
+                expectedExpanded = List(6) { true },
             )
         )
     }

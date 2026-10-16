@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 plugins {
     id("net.fabricmc.fabric-loom")
     kotlin("jvm")
+    kotlin("plugin.compose")
     `maven-publish`
 }
 
@@ -78,12 +79,35 @@ base {
 
 repositories {
     mavenCentral()
+    maven("https://repo.polyfrost.org/releases")
+    maven("https://redirector.kotlinlang.org/maven/compose-dev")
     maven("https://jitpack.io")
     maven("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1")
     maven("https://api.modrinth.com/maven")
 }
 
+val oneConfigComposeApi by configurations.creating { isTransitive = false }
+
 dependencies {
+    // Use the upstream distribution (with its nested libraries) on every supported release line.
+    // API jars are compile-only: the distribution supplies the same classes at runtime.
+    val oneConfigRelease = if (minecraftVersion.startsWith("26.1")) "xnIw4EqI" else "bDhbYaqU"
+    listOf("config", "config-impl", "ui", "internal", "utils", "poly-compose").forEach { api ->
+        compileOnly("org.polyfrost.oneconfig:$api:1.4.2") { isTransitive = false }
+    }
+    val oneConfigDistribution = "maven.modrinth:oneconfig:$oneConfigRelease"
+    runtimeOnly(oneConfigDistribution) { isTransitive = false }
+    include(oneConfigDistribution) { isTransitive = false }
+    val composeBundle = "org.polyfrost.oneconfig:compose-bundle:1.0.6+compose.1.13.0-alpha02"
+    add(oneConfigComposeApi.name, composeBundle)
+    // Compile against the exact Compose API jars already shipped in the upstream bundle.
+    val composeApis = files(provider {
+        zipTree(oneConfigComposeApi.singleFile).matching { include("META-INF/jars/*.jar") }.files
+    })
+    compileOnly(composeApis)
+    testImplementation(composeApis)
+    runtimeOnly(composeBundle) { isTransitive = false }
+    include(composeBundle) { isTransitive = false }
     minecraft("com.mojang:minecraft:$minecraftVersion")
     implementation("net.fabricmc:fabric-loader:${property("loader_version")}")
     implementation("net.fabricmc:fabric-language-kotlin:${property("fabric_kotlin_version")}")
@@ -228,6 +252,7 @@ tasks {
 
     val generateBrandingResources by registering {
         inputs.property("brandKey", activeBrand.key)
+        if (activeBrand.key == "ginger") inputs.dir(rootProject.file("branding/ginger"))
         outputs.dir(generatedBrandingResourcesDir)
         doLast {
             val root = generatedBrandingResourcesDir.get().asFile

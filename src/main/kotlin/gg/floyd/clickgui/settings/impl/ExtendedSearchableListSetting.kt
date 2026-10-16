@@ -47,6 +47,13 @@ class ExtendedSearchableListSetting(
     private val onClearAll: (() -> Unit)? = null,
     private val showActionsRow: Boolean = false,
 ) : SearchableListSetting(name, optionsProvider, selectedProvider, onToggle, desc) {
+    internal val supportsColors get() = colorProvider != null && onColorChange != null
+    internal val canPickFromWorld get() = onAltClick != null
+    internal val canClearAll get() = onClearAll != null
+    internal fun optionColor(id: String): String? = colorProvider?.invoke(id)
+    internal fun setOptionColor(id: String, hex: String) { onColorChange?.invoke(id, hex) }
+    internal fun pickFromWorld() { onAltClick?.invoke("") }
+    internal fun clearAll() { onClearAll?.invoke() }
 
     private val actionsH = 20f
 

@@ -8,6 +8,7 @@ import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.clickgui.ClickGUI
 import gg.floyd.clickgui.HudManager
 import gg.floyd.clickgui.LegacyFloydClickGUI
+import gg.floyd.clickgui.FloydOneConfig
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.config.FloydSidecarConfig
@@ -501,6 +502,7 @@ object FloydLocalControl : Module(
             "clickGui" to ClickGUIModule.state()
         )
         root["legacyGui"] = LegacyFloydClickGUI.debugState()
+        root["oneConfigGui"] = FloydOneConfig.state()
         // ClickGUI deferred-text replay counts (P4): per-layer mc.font runs baked into the NVG PIP
         // last frame; deferralActive=false means FLOYD_NVG_TEXT=1 legacy, null = NVG not yet inited.
         root["nvgText"] = NvgTextReplay.debugState()
@@ -640,6 +642,9 @@ object FloydLocalControl : Module(
         val action = requiredString(body, "action")
         callClient {
             when (action) {
+                "inputKey" -> net.minecraft.client.KeyMapping.click(
+                    com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(requiredInt(body, "keyCode"))
+                )
                 "attack" -> tapKey(mc.options.keyAttack, body)
                 "use" -> tapKey(mc.options.keyUse, body)
                 "swing", "swingMainHand" -> {
@@ -786,7 +791,7 @@ object FloydLocalControl : Module(
         val screen = requiredString(readJson(exchange), "screen")
         callClient {
             when (screen) {
-                "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> mc.setScreen(LegacyFloydClickGUI.openHub())
+                "floyd", "floydaddons", "oneconfig", "legacy", "legacygui", "oldgui" -> FloydOneConfig.open()
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
                 "calculator", "calc" -> FloydCalculator.toggleVisibility()
@@ -826,6 +831,9 @@ object FloydLocalControl : Module(
                 }
                 else -> {
                     setMouseOverride(x, y)
+                    val pointer = mc.mouseHandler as gg.floyd.mixin.accessors.MouseHandlerAccessor
+                    pointer.`floydaddons$setX`(x * mc.window.width / mc.window.guiScaledWidth)
+                    pointer.`floydaddons$setY`(y * mc.window.height / mc.window.guiScaledHeight)
                     withMouseOverride(x, y) {
                         when (event) {
                             "move" -> {
@@ -1025,6 +1033,10 @@ object FloydLocalControl : Module(
                     "empty" to false,
                     "id" to BuiltInRegistries.ITEM.getKey(stack.item).toString(),
                     "name" to stack.hoverName.string,
+                    "itemModel" to stack.get(net.minecraft.core.component.DataComponents.ITEM_MODEL)?.toString(),
+                    "skyBlockId" to gg.floyd.features.impl.render.FloydSkyBlockItemFallbacks.skyBlockId(
+                        stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA)?.copyTag() ?: net.minecraft.nbt.CompoundTag()
+                    ),
                     "count" to stack.count
                 )
             )

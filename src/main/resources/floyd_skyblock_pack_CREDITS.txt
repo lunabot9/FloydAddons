@@ -1,0 +1,26 @@
+SkyBlock Pack Disabler compatibility assets
+
+Base fallback pack and item-to-vanilla mappings:
+https://github.com/Noamm9/PackDisabler
+Pinned revision: 20633a24cdb490c9d6d4fcb2ddb215636e298069
+Files: src/main/resources/pack_fallback.zip, src/main/resources/skyblock-items.json
+Noamm PackDisabler source code: CC0-1.0.
+Hypixel pack assets: Copyright 2026 Hypixel Inc.; their separate resource pack
+license is preserved as LICENSE inside the ZIP. The repository's CC0 license
+does not replace the pack asset license. Item mappings originate from
+NotEnoughUpdates-REPO, as credited by Noamm PackDisabler.
+
+The fallback retains 697 additional Hypixel namespace resources from Floyd's previous
+bundled legacy pack, originally from https://github.com/nightlibra/hypixel_skyblock_legacy.
+Existing upstream resources always take precedence. The additional files include the
+Salty Sprayonator and nozzle definitions and their head textures. Two critter capsule
+definitions use their provided head-rendering branches because the old legacy bundle
+referenced optional model variants that it did not include.
+
+Known items use the pinned upstream item mapping. Unknown items retain their original
+Hypixel model and complete textures, following Noamm's resolver. Do not generate paper
+placeholders or derive item-model IDs from generic model parents.
+
+Every cached/downloaded server pack is supplemented with missing bundled asset files
+before mounting. Existing live files and pack metadata take precedence. A companion ZIP
+allows this to work while the original cached ZIP remains open during resource reloads.

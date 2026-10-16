@@ -173,6 +173,7 @@ object ModuleManager {
         }
         configs.add(config)
         config.load()
+        ClickGUIModule.migrateMenuKeys()
         normalizeDisabledCompatFeatures()
         // Freecam/Freelook are transient: never persist as active across restarts.
         FloydCamera.resetTransientModes()
@@ -237,14 +238,14 @@ object ModuleManager {
      */
     private fun keybindTranslationKey(module: Module, setting: KeybindSetting): String {
         when (setting.name) {
-            "Open GUI Key" -> return "key.floydaddons.open_gui"
+            "Open GUI Key" -> return "key.floydaddons.click_gui"
             "Toggle X-Ray" -> return "key.floydaddons.toggle_xray"
             "Toggle Freecam" -> return "key.floydaddons.toggle_freecam"
             "Toggle Freelook" -> return "key.floydaddons.toggle_freelook"
             "Toggle Mob ESP" -> return "key.floydaddons.toggle_mob_esp"
         }
         // The Legacy Click GUI's auto-registered module-toggle keybind is the "click gui" key.
-        if (setting.name == "Keybind" && module === LegacyClickGUIModule) return "key.floydaddons.click_gui"
+        if (setting.name == "Keybind" && module === LegacyClickGUIModule) return "key.floydaddons.open_gui"
         if (setting.name == "Keybind") return "key.floydaddons.module.${moduleSlug(module)}"
         return "key.floydaddons.module.${moduleSlug(module)}.${settingSlug(setting.name)}"
     }

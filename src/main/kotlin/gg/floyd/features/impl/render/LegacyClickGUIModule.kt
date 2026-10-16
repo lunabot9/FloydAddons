@@ -1,28 +1,21 @@
 package gg.floyd.features.impl.render
 
 import gg.floyd.Branding
-import gg.floyd.clickgui.LegacyFloydClickGUI
+import gg.floyd.clickgui.FloydOneConfig
 import gg.floyd.clickgui.settings.AlwaysActive
 import gg.floyd.clickgui.settings.impl.*
 import gg.floyd.features.Module
 import gg.floyd.utils.Color
 import org.lwjgl.glfw.GLFW
 
-/**
- * Owns the styling settings for the fullscreen Floyd GUI ([LegacyFloydClickGUI]).
- *
- * These button/border colour settings used to live in [ClickGUIModule], where they were orphaned
- * under the Odin GUI even though only that GUI reads them. They now have a dedicated home so the GUI's
- * settings are self-contained and discoverable; chroma/fade are configured inside each color picker
- * (the old separate fade toggles/colors were removed). Opening the module (via its keybind or toggle)
- * opens the Floyd GUI hub independently from the panel-based Click GUI.
- */
+/** Retains the old config identity and colors while opening the primary OneConfig UI. */
 @AlwaysActive
 object LegacyClickGUIModule : Module(
     name = Branding.LEGACY_GUI_NAME,
     description = Branding.LEGACY_GUI_DESCRIPTION,
-    key = GLFW.GLFW_KEY_RIGHT_SHIFT
+    key = GLFW.GLFW_KEY_N
 ) {
+    override val visibleInGui: Boolean = false
     val buttonTextColor by ColorSetting("Button Text Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Floyd GUI button text color — toggle chroma/fade inside the picker.")
     val buttonBorderColor by ColorSetting("Button Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Floyd GUI button border color — toggle chroma/fade inside the picker.")
     val guiBorderColor by ColorSetting("GUI Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Floyd GUI panel border color — toggle chroma/fade inside the picker.")
@@ -32,7 +25,7 @@ object LegacyClickGUIModule : Module(
     }
 
     override fun onEnable() {
-        mc.setScreen(LegacyFloydClickGUI.openHub())
+        FloydOneConfig.open()
         super.onEnable()
         toggle()
     }

@@ -14,6 +14,7 @@ pluginManagement {
     plugins {
         id("net.fabricmc.fabric-loom") version loom_version
         kotlin("jvm") version kotlin_version
+        kotlin("plugin.compose") version kotlin_version
     }
 }
 

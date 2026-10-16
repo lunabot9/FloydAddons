@@ -37,6 +37,21 @@ class NumberSetting<E>(
     private val minDouble = min.toDouble()
     private var maxDouble = max.toDouble()
 
+    internal val minimum get() = minDouble
+    internal val maximum get() = maxDouble
+    internal val step get() = incrementDouble
+
+    internal fun setFromNumber(number: Number) {
+        @Suppress("UNCHECKED_CAST")
+        val converted = when (default) {
+            is Int -> number.toInt()
+            is Long -> number.toLong()
+            is Float -> number.toFloat()
+            else -> number.toDouble()
+        } as E
+        value = converted
+    }
+
     private val handler = HoverHandler(150)
 
     private var displayValue = ""

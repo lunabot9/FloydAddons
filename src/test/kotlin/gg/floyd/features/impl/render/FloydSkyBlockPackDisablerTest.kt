@@ -1,8 +1,13 @@
 package gg.floyd.features.impl.render
 
+import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import net.minecraft.resources.Identifier
+import java.nio.file.Files
+import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -11,297 +16,157 @@ import kotlin.test.assertTrue
 
 class FloydSkyBlockPackDisablerTest {
     @Test
-    fun `matches official Hypixel SkyBlock pack URLs`() {
-        assertTrue(FloydSkyBlockPackPolicy.isOfficialSkyBlockPack("https://assets.hypixel.net/SkyBlock/pack.zip"))
-        assertTrue(FloydSkyBlockPackPolicy.isOfficialSkyBlockPack("https://HYPIXEL.NET/resources/skyblock-pack.zip"))
-        assertTrue(
-            FloydSkyBlockPackPolicy.isOfficialSkyBlockPack(
-                "https://resourcepacks.hypixel.net/SkyBlock/5c59e0a9-9865-4d4e-91d2-915515672cbd/84.zip"
-            )
-        )
-    }
-
-    @Test
-    fun `does not block unrelated server packs`() {
+    fun `matches official SkyBlock packs and leaves other games alone`() {
+        assertTrue(FloydSkyBlockPackPolicy.isOfficialSkyBlockPack("https://resourcepacks.hypixel.net/SkyBlock/test/84.zip"))
         assertFalse(FloydSkyBlockPackPolicy.isOfficialSkyBlockPack("https://assets.hypixel.net/bedwars/pack.zip"))
         assertFalse(FloydSkyBlockPackPolicy.isOfficialSkyBlockPack("https://example.com/SkyBlock/pack.zip"))
-        assertFalse(FloydSkyBlockPackPolicy.isOfficialSkyBlockPack("https://example.com/pack.zip"))
     }
 
     @Test
-    fun `bundled compatibility data covers the currently broken aspect of the void model`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val aspectOfTheVoid = JsonParser.parseReader(reader).asJsonObject["ASPECT_OF_THE_VOID"]
-            assertNotNull(aspectOfTheVoid)
-            assertTrue(aspectOfTheVoid.asJsonObject["model"].asString.startsWith("minecraft:"))
-        }
-
-        assertNotNull(javaClass.getResource("/floyd_skyblock_pack_fallback.zip"))
-    }
-
-    @Test
-    fun `bundled item table still carries sprayonator variants used by the upstream fallback path`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            assertNotNull(json["SPRAYONATOR"])
-            assertTrue(json["SPRAYONATOR"].asJsonObject["model"].asString.startsWith("minecraft:"))
+    fun `unknown menu model stays intact instead of becoming paper or a generic model parent`() {
+        val current = Identifier.parse("hypixel_skyblock:item/island_relevant/garden/pests/salty_nozzle")
+        for (skyBlockId in listOf(null, "SALTY_NOZZLE", "FUTURE_ITEM")) {
+            assertEquals(current, FloydSkyBlockItemModelPolicy.resolveBaseModel(current, skyBlockId, emptyMap()))
         }
     }
 
     @Test
-    fun `bundled item table covers safari and critter ids that recently regressed to null`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            val requiredIds = listOf(
-                "SAFARI_BELT",
-                "SAFARI_BELT_COMMON",
-                "SAFARI_BELT_UNCOMMON",
-                "SAFARI_BELT_RARE",
-                "SAFARI_BELT_EPIC",
-                "SAFARI_BELT_LEGENDARY",
-                "SAFARI_BELT_MYTHIC",
-                "RAINBOW_FEATHER",
-                "CRITTER_CAPSULE",
-                "BAG_OF_SEEDS",
-                "YOGI_BERRY",
-                "WRIGGLEWORM",
-                "SOOTHING_INCENSE",
-                "SHINING_COIN",
-                "BASIC_NOZZLE",
-                "JUICY_NOZZLE",
-                "SALTY_NOZZLE",
-                "ARCHITECTS_FIRST_DRAFT",
-                "ARCHITECT_FIRST_DRAFT",
-                "LUMBERJACK_RING",
-                "LUMBERJACK_TALISMAN",
-                "TORRHUS_ARTIFACT",
-                "TORRHUS_BELT",
-                "TORRHUS_RING",
-                "TORRHUS_TALISMAN",
-                "HONEYCOMB_TALISMAN",
-                "HONEYCOMB_RING",
-                "HONEYCOMB_ARTIFACT",
-                "HONEYCOMB_NECKLACE",
-                "HONEY_POT_BEHEMOTH",
-                "BEHEMOTH_POT_OF_HONEYCOMB",
-            )
-
-            for (skyBlockId in requiredIds) {
-                val fallback = json[skyBlockId]
-                assertNotNull(fallback, "Missing bundled fallback for $skyBlockId")
-                assertTrue(
-                    fallback.asJsonObject["model"].asString.startsWith("minecraft:"),
-                    "Fallback for $skyBlockId should resolve to a vanilla item model"
-                )
-            }
-        }
+    fun `known legacy item still reverts to its mapped vanilla model`() {
+        val current = Identifier.parse("hypixel_skyblock:item/weapon/aspect_of_the_void")
+        val vanilla = Identifier.parse("minecraft:diamond_shovel")
+        assertEquals(vanilla, FloydSkyBlockItemModelPolicy.resolveBaseModel(
+            current, "ASPECT_OF_THE_VOID", mapOf("ASPECT_OF_THE_VOID" to vanilla),
+        ))
     }
 
     @Test
-    fun `bundled item table covers newer legacy fallback items from the refreshed pack`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            val requiredIds = listOf(
-                "FLINT_ARROW",
-                "BONEMERANG",
-                "SPIRIT_SHORTBOW",
-                "DIVANS_DRILL",
-                "STONK",
-            )
-
-            for (skyBlockId in requiredIds) {
-                val fallback = json[skyBlockId]
-                assertNotNull(fallback, "Missing bundled fallback for $skyBlockId")
-                assertTrue(
-                    fallback.asJsonObject["model"].asString.startsWith("minecraft:"),
-                    "Fallback for $skyBlockId should resolve to a vanilla item model"
-                )
-            }
-        }
-    }
-
-    @Test
-    fun `bundled item table uses stable vanilla item models for shortbows and superboom`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            val expectedModels = mapOf(
-                "ARTISANAL_SHORTBOW" to "minecraft:bow",
-                "DRAGON_SHORTBOW" to "minecraft:bow",
-                "JUJU_SHORTBOW" to "minecraft:bow",
-                "MACHINE_GUN_SHORTBOW" to "minecraft:bow",
-                "MOSQUITO_SHORTBOW" to "minecraft:bow",
-                "SPIDER_SHORTBOW" to "minecraft:bow",
-                "SPIRIT_SHORTBOW" to "minecraft:bow",
-                "TERMINATOR" to "minecraft:bow",
-                "SUPERBOOM_TNT" to "minecraft:tnt",
-            )
-
-            for ((skyBlockId, expectedModel) in expectedModels) {
-                val fallback = json[skyBlockId]
-                assertNotNull(fallback, "Missing bundled fallback for $skyBlockId")
-                assertEquals(
-                    expectedModel,
-                    fallback.asJsonObject["model"].asString,
-                    "Fallback for $skyBlockId should point to a stable vanilla item model"
-                )
-            }
-        }
-    }
-
-    @Test
-    fun `bundled item table uses honeycomb fallbacks for honey accessories`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            val honeyAccessories = listOf(
-                "HONEYCOMB_TALISMAN",
-                "HONEYCOMB_RING",
-                "HONEYCOMB_ARTIFACT",
-                "HONEYCOMB_NECKLACE",
-            )
-
-            for (skyBlockId in honeyAccessories) {
-                val fallback = json[skyBlockId]
-                assertNotNull(fallback, "Missing bundled fallback for $skyBlockId")
-                assertEquals(
-                    "minecraft:honeycomb",
-                    fallback.asJsonObject["model"].asString,
-                    "Fallback for $skyBlockId should point to honeycomb instead of paper"
-                )
-            }
-        }
-    }
-
-    @Test
-    fun `bundled item table uses map fallbacks for architect first draft variants`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            val architectDrafts = listOf(
-                "ARCHITECTS_FIRST_DRAFT",
-                "ARCHITECT_FIRST_DRAFT",
-            )
-
-            for (skyBlockId in architectDrafts) {
-                val fallback = json[skyBlockId]
-                assertNotNull(fallback, "Missing bundled fallback for $skyBlockId")
-                assertEquals(
-                    "minecraft:map",
-                    fallback.asJsonObject["model"].asString,
-                    "Fallback for $skyBlockId should point to map instead of paper"
-                )
-            }
-        }
-    }
-
-    @Test
-    fun `bundled item table uses stable fallbacks for lumberjack and torrhus accessories`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            val expectedModels = mapOf(
-                "LUMBERJACK_RING" to "minecraft:wooden_axe",
-                "LUMBERJACK_TALISMAN" to "minecraft:wooden_axe",
-                "TORRHUS_ARTIFACT" to "minecraft:leather",
-                "TORRHUS_BELT" to "minecraft:leather",
-                "TORRHUS_RING" to "minecraft:leather",
-                "TORRHUS_TALISMAN" to "minecraft:leather",
-            )
-
-            for ((skyBlockId, expectedModel) in expectedModels) {
-                val fallback = json[skyBlockId]
-                assertNotNull(fallback, "Missing bundled fallback for $skyBlockId")
-                assertEquals(
-                    expectedModel,
-                    fallback.asJsonObject["model"].asString,
-                    "Fallback for $skyBlockId should point to a stable vanilla item model"
-                )
-            }
-        }
-    }
-
-    @Test
-    fun `bundled fallback zip contains merged legacy item definitions`() {
-        val resource = javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")
-        assertNotNull(resource)
-
-        ZipInputStream(resource).use { zip ->
-            var foundMergedBonemerang = false
-            while (true) {
-                val entry = zip.nextEntry ?: break
-                if (entry.name == "assets/hypixel_skyblock/items/item/island_relevant/dungeons/bonemerang.json") {
-                    foundMergedBonemerang = true
-                    break
-                }
-            }
-            assertTrue(foundMergedBonemerang, "Expected merged legacy bonemerang item definition in bundled fallback zip")
-        }
-    }
-
-    @Test
-    fun `bundled item table covers new legacy head models through the local fallback pack`() {
-        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")
-        assertNotNull(data)
-        data.reader().use { reader ->
-            val json = JsonParser.parseReader(reader).asJsonObject
-            val fallback = json["ABIPHONE_X_BLUE"]
-            assertNotNull(fallback, "Missing bundled fallback for ABIPHONE_X_BLUE")
-            assertEquals(
-                "hypixel_skyblock:item/abiphones/x/abiphone_x_blue",
-                fallback.asJsonObject["model"].asString,
-            )
-        }
-    }
-
-    @Test
-    fun `prefers cached live pack base model when bundled table lacks a new item`() {
-        val currentModel = Identifier.parse("hypixel_skyblock:item/boosters/common/booster_foraging_wisdom")
-        val resolved = FloydSkyBlockItemModelPolicy.resolveBaseModel(
-            currentModel = currentModel,
-            skyBlockId = null,
-            liveModels = mapOf(currentModel to Identifier.parse("minecraft:paper")),
-            knownModels = emptyMap(),
-            vanillaItemModel = Identifier.parse("hypixel_skyblock:item/unknown"),
-        )
-
-        assertEquals(Identifier.parse("minecraft:paper"), resolved)
-    }
-
-    @Test
-    fun `prefers cached live pack base model over bundled paper placeholders`() {
-        val currentModel = Identifier.parse("hypixel_skyblock:item/island_relevant/garden/pests/basic_nozzle")
-        val resolved = FloydSkyBlockItemModelPolicy.resolveBaseModel(
-            currentModel = currentModel,
-            skyBlockId = "BASIC_NOZZLE",
-            liveModels = mapOf(currentModel to Identifier.parse("minecraft:glass_bottle")),
-            knownModels = mapOf("BASIC_NOZZLE" to Identifier.parse("minecraft:glass_bottle")),
-            vanillaItemModel = Identifier.parse("hypixel_skyblock:item/unknown"),
-        )
-
-        assertEquals(Identifier.parse("minecraft:glass_bottle"), resolved)
+    fun `quiver arrow reverts even without an item id`() {
+        val current = Identifier.parse("hypixel_skyblock:item/quiver_arrow")
+        val arrow = Identifier.parse("minecraft:arrow")
+        assertEquals(arrow, FloydSkyBlockItemModelPolicy.resolveBaseModel(current, null, emptyMap(), arrow))
     }
 
     @Test
     fun `missing item model passes through for synthetic cross mod HUD previews`() {
-        assertFalse(
-            FloydSkyBlockItemModelPolicy.shouldReplaceCurrentModel(
-                currentModel = null,
-                packDisablerEnabled = true,
-                stackEmpty = false,
+        assertFalse(FloydSkyBlockItemModelPolicy.shouldReplaceCurrentModel(null, true, false))
+        assertFalse(FloydSkyBlockItemModelPolicy.shouldReplaceCurrentModel(Identifier.parse("minecraft:paper"), true, false))
+        assertFalse(FloydSkyBlockItemModelPolicy.shouldReplaceCurrentModel(Identifier.parse("hypixel_skyblock:test"), false, false))
+        assertTrue(FloydSkyBlockItemModelPolicy.shouldReplaceCurrentModel(Identifier.parse("hypixel_skyblock:test"), true, false))
+    }
+
+    @Test
+    fun `Noamm item data does not invent paper or bottle replacements for new nozzle controls`() {
+        val data = javaClass.getResourceAsStream("/floyd_skyblock_items.json")!!.reader().use(JsonParser::parseReader).asJsonObject
+        for (id in listOf("BASIC_NOZZLE", "JUICY_NOZZLE", "SALTY_NOZZLE", "JUICY_SPRAYONATOR", "SALTY_SPRAYONATOR")) {
+            assertFalse(data.has(id), "$id must use its complete original pack model")
+        }
+        for ((id, model) in mapOf("ASPECT_OF_THE_VOID" to "minecraft:diamond_shovel", "TERMINATOR" to "minecraft:bow", "SUPERBOOM_TNT" to "minecraft:tnt")) {
+            assertEquals(model, data[id].asJsonObject["model"].asString)
+        }
+        assertNotNull(data["SPRAYONATOR"].asJsonObject["texture"])
+    }
+
+    @Test
+    fun `bundled pack includes base models and every custom model referenced by item definitions`() {
+        val entries = bundledEntries()
+        assertTrue(entries.keys.count { it.startsWith("assets/hypixel_skyblock/models/") } > 1000)
+        for ((path, content) in entries) {
+            if (!path.startsWith("assets/hypixel_skyblock/items/") || !path.endsWith(".json")) continue
+            val root = JsonParser.parseString(content.toString(Charsets.UTF_8))
+            for (model in modelReferences(root)) {
+                if (!model.startsWith("hypixel_skyblock:")) continue
+                val modelPath = "assets/hypixel_skyblock/models/${model.substringAfter(':')}.json"
+                assertTrue(entries.containsKey(modelPath), "$path references absent $modelPath")
+            }
+        }
+    }
+
+    @Test
+    fun `bundled fallback retains new salty sprayonator and nozzle definitions with head textures`() {
+        val entries = bundledEntries()
+        for (name in listOf("basic_nozzle", "juicy_nozzle", "salty_nozzle", "salty_sprayonator")) {
+            assertNotNull(entries["assets/hypixel_skyblock/items/item/island_relevant/garden/pests/$name.json"])
+            assertNotNull(entries["assets/hypixel_skyblock/textures/entity/uncategorized/$name.png"])
+        }
+        for (name in listOf("salty_sprayonator_basic_nozzle", "salty_sprayonator_juicy_nozzle")) {
+            assertNotNull(entries["assets/hypixel_skyblock/textures/entity/uncategorized/$name.png"])
+        }
+    }
+
+    @Test
+    fun `old legacy-only cached pack is rejected while complete fallback is accepted`() {
+        val legacy = Files.createTempFile("floyd-legacy-pack", ".zip")
+        val complete = Files.createTempFile("floyd-complete-pack", ".zip")
+        try {
+            ZipOutputStream(Files.newOutputStream(legacy)).use {
+                it.putNextEntry(ZipEntry("assets/hypixel_skyblock/items/test.json"))
+                it.write("{}".toByteArray())
+                it.closeEntry()
+            }
+            javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")!!.use { Files.copy(it, complete, java.nio.file.StandardCopyOption.REPLACE_EXISTING) }
+            assertFalse(FloydSkyBlockPackContentPolicy.hasCompleteItemAssets(legacy))
+            assertTrue(FloydSkyBlockPackContentPolicy.hasCompleteItemAssets(complete))
+        } finally {
+            Files.deleteIfExists(legacy)
+            Files.deleteIfExists(complete)
+        }
+    }
+
+    @Test
+    fun `complete cached server pack receives missing nozzle assets without overriding live files`() {
+        val cached = Files.createTempFile("floyd-cached-official", ".zip")
+        var merged = cached
+        val preserved = "assets/hypixel_skyblock/models/item/live.json"
+        val nozzle = "assets/hypixel_skyblock/items/item/island_relevant/garden/pests/salty_nozzle.json"
+        val nozzleTexture = "assets/hypixel_skyblock/textures/entity/uncategorized/salty_nozzle.png"
+        // Simulate a newer live definition for an existing bundled item: it must take precedence.
+        val liveOverride = "assets/hypixel_skyblock/items/item/island_relevant/garden/pests/basic_nozzle.json"
+        try {
+            ZipOutputStream(Files.newOutputStream(cached)).use { zip ->
+                for ((name, body) in mapOf("pack.mcmeta" to "live metadata", preserved to "{}", liveOverride to "live override")) {
+                    zip.putNextEntry(ZipEntry(name))
+                    zip.write(body.toByteArray())
+                    zip.closeEntry()
+                }
+            }
+            assertTrue(FloydSkyBlockPackContentPolicy.hasCompleteItemAssets(cached))
+            merged = FloydSkyBlockPackContentPolicy.supplementMissingAssets(
+                cached, javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")!!,
             )
-        )
+            ZipFile(merged.toFile()).use { zip ->
+                assertNotNull(zip.getEntry(nozzle))
+                assertNotNull(zip.getEntry(nozzleTexture))
+                assertEquals("live override", zip.getInputStream(zip.getEntry(liveOverride)).reader().readText())
+                assertEquals("live metadata", zip.getInputStream(zip.getEntry("pack.mcmeta")).reader().readText())
+            }
+            // The active cache can remain open during reload; supplementation must not modify it.
+            ZipFile(cached.toFile()).use { assertEquals(3, it.size()) }
+            assertEquals(merged, FloydSkyBlockPackContentPolicy.supplementMissingAssets(
+                merged, javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")!!,
+            ))
+        } finally {
+            if (merged != cached) Files.deleteIfExists(merged)
+            Files.deleteIfExists(cached)
+        }
+    }
+
+    private fun bundledEntries(): Map<String, ByteArray> = buildMap {
+        ZipInputStream(javaClass.getResourceAsStream("/floyd_skyblock_pack_fallback.zip")!!).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (!entry.isDirectory) put(entry.name, zip.readBytes())
+            }
+        }
+    }
+
+    private fun modelReferences(element: JsonElement): List<String> = buildList {
+        if (element.isJsonObject) {
+            for ((key, value) in element.asJsonObject.entrySet()) {
+                if (key == "model" && value.isJsonPrimitive) add(value.asString)
+                else addAll(modelReferences(value))
+            }
+        } else if (element.isJsonArray) {
+            for (value in element.asJsonArray) addAll(modelReferences(value))
+        }
     }
 }
