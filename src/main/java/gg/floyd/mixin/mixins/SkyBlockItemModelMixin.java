@@ -29,6 +29,9 @@ public abstract class SkyBlockItemModelMixin {
         var model = FloydSkyBlockItemModelPolicy.INSTANCE.resolveBaseModel(current, id,
             FloydSkyBlockPackAssets.INSTANCE.getItemModels(),
             data.contains("quiver_arrow") ? Items.ARROW.components().get(DataComponents.ITEM_MODEL) : null);
-        return id == null ? model : FloydSkyBlockItemFallbacks.INSTANCE.resolveDynamic(id, stack, data, model);
+        var resolved = id == null ? model : FloydSkyBlockItemFallbacks.INSTANCE.resolveDynamic(id, stack, data, model);
+        return FloydSkyBlockItemModelPolicy.INSTANCE.selectRenderableModel(resolved,
+            FloydSkyBlockPackAssets.INSTANCE.getLiveHeadSkins().containsKey(current),
+            Items.PLAYER_HEAD.components().get(DataComponents.ITEM_MODEL));
     }
 }

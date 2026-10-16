@@ -87,7 +87,7 @@ object FloydSharedCosmetics : Module(
     fun appearanceForEntity(entityId: Int): SharedAppearance? {
         if (!enabled || !showOthers) return null
         val entity = mc.level?.getEntity(entityId) as? Player ?: return null
-        if (entity.uuid == mc.player?.uuid) return null
+        if (FloydSelfPlayer.isSelfEntity(entity)) return null
         return registry.get(entity.uuid)
     }
 
@@ -137,9 +137,9 @@ object FloydSharedCosmetics : Module(
         if (!enabled || base.isEmpty()) return
         if (shareMine) publishOrAuthenticate(base)
         if (!showOthers || !lookupInFlight.compareAndSet(false, true)) return
-        val self = mc.player?.uuid
+        val self = FloydSelfPlayer.localProfileIds()
         val profiles = mc.connection?.onlinePlayers.orEmpty()
-            .filter { it.profile.id != self }
+            .filter { it.profile.id !in self }
             .associate { it.profile.id to it.profile.name }
         val uuids = profiles.keys
         if (uuids.isEmpty()) {

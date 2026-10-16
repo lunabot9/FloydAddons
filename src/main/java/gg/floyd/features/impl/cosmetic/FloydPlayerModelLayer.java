@@ -51,6 +51,14 @@ public final class FloydPlayerModelLayer extends RenderLayer<AvatarRenderState, 
     public void submit(PoseStack poseStack, SubmitNodeCollector collector, int light, AvatarRenderState state, float limbAngle, float limbDistance) {
         if (!FloydPlayerModel.usesBundledLayerFor(state.id) || state.isInvisible) return;
 
+        // A model file from config/floydaddons/models takes over for the local player only; other
+        // players keep resolving through the shared appearance directory.
+        ImportedFileModel customModel = FloydPlayerModel.customModelFor(state.id);
+        if (customModel != null) {
+            customModel.render(poseStack, collector, light, getParentModel(), state.walkAnimationSpeed, state.attackTime);
+            return;
+        }
+
         String selectedModel = FloydPlayerModel.selectedModelFor(state.id);
         if (selectedModel.equals("George Floyd")) {
             submitGeorgeFloyd(poseStack, collector, light);

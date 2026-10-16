@@ -23,37 +23,53 @@ import java.util.Map;
  * Loads and renders the rigged Tung Tung Sahur GLB.
  * Model and texture created and provided by ImJoyler, used with the owner's permission.
  */
-final class TungImportedModel {
+public final class TungImportedModel {
     private static final String MODEL_RESOURCE = "assets/floydaddons/player_models/tung_tung_sahur.glb";
-    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
+    private static final Identifier BUNDLED_TEXTURE = Identifier.fromNamespaceAndPath(
         "floydaddons", "textures/entity/player_model/tung_tung_sahur.png"
     );
     private static final float MODEL_SCALE = 0.60F;
-    private static final Model MODEL = load();
+    /** Authored height of the bundled GLB in model units; user files are fitted against it. */
+    private static final float BUNDLED_HEIGHT = 2.5F;
+    private static final TungImportedModel BUNDLED = load();
 
-    private TungImportedModel() {}
+    private final Model model;
+    private final Identifier texture;
+    private final float scale;
 
+    private TungImportedModel(Model model, Identifier texture, float scale) {
+        this.model = model;
+        this.texture = texture;
+        this.scale = scale;
+    }
+
+    /** Renders the bundled Tung Tung Sahur GLB. */
     static void render(PoseStack stack, SubmitNodeCollector collector, int light, float movementSpeed, float attackTime) {
+        BUNDLED.renderModel(stack, collector, light, movementSpeed, attackTime);
+    }
+
+    /** Renders this instance's GLB (bundled or a user file from config/floydaddons/models). */
+    public void renderModel(PoseStack stack, SubmitNodeCollector collector, int light, float movementSpeed, float attackTime) {
         Map<Integer, AnimatedTrs> animated = new HashMap<>();
         // Render states retain an animation position while idle, so gate the GLB run cycle on the
         // current movement speed. This leaves a stationary player in the authored base pose.
-        if (MODEL.runAnimation != null && movementSpeed > 0.01F) {
-            float duration = MODEL.runAnimation.duration;
+        if (model.runAnimation != null && movementSpeed > 0.01F) {
+            float duration = model.runAnimation.duration;
             float time = duration > 0.0F ? clockSeconds() % duration : 0.0F;
-            applyAnimation(MODEL.runAnimation, time, Math.min(1.0F, movementSpeed * 4.0F), animated);
+            applyAnimation(model.runAnimation, time, Math.min(1.0F, movementSpeed * 4.0F), animated);
         }
-        if (MODEL.hitAnimation != null && attackTime > 0.0F) {
+        if (model.hitAnimation != null && attackTime > 0.0F) {
             float progress = Math.min(1.0F, attackTime);
             float weight = progress < 0.1F ? progress / 0.1F : progress > 0.9F ? (1.0F - progress) / 0.1F : 1.0F;
-            applyAnimation(MODEL.hitAnimation, progress * MODEL.hitAnimation.duration, weight, animated);
+            applyAnimation(model.hitAnimation, progress * model.hitAnimation.duration, weight, animated);
         }
 
         stack.pushPose();
         // The GLB is Y-up and 2.5 units tall. Floyd's avatar model uses Y-down with its feet at 1.5.
         stack.translate(0.0F, 1.5F, 0.0F);
         stack.mulPose(Axis.YP.rotationDegrees(180.0F));
-        stack.scale(-MODEL_SCALE, -MODEL_SCALE, MODEL_SCALE);
-        for (int root : MODEL.sceneRoots) {
+        stack.scale(-scale, -scale, scale);
+        for (int root : model.sceneRoots) {
             renderNode(root, stack, collector, light, animated);
         }
         stack.popPose();
@@ -63,9 +79,9 @@ final class TungImportedModel {
         return (System.nanoTime() % 60_000_000_000L) / 1_000_000_000.0F;
     }
 
-    private static void renderNode(int nodeIndex, PoseStack stack, SubmitNodeCollector collector, int light,
-                                   Map<Integer, AnimatedTrs> animated) {
-        Node node = MODEL.nodes[nodeIndex];
+    private void renderNode(int nodeIndex, PoseStack stack, SubmitNodeCollector collector, int light,
+                            Map<Integer, AnimatedTrs> animated) {
+        Node node = model.nodes[nodeIndex];
         AnimatedTrs pose = animated.get(nodeIndex);
         float[] translation = pose == null || pose.translation == null ? node.translation : pose.translation;
         float[] rotation = pose == null || pose.rotation == null ? node.rotation : pose.rotation;
@@ -76,8 +92,8 @@ final class TungImportedModel {
         stack.mulPose(new Quaternionf(rotation[0], rotation[1], rotation[2], rotation[3]));
         stack.scale(scale[0], scale[1], scale[2]);
         if (node.mesh >= 0) {
-            Mesh mesh = MODEL.meshes[node.mesh];
-            collector.submitCustomGeometry(stack, RenderTypes.entityCutout(TEXTURE),
+            Mesh mesh = model.meshes[node.mesh];
+            collector.submitCustomGeometry(stack, RenderTypes.entityCutout(texture),
                 (renderPose, consumer) -> emitMesh(renderPose, consumer, light, mesh));
         }
         for (int child : node.children) {
@@ -107,11 +123,11 @@ final class TungImportedModel {
             .setNormal(pose, mesh.normals[p], mesh.normals[p + 1], mesh.normals[p + 2]);
     }
 
-    private static void applyAnimation(Animation animation, float time, float weight,
-                                       Map<Integer, AnimatedTrs> animated) {
+    private void applyAnimation(Animation animation, float time, float weight,
+                                Map<Integer, AnimatedTrs> animated) {
         if (weight <= 0.0F) return;
         for (Channel channel : animation.channels) {
-            Node node = MODEL.nodes[channel.node];
+            Node node = model.nodes[channel.node];
             AnimatedTrs target = animated.computeIfAbsent(channel.node, ignored -> new AnimatedTrs());
             float[] sampled = sample(channel, time);
             switch (channel.path) {
@@ -155,28 +171,53 @@ final class TungImportedModel {
         return result;
     }
 
-    private static Model load() {
+    private static TungImportedModel load() {
         try (InputStream stream = TungImportedModel.class.getClassLoader().getResourceAsStream(MODEL_RESOURCE)) {
             if (stream == null) throw new IllegalStateException("Missing resource " + MODEL_RESOURCE);
-            byte[] bytes = stream.readAllBytes();
-            ByteBuffer file = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
-            if (file.getInt() != 0x46546C67 || file.getInt() != 2) throw new IllegalStateException("Invalid GLB header");
-            int totalLength = file.getInt();
-            String json = null;
-            byte[] binary = null;
-            while (file.position() < totalLength) {
-                int length = file.getInt();
-                int type = file.getInt();
-                byte[] chunk = new byte[length];
-                file.get(chunk);
-                if (type == 0x4E4F534A) json = new String(chunk, StandardCharsets.UTF_8).trim();
-                if (type == 0x004E4942) binary = chunk;
-            }
-            if (json == null || binary == null) throw new IllegalStateException("GLB is missing JSON or binary data");
-            return parse(JsonParser.parseString(json).getAsJsonObject(), binary);
+            return new TungImportedModel(parseGlb(stream), BUNDLED_TEXTURE, MODEL_SCALE);
         } catch (Exception exception) {
             throw new IllegalStateException("Failed to load Tung Tung Sahur model", exception);
         }
+    }
+
+    /** Loads a user GLB from config/floydaddons/models, auto-fitted to the bundled model height. */
+    public static TungImportedModel parse(InputStream stream, Identifier texture) throws Exception {
+        Model parsed = parseGlb(stream);
+        return new TungImportedModel(parsed, texture, scaleForHeight(parsed));
+    }
+
+    /** Uniformly scales a model so it occupies the same vertical space as the bundled one. */
+    private static float scaleForHeight(Model model) {
+        float minY = Float.POSITIVE_INFINITY;
+        float maxY = Float.NEGATIVE_INFINITY;
+        for (Mesh mesh : model.meshes) {
+            for (int i = 1; i < mesh.positions.length; i += 3) {
+                minY = Math.min(minY, mesh.positions[i]);
+                maxY = Math.max(maxY, mesh.positions[i]);
+            }
+        }
+        float height = maxY > minY ? maxY - minY : 0.0F;
+        if (height <= 0.0001F) return MODEL_SCALE;
+        return MODEL_SCALE * BUNDLED_HEIGHT / height;
+    }
+
+    private static Model parseGlb(InputStream stream) throws Exception {
+        byte[] bytes = stream.readAllBytes();
+        ByteBuffer file = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
+        if (file.getInt() != 0x46546C67 || file.getInt() != 2) throw new IllegalStateException("Invalid GLB header");
+        int totalLength = file.getInt();
+        String json = null;
+        byte[] binary = null;
+        while (file.position() < totalLength) {
+            int length = file.getInt();
+            int type = file.getInt();
+            byte[] chunk = new byte[length];
+            file.get(chunk);
+            if (type == 0x4E4F534A) json = new String(chunk, StandardCharsets.UTF_8).trim();
+            if (type == 0x004E4942) binary = chunk;
+        }
+        if (json == null || binary == null) throw new IllegalStateException("GLB is missing JSON or binary data");
+        return parse(JsonParser.parseString(json).getAsJsonObject(), binary);
     }
 
     private static Model parse(JsonObject root, byte[] binary) {

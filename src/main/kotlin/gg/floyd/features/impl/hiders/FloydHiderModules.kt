@@ -5,6 +5,7 @@ import gg.floyd.events.TickEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.features.impl.cosmetic.FloydSelfPlayer
 
 /**
  * Per-feature hider modules.
@@ -127,8 +128,8 @@ object FloydNoArmor : Module(
 
     fun shouldHideArmorFor(entityId: Int): Boolean {
         if (!enabled) return false
-        val player = mc.player ?: return false
-        val isSelf = entityId == player.id
+        if (mc.player == null) return false
+        val isSelf = FloydSelfPlayer.isSelf(entityId)
         return when (modeName()) {
             "Self" -> isSelf
             "Others" -> !isSelf

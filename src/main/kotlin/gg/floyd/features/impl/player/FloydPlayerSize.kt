@@ -7,6 +7,7 @@ import gg.floyd.clickgui.settings.impl.SelectorSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
+import gg.floyd.features.impl.cosmetic.FloydSelfPlayer
 import gg.floyd.features.impl.cosmetic.FloydSharedCosmetics
 import gg.floyd.utils.moduleToggle
 import net.minecraft.world.entity.player.Player
@@ -37,13 +38,13 @@ object FloydPlayerSize : Module(
 
     @JvmStatic
     fun shouldScale(id: Int): Boolean {
-        if (mc.player?.id != id) {
+        if (!FloydSelfPlayer.isSelf(id)) {
             FloydSharedCosmetics.appearanceForEntity(id)?.let { return it.size.enabled }
         }
         if (!enabled || !playerSizeActive()) return false
-        val player = mc.player ?: return false
+        if (mc.player == null) return false
         return when (targetName()) {
-            "Self" -> id == player.id
+            "Self" -> FloydSelfPlayer.isSelf(id)
             "Real Players" -> {
                 val entity = mc.level?.getEntity(id) as? Player ?: return false
                 mc.connection?.getPlayerInfo(entity.uuid) != null

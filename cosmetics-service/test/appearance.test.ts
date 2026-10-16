@@ -5,9 +5,9 @@ import { verifyCertifiedChallenge } from "../src/index";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("sanitizeAppearance", () => {
-  it("only accepts bundled assets and clamps geometry", () => {
+  it("falls back to the default model for unusable ids and clamps geometry", () => {
     expect(sanitizeAppearance({
-      model: { enabled: true, id: "unknown", showHeads: true },
+      model: { enabled: true, id: "../../assets/secret.png", showHeads: true },
       cape: { enabled: true, id: "uploaded.gif" },
       cone: { enabled: true, id: "bad.png", height: 9, radius: -2, yOffset: 4, rotation: -1, spinSpeed: 999 },
       skin: { enabled: true, id: "bad.png" },
@@ -22,6 +22,28 @@ describe("sanitizeAppearance", () => {
       size: { enabled: true, x: -1, y: 5, z: 2 },
       neckHider: { enabled: true, nickname: "FloydName that is much longer th" },
     });
+  });
+
+  it("keeps client-owned model labels instead of rewriting them to the default", () => {
+    const idFor = (id: unknown) => sanitizeAppearance({ model: { enabled: true, id } }).model.id;
+
+    expect(idFor("Low Poly Tung")).toBe("Low Poly Tung");
+    expect(idFor("  Zombified Piglin  ")).toBe("Zombified Piglin");
+    expect(idFor("Orthodox Man")).toBe("Orthodox Man");
+    expect(idFor("Minion")).toBe("Minion");
+    expect(idFor("Tung Tung Sahur")).toBe("Tung Tung Sahur");
+    expect(idFor("x".repeat(64))).toBe("x".repeat(64));
+  });
+
+  it("falls back to the default model for blank, oversized or non-label ids", () => {
+    const idFor = (id: unknown) => sanitizeAppearance({ model: { enabled: true, id } }).model.id;
+
+    expect(idFor("   ")).toBe("Tung Tung Sahur");
+    expect(idFor("x".repeat(65))).toBe("Tung Tung Sahur");
+    expect(idFor("bad\nlabel")).toBe("Tung Tung Sahur");
+    expect(idFor(".hidden")).toBe("Tung Tung Sahur");
+    expect(idFor(42)).toBe("Tung Tung Sahur");
+    expect(idFor(undefined)).toBe("Tung Tung Sahur");
   });
 });
 

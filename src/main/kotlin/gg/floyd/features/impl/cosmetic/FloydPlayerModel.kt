@@ -1,10 +1,13 @@
 package gg.floyd.features.impl.cosmetic
 
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.SelectorSetting
+import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.utils.modMessage
 
 internal object FloydPlayerModelSelection {
     private const val MINION_MODEL = "Minion"
@@ -68,16 +71,53 @@ object FloydPlayerModel : Module(
         desc = "Shows equipped player and mob heads while the custom player model is active."
     )
 
+    var selectedModelFile by StringSetting(
+        "Model File",
+        "",
+        96,
+        desc = "OBJ or GLB file in config/floydaddons/models, rendered for yourself. Blank uses the bundled model above."
+    )
+
+    private val openModelFolder by ActionSetting("Open Model Folder", desc = "Opens config/floydaddons/models.") {
+        FloydModelFiles.ensureSeeded()
+        modMessage(
+            if (FloydModelFiles.openFolder()) "Opened model folder: ${FloydModelFiles.modelDir}"
+            else "Could not open model folder: ${FloydModelFiles.modelDir}"
+        )
+    }
+
+    private val listModelFiles by ActionSetting("List Model Files", desc = "Prints model files found in config/floydaddons/models.") {
+        val files = FloydModelFiles.availableFiles()
+        modMessage(
+            if (files.isEmpty()) "No model files found in ${FloydModelFiles.modelDir}"
+            else "Model files:\n" + files.joinToString("\n") { "${it.fileName} (${it.format})" }
+        )
+    }
+
+    private val reloadModelFiles by ActionSetting("Reload Model Files", desc = "Re-reads model files from config/floydaddons/models.") {
+        FloydModelFiles.reload()
+        modMessage("Reloaded model files: ${FloydModelFiles.availableFiles().size} available")
+    }
+
+    /** Model file rendered for the local body, or null when the bundled selection applies. */
+    @JvmStatic
+    fun customModelFor(id: Int): ImportedFileModel? {
+        if (!enabled || !FloydSelfPlayer.isSelf(id)) return null
+        val name = selectedModelFile
+        if (name.isBlank()) return null
+        return FloydModelFiles.modelFor(name)
+    }
+
     @JvmStatic
     fun isActiveFor(id: Int): Boolean =
-        if (mc.player?.id == id) enabled else FloydSharedCosmetics.appearanceForEntity(id)?.model?.enabled == true
+        if (FloydSelfPlayer.isSelf(id)) enabled else FloydSharedCosmetics.appearanceForEntity(id)?.model?.enabled == true
 
     @JvmStatic
     fun selectedModel(): String = FloydPlayerModelSelection.selectedName(model)
 
     @JvmStatic
     fun selectedModelFor(id: Int): String =
-        if (mc.player?.id == id) selectedModel()
+        if (FloydSelfPlayer.isSelf(id)) selectedModel()
         else FloydPlayerModelSelection.canonicalModelName(FloydSharedCosmetics.appearanceForEntity(id)?.model?.id)
             ?: FloydPlayerModelSelection.models.first()
 
@@ -95,7 +135,7 @@ object FloydPlayerModel : Module(
 
     @JvmStatic
     fun shouldShowHeadsFor(id: Int): Boolean =
-        if (mc.player?.id == id) showHeads
+        if (FloydSelfPlayer.isSelf(id)) showHeads
         else FloydSharedCosmetics.appearanceForEntity(id)?.model?.showHeads ?: false
 
     @JvmStatic
@@ -125,6 +165,10 @@ object FloydPlayerModel : Module(
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "model" to selectedModel(),
+        "modelFile" to selectedModelFile,
+        "modelFileActive" to (customModelFor(mc.player?.id ?: -1) != null),
+        "modelFileError" to FloydModelFiles.failureFor(selectedModelFile),
+        "modelFilesAvailable" to FloydModelFiles.availableFiles().map { it.fileName },
         "vanillaMobId" to FloydPlayerModelSelection.vanillaMobId(selectedModel()),
         "vanillaMobRenderer" to VanillaMobPlayerModel.state(),
         "showHeads" to showHeads,

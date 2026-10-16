@@ -62,20 +62,20 @@ object FloydCape : Module(
     fun isActive(): Boolean = enabled
 
     @JvmStatic
-    fun isActiveFor(id: Int): Boolean = isActive() && FloydAddonsMod.mc.player?.id == id
+    fun isActiveFor(id: Int): Boolean = isActive() && FloydSelfPlayer.isSelf(id)
 
     @JvmStatic
     fun isSharedActiveFor(id: Int): Boolean =
-        if (FloydAddonsMod.mc.player?.id == id) isActive()
+        if (FloydSelfPlayer.isSelf(id)) isActive()
         else FloydSharedCosmetics.appearanceForEntity(id)?.cape?.enabled == true
 
     @JvmStatic
     fun textureFor(id: Int): Identifier =
-        if (FloydAddonsMod.mc.player?.id == id) texture() else builtinCape
+        if (FloydSelfPlayer.isSelf(id)) texture() else builtinCape
 
     @JvmStatic
     fun aspectRatioFor(id: Int): Float =
-        if (FloydAddonsMod.mc.player?.id == id) aspectRatio() else 2.0f
+        if (FloydSelfPlayer.isSelf(id)) aspectRatio() else 2.0f
 
     @JvmStatic
     fun texture(): Identifier {

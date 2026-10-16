@@ -63,7 +63,7 @@ fun FloydSidebar() {
     ) {
         Column(Modifier.fillMaxWidth().padding(start = 14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("FLOYD", color = Accent, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
+            Text(Branding.DISPLAY_NAME.substringBefore(' ').uppercase(), color = Accent, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold)
             Text("A D D O N S", color = theme.textColorSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         }
         Spacer(Modifier.height(8.dp))
@@ -85,7 +85,7 @@ fun FloydSidebar() {
             }
         }
         Spacer(Modifier.weight(1f))
-        Text("Floyd Addons ${Branding.VERSION}", color = theme.textColorSecondary, fontSize = 11.sp)
+        Text("${Branding.DISPLAY_NAME} ${Branding.VERSION}", color = theme.textColorSecondary, fontSize = 11.sp)
     }
 }
 

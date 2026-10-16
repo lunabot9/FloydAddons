@@ -1,6 +1,27 @@
 export const APPEARANCE_VERSION = 1;
 export const MODEL_IDS = ["Tung Tung Sahur", "George Floyd", "Jenny"] as const;
 
+/**
+ * Bundled model labels are owned by the client (`FloydPlayerModelSelection`): the three
+ * original models, three later additions, and every vanilla mob. Keeping a copy of that list
+ * here silently rewrote every other selection to `MODEL_IDS[0]` ("Tung Tung Sahur"), so a
+ * published appearance could render a different model than the one the owner selected.
+ * Receiving clients canonicalize the label and already fall back to their own default for
+ * anything they cannot render, so the service only has to keep the stored label bounded and
+ * printable instead of allowlisting it.
+ */
+export const MODEL_ID_MAX_LENGTH = 64;
+const MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 '_.:()-]*$/;
+
+const modelId = (value: unknown): string => {
+  if (typeof value !== "string") return MODEL_IDS[0];
+  const label = value.trim();
+  if (label.length === 0 || label.length > MODEL_ID_MAX_LENGTH || !MODEL_ID_PATTERN.test(label)) {
+    return MODEL_IDS[0];
+  }
+  return label;
+};
+
 const finite = (value: unknown, fallback: number): number =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
 
@@ -27,15 +48,13 @@ export function sanitizeAppearance(input: unknown) {
   const skin = record(root.skin);
   const size = record(root.size);
   const neckHider = record(root.neckHider);
-  const modelId = typeof model.id === "string" && MODEL_IDS.includes(model.id as typeof MODEL_IDS[number])
-    ? model.id
-    : MODEL_IDS[0];
+  const modelIdLabel = modelId(model.id);
 
   return {
     version: APPEARANCE_VERSION,
     model: {
       enabled: bool(model.enabled),
-      id: modelId,
+      id: modelIdLabel,
       showHeads: bool(model.showHeads),
     },
     cape: { enabled: bool(cape.enabled), id: "default" },
