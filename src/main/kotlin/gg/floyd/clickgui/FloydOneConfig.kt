@@ -32,9 +32,32 @@ object FloydOneConfig {
     private var configTree: Tree? = null
     private val categoryTrees = mutableMapOf<String, Tree>()
     private var suppressedOpeningSounds = 0
+    private var suppressedClosingSounds = 0
+    private var suppressedCompatOverlays = 0L
+
+    @JvmStatic
+    fun recordSuppressedCompatOverlay() { suppressedCompatOverlays++ }
+
+    // Navigation resolves after the first frame. Use the opening request here so
+    // editing examples cannot leak into the background snapshot before that happens.
+    fun isFloydSettingsScreen(): Boolean = floydScreenRequested &&
+        mc.screen?.javaClass?.name == "org.polyfrost.oneconfig.internal.ui.compose.impls.OneConfigUIScreen"
 
     @JvmStatic
     fun recordSuppressedOpeningSound() { suppressedOpeningSounds++ }
+
+    @JvmStatic
+    fun recordSuppressedClosingSound() { suppressedClosingSounds++ }
+
+    fun isFloydMenuRequested(): Boolean = floydScreenRequested
+
+    fun searchTree(query: String): Tree {
+        val matches = checkNotNull(configTree).map.filterValues { node ->
+            FloydSettingsSearch.matches(query, node.title?.toString(), node.description?.toString(),
+                node.getMetadata<String>("subcategory"), node.getMetadata<String>("category"))
+        }
+        return Tree("$ID.search", Branding.DISPLAY_NAME, null, matches)
+    }
 
     fun isFloydPage(): Boolean = floydScreenRequested && (
         org.polyfrost.oneconfig.internal.ui.shell.ShellState.awaitingInitialRoute ||
@@ -89,10 +112,21 @@ object FloydOneConfig {
         "theme" to FloydOneConfigTheme.state(),
         "sidebarCategories" to FloydSettingsNavigation.categories,
         "selectedCategory" to FloydSettingsNavigation.selectedCategory,
+        "highlightOffsetDp" to FloydSettingsNavigation.highlightOffsetDp,
+        "highlightAnimationFrames" to FloydSettingsNavigation.highlightAnimationFrames,
         "ambientMusicEnabled" to OneConfigConfig.enableUIAmbience,
         "ambientMusicPlaying" to ambientMusicPlaying(),
         "openingSoundEnabled" to false,
         "suppressedOpeningSounds" to suppressedOpeningSounds,
+        "closingSoundEnabled" to false,
+        "suppressedClosingSounds" to suppressedClosingSounds,
+        "searchQuery" to org.polyfrost.oneconfig.internal.ui.shell.ShellState.searchQuery,
+        "searchResultCount" to searchTree(org.polyfrost.oneconfig.internal.ui.shell.ShellState.searchQuery).map.size,
+        "hudPreviewEnabled" to org.polyfrost.oneconfig.api.hud.v1.HudManager.isConfigUiOpen,
+        "hudForcedInScreens" to org.polyfrost.oneconfig.api.hud.v1.HudManager.overrideShowInScreens,
+        "odinLoaded" to net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("odin"),
+        "compatHudOverlaysSuppressed" to isFloydSettingsScreen(),
+        "suppressedCompatOverlayFrames" to suppressedCompatOverlays,
     )
 
     private fun register() {

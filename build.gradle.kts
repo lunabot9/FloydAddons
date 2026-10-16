@@ -92,7 +92,7 @@ dependencies {
     // Use the upstream distribution (with its nested libraries) on every supported release line.
     // API jars are compile-only: the distribution supplies the same classes at runtime.
     val oneConfigRelease = if (minecraftVersion.startsWith("26.1")) "xnIw4EqI" else "bDhbYaqU"
-    listOf("config", "config-impl", "ui", "internal", "utils", "poly-compose").forEach { api ->
+    listOf("config", "config-impl", "ui", "internal", "utils", "poly-compose", "hud").forEach { api ->
         compileOnly("org.polyfrost.oneconfig:$api:1.4.2") { isTransitive = false }
     }
     val oneConfigDistribution = "maven.modrinth:oneconfig:$oneConfigRelease"

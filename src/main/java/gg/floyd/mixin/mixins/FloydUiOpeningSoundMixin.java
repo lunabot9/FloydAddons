@@ -15,6 +15,9 @@ public abstract class FloydUiOpeningSoundMixin {
         if (event == UiSoundEvent.OPEN) {
             FloydOneConfig.recordSuppressedOpeningSound();
             ci.cancel();
+        } else if (event == UiSoundEvent.CLOSE) {
+            FloydOneConfig.recordSuppressedClosingSound();
+            ci.cancel();
         }
     }
 }

@@ -1,12 +1,23 @@
+@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+
 package gg.floyd.clickgui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
@@ -18,6 +29,10 @@ import org.polyfrost.oneconfig.internal.ui.components.GlobalSearchBar
 import org.polyfrost.oneconfig.internal.ui.components.IconButton
 import org.polyfrost.oneconfig.internal.ui.LocalCloseRequest
 import org.polyfrost.oneconfig.internal.ui.screens.ConfigScreen
+import org.polyfrost.oneconfig.internal.ui.screens.ConfigListRow
+import org.polyfrost.oneconfig.internal.ui.search.buildCategories
+import org.polyfrost.oneconfig.internal.ui.search.flattenSearchEntries
+import org.polyfrost.oneconfig.internal.ui.search.filterHiddenNodes
 import org.polyfrost.oneconfig.internal.ui.shell.ShellState
 import org.polyfrost.oneconfig.internal.ui.themes.Accent
 import org.polyfrost.oneconfig.internal.ui.themes.LocalTheme
@@ -27,6 +42,15 @@ object FloydSettingsNavigation {
     val categories = listOf("Render", "Hiders", "Camera", "Cosmetic", "QoL", "Misc")
     var selectedCategory by mutableStateOf("Render")
         private set
+    var highlightOffsetDp = 0f
+        private set
+    var highlightAnimationFrames = 0
+        private set
+
+    fun recordHighlightPosition(value: Float) {
+        if (value != highlightOffsetDp) highlightAnimationFrames++
+        highlightOffsetDp = value
+    }
 
     fun select(category: String) {
         require(category in categories)
@@ -41,7 +65,7 @@ fun FloydSettingsHeader() {
     Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 26.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(26.dp)) {
-        Text(FloydSettingsNavigation.selectedCategory, color = LocalTheme.current.textColor,
+        Text(if (ShellState.searchQuery.isBlank()) FloydSettingsNavigation.selectedCategory else "Search results", color = LocalTheme.current.textColor,
             fontSize = 24.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.weight(1f))
         GlobalSearchBar()
@@ -69,19 +93,34 @@ fun FloydSidebar() {
         Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(Accent.copy(alpha = 0.25f)))
         Spacer(Modifier.height(3.dp))
+        val selectionOffset by animateDpAsState(
+            targetValue = (50 * FloydSettingsNavigation.categories.indexOf(FloydSettingsNavigation.selectedCategory)).dp,
+            animationSpec = tween(220, easing = FastOutSlowInEasing), label = "category highlight")
+        SideEffect { FloydSettingsNavigation.recordHighlightPosition(selectionOffset.value) }
+        Box(Modifier.fillMaxWidth().height(292.dp)) {
+            Box(Modifier.fillMaxWidth().offset(y = selectionOffset).height(42.dp)
+                .background(Accent, theme.sideBarNavigationEntryShape)
+                .border(1.dp, theme.borderColor, theme.sideBarNavigationEntryShape))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FloydSettingsNavigation.categories.forEach { category ->
             val selected = FloydSettingsNavigation.selectedCategory == category
+            val interaction = remember { MutableInteractionSource() }
+            val hovered by interaction.collectIsHoveredAsState()
             Row(
                 Modifier.fillMaxWidth().height(42.dp)
-                    .background(if (selected) Accent else theme.chipBackground.copy(alpha = 0f), theme.sideBarNavigationEntryShape)
-                    .border(1.dp, if (selected) theme.borderColor else theme.borderColor.copy(alpha = 0f), theme.sideBarNavigationEntryShape)
-                    .clickable { FloydSettingsNavigation.select(category) }
+                    .clip(theme.sideBarNavigationEntryShape)
+                    .background(if (hovered && !selected) theme.chipBackground else theme.chipBackground.copy(alpha = 0f))
+                    .hoverable(interaction)
+                    .clickable(interactionSource = interaction, indication = null) { FloydSettingsNavigation.select(category) }
                     .pointerHoverIcon(PointerIcon.Hand)
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(category, color = if (selected) theme.accentTextColor else theme.textColor,
-                    fontSize = 15.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+                Text(category, modifier = Modifier.offset(y = (-2).dp),
+                    color = if (selected) theme.accentTextColor else theme.textColor,
+                    fontSize = 15.sp, lineHeight = 15.sp, maxLines = 1, fontWeight = FontWeight.Medium)
+            }
+        }
             }
         }
         Spacer(Modifier.weight(1f))
@@ -100,7 +139,24 @@ fun FloydSettingsPanel() {
         ShellState.titleVersion = Branding.VERSION
         ShellState.openOriginalScreen = null
     }
-    // A one-category view removes the stock horizontal tab strip. All property objects are
-    // shared with the registered tree so resets, dependencies, editing, and saving stay intact.
-    ConfigScreen(FloydOneConfig.categoryTree(category), category, "floydaddons/$category")
+    val query = ShellState.searchQuery
+    if (query.isBlank()) {
+        ConfigScreen(FloydOneConfig.categoryTree(category), category, "floydaddons/$category")
+    } else {
+        val entries = remember(query) {
+            flattenSearchEntries(buildCategories(FloydOneConfig.searchTree(query)).mapNotNull { filterHiddenNodes(it) })
+        }
+        if (entries.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No settings match \"$query\"", color = LocalTheme.current.textColorSecondary)
+            }
+        } else {
+            key(query) {
+                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 26.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(entries) { ConfigListRow(it) }
+                }
+            }
+        }
+    }
 }

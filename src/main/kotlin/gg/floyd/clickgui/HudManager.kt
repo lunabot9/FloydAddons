@@ -197,7 +197,7 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
 
     override fun onClose() {
         ModuleManager.saveConfigurations()
-        super.onClose()
+        FloydOneConfig.open()
     }
 
     override fun removed() {
