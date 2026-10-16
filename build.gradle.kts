@@ -210,6 +210,7 @@ tasks {
     val generatedBrandingResourcesDir = layout.buildDirectory.dir("generated/resources/branding")
 
     val generateBrandingSources by registering {
+        inputs.property("modVersion", modVersion)
         inputs.property("brandKey", activeBrand.key)
         inputs.property("brandDisplayName", activeBrand.displayName)
         inputs.property("brandCompactName", activeBrand.compactName)
