@@ -120,7 +120,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydFont, FloydPanelStyle, FloydUiTheme, FloydCustomSky, FloydNotifier, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
+            gg.floyd.agent.FloydAgent, FloydFont, FloydPanelStyle, FloydUiTheme, FloydCustomSky, FloydNotifier, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
@@ -144,6 +144,12 @@ object ModuleManager {
 
         Module.toggleListener = FloydNotifier::onModuleToggled
         HudElementRegistry.attachElementBefore(VanillaHudElements.SLEEP, HUD_LAYER, ModuleManager::render)
+        HudElementRegistry.addLast(fromNamespaceAndPath(FloydAddonsMod.MOD_ID, "companion_foreground")) { graphics, _ ->
+            if (mc.level != null && mc.player != null && mc.screen != HudManager && !mc.options.hideGui) {
+                graphics.nextStratum()
+                gg.floyd.agent.FloydAgent.render(graphics)
+            }
+        }
     }
 
     /**

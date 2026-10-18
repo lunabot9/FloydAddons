@@ -42,6 +42,12 @@ object EventDispatcher {
             ScreenKeyboardEvents.allowKeyPress(screen).register { screen, event ->
                 !ScreenEvent.KeyPress(screen, event).postAndCatch()
             }
+            ScreenMouseEvents.allowMouseDrag(screen).register { screen, event, dx, dy ->
+                !ScreenEvent.MouseDrag(screen, event, dx, dy).postAndCatch()
+            }
+            ScreenMouseEvents.allowMouseScroll(screen).register { screen, x, y, horizontal, vertical ->
+                !ScreenEvent.MouseScroll(screen, x, y, horizontal, vertical).postAndCatch()
+            }
         }
 
         ClientReceiveMessageEvents.ALLOW_GAME.register { text, overlay ->

@@ -23,7 +23,7 @@ class FloydUiThemeTest {
             colors.getValue("Accent").value = Color(0xFF19D68C.toInt())
             assertEquals(0xFF19D68C.toInt(), theme.palette()["Accent"])
             theme.customColors = false
-            preset.value = 2
+            preset.value = FloydUiPalette.presets.keys.indexOf("Glacier Blue")
             assertEquals(FloydUiPalette.presets.getValue("Glacier Blue"), theme.palette())
             theme.customColors = true
             assertEquals(0xFF19D68C.toInt(), theme.palette()["Accent"])

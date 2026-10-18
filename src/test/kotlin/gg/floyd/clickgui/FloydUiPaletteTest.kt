@@ -16,10 +16,16 @@ class FloydUiPaletteTest {
     }
 
     @Test fun `Golden Amber retains the original Floyd menu colors`() {
-        assertEquals(0xFFFFB84D.toInt(), FloydUiPalette.default["Accent"])
-        assertEquals(0xFF201911.toInt(), FloydUiPalette.default["Page Background"])
-        assertEquals(0xFF1A1510.toInt(), FloydUiPalette.default["Sidebar Background"])
-        assertEquals(0xFF62503A.toInt(), FloydUiPalette.default["Border"])
+        val amber = FloydUiPalette.presets.getValue("Golden Amber")
+        assertEquals(0xFFFFB84D.toInt(), amber["Accent"])
+        assertEquals(0xFF201911.toInt(), amber["Page Background"])
+        assertEquals(0xFF1A1510.toInt(), amber["Sidebar Background"])
+        assertEquals(0xFF62503A.toInt(), amber["Border"])
+    }
+
+    @Test fun `new installs default to Midnight Silver`() {
+        assertEquals(FloydUiPalette.presets.getValue("Midnight Silver"), FloydUiPalette.default)
+        assertEquals("Midnight Silver", FloydUiPalette.presets.keys.first())
     }
 
     @Test fun `preset labels remain readable on their surfaces`() {

@@ -127,6 +127,7 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         }
 
         guiGraphics.pose().popMatrix()
+        gg.floyd.agent.FloydAgent.renderPet(guiGraphics)
     }
 
     override fun mouseScrolled(mouseX: Double, mouseY: Double, horizontalAmount: Double, verticalAmount: Double): Boolean {
@@ -139,6 +140,7 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
     }
 
     override fun mouseClicked(mouseButtonEvent: MouseButtonEvent, bl: Boolean): Boolean {
+        if (gg.floyd.agent.FloydAgent.beginPetDrag(mouseButtonEvent)) return true
         if (mouseButtonEvent.button() != 0) return super.mouseClicked(mouseButtonEvent, bl)
         val mouseX = renderSpaceMouseX()
         val mouseY = renderSpaceMouseY()
@@ -174,7 +176,13 @@ object HudManager : Screen(Component.literal("HUD Manager")) {
         return super.mouseClicked(mouseButtonEvent, bl)
     }
 
+    override fun mouseDragged(event: MouseButtonEvent, deltaX: Double, deltaY: Double): Boolean {
+        if (gg.floyd.agent.FloydAgent.dragPet(event.x(), event.y())) return true
+        return super.mouseDragged(event, deltaX, deltaY)
+    }
+
     override fun mouseReleased(mouseButtonEvent: MouseButtonEvent): Boolean {
+        if (gg.floyd.agent.FloydAgent.endPetDrag()) return true
         dragging = null
         resizing = null
         return super.mouseReleased(mouseButtonEvent)

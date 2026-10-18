@@ -360,6 +360,11 @@ object FloydOneConfig {
             val verb = title.substringBefore(' ')
             val label = when (verb) {
                 "Open", "Reload", "Next", "Previous", "List", "Reset", "Clear", "Pick", "Toggle", "Stalk", "Customize" -> verb
+                "Sign" -> if (title.startsWith("Sign in")) "Sign in" else "Sign out"
+                "Check" -> "Check"
+                "Test" -> "Test"
+                "Preview" -> "Preview"
+                "Install" -> "Install"
                 "Edit" -> "Edit"
                 "Click" -> "Open" // Secondary Click GUI screen.
                 else -> "Run"

@@ -21,7 +21,7 @@ object FloydUiTheme : Module(
 ) {
     // Keep the existing persisted module id/settings, but theme editing is its own menu page.
     override val visibleInGui: Boolean = false
-    private val preset by SelectorSetting("Preset", "Golden Amber", FloydUiPalette.presets.keys.toList(),
+    private val preset by SelectorSetting("Preset", FloydUiPalette.DEFAULT_PRESET, FloydUiPalette.presets.keys.toList(),
         desc = "Six complete palettes. Turn Custom Colors off to preview the selected preset.")
     var customColors by BooleanSetting("Custom Colors", false,
         desc = "Use your own colors below. Off uses the selected preset and keeps your custom colors saved.")
@@ -34,7 +34,7 @@ object FloydUiTheme : Module(
             desc = "$description Changes apply live to Floyd's menu.")).withDependency { customColors }
     }
 
-    fun presetName(): String = FloydUiPalette.presets.keys.elementAtOrElse(preset) { "Golden Amber" }
+    fun presetName(): String = FloydUiPalette.presets.keys.elementAtOrElse(preset) { FloydUiPalette.DEFAULT_PRESET }
     fun selectPreset(index: Int) {
         (settings["Preset"] as SelectorSetting).value = index
         customColors = false

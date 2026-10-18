@@ -53,7 +53,7 @@ import gg.floyd.clickgui.FloydOneConfigTheme.accent as Accent
 import org.polyfrost.oneconfig.internal.ui.themes.LocalTheme
 
 object FloydSettingsNavigation {
-    val categories = listOf("Render", "Hiders", "Camera", "Cosmetic", "QoL", "Misc")
+    val categories = listOf("Render", "Hiders", "Camera", "Cosmetic", "QoL", "Misc", "Agent")
     var searchQuery by mutableStateOf("")
     var selectedCategory by mutableStateOf("Render")
         private set
@@ -159,7 +159,7 @@ fun FloydSidebar() {
         Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, theme.borderColor, Color.Transparent))))
         Spacer(Modifier.height(3.dp))
-        Box(Modifier.fillMaxWidth().height(292.dp).onGloballyPositioned {
+        Box(Modifier.fillMaxWidth().height((FloydSettingsNavigation.categories.size * 50 - 8).dp).onGloballyPositioned {
             categoryTop = with(density) { it.positionInParent().y.toDp() }
         }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -15,7 +15,7 @@ object FloydOneConfigTheme {
     private const val NAME = "Floyd Main Menu"
     private const val WORDMARK = "assets/floydaddons/brand/floyd-addons.svg"
     private var palette by mutableStateOf(FloydUiPalette.default)
-    private var editorState by mutableStateOf("Golden Amber" to false)
+    private var editorState by mutableStateOf(FloydUiPalette.DEFAULT_PRESET to false)
     val editorSelection get() = editorState
     private var cachedPalette: FloydUiPalette? = null
     private var cachedTheme = PolyGlassDark

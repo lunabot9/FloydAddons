@@ -482,6 +482,7 @@ object FloydLocalControl : Module(
             "sparklingCritterEsp" to FloydSparklingCritterEsp.state(),
             "fellNotification" to FloydFellNotification.state(),
             "notifier" to FloydNotifier.state(),
+            "agent" to gg.floyd.agent.FloydAgent.state(),
             "hud" to FloydHud.state(),
             "inventoryHud" to FloydInventoryHud.state(),
             "skyBlockLevel7Guide" to FloydSkyBlockLevel7Guide.state(),
@@ -656,7 +657,7 @@ object FloydLocalControl : Module(
                         null -> net.minecraft.client.KeyMapping.click(
                             com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(code)
                         )
-                        "press" -> mc.screen?.keyPressed(event)
+                        "press" -> mc.screen?.let { gg.floyd.events.ScreenEvent.KeyPress(it, event).postAndCatch() || it.keyPressed(event) }
                         "release" -> mc.screen?.keyReleased(event)
                         else -> throw IllegalArgumentException("unknown_key_event")
                     }
@@ -796,6 +797,11 @@ object FloydLocalControl : Module(
                     val want = body["enabled"]?.takeIf { !it.isJsonNull }?.asBoolean ?: true
                     if (module.enabled != want) module.toggle()
                 }
+                "agentCheckConnection" -> gg.floyd.agent.FloydAgent.checkConnection()
+                "agentOpenChat" -> gg.floyd.agent.FloydAgent.openChat()
+                "agentSend" -> gg.floyd.agent.FloydAgent.send(requiredString(body, "text"))
+                "agentTestVoice" -> gg.floyd.agent.FloydAgent.testVoice()
+                "agentStop" -> gg.floyd.agent.FloydAgent.stopResponse()
                 "profileSky" -> gg.floyd.utils.render.SkyGpuTimer.start(number(body, "frames")?.toInt() ?: 60)
                 "reloadConfig" -> ModuleManager.loadConfigurations()
                 "reloadMod", "reloadResources" -> {
@@ -867,14 +873,14 @@ object FloydLocalControl : Module(
                                 true
                             }
                             "click" -> {
-                                val down = currentScreen.mouseClicked(click, false)
-                                val up = currentScreen.mouseReleased(click)
+                                val down = gg.floyd.events.ScreenEvent.MouseClick(currentScreen, click).postAndCatch() || currentScreen.mouseClicked(click, false)
+                                val up = gg.floyd.events.ScreenEvent.MouseRelease(currentScreen, click).postAndCatch() || currentScreen.mouseReleased(click)
                                 down || up
                             }
-                            "down", "press" -> currentScreen.mouseClicked(click, false)
-                            "up", "release" -> currentScreen.mouseReleased(click)
-                            "drag" -> currentScreen.mouseDragged(click, dragX, dragY)
-                            "scroll", "wheel" -> currentScreen.mouseScrolled(x, y, horizontalAmount, verticalAmount)
+                            "down", "press" -> gg.floyd.events.ScreenEvent.MouseClick(currentScreen, click).postAndCatch() || currentScreen.mouseClicked(click, false)
+                            "up", "release" -> gg.floyd.events.ScreenEvent.MouseRelease(currentScreen, click).postAndCatch() || currentScreen.mouseReleased(click)
+                            "drag" -> gg.floyd.events.ScreenEvent.MouseDrag(currentScreen, click, dragX, dragY).postAndCatch() || currentScreen.mouseDragged(click, dragX, dragY)
+                            "scroll", "wheel" -> gg.floyd.events.ScreenEvent.MouseScroll(currentScreen, x, y, horizontalAmount, verticalAmount).postAndCatch() || currentScreen.mouseScrolled(x, y, horizontalAmount, verticalAmount)
                             else -> throw IllegalArgumentException("unknown_mouse_event")
                         }
                     }
@@ -921,10 +927,12 @@ object FloydLocalControl : Module(
                 handled = currentScreen.keyPressed(KeyEvent(GLFW.GLFW_KEY_DELETE, 0, 0)) || handled
             }
             text.codePoints().forEach { codepoint ->
-                handled = currentScreen.charTyped(CharacterEvent(codepoint)) || handled
+                val input = CharacterEvent(codepoint)
+                handled = gg.floyd.events.ScreenEvent.CharType(currentScreen, input).postAndCatch() || currentScreen.charTyped(input) || handled
             }
             if (submit) {
-                handled = currentScreen.keyPressed(KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)) || handled
+                val input = KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)
+                handled = gg.floyd.events.ScreenEvent.KeyPress(currentScreen, input).postAndCatch() || currentScreen.keyPressed(input) || handled
             }
             currentScreen.afterKeyboardAction()
             mapOf("ok" to true, "typed" to text.length, "cleared" to clear, "submitted" to submit, "handled" to handled)

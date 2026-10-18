@@ -23,7 +23,8 @@ class SelectorSetting(
     default: String,
     private var options: List<String>,
     desc: String,
-    private val optionDescriptions: Map<String, String> = emptyMap()
+    private val optionDescriptions: Map<String, String> = emptyMap(),
+    private val renamedOptions: Map<String, String> = emptyMap()
 ) : RenderableSetting<Int>(name, desc), Saving {
     private companion object {
         const val TEXT_SIZE = 10f
@@ -214,7 +215,7 @@ class SelectorSetting(
     override fun write(gson: Gson): JsonElement = JsonPrimitive(selected)
 
     override fun read(element: JsonElement, gson: Gson) {
-        element.asString?.let { selected = it }
+        element.asString?.let { selected = renamedOptions[it] ?: it }
     }
 
     fun selectedOption(): String = selected

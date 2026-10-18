@@ -15,4 +15,8 @@ public abstract class ScreenMixin {
     private void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci) {
         if (new ScreenEvent.Render((Screen) (Object) this, context, mouseX, mouseY).postAndCatch()) ci.cancel();
     }
+    @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("TAIL"))
+    private void afterRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci) {
+        new ScreenEvent.RenderAfter((Screen) (Object) this, context, mouseX, mouseY).postAndCatch();
+    }
 }

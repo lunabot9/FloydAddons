@@ -401,6 +401,79 @@ object NVGRenderer {
         nvgFill(vg)
     }
 
+    private var companionSphereImage = -1
+
+    /** Soft lemon shading and an antialiased silhouette, matching the flatter reference face. */
+    private fun companionSphereTexture(): Int {
+        if (companionSphereImage >= 0) return companionSphereImage
+        val resolution = 192
+        val pixels = memAlloc(resolution * resolution * 4)
+        try {
+            for (py in 0 until resolution) for (px in 0 until resolution) {
+                val nx = (px + .5) / resolution * 2 - 1
+                val ny = (py + .5) / resolution * 2 - 1
+                val distance = kotlin.math.sqrt(nx * nx + ny * ny)
+                val nz = kotlin.math.sqrt((1 - nx * nx - ny * ny).coerceAtLeast(0.0))
+                val light = .94 + .06 * nz
+                val alpha = ((1 - distance) * resolution / 2 + .5).coerceIn(0.0, 1.0)
+                for (channel in doubleArrayOf(241 * light, 223 * light, 62 * light, 255 * alpha))
+                    pixels.put(channel.toInt().coerceIn(0, 255).toByte())
+            }
+            pixels.flip()
+            companionSphereImage = nvgCreateImageRGBA(vg, resolution, resolution, 0, pixels)
+            return companionSphereImage
+        } finally { memFree(pixels) }
+    }
+
+    /** A shaded yellow sphere with facial marks projected over its curved front surface. */
+    fun companionOrb(x: Float, y: Float, size: Float, phase: String, mouth: Float, time: Double, rotation: Float = 0f) {
+        val active = phase == "speaking"
+        nvgSave(vg)
+        nvgTranslate(vg, x + size / 2, y + size / 2 + kotlin.math.sin(time * 1.8).toFloat() * .8f)
+        nvgScale(vg, size / 58f, size / 58f)
+        nvgRotate(vg, rotation + if (active) kotlin.math.sin(time * 13).toFloat() * .055f * (.3f + mouth) else kotlin.math.sin(time * 1.3).toFloat() * .02f)
+        val r = 27f
+        nvgImagePattern(vg, -r, -r, r * 2, r * 2, 0f, companionSphereTexture(), 1f, nvgPaint)
+        nvgBeginPath(vg); nvgCircle(vg, 0f, 0f, r); nvgFillPaint(vg, nvgPaint); nvgFill(vg)
+        // The face turns slightly on the sphere rather than sliding flat across its silhouette.
+        val yaw = kotlin.math.sin(time * .7).toFloat() * .035f + if (phase == "thinking") .05f else 0f
+        nvgTranslate(vg, kotlin.math.sin(yaw).toFloat() * r * .65f, 0f)
+        nvgScale(vg, kotlin.math.cos(yaw).toFloat(), 1f)
+        val blink = time % 5.3 > 5.15
+        val thinking = phase == "thinking" || phase == "transcribing"
+        val listening = phase == "listening"
+        val concerned = phase == "concerned"
+        val eyeH = if (blink) .5f else if (thinking) 2.6f else 3.3f
+        nvgRGBA(12, 11, 5, 255.toByte(), nvgColor)
+        for (eye in listOf(-5.9f, 5.9f)) {
+            nvgBeginPath(vg); nvgEllipse(vg, eye, -3f, 1.95f, eyeH); nvgFillColor(vg, nvgColor); nvgFill(vg)
+        }
+        nvgLineCap(vg, NVG_ROUND); nvgLineJoin(vg, NVG_ROUND)
+        nvgStrokeWidth(vg, 1.7f); nvgStrokeColor(vg, nvgColor)
+        if (thinking || listening || concerned) {
+            for (side in listOf(-1f, 1f)) {
+                nvgBeginPath(vg); nvgMoveTo(vg, side * 4.5f, if (concerned) -14f else -13f)
+                nvgQuadTo(vg, side * 8f, if (listening) -18f else -15f, side * 11.5f, if (concerned) -11f else -14f); nvgStroke(vg)
+            }
+        }
+        if (active && mouth > .1f) {
+            // PIP targets have no stencil attachment: keep filled facial shapes convex.
+            val opening = 2f + mouth * 6f
+            nvgBeginPath(vg); nvgEllipse(vg, 0f, 10f, 11.5f, opening)
+            nvgFillColor(vg, nvgColor); nvgFill(vg)
+        } else if (listening) {
+            nvgBeginPath(vg); nvgEllipse(vg, 0f, 10f, 3.7f, 5f); nvgFillColor(vg, nvgColor); nvgFill(vg)
+        } else {
+            nvgBeginPath(vg); nvgMoveTo(vg, -18f, 4f)
+            nvgBezierTo(vg, -11f, if (thinking) 12f else if (concerned) -1f else 17f, 11f, if (thinking) 10f else if (concerned) -1f else 17f, 18f, 4f)
+            nvgStrokeWidth(vg, 1.8f); nvgStrokeColor(vg, nvgColor); nvgStroke(vg)
+            for (side in listOf(-1f, 1f)) {
+                nvgBeginPath(vg); nvgMoveTo(vg, side * 17.3f, 2.9f); nvgLineTo(vg, side * 19f, 3.5f); nvgStroke(vg)
+            }
+        }
+        nvgRestore(vg)
+    }
+
     fun circle(x: Float, y: Float, radius: Float, color: Int) {
         nvgBeginPath(vg)
         nvgCircle(vg, x, y, radius)
@@ -599,6 +672,23 @@ object NVGRenderer {
         GL33C.glTexParameteri(GL33C.GL_TEXTURE_2D, GL33C.GL_TEXTURE_MIN_FILTER, GL33C.GL_NEAREST)
         GL33C.glTexParameteri(GL33C.GL_TEXTURE_2D, GL33C.GL_TEXTURE_MAG_FILTER, GL33C.GL_NEAREST)
         nvglCreateImageFromHandle(vg, textureId, textureWidth, textureHeight, NVG_IMAGE_NEAREST or NVG_IMAGE_NODELETE)
+    }
+
+    private val randySprite by lazy { createImage("/assets/floydaddons/agent/big-d-randy.png") }
+
+    fun companionRandy(x: Float, y: Float, size: Float, phase: String, mouth: Float, time: Double, rotation: Float) {
+        val frame = when (phase) {
+            "thinking", "concerned" -> 1
+            "listening", "transcribing" -> 2
+            "speaking" -> if (mouth > .055f) 3 else 0
+            else -> 0
+        }
+        push()
+        translate(x + size / 2, y + size / 2)
+        rotate(rotation + if (phase == "speaking") kotlin.math.sin(time * 11).toFloat() * .035f * mouth else 0f)
+        val width = size * .75f
+        image(getImage(randySprite), 2172, 724, frame * 543, 0, 543, 724, -width / 2, -size / 2, width, size, 0f)
+        pop()
     }
 
     fun image(image: Int, textureWidth: Int, textureHeight: Int, subX: Int, subY: Int, subW: Int, subH: Int, x: Float, y: Float, w: Float, h: Float, radius: Float) {
