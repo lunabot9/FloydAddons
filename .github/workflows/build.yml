@@ -59,8 +59,8 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4
 
-      # Publish or refresh a notes-only GitHub Release on every push to main.
-      # Jar distribution is handled outside GitHub Releases.
+      # Keep release descriptions in sync with reviewed, checked-in notes.
+      # Runtime jars and checksums are uploaded separately.
       - name: publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,18 +70,11 @@ jobs:
           version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')"
           tag="v${version}"
           release_notes="release-notes-${version}.md"
-          if [[ -f "$release_notes" ]]; then
-            notes_file="$release_notes"
-          else
-            notes_file="$(mktemp)"
-            {
-              echo "FloydAddons ${version}"
-              echo
-              echo "Release published from ${GITHUB_SHA}."
-              echo
-              echo "Artifacts are distributed outside GitHub Releases."
-            } > "$notes_file"
+          if [[ ! -f "$release_notes" ]]; then
+            echo "No checked-in notes for ${tag}; preserving existing release metadata."
+            exit 0
           fi
+          notes_file="$release_notes"
 
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release ${tag} exists — updating notes."

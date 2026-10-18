@@ -27,10 +27,17 @@ for line in sys.stdin:
                     cached = None
                 candidate = ChatterboxTurboTTS.from_local(cached, device="cpu") if cached else ChatterboxTurboTTS.from_pretrained(device="cpu")
                 model = candidate
-            profile = "Randy" if job.get("profile") in ("Randy", "Big D Randy") else "Verity"
+            references = {"Verity": sys.argv[1], "Randy": sys.argv[2]}
+            if len(sys.argv) > 3:
+                references["Tom Pearl"] = sys.argv[3]
+            profile = job.get("profile", "Verity")
+            if profile == "Big D Randy":
+                profile = "Randy"
+            if profile not in references:
+                raise ValueError("Unknown companion voice profile")
             if profile != conditioned_profile:
                 with torch.inference_mode():
-                    model.prepare_conditionals(sys.argv[2] if profile == "Randy" else sys.argv[1])
+                    model.prepare_conditionals(references[profile])
                 conditioned_profile = profile
             if not job.get("warmup"):
                 # Retain Chatterbox's native generated-audio watermark.
@@ -39,8 +46,9 @@ for line in sys.stdin:
                     # "I'm" without changing the visible conversation text.
                     import re
                     spoken = re.sub(r"\bI['\u2019]m\b", "I am", job["text"][:6000], flags=re.IGNORECASE)
-                    audio = model.generate(spoken, temperature=.8 if profile == "Randy" else .7,
-                        top_p=.95 if profile == "Randy" else .9).squeeze()
+                    natural_prosody = profile in ("Randy", "Tom Pearl")
+                    audio = model.generate(spoken, temperature=.8 if natural_prosody else .7,
+                        top_p=.95 if natural_prosody else .9).squeeze()
                 samples = (audio.detach().cpu().numpy().clip(-1, 1) * 32767).astype("int16")
                 scipy.io.wavfile.write(job["output"], model.sr, samples)
         print(json.dumps({"ok": True}), flush=True)

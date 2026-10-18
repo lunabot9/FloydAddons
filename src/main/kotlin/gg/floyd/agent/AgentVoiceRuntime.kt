@@ -46,10 +46,12 @@ object AgentVoiceRuntime {
             val script = File(directory, "voice_worker.py")
             val reference = File(directory, "verity-reference.wav")
             val randyReference = File(directory, "randy-original-reference.wav")
+            val tomReference = File(directory, "tom-pearl-reference.wav")
             copyResource("voice_worker.py", script); copyResource("verity-reference.wav", reference)
             copyResource("randy-original-reference.wav", randyReference)
+            copyResource("tom-pearl-reference.wav", tomReference)
             replies.clear()
-            val builder = ProcessBuilder(python().absolutePath, "-u", script.absolutePath, reference.absolutePath, randyReference.absolutePath)
+            val builder = ProcessBuilder(python().absolutePath, "-u", script.absolutePath, reference.absolutePath, randyReference.absolutePath, tomReference.absolutePath)
                 .directory(directory).redirectError(ProcessBuilder.Redirect.DISCARD)
             builder.environment()["CUDA_VISIBLE_DEVICES"] = ""
             builder.environment()["OMP_NUM_THREADS"] = "4"

@@ -675,6 +675,28 @@ object NVGRenderer {
     }
 
     private val randySprite by lazy { createImage("/assets/floydaddons/agent/big-d-randy.png") }
+    private val tomPearlSprite by lazy { createImage("/assets/floydaddons/agent/tom-pearl.png") }
+
+    fun companionTomPearl(x: Float, y: Float, size: Float, phase: String, mouth: Float, time: Double, rotation: Float) {
+        val frame = when (phase) {
+            "thinking", "concerned" -> 1
+            "listening", "transcribing" -> 2
+            "speaking" -> if (mouth > .055f) 3 else 0
+            else -> 0
+        }
+        val texture = getImage(tomPearlSprite)
+        val dimensions = IntArray(1)
+        val height = IntArray(1)
+        nvgImageSize(vg, texture, dimensions, height)
+        val cellX = frame * dimensions[0] / 4
+        val cellWidth = (frame + 1) * dimensions[0] / 4 - cellX
+        val drawWidth = size * (dimensions[0] / 4f) / height[0].coerceAtLeast(1)
+        push()
+        translate(x + size / 2, y + size / 2)
+        rotate(rotation + if (phase == "speaking") kotlin.math.sin(time * 11).toFloat() * .035f * mouth else 0f)
+        image(texture, dimensions[0], height[0], cellX, 0, cellWidth, height[0], -drawWidth / 2, -size / 2, drawWidth, size, 0f)
+        pop()
+    }
 
     fun companionRandy(x: Float, y: Float, size: Float, phase: String, mouth: Float, time: Double, rotation: Float) {
         val frame = when (phase) {

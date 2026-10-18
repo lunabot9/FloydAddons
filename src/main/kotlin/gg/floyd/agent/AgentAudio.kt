@@ -87,7 +87,7 @@ object AgentAudio {
                 checkNotNull(AgentAudio::class.java.getResourceAsStream("/assets/floydaddons/agent/$recordedResource")) {
                     "The bundled introduction is unavailable."
                 }.use { source -> wav.outputStream().use { source.copyTo(it) } }
-            } else if (voice in listOf("Randy", "Big D Randy") || voice.startsWith("Verity")) AgentVoiceRuntime.synthesize(directory, text, wav, profile = voice)
+            } else if (voice in listOf("Randy", "Big D Randy", "Tom Pearl") || voice.startsWith("Verity")) AgentVoiceRuntime.synthesize(directory, text, wav, profile = voice)
             else windows(directory, "speak", mapOf("text" to text.take(6000), "voice" to voice, "audio" to wav.absolutePath))
             if (epoch != playbackGeneration.get()) return
             AudioSystem.getAudioInputStream(wav).use { stream ->

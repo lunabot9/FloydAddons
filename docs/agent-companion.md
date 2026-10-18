@@ -62,3 +62,11 @@ The companion renders in a final foreground HUD layer, above ordinary HUD text a
 ChatGPT login uses Codex automatic credential storage: existing OS-keyring logins are preserved, with a provider-owned account/auth.json fallback when Windows cannot store a large token. The mod never reads token contents. The compact bubble shows Not signed in while disconnected.
 
 Chat buttons use the same OneConfig CLICK sound event as the main settings controls, respecting existing UI sound preferences and replacing the vanilla click. On Windows, Codex discovery checks CODEX_CLI_PATH and the installed desktop CLI before PATH/npm fallbacks, so launchers do not silently pick an outdated CLI. Failed replies remain visible as a System message and in the bubble until retry or Stop.
+
+## Tom Pearl
+
+Select **Tom Pearl** as the third Pet Model. The photo-inspired transparent portrait has idle, thinking, listening, and toothless speaking frames. It uses the same 96-pixel height, smooth idle movement, mouth-driven speech animation, and draggable momentum as Randy. Verity and Randy keep their existing settings and voices.
+
+Tom uses a separate local Natural voice profile from the supplied [voice clip](https://www.youtube.com/watch?v=0AtW4M6MWes). The bundled voice reference uses a continuous 5.9-second spoken excerpt without internal cuts or repeated phrases, with Chatterbox Turbo natural sampling (temperature 0.8, top-p 0.95). The greeting is extracted separately for instant playback. Test Voice, model switches, and the first world join per launch play exactly **Hi my name is Tom Pearl**. Later world/server rejoins do not repeat the join introduction.
+
+The sprite was generated with the built-in image generator from the supplied face photo, using the existing companion sprite as a style reference. Prompt: a transparent four-cell front-facing portrait bust with receding dark hair, blue eyes, teal striped shirt, consistent proportions, and idle/thinking/listening/speaking expressions; the final edit removes teeth from the speaking mouth. Saved asset: `src/main/resources/assets/floydaddons/agent/tom-pearl.png`.
