@@ -87,6 +87,7 @@ repositories {
 }
 
 val oneConfigComposeApi by configurations.creating { isTransitive = false }
+val oneConfigPlatformApi by configurations.creating { isTransitive = false }
 
 dependencies {
     // Use the upstream distribution (with its nested libraries) on every supported release line.
@@ -96,6 +97,10 @@ dependencies {
         compileOnly("org.polyfrost.oneconfig:$api:1.4.2") { isTransitive = false }
     }
     val oneConfigDistribution = "maven.modrinth:oneconfig:$oneConfigRelease"
+    add(oneConfigPlatformApi.name, oneConfigDistribution)
+    compileOnly(files(provider {
+        zipTree(oneConfigPlatformApi.singleFile).matching { include("META-INF/jars/*-fabric-*.jar") }.files
+    }))
     runtimeOnly(oneConfigDistribution) { isTransitive = false }
     include(oneConfigDistribution) { isTransitive = false }
     val composeBundle = "org.polyfrost.oneconfig:compose-bundle:1.0.6+compose.1.13.0-alpha02"

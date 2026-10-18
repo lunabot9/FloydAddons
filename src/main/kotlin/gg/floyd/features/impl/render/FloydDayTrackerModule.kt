@@ -98,7 +98,7 @@ object FloydDayTrackerModule : Module(
         val target = FloydPanelStyle.PanelTarget.DAY_TRACKER
         val padding = FloydPanelStyle.paddingFor(target).coerceAtLeast(0)
         val multiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
-        NVGPIPRenderer.draw(this, 0, 0, layout.width, layout.height, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(layout.width, layout.height, target)) {
+        NVGPIPRenderer.draw(this, 0, 0, layout.width, layout.height, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(layout.width, layout.height, target), outerPadding = if (FloydPanelStyle.borderWidthFor(target) <= 0) 8 else 0) {
             HudPanel.drawNvgPanel(
                 layout.width,
                 layout.height,
@@ -136,14 +136,14 @@ object FloydDayTrackerModule : Module(
         val fx = dayTrackerHud.visibleX(fw)
         val fy = dayTrackerHud.visibleY(fh)
 
-        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val fill = FloydPanelStyle.fillColorFor(target)
         val border = HudPanel.panelBorderColors(target, dayTrackerHud.x, dayTrackerHud.y)
         val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
         if (allowBlur && FloydPanelStyle.blurFor(target)) {
-            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20).toFloat()
             if (blurRadius >= 0.5f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
                 PostHudOverlay.bindMainFbo()

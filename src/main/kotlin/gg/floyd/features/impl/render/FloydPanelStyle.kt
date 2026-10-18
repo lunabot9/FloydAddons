@@ -52,19 +52,21 @@ object FloydPanelStyle : Module(
 
     // ---- Global set (shown when Per-Panel Style is off; the source of truth for every panel then) ----
     val panelCornerRadius by NumberSetting("Panel Corner Radius", 4, 0, 20, 1, desc = "Default rounded corner radius for every Floyd panel.").withDependency { !perPanelStyle }
+    val panelBorderEnabled by BooleanSetting("Panel Border Enabled", true, desc = "Show outlines around Floyd HUD panels. Off keeps the background and blur.").withDependency { !perPanelStyle }
     val panelBorderWidth by NumberSetting("Panel Border Width", 2, 0, 6, 1, desc = "Default outline width for every Floyd panel.").withDependency { !perPanelStyle }
     val panelPadding by NumberSetting("Panel Padding", 6, 0, 16, 1, desc = "Default internal padding between a panel's border and its contents.").withDependency { !perPanelStyle }
     val panelBackgroundColor by ColorSetting("Panel Background", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color (with opacity) behind every Floyd panel.").withDependency { !perPanelStyle }
     val panelBorderColor by ColorSetting("Panel Border", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for every Floyd panel — chroma and fade are configured inside the picker.").withDependency { !perPanelStyle }
-    val panelBlur by BooleanSetting("Panel Blur", false, desc = "Renders a real blurred backdrop of the world behind every Floyd panel.").withDependency { !perPanelStyle }
-    val panelBlurStrength by NumberSetting("Panel Blur Strength", 6, 0, 20, 1, desc = "Blur radius of the backdrop behind Floyd panels.").withDependency { !perPanelStyle }
-    private val panelBlurType by SelectorSetting("Panel Blur Type", "Gaussian", blurTypes, desc = "Blur kernel used for the panel backdrop.").withDependency { !perPanelStyle }
+    val panelBlur by BooleanSetting("Panel Blur", true, desc = "Renders a real blurred backdrop of the world behind every Floyd panel.").withDependency { !perPanelStyle }
+    val panelBlurStrength by NumberSetting("Panel Blur Strength", 20, 0, 20, 1, desc = "Blur radius of the backdrop behind Floyd panels.").withDependency { !perPanelStyle }
+    private val panelBlurType by SelectorSetting("Panel Blur Type", "Box", blurTypes, desc = "Blur kernel used for the panel backdrop.").withDependency { !perPanelStyle }
 
     val fullChatChroma by BooleanSetting("Full Chat Chroma", false, desc = "Cycles all visible chat text through chroma.")
 
     // ---- Per-panel sets (built once; each shown only while its panel is the selected target) ----
     private class PanelSet(
         val cornerRadius: NumberSetting<Int>,
+        val borderEnabled: BooleanSetting,
         val borderWidth: NumberSetting<Int>,
         val padding: NumberSetting<Int>,
         val background: ColorSetting,
@@ -78,13 +80,14 @@ object FloydPanelStyle : Module(
         val visible = { perPanelStyle && currentTarget() == target }
         PanelSet(
             cornerRadius = registerSetting(NumberSetting("${target.label} Corner Radius", 4, 0, 20, 1, desc = "Rounded corner radius for the ${target.label} panel.")).withDependency(visible),
+            borderEnabled = registerSetting(BooleanSetting("${target.label} Border Enabled", true, desc = "Show the ${target.label} outline. Off keeps the background and blur.")).withDependency(visible),
             borderWidth = registerSetting(NumberSetting("${target.label} Border Width", 2, 0, 6, 1, desc = "Outline width for the ${target.label} panel.")).withDependency(visible),
             padding = registerSetting(NumberSetting("${target.label} Padding", 6, 0, 16, 1, desc = "Internal padding for the ${target.label} panel.")).withDependency(visible),
             background = registerSetting(ColorSetting("${target.label} Background", Color(HudPanel.DEFAULT_FILL), allowAlpha = true, desc = "Fill color behind the ${target.label} panel.")).withDependency(visible),
             border = registerSetting(ColorSetting("${target.label} Border", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Outline color for the ${target.label} panel — chroma/fade inside the picker.")).withDependency(visible),
-            blur = registerSetting(BooleanSetting("${target.label} Blur", false, desc = "Blurred backdrop behind the ${target.label} panel.")).withDependency(visible),
-            blurStrength = registerSetting(NumberSetting("${target.label} Blur Strength", 6, 0, 20, 1, desc = "Blur radius behind the ${target.label} panel.")).withDependency(visible),
-            blurType = registerSetting(SelectorSetting("${target.label} Blur Type", "Gaussian", blurTypes, desc = "Blur kernel for the ${target.label} panel.")).withDependency(visible),
+            blur = registerSetting(BooleanSetting("${target.label} Blur", true, desc = "Blurred backdrop behind the ${target.label} panel.")).withDependency(visible),
+            blurStrength = registerSetting(NumberSetting("${target.label} Blur Strength", 20, 0, 20, 1, desc = "Blur radius behind the ${target.label} panel.")).withDependency(visible),
+            blurType = registerSetting(SelectorSetting("${target.label} Blur Type", "Box", blurTypes, desc = "Blur kernel for the ${target.label} panel.")).withDependency(visible),
         )
     }
 
@@ -93,9 +96,20 @@ object FloydPanelStyle : Module(
     // ---- Resolved per-panel accessors. When Per-Panel Style is off, every panel returns the global
     // value (byte-identical to the previous single-set behavior); when on, each returns its own set. ----
     fun cornerRadiusFor(target: PanelTarget): Int = if (!perPanelStyle) panelCornerRadius else panelSets.getValue(target).cornerRadius.value
-    fun borderWidthFor(target: PanelTarget): Int = if (!perPanelStyle) panelBorderWidth else panelSets.getValue(target).borderWidth.value
+    fun borderEnabledFor(target: PanelTarget): Boolean = if (!perPanelStyle) panelBorderEnabled else panelSets.getValue(target).borderEnabled.value
+    fun borderWidthFor(target: PanelTarget): Int = when {
+        !borderEnabledFor(target) -> 0
+        !perPanelStyle -> panelBorderWidth
+        else -> panelSets.getValue(target).borderWidth.value
+    }
     fun paddingFor(target: PanelTarget): Int = if (!perPanelStyle) panelPadding else panelSets.getValue(target).padding.value
     fun backgroundColorFor(target: PanelTarget): Color = if (!perPanelStyle) panelBackgroundColor else panelSets.getValue(target).background.value
+    /** A frosted backdrop needs only half the tint used by an unblurred panel. */
+    fun fillColorFor(target: PanelTarget): Int {
+        val color = backgroundColorFor(target).rgba
+        if (!blurFor(target)) return color
+        return (color and 0x00FFFFFF) or (((color ushr 24) / 2) shl 24)
+    }
     fun borderColorFor(target: PanelTarget): Color = if (!perPanelStyle) panelBorderColor else panelSets.getValue(target).border.value
     fun blurFor(target: PanelTarget): Boolean = if (!perPanelStyle) panelBlur else panelSets.getValue(target).blur.value
     fun blurStrengthFor(target: PanelTarget): Int = if (!perPanelStyle) panelBlurStrength else panelSets.getValue(target).blurStrength.value
@@ -111,6 +125,7 @@ object FloydPanelStyle : Module(
         "perPanelStyle" to perPanelStyle,
         "configurePanel" to currentTarget().label,
         "panelCornerRadius" to panelCornerRadius,
+        "panelBorderEnabled" to panelBorderEnabled,
         "panelBorderWidth" to panelBorderWidth,
         "panelPadding" to panelPadding,
         "panelBackgroundColor" to panelBackgroundColor.rgba,
@@ -119,6 +134,14 @@ object FloydPanelStyle : Module(
         "panelBorderFade" to panelBorderColor.fade,
         "panelBlur" to panelBlur,
         "panelBlurStrength" to panelBlurStrength,
+        "panelBlurType" to blurTypes[panelBlurType],
+        "panels" to PanelTarget.entries.associate { target -> target.label to mapOf(
+            "borderEnabled" to borderEnabledFor(target),
+            "borderWidth" to borderWidthFor(target),
+            "blur" to blurFor(target),
+            "blurStrength" to blurStrengthFor(target),
+            "blurType" to if (blurIsBoxFor(target)) "Box" else "Gaussian",
+        ) },
         "fullChatChroma" to fullChatChroma,
         "shouldUseFullChatChroma" to shouldUseFullChatChroma()
     )

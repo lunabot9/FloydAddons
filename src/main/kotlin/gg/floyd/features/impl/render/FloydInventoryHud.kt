@@ -115,7 +115,7 @@ object FloydInventoryHud : Module(
         val height = 3 * slotSize + 2 * pad
 
         val panelMultiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
-        NVGPIPRenderer.draw(this, 0, 0, width, height, panelMultiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(width, height, target)) {
+        NVGPIPRenderer.draw(this, 0, 0, width, height, panelMultiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(width, height, target), outerPadding = if (FloydPanelStyle.borderWidthFor(target) <= 0) 8 else 0) {
             HudPanel.drawNvgPanel(
                 width,
                 height,
@@ -198,14 +198,14 @@ object FloydInventoryHud : Module(
         val fy = inventoryHud.visibleY(fh)
         val itemScale = slotSize / 18f
 
-        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val fill = FloydPanelStyle.fillColorFor(target)
         val border = HudPanel.panelBorderColors(target, inventoryHud.x, inventoryHud.y)
         val radius = FloydPanelStyle.cornerRadiusFor(target).toFloat() * scale
         val outline = FloydPanelStyle.borderWidthFor(target).toFloat() * scale
 
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
         if (allowBlur && FloydPanelStyle.blurFor(target)) {
-            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20).toFloat()
             if (blurRadius >= 0.5f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
                 PostHudOverlay.bindMainFbo()

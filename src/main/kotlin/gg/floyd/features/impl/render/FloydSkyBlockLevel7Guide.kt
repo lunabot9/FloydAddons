@@ -364,6 +364,7 @@ object FloydSkyBlockLevel7Guide : Module(
             multiplier,
             localCoordinates = true,
             backdropBlur = HudPanel.nvgBlur(PANEL_WIDTH, height, target),
+                outerPadding = if (FloydPanelStyle.borderWidthFor(target) <= 0) 8 else 0,
         ) {
             HudPanel.drawNvgPanel(
                 PANEL_WIDTH,

@@ -143,6 +143,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             cornerRadius: Float,
             blurRadius: Float,
             boxKernel: Boolean,
+            insetPixels: Int = 0,
         ) {
             //? if >=26.2 {
             /*return
@@ -162,6 +163,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 cornerRadius,
                 blurRadius,
                 boxKernel,
+                insetPixels,
             )
             //?}
         }
@@ -184,55 +186,14 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             *///?}
             //? if <26.2 {
             if (w <= 0f || h <= 0f) return
-            val source = PostHudOverlay.blurSourceView() ?: return
+            val source = PostHudOverlay.blurSourceView()?.texture() as? GlTexture ?: return
             val target = Minecraft.getInstance().mainRenderTarget
-            RenderSystem.setProjectionMatrix(
-                inlineProjection.getBuffer(target.width.toFloat(), target.height.toFloat()),
-                ProjectionType.ORTHOGRAPHIC
-            )
-
-            val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
-            builder.addVertex(0f, 0f, 0f).setColor(-1)
-            builder.addVertex(0f, h, 0f).setColor(-1)
-            builder.addVertex(w, h, 0f).setColor(-1)
-            builder.addVertex(w, 0f, 0f).setColor(-1)
-            val mesh = builder.buildOrThrow()
-
-            val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
-                Matrix4f().translation(x, y, 0f), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
-            )
-
-            val uniformBuffer = uniformStorage.writeUniform { buffer ->
-                Std140Builder.intoBuffer(buffer)
-                    .putVec4(w * 0.5f, h * 0.5f, w, h)                                    // u_Rect
-                    .putVec4(radTL, radTR, radBR, radBL)                                  // u_Radii
-                    .putVec4(target.width.toFloat(), target.height.toFloat(), x, y)       // u_Screen
-                    .putVec4(blurRadius, if (boxKernel) 1f else 0f, 0f, 0f)               // u_Blur
-            }
-
-            val sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-            val vertexBuffer = CustomRenderPipelines.PIPELINE_PANEL_BLUR.vertexFormat.uploadImmediateVertexBuffer(mesh.vertexBuffer())
-            val indexStorage = RenderSystem.getSequentialBuffer(mesh.drawState().mode())
-            val indexBuffer = indexStorage.getBuffer(mesh.drawState().indexCount())
-
-            mesh.use {
-                target.colorTextureView?.let { gpuTextureView ->
-                    RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                        { "FloydAddons Panel Blur Inline" }, gpuTextureView, OptionalInt.empty(),
-                        if (target.useDepth) target.depthTextureView else null,
-                        OptionalDouble.empty()
-                    )
-                }?.use { pass ->
-                    pass.setPipeline(CustomRenderPipelines.PIPELINE_PANEL_BLUR)
-                    RenderSystem.bindDefaultUniforms(pass)
-                    pass.setUniform("DynamicTransforms", dynamicTransforms)
-                    pass.setUniform("u", uniformBuffer)
-                    pass.bindTexture("Sampler0", source, sampler)
-                    pass.setVertexBuffer(0, vertexBuffer)
-                    pass.setIndexBuffer(indexBuffer, indexStorage.type())
-                    pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1)
-                }
-            }
+            val viewport = IntArray(4).also { GL33C.glGetIntegerv(GL33C.GL_VIEWPORT, it) }
+            try {
+                GL33C.glViewport(x.roundToInt(), (target.height - y - h).roundToInt(), w.roundToInt(), h.roundToInt())
+                drawRawBlur(x, y, w.roundToInt(), h.roundToInt(), radTL, radTR, radBR, radBL,
+                    blurRadius, boxKernel, sourceOverride = source)
+            } finally { GL33C.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]) }
             //?}
         }
 
@@ -288,6 +249,11 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         private var rawProgram = 0
         private var rawVao = 0
         private var rawSampler = 0
+        private var blurFramebuffer = 0
+        private var blurTexture = 0
+        private var blurWidth = 0
+        private var blurHeight = 0
+        private var passUniform = -1
         private var rawInitFailed = false
         private var rawFailureReported = false
         private var screenSizeUniform = -1
@@ -297,6 +263,7 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         private var blurRadiusUniform = -1
         private var boxKernelUniform = -1
         private var sourceUniform = -1
+        private var insetUniform = -1
 
         /**
          * Draws the sampled world backdrop into the already-bound panel texture. The 26.1 command
@@ -315,17 +282,27 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             radiusBottomLeft: Float,
             blurRadius: Float,
             boxKernel: Boolean,
+            insetPixels: Int = 0,
+            sourceOverride: GlTexture? = null,
         ) {
             if (width <= 0 || height <= 0 || blurRadius < 0.5f || !ensureRawBlurInitialized()) return
             val mainTarget = Minecraft.getInstance().mainRenderTarget
-            val source = mainTarget.colorTexture as? GlTexture ?: return
+            val source = sourceOverride ?: (mainTarget.colorTexture as? GlTexture ?: return)
 
+            val previousDraw = GL33C.glGetInteger(GL33C.GL_DRAW_FRAMEBUFFER_BINDING)
+            val previousRead = GL33C.glGetInteger(GL33C.GL_READ_FRAMEBUFFER_BINDING)
+            val viewport = IntArray(4).also { GL33C.glGetIntegerv(GL33C.GL_VIEWPORT, it) }
             val previousProgram = GL33C.glGetInteger(GL33C.GL_CURRENT_PROGRAM)
             val previousVao = GL33C.glGetInteger(GL33C.GL_VERTEX_ARRAY_BINDING)
             val previousActiveTexture = GL33C.glGetInteger(GL33C.GL_ACTIVE_TEXTURE)
             GL33C.glActiveTexture(GL33C.GL_TEXTURE0)
             val previousTexture = GL33C.glGetInteger(GL33C.GL_TEXTURE_BINDING_2D)
             val previousSampler = GL33C.glGetInteger(GL33C.GL_SAMPLER_BINDING)
+            val blendSrcRgb = GL33C.glGetInteger(GL33C.GL_BLEND_SRC_RGB)
+            val blendDstRgb = GL33C.glGetInteger(GL33C.GL_BLEND_DST_RGB)
+            val blendSrcAlpha = GL33C.glGetInteger(GL33C.GL_BLEND_SRC_ALPHA)
+            val blendDstAlpha = GL33C.glGetInteger(GL33C.GL_BLEND_DST_ALPHA)
+            val depthMask = GL33C.glGetBoolean(GL33C.GL_DEPTH_WRITEMASK)
             val blendEnabled = GL33C.glIsEnabled(GL33C.GL_BLEND)
             val depthEnabled = GL33C.glIsEnabled(GL33C.GL_DEPTH_TEST)
             val cullEnabled = GL33C.glIsEnabled(GL33C.GL_CULL_FACE)
@@ -341,21 +318,45 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
 
                 GL33C.glUseProgram(rawProgram)
                 GL33C.glBindVertexArray(rawVao)
+                val halo = kotlin.math.ceil(blurRadius).toInt()
+                val scratchHeight = height + halo * 2
+                if (blurTexture == 0) blurTexture = GL33C.glGenTextures()
+                if (blurFramebuffer == 0) blurFramebuffer = GL33C.glGenFramebuffers()
+                GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, blurTexture)
+                if (blurWidth < width || blurHeight < scratchHeight) {
+                    blurWidth = maxOf(blurWidth, width); blurHeight = maxOf(blurHeight, scratchHeight)
+                    GL33C.glTexImage2D(GL33C.GL_TEXTURE_2D, 0, GL33C.GL_RGBA8, blurWidth, blurHeight, 0, GL33C.GL_RGBA, GL33C.GL_UNSIGNED_BYTE, 0L)
+                }
+                GlStateManager._glBindFramebuffer(GL33C.GL_FRAMEBUFFER, blurFramebuffer)
+                GL33C.glFramebufferTexture2D(GL33C.GL_FRAMEBUFFER, GL33C.GL_COLOR_ATTACHMENT0, GL33C.GL_TEXTURE_2D, blurTexture, 0)
+                check(GL33C.glCheckFramebufferStatus(GL33C.GL_FRAMEBUFFER) == GL33C.GL_FRAMEBUFFER_COMPLETE)
+                GL33C.glViewport(0, 0, width, scratchHeight)
                 GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, source.glId())
                 GL33C.glBindSampler(0, rawSampler)
-                GL33C.glUniform2f(screenSizeUniform, mainTarget.width.toFloat(), mainTarget.height.toFloat())
-                GL33C.glUniform2f(panelOriginUniform, originX, originY)
-                GL33C.glUniform2f(panelSizeUniform, width.toFloat(), height.toFloat())
-                GL33C.glUniform4f(
-                    radiiUniform,
-                    radiusTopLeft,
-                    radiusTopRight,
-                    radiusBottomRight,
-                    radiusBottomLeft,
-                )
+                GL33C.glUniform1i(sourceUniform, 0)
                 GL33C.glUniform1f(blurRadiusUniform, blurRadius.coerceAtMost(20f))
                 GL33C.glUniform1i(boxKernelUniform, if (boxKernel) 1 else 0)
-                GL33C.glUniform1i(sourceUniform, 0)
+                // First pass includes vertical halo, so the second pass never clamps at panel edges.
+                GL33C.glUniform1i(passUniform, 1)
+                GL33C.glUniform2f(screenSizeUniform, mainTarget.width.toFloat(), mainTarget.height.toFloat())
+                GL33C.glUniform2f(panelOriginUniform, originX, originY - halo)
+                GL33C.glUniform2f(panelSizeUniform, width.toFloat(), scratchHeight.toFloat())
+                GL33C.glDrawArrays(GL33C.GL_TRIANGLE_STRIP, 0, 4)
+
+                GlStateManager._glBindFramebuffer(GL33C.GL_DRAW_FRAMEBUFFER, previousDraw)
+                GlStateManager._glBindFramebuffer(GL33C.GL_READ_FRAMEBUFFER, previousRead)
+                GL33C.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
+                GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, blurTexture)
+                if (sourceOverride != null) {
+                    GL33C.glEnable(GL33C.GL_BLEND)
+                    GL33C.glBlendFuncSeparate(GL33C.GL_ONE, GL33C.GL_ONE_MINUS_SRC_ALPHA, GL33C.GL_ONE, GL33C.GL_ONE_MINUS_SRC_ALPHA)
+                }
+                GL33C.glUniform1i(passUniform, 2)
+                GL33C.glUniform2f(screenSizeUniform, blurWidth.toFloat(), blurHeight.toFloat())
+                GL33C.glUniform2f(panelOriginUniform, 0f, (blurHeight - scratchHeight + halo).toFloat())
+                GL33C.glUniform2f(panelSizeUniform, width.toFloat(), height.toFloat())
+                GL33C.glUniform1f(insetUniform, insetPixels.toFloat())
+                GL33C.glUniform4f(radiiUniform, radiusTopLeft, radiusTopRight, radiusBottomRight, radiusBottomLeft)
                 GL33C.glDrawArrays(GL33C.GL_TRIANGLE_STRIP, 0, 4)
             }.onFailure { error ->
                 if (!rawFailureReported) {
@@ -364,12 +365,16 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 }
             }
 
+            GlStateManager._glBindFramebuffer(GL33C.GL_DRAW_FRAMEBUFFER, previousDraw)
+            GlStateManager._glBindFramebuffer(GL33C.GL_READ_FRAMEBUFFER, previousRead)
+            GL33C.glViewport(viewport[0], viewport[1], viewport[2], viewport[3])
             GL33C.glUseProgram(previousProgram)
             GL33C.glBindVertexArray(previousVao)
             GL33C.glBindSampler(0, previousSampler)
             GL33C.glBindTexture(GL33C.GL_TEXTURE_2D, previousTexture)
             GL33C.glActiveTexture(previousActiveTexture)
-            GL33C.glDepthMask(true)
+            GL33C.glDepthMask(depthMask)
+            GL33C.glBlendFuncSeparate(blendSrcRgb, blendDstRgb, blendSrcAlpha, blendDstAlpha)
             if (blendEnabled) GL33C.glEnable(GL33C.GL_BLEND) else GL33C.glDisable(GL33C.GL_BLEND)
             if (depthEnabled) GL33C.glEnable(GL33C.GL_DEPTH_TEST) else GL33C.glDisable(GL33C.GL_DEPTH_TEST)
             if (cullEnabled) GL33C.glEnable(GL33C.GL_CULL_FACE) else GL33C.glDisable(GL33C.GL_CULL_FACE)
@@ -406,6 +411,8 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 blurRadiusUniform = GL33C.glGetUniformLocation(rawProgram, "u_BlurRadius")
                 boxKernelUniform = GL33C.glGetUniformLocation(rawProgram, "u_BoxKernel")
                 sourceUniform = GL33C.glGetUniformLocation(rawProgram, "u_Source")
+                insetUniform = GL33C.glGetUniformLocation(rawProgram, "u_PanelInset")
+                passUniform = GL33C.glGetUniformLocation(rawProgram, "u_Pass")
                 true
             }.getOrElse { error ->
                 rawInitFailed = true
@@ -453,6 +460,8 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             uniform vec4 u_Radii;
             uniform float u_BlurRadius;
             uniform int u_BoxKernel;
+            uniform float u_PanelInset;
+            uniform int u_Pass;
 
             in vec2 v_Position;
             out vec4 fragColor;
@@ -471,11 +480,12 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             }
 
             void main() {
-                vec2 halfSize = u_PanelSize * 0.5;
-                vec2 p = v_Position - halfSize;
+                vec2 halfSize = max(u_PanelSize * 0.5 - vec2(u_PanelInset), vec2(0.0));
+                vec2 p = v_Position - u_PanelSize * 0.5;
                 float radius = clamp(cornerRadius(p, u_Radii), 0.0, min(halfSize.x, halfSize.y));
                 float distanceToEdge = roundedRectSdf(p, halfSize, radius);
-                float mask = 1.0 - smoothstep(0.0, max(fwidth(distanceToEdge), 0.75), distanceToEdge);
+                float aa = max(fwidth(distanceToEdge), 0.75);
+                float mask = u_Pass == 1 ? 1.0 : 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, distanceToEdge);
                 if (mask <= 0.0) {
                     fragColor = vec4(0.0);
                     return;
@@ -488,16 +498,15 @@ class PanelBlurPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 vec3 accumulated = vec3(0.0);
                 float weightSum = 0.0;
 
-                for (int sampleX = -20; sampleX <= 20; sampleX += 2) {
-                    for (int sampleY = -20; sampleY <= 20; sampleY += 2) {
-                        vec2 offset = vec2(float(sampleX), float(sampleY));
-                        if (abs(offset.x) > u_BlurRadius || abs(offset.y) > u_BlurRadius) continue;
-                        float weight = u_BoxKernel != 0
-                            ? 1.0
-                            : exp(-dot(offset, offset) / (2.0 * sigma * sigma));
-                        accumulated += texture(u_Source, uv + offset * texel).rgb * weight;
-                        weightSum += weight;
-                    }
+                // Two dense, separable passes cover every source texel. At strength 20
+                // this needs 41 + 41 fetches, rather than a sparse 9x9 grid with gaps.
+                for (int tap = -20; tap <= 20; ++tap) {
+                    float distance = float(tap);
+                    if (abs(distance) > u_BlurRadius) continue;
+                    vec2 offset = u_Pass == 1 ? vec2(distance, 0.0) : vec2(0.0, distance);
+                    float weight = u_BoxKernel != 0 ? 1.0 : exp(-distance * distance / (2.0 * sigma * sigma));
+                    accumulated += texture(u_Source, uv + offset * texel).rgb * weight;
+                    weightSum += weight;
                 }
 
                 vec3 color = weightSum > 0.0 ? accumulated / weightSum : texture(u_Source, uv).rgb;

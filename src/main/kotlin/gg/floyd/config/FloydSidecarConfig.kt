@@ -232,7 +232,7 @@ object FloydSidecarConfig {
     private fun setModuleEnabled(moduleName: String, enabled: Boolean?) {
         if (enabled == null) return
         val module = ModuleManager.modules[moduleName.lowercase()] ?: return
-        if (module.enabled != enabled) module.toggle()
+        if (module.enabled != enabled) module.toggle(notify = false)
     }
 
     private fun set(moduleName: String, settingName: String, value: JsonElement?) {

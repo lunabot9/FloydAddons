@@ -102,10 +102,12 @@ abstract class Module(
     /**
      * Toggles the module and invokes [onEnable]/[onDisable].
      */
-    fun toggle() {
+    @JvmOverloads
+    fun toggle(notify: Boolean = true) {
         enabled = !enabled
         if (enabled) onEnable()
         else onDisable()
+        if (notify) toggleListener?.invoke(this)
     }
 
     /**
@@ -129,7 +131,11 @@ abstract class Module(
         block: GuiGraphics.(example: Boolean) -> Pair<Int, Int>
     ): HUDSetting = HUDSetting(name, x, y, scale, toggleable, desc, this, block)
 
-    private companion object {
+    companion object {
+        // Installed after modules and saved configurations are ready. Construction and isolated
+        // module tests must not initialize the Minecraft client or a render feature as a side effect.
+        internal var toggleListener: ((Module) -> Unit)? = null
+
         private fun getCategoryFromPackage(clazz: Class<out Module>): Category {
             val packageName = clazz.packageName
             return when {

@@ -98,4 +98,30 @@ internal fun SubmitNodeCollector.submitRoundedRect(
         out.addVertex(matrix, x, y, 0f).setColor(colorAt(x, y))
     }
     out.addVertex(matrix, firstX, firstY, 0f).setColor(colorAt(firstX, firstY))
-}*///?}
+}
+
+/** Annulus geometry keeps every shadow vertex outside the panel, including translucent fills. */
+internal fun SubmitNodeCollector.submitRoundedShadow(pose: PoseStack, width: Float, height: Float, radii: FloatArray) {
+    val out = getBuffer(RenderTypes.debugQuads())
+    val matrix = pose.last()
+    val points = ArrayList<FloatArray>()
+    for (corner in 0..3) {
+        val r = radii[corner].coerceIn(0f, minOf(width, height) * .5f)
+        val cx = if (corner == 0 || corner == 3) r else width - r
+        val cy = if (corner < 2) r else height - r
+        val start = (PI + corner * PI * .5).toFloat()
+        for (step in 0..12) {
+            val angle = start + (PI * .5 * step / 12).toFloat()
+            val nx = cos(angle); val ny = sin(angle)
+            points += floatArrayOf(cx + nx * r, cy + ny * r, cx + nx * (r + 6f), cy + ny * (r + 6f))
+        }
+    }
+    for (i in points.indices) {
+        val a = points[i]; val b = points[(i + 1) % points.size]
+        out.addVertex(matrix, a[0], a[1], 0f).setColor(0x38000000)
+        out.addVertex(matrix, a[2], a[3], 0f).setColor(0)
+        out.addVertex(matrix, b[2], b[3], 0f).setColor(0)
+        out.addVertex(matrix, b[0], b[1], 0f).setColor(0x38000000)
+    }
+}
+*///?}

@@ -53,6 +53,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
                 state.x0(), state.y0(), slot.width, slot.height,
                 blur.cornerRadius * state.renderScale * NVGRenderer.devicePixelRatio(),
                 blur.radius, blur.boxKernel,
+                (state.shadowPadding * FloydAddonsMod.mc.window.guiScale).toInt(),
             )
             bindSlotTarget()
         }
@@ -71,6 +72,11 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
 
         NVGRenderer.beginFrame(slot.width.toFloat(), slot.height.toFloat())
         if (state.renderScale != 1f) NVGRenderer.scale(state.renderScale, state.renderScale)
+        if (state.localCoordinates && state.shadowPadding > 0) {
+            val offset = state.shadowPadding * FloydAddonsMod.mc.window.guiScale.toFloat() /
+                NVGRenderer.devicePixelRatio() / state.renderScale
+            NVGRenderer.translate(offset, offset)
+        }
         if (!state.localCoordinates) {
             val guiScale = FloydAddonsMod.mc.window.guiScale.toFloat()
             val dpr = NVGRenderer.devicePixelRatio()
@@ -248,6 +254,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
         val renderScale: Float,
         val localCoordinates: Boolean,
         val backdropBlur: BackdropBlur?,
+        val shadowPadding: Int,
         private val poseMatrix: Matrix3x2f,
         private val scissor: ScreenRectangle?,
         private val bounds: ScreenRectangle?,
@@ -292,6 +299,7 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
             renderScaleMultiplier: Float = 1f,
             localCoordinates: Boolean = false,
             backdropBlur: BackdropBlur? = null,
+            outerPadding: Int = 0,
             renderContent: () -> Unit
         ) {
             val scissor = context.scissorStack.peek()
@@ -305,13 +313,15 @@ class NVGPIPRenderer(vertexConsumers: MultiBufferSource.BufferSource) : PooledPi
             val screenHeight = maxOf(p0.y, p1.y).roundToInt() - screenTop
             val renderScale = pose.transformDirection(Vector2f(1f, 0f)).length() * renderScaleMultiplier
             if (!renderScale.isFinite()) return
-            val bounds = createBounds(screenLeft, screenTop, screenLeft + screenWidth, screenTop + screenHeight, scissor)
+            val pad = kotlin.math.ceil(outerPadding * pose.transformDirection(Vector2f(1f, 0f)).length()).toInt()
+            val bounds = createBounds(screenLeft - pad, screenTop - pad, screenLeft + screenWidth + pad, screenTop + screenHeight + pad, scissor)
 
             val state = NVGRenderState(
-                screenLeft, screenTop, screenWidth, screenHeight,
+                screenLeft - pad, screenTop - pad, screenWidth + pad * 2, screenHeight + pad * 2,
                 renderScale,
                 localCoordinates,
                 backdropBlur,
+                pad,
                 pose, scissor, bounds,
                 renderContent
             )

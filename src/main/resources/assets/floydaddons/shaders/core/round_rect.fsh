@@ -46,7 +46,7 @@ void main() {
 
     float aa = max(fwidth(d), 0.75);
 
-    float fillAlpha = 1.0 - smoothstep(0.0, aa, d);
+    float fillAlpha = 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, d);
 
     float width = max(u_OutlineWidth, 0.0);
     float innerFillAlpha = 1.0 - smoothstep(0.0, aa, d + width);
@@ -56,4 +56,10 @@ void main() {
     vec4 outlineColor = outlineGradient(p) * outlineAlpha;
 
     fragColor = outlineColor + fillColor * (1.0 - outlineColor.a);
+    if (width == 0.0) {
+        // Shade only outside the rounded silhouette; geometry reserves space for the full fade.
+        float shadowAlpha = 0.22 * pow(1.0 - smoothstep(0.0, 6.0 * aa, max(d, 0.0)), 2.0)
+            * (1.0 - fillAlpha);
+        fragColor.a += shadowAlpha * (1.0 - fragColor.a);
+    }
 }

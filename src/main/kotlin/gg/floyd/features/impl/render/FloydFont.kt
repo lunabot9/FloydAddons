@@ -39,7 +39,7 @@ object FloydFont : Module(
     name = "Font",
     category = Category.RENDER,
     description = "Custom font: per-surface toggles (vanilla text, scoreboard, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
-    toggled = true,
+    toggled = false,
 ) {
     val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = the live Minecraft font on normal text and per-panel custom-font toggles decide Floyd HUD text (the ClickGUI keeps its own pinned font).")
     private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the selected custom font to vanilla game text (chat, hotbar, F3, menus) for normal letters while pack emoji/special glyphs still fall through. OFF restores the live Minecraft/resource-pack font stack for normal game text.")

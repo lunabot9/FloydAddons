@@ -237,14 +237,14 @@ object FloydPlayerEsp : Module(
         val left = (-dims.panelWidth / 2).toFloat()
         val top = (-dims.panelHeight).toFloat()
 
-        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val fill = FloydPanelStyle.fillColorFor(target)
         // "Border = ESP Color" tints with this player's ESP color (honouring chroma); else the global panel
         // border, seeded by the (stable) world anchor so adjacent plates animate out of phase.
         val border = if (borderIsEspColor) HudPanel.monochrome(color.rgba)
             else HudPanel.panelBorderColors(target, anchor.x.toInt(), anchor.z.toInt())
         val radius = (FloydPanelStyle.cornerRadiusFor(target) / 2f).coerceAtLeast(1f)
         // Thinner border too — the full HUD border width reads as a heavy, chunky outline on the small plate.
-        val outline = (FloydPanelStyle.borderWidthFor(target) / 2f).coerceAtLeast(1f)
+        val outline = FloydPanelStyle.borderWidthFor(target).let { if (it <= 0) 0f else (it / 2f).coerceAtLeast(1f) }
 
         // 1) Rounded panel + border (world MVP = view×basis translated to the rect's local top-left).
         RoundRectPIPRenderer.drawWorld(
@@ -312,11 +312,11 @@ object FloydPlayerEsp : Module(
         val leftPx = anchorX - widthPx / 2f
         val topPx = anchorY - heightPx
 
-        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val fill = FloydPanelStyle.fillColorFor(target)
         val border = if (borderIsEspColor) HudPanel.monochrome(color.rgba)
         else HudPanel.panelBorderColors(target, anchor.x.toInt(), anchor.z.toInt())
         val radiusPx = (FloydPanelStyle.cornerRadiusFor(target) / 2f).coerceAtLeast(1f) * localPx
-        val outlinePx = (FloydPanelStyle.borderWidthFor(target) / 2f).coerceAtLeast(1f) * localPx
+        val outlinePx = FloydPanelStyle.borderWidthFor(target).let { if (it <= 0) 0f else (it / 2f).coerceAtLeast(1f) } * localPx
 
         RoundRectPIPRenderer.drawInline(
             leftPx, topPx, widthPx, heightPx,

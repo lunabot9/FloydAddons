@@ -19,6 +19,17 @@ class ModuleConfigTest {
     lateinit var tempDir: Path
 
     @Test
+    fun `legacy scoreboard larp text loads under scoreboard name`() {
+        val module = object : Module(
+            name = "Custom Scoreboard", category = Category.RENDER, description = "Test scoreboard."
+        ) {
+            val footer by gg.floyd.clickgui.settings.impl.StringSetting("Scoreboard Name", "Default", 64, desc = "Test footer.")
+        }
+        loadLegacyConfigEntry("Custom Scoreboard", module, """{"Scoreboard Larp":"My Footer"}""")
+        assertEquals("My Footer", module.footer)
+    }
+
+    @Test
     fun `legacy Nick Hider config entries load into Floyd GUI Neck Hider module`() {
         val module = LegacyNamedModule(name = "Neck Hider")
         loadLegacyConfigEntry("Nick Hider", module)

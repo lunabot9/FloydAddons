@@ -21,7 +21,7 @@ object LegacyClickGUIModule : Module(
     val guiBorderColor by ColorSetting("GUI Border Color", Color(0xFFFFFFFF.toInt()).also { it.chroma = true }, desc = "Floyd GUI panel border color — toggle chroma/fade inside the picker.")
 
     override fun onKeybind() {
-        toggle()
+        FloydOneConfig.open(openingKey = (settings["Keybind"] as KeybindSetting).value.value)
     }
 
     override fun onEnable() {

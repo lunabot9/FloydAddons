@@ -55,9 +55,12 @@ import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.FloydBlockSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
+import gg.floyd.features.impl.render.FloydCustomSky
+import gg.floyd.features.impl.render.FloydUiTheme
 import gg.floyd.features.impl.render.FloydCrosshairChanger
 import gg.floyd.features.impl.render.FloydDarkMode
 import gg.floyd.features.impl.render.FloydFellNotification
+import gg.floyd.features.impl.render.FloydNotifier
 import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydFloorDropEsp
 import gg.floyd.features.impl.render.FloydHubMap
@@ -117,7 +120,7 @@ object ModuleManager {
             ClickGUIModule, LegacyClickGUIModule,
 
             // FloydAddons feature groups.
-            FloydFont, FloydPanelStyle, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
+            FloydFont, FloydPanelStyle, FloydUiTheme, FloydCustomSky, FloydNotifier, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
@@ -139,6 +142,7 @@ object ModuleManager {
             }
         }
 
+        Module.toggleListener = FloydNotifier::onModuleToggled
         HudElementRegistry.attachElementBefore(VanillaHudElements.SLEEP, HUD_LAYER, ModuleManager::render)
     }
 
@@ -265,6 +269,7 @@ object ModuleManager {
         FloydPerf.section("HudLayer.crosshair") {
             FloydCrosshairChanger.render(guiGraphics)
         }
+        FloydNotifier.render(guiGraphics)
 
         // The overhead ESP nameplates now render from the world-end post-HUD pass (PostHudOverlay), like
         // the other Floyd panels, so they stay visible with any screen open and composite under GUIs.

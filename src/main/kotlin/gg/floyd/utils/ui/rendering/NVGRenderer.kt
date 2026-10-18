@@ -356,6 +356,20 @@ object NVGRenderer {
         nvgFill(vg)
     }
 
+    /** A soft exterior fade; callers reserve padding so the shadow cannot be clipped. */
+    fun outerShadow(x: Float, y: Float, width: Float, height: Float, radius: Float) {
+        // A single gradient-painted stroke gives a continuous exterior fade. Unlike
+        // a compound fill/hole, this also works on HUD targets without a stencil buffer.
+        nvgRGBA(0, 0, 0, 72, nvgColor)
+        nvgRGBA(0, 0, 0, 0, nvgColor2)
+        nvgBoxGradient(vg, x, y, width, height, radius, 12f, nvgColor, nvgColor2, nvgPaint)
+        nvgBeginPath(vg)
+        nvgRoundedRect(vg, x - 3f, y - 3f, width + 6f, height + 6f, radius + 3f)
+        nvgStrokeWidth(vg, 6f)
+        nvgStrokePaint(vg, nvgPaint)
+        nvgStroke(vg)
+    }
+
     fun dropShadow(x: Float, y: Float, width: Float, height: Float, blur: Float, spread: Float, radius: Float) {
         nvgRGBA(0, 0, 0, 125, nvgColor)
         nvgRGBA(0, 0, 0, 0, nvgColor2)

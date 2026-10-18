@@ -45,7 +45,7 @@ object HudPanel {
         x0: Int, y0: Int, x1: Int, y1: Int,
         panel: PanelTarget,
         border: BorderColors = panelBorderColors(panel, x0, y0),
-        fillColor: Int = FloydPanelStyle.backgroundColorFor(panel).rgba,
+        fillColor: Int = FloydPanelStyle.fillColorFor(panel),
         cornerRadius: Float = FloydPanelStyle.cornerRadiusFor(panel).toFloat(),
         outlineWidth: Float = FloydPanelStyle.borderWidthFor(panel).toFloat()
     ) {
@@ -53,7 +53,7 @@ object HudPanel {
         val width = outlineWidth.coerceAtLeast(0f)
 
         if (FloydPanelStyle.blurFor(panel)) {
-            val blurRadius = FloydPanelStyle.blurStrengthFor(panel).coerceIn(0, 20) * 0.4f
+            val blurRadius = FloydPanelStyle.blurStrengthFor(panel).coerceIn(0, 20).toFloat()
             val area = (x1 - x0) * (y1 - y0)
             if (blurRadius >= 0.5f && area >= 2000) {
                 PanelBlurPIPRenderer.submit(
@@ -77,7 +77,7 @@ object HudPanel {
     /** The v2.1.0 framebuffer blur parameters for an NVG-rendered HUD panel. */
     fun nvgBlur(width: Int, height: Int, panel: PanelTarget): NVGPIPRenderer.Companion.BackdropBlur? {
         if (!FloydPanelStyle.blurFor(panel)) return null
-        val blurRadius = FloydPanelStyle.blurStrengthFor(panel).coerceIn(0, 20) * 0.4f
+        val blurRadius = FloydPanelStyle.blurStrengthFor(panel).coerceIn(0, 20).toFloat()
         if (blurRadius < 0.5f || width * height < 2000) return null
         val radius = FloydPanelStyle.cornerRadiusFor(panel).toFloat().coerceAtLeast(0f)
         return NVGPIPRenderer.Companion.BackdropBlur(
@@ -96,7 +96,7 @@ object HudPanel {
         panel: PanelTarget,
         border: BorderColors,
     ) {
-        val fill = FloydPanelStyle.backgroundColorFor(panel).rgba
+        val fill = FloydPanelStyle.fillColorFor(panel)
         val radius = FloydPanelStyle.cornerRadiusFor(panel).toFloat().coerceAtLeast(0f)
         val stroke = FloydPanelStyle.borderWidthFor(panel).toFloat().coerceAtLeast(0f)
         gg.floyd.utils.ui.rendering.NVGRenderer.rect(0f, 0f, width.toFloat(), height.toFloat(), fill, radius)
@@ -111,7 +111,10 @@ object HudPanel {
         stroke: Float,
         border: BorderColors,
     ) {
-        if (stroke <= 0f) return
+        if (stroke <= 0f) {
+            gg.floyd.utils.ui.rendering.NVGRenderer.outerShadow(0f, 0f, width.toFloat(), height.toFloat(), radius)
+            return
+        }
 
         // NanoVG centres strokes on the path. Inset by half the width so none of the configured
         // border is clipped by the panel's PIP texture bounds.

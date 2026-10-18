@@ -70,6 +70,7 @@ object FloydCalculatorScreen {
                 multiplier,
                 localCoordinates = true,
                 backdropBlur = HudPanel.nvgBlur(PANEL_WIDTH_INT, PANEL_HEIGHT_INT, target),
+                outerPadding = if (FloydPanelStyle.borderWidthFor(target) <= 0) 8 else 0,
             ) {
                 // The calculator is captured through a scaled HUD PIP. Deferred mc.font replay
                 // is unreliable for non-identity PIP transforms, so keep its text in the same
@@ -123,7 +124,7 @@ object FloydCalculatorScreen {
                 FloydPanelStyle.borderColorFor(target),
                 HudPanel.hudRotationOffset(hud.x, hud.y, 0.38f),
             )
-            val panelFill = FloydPanelStyle.backgroundColorFor(target).rgba
+            val panelFill = FloydPanelStyle.fillColorFor(target)
             val historyFill = compositeOver(panelFill, 0xFF202020.toInt())
             val panelRadius = FloydPanelStyle.cornerRadiusFor(target).toFloat().coerceAtLeast(0f)
             val panelStroke = FloydPanelStyle.borderWidthFor(target).toFloat().coerceAtLeast(0f)
@@ -172,7 +173,10 @@ object FloydCalculatorScreen {
         }
 
         private fun drawCalculatorOutline(color: Int, radius: Float, stroke: Float) {
-            if (stroke <= 0f) return
+            if (stroke <= 0f) {
+                NVGRenderer.outerShadow(0f, 0f, PANEL_WIDTH.toFloat(), PANEL_HEIGHT.toFloat(), radius)
+                return
+            }
             val bounds = calculatorOutlineBounds(PANEL_WIDTH, PANEL_HEIGHT, stroke)
             NVGRenderer.hollowRect(
                 bounds.x,

@@ -62,7 +62,7 @@ object FloydCustomScoreboard : Module(
     private val vanillaScoreboardWouldRender = AtomicBoolean(false)
 
     private var scoreboardLarp by StringSetting(
-        "Scoreboard Larp",
+        "Scoreboard Name",
         Branding.COMPACT_NAME,
         64,
         desc = "Changes the text shown at the bottom of the custom scoreboard."
@@ -317,7 +317,7 @@ object FloydCustomScoreboard : Module(
     private fun GuiGraphics.drawScoreboardGui(r: ScoreboardRender) {
         val target = FloydPanelStyle.PanelTarget.SCOREBOARD
         val multiplier = mc.window.guiScale.toFloat() / NVGRenderer.devicePixelRatio()
-        NVGPIPRenderer.draw(this, 0, 0, r.boxWidth, r.boxHeight, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(r.boxWidth, r.boxHeight, target)) {
+        NVGPIPRenderer.draw(this, 0, 0, r.boxWidth, r.boxHeight, multiplier, localCoordinates = true, backdropBlur = HudPanel.nvgBlur(r.boxWidth, r.boxHeight, target), outerPadding = if (FloydPanelStyle.borderWidthFor(target) <= 0) 8 else 0) {
             HudPanel.drawNvgPanel(
                 r.boxWidth,
                 r.boxHeight,
@@ -440,7 +440,7 @@ object FloydCustomScoreboard : Module(
         val fx = scoreboardHud.x.toFloat().coerceAtMost(mc.window.width - fw).coerceAtLeast(0f)
         val fy = scoreboardHud.y.toFloat().coerceAtMost(mc.window.height - fh).coerceAtLeast(0f)
 
-        val fill = FloydPanelStyle.backgroundColorFor(target).rgba
+        val fill = FloydPanelStyle.fillColorFor(target)
         // STORED position, not the clamped fx/fy: the brand line's per-letter chroma
         // (scoreboardAccentColor) phases off the stored position too, and the two must stay
         // locked or the border and brand sweep out of sync while the panel is edge-clamped.
@@ -450,7 +450,7 @@ object FloydCustomScoreboard : Module(
 
         // Frosted blur backdrop (samples the per-frame framebuffer snapshot), then the rounded fill+border.
         if (allowBlur && FloydPanelStyle.blurFor(target)) {
-            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20) * 0.4f
+            val blurRadius = FloydPanelStyle.blurStrengthFor(target).coerceIn(0, 20).toFloat()
             if (blurRadius >= 0.5f) {
                 PanelBlurPIPRenderer.drawInline(fx, fy, fw, fh, radius, radius, radius, radius, blurRadius, FloydPanelStyle.blurIsBoxFor(target))
                 PostHudOverlay.bindMainFbo()

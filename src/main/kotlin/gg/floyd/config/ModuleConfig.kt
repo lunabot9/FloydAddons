@@ -60,7 +60,7 @@ class ModuleConfig internal constructor(file: File) {
                     val canonicalModule = canonicalModuleName(moduleName)
                     val module = this@ModuleConfig.modules[canonicalModule] ?: continue
                     val enabledElement = moduleObj.get("enabled")
-                    if (enabledElement != null && enabledElement.asBoolean != module.enabled) module.toggle()
+                    if (enabledElement != null && enabledElement.asBoolean != module.enabled) module.toggle(notify = false)
                     val settingObj = moduleObj.get("settings")?.takeIf { it.isJsonObject }?.asJsonObject?.entrySet() ?: continue
                     for ((key, value) in settingObj) {
                         val settingModuleName = canonicalSettingModuleName(canonicalModule, key)
@@ -126,6 +126,9 @@ class ModuleConfig internal constructor(file: File) {
         )
 
         private val legacySettingNames = mapOf(
+            "custom scoreboard" to mapOf(
+                "scoreboard larp" to "Scoreboard Name"
+            ),
             "camera" to mapOf(
                 "freecam speed" to "Speed",
                 "freelook distance" to "Distance",

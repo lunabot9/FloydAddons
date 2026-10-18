@@ -29,10 +29,14 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
     override fun renderContent(state: State, poseStack: PoseStack) {
         val w = state.width * state.scale
         val h = state.height * state.scale
+        val pad = state.shadowPadding * state.scale
 
         //? if >=26.2 {
-        /*submitRounded26(
-            submitNodeCollector, poseStack, w, h,
+        /*val paddedPose = PoseStack()
+        paddedPose.mulPose(poseStack.last().pose())
+        paddedPose.translate(pad, pad, 0f)
+        submitRounded26(
+            submitNodeCollector, paddedPose, w, h,
             state.topLeftColor, state.topRightColor, state.bottomRightColor, state.bottomLeftColor,
             state.topLeftRadius * state.scale, state.topRightRadius * state.scale,
             state.bottomRightRadius * state.scale, state.bottomLeftRadius * state.scale,
@@ -44,14 +48,14 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         *///?}
         //? if <26.2 {
         val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
-        builder.addVertex(0f, 0f, 0f).setColor(state.topLeftColor)
-        builder.addVertex(0f, h, 0f).setColor(state.bottomLeftColor)
-        builder.addVertex(w, h, 0f).setColor(state.bottomRightColor)
-        builder.addVertex(w, 0f, 0f).setColor(state.topRightColor)
+        builder.addVertex(-pad, -pad, 0f).setColor(state.topLeftColor)
+        builder.addVertex(-pad, h + pad, 0f).setColor(state.bottomLeftColor)
+        builder.addVertex(w + pad, h + pad, 0f).setColor(state.bottomRightColor)
+        builder.addVertex(w + pad, -pad, 0f).setColor(state.topRightColor)
         val mesh = builder.buildOrThrow()
 
         val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
-            Matrix4f(), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
+            Matrix4f().translation(pad, pad, 0f), Vector4f(1f, 1f, 1f, 1f), Vector3f(), Matrix4f()
         )
 
         val uniformBuffer = uniformStorage.writeUniform { buffer ->
@@ -114,6 +118,7 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         private val bounds: ScreenRectangle?
     ) : PictureInPictureRenderState {
 
+        val shadowPadding = if (outlineWidth <= 0f) 8 else 0
         val scale = Minecraft.getInstance().window.guiScale.toFloat()
 
         val outlineTopLeftRed = (outlineTopLeftColor shr 16 and 0xFF) / 255f
@@ -133,10 +138,10 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
         val outlineBottomLeftBlue = (outlineBottomLeftColor and 0xFF) / 255f
         val outlineBottomLeftAlpha = (outlineBottomLeftColor shr 24 and 0xFF) / 255f
 
-        override fun x0() = x
-        override fun y0() = y
-        override fun x1() = x + width
-        override fun y1() = y + height
+        override fun x0() = x - shadowPadding
+        override fun y0() = y - shadowPadding
+        override fun x1() = x + width + shadowPadding
+        override fun y1() = y + height + shadowPadding
         override fun scale() = 1f
         override fun scissorArea() = scissorArea
         override fun bounds() = bounds
@@ -217,11 +222,12 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                 ProjectionType.ORTHOGRAPHIC
             )
 
+            val pad = if (outlineWidth <= 0f) 8f else 0f
             val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
-            builder.addVertex(0f, 0f, 0f).setColor(fillTL)
-            builder.addVertex(0f, h, 0f).setColor(fillBL)
-            builder.addVertex(w, h, 0f).setColor(fillBR)
-            builder.addVertex(w, 0f, 0f).setColor(fillTR)
+            builder.addVertex(-pad, -pad, 0f).setColor(fillTL)
+            builder.addVertex(-pad, h + pad, 0f).setColor(fillBL)
+            builder.addVertex(w + pad, h + pad, 0f).setColor(fillBR)
+            builder.addVertex(w + pad, -pad, 0f).setColor(fillTR)
             val mesh = builder.buildOrThrow()
 
             // Mesh is local (0,0)-(w,h); the modelview translates it to the panel's framebuffer origin.
@@ -290,11 +296,12 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
             return
             *///?}
             //? if <26.2 {
+            val pad = if (outlineWidth <= 0f) 8f else 0f
             val builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR)
-            builder.addVertex(0f, 0f, 0f).setColor(fillTL)
-            builder.addVertex(0f, h, 0f).setColor(fillBL)
-            builder.addVertex(w, h, 0f).setColor(fillBR)
-            builder.addVertex(w, 0f, 0f).setColor(fillTR)
+            builder.addVertex(-pad, -pad, 0f).setColor(fillTL)
+            builder.addVertex(-pad, h + pad, 0f).setColor(fillBL)
+            builder.addVertex(w + pad, h + pad, 0f).setColor(fillBR)
+            builder.addVertex(w + pad, -pad, 0f).setColor(fillTR)
             val mesh = builder.buildOrThrow()
 
             val dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(
@@ -354,6 +361,7 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
                     floatArrayOf(radTL - outlineWidth, radTR - outlineWidth, radBR - outlineWidth, radBL - outlineWidth),
                     intArrayOf(fillTL, fillTR, fillBR, fillBL))
             } else {
+                collector.submitRoundedShadow(pose, w, h, floatArrayOf(radTL, radTR, radBR, radBL))
                 collector.submitRoundedRect(pose, w, h, floatArrayOf(radTL, radTR, radBR, radBL), intArrayOf(fillTL, fillTR, fillBR, fillBL))
             }
         }
@@ -379,7 +387,8 @@ class RoundRectPIPRenderer(bufferSource: MultiBufferSource.BufferSource)
 
             val poseScale   = pose.transformDirection(Vector2f(1f, 0f)).length()
 
-            val screenRect = ScreenRectangle(screenLeft, screenTop, screenW, screenH)
+            val pad = if (outlineWidth <= 0f) 8 else 0
+            val screenRect = ScreenRectangle(screenLeft - pad, screenTop - pad, screenW + pad * 2, screenH + pad * 2)
             val bounds = if (scissor != null) scissor.intersection(screenRect) else screenRect
 
             context.guiRenderState.addPicturesInPictureState(

@@ -55,7 +55,7 @@ object FloydCustomMainMenu : Module(
         }
         on<TickEvent.ClientEnd> {
             if (!FloydCompatibility.shouldUseCustomMainMenu()) {
-                FloydMenuVideoBackground.shutdown()
+                if (!gg.floyd.features.impl.render.FloydCustomSky.enabled) FloydMenuVideoBackground.shutdown()
                 return@on
             }
             if (enabled && mc.screen is TitleScreen) {
@@ -78,7 +78,7 @@ object FloydCustomMainMenu : Module(
     override fun onDisable() {
         super.onDisable()
         runCatching {
-            FloydMenuVideoBackground.shutdown()
+            if (!gg.floyd.features.impl.render.FloydCustomSky.enabled) FloydMenuVideoBackground.shutdown()
             if (mc.screen is FloydMainMenuScreen) mc.setScreen(TitleScreen())
         }
     }

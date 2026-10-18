@@ -18,12 +18,12 @@ class FramebufferBlurCoordinatesTest {
     }
 
     @Test
-    fun `panel blur uses the v2 1 kernel and normalizes color once`() {
+    fun `panel blur keeps a fixed sample budget and normalizes color once`() {
         val shader = checkNotNull(javaClass.getResourceAsStream("/assets/floydaddons/shaders/core/panel_blur.fsh"))
             .bufferedReader()
             .use { it.readText() }
-        assertContains(shader, "for (float dx = -radius; dx <= radius; dx += 2.0)")
-        assertContains(shader, "for (float dy = -radius; dy <= radius; dy += 2.0)")
+        assertContains(shader, "for (int x = -4; x <= 4; ++x)")
+        assertContains(shader, "for (int y = -4; y <= 4; ++y)")
         assertContains(shader, "acc / wsum")
     }
 }

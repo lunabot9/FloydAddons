@@ -38,10 +38,14 @@ public abstract class CameraMixin {
         method = "update",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/Camera;prepareCullFrustum(Lorg/joml/Matrix4fc;Lorg/joml/Matrix4f;Lnet/minecraft/world/phys/Vec3;)V"
+            target = "Lnet/minecraft/client/Camera;alignWithEntity(F)V",
+            shift = At.Shift.AFTER
         )
     )
     private void floydaddons$cameraUpdate(net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
+        // Apply detached camera transforms before update evaluates the view matrix and frustum
+        // position arguments. Injecting at prepareCullFrustum leaves the player's old values
+        // on the operand stack, so terrain is culled from the player's view instead of ours.
         if (FloydCamera.freecamActive()) {
             FloydCamera.updateFreecamMovement();
             setPosition(FloydCamera.freecamX(), FloydCamera.freecamY(), FloydCamera.freecamZ());

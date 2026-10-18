@@ -36,7 +36,7 @@ void main() {
     float r = clamp(cornerRadius(p, u_Radii), 0.0, min(halfSize.x, halfSize.y));
     float d = roundedRectSDF(p, halfSize, r);
     float aa = max(fwidth(d), 0.75);
-    float mask = 1.0 - smoothstep(0.0, aa, d);
+    float mask = 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, d);
     if (mask <= 0.0) {
         fragColor = vec4(0.0);
         return;
@@ -55,13 +55,13 @@ void main() {
 
     vec3 acc = vec3(0.0);
     float wsum = 0.0;
-    // Bounded 2D kernel sampled with a step of 2 (relying on bilinear filtering) to keep the sample
-    // count reasonable. This is the original v2.1.0 panel blur kernel.
-    for (float dx = -radius; dx <= radius; dx += 2.0) {
-        for (float dy = -radius; dy <= radius; dy += 2.0) {
-            float wgt = box ? 1.0 : exp(-(dx * dx + dy * dy) / (2.0 * sigma * sigma));
-            acc += texture(Sampler0, uv + vec2(dx, dy) * texel).rgb * wgt;
-            wsum += wgt;
+    // Fixed sample budget: strength changes the spread, not the number of texture fetches.
+    for (int x = -4; x <= 4; ++x) {
+        for (int y = -4; y <= 4; ++y) {
+            vec2 offset = vec2(x, y) * (radius * 0.25);
+            float weight = box ? 1.0 : exp(-dot(offset, offset) / (2.0 * sigma * sigma));
+            acc += texture(Sampler0, uv + offset * texel).rgb * weight;
+            wsum += weight;
         }
     }
 

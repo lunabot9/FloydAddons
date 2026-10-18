@@ -8,40 +8,59 @@ import gg.floyd.clickgui.settings.impl.*
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.features.impl.render.LegacyClickGUIModule
+import gg.floyd.features.impl.render.FloydUiTheme
 import gg.floyd.utils.Color
 import net.minecraft.client.gui.screens.Screen
-import org.polyfrost.oneconfig.api.config.v1.CompatSnapshots
 import org.polyfrost.oneconfig.api.config.v1.Config
 import org.polyfrost.oneconfig.api.config.v1.Properties
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.Visualizer
-import org.polyfrost.oneconfig.api.ui.v1.OneConfigUI
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
-import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindManager
 import org.polyfrost.oneconfig.internal.OneConfigConfig
-import org.polyfrost.oneconfig.internal.ui.navigation.graph.ModConfigRoute
+import org.polyfrost.oneconfig.internal.ui.components.settings.bumpResetEpoch
 
-/** The upstream OneConfig screen edits the same live settings as the panel GUI. */
+/** Floyd-owned settings screen using shared controls over the same live settings as the panel GUI. */
 object FloydOneConfig {
     private const val ID = "floydaddons"
     private var registered = false
     private var optionCount = 0
     private val refreshOptions = mutableListOf<() -> Unit>()
-    private var floydScreenRequested = false
+    private val screen by lazy { FloydSettingsScreen() }
     private var configTree: Tree? = null
+    private var themeTree: Tree? = null
     private val categoryTrees = mutableMapOf<String, Tree>()
     private var suppressedOpeningSounds = 0
     private var suppressedClosingSounds = 0
     private var suppressedCompatOverlays = 0L
+    private var settingsScrollEvents = 0L
+    private var preparingSettings = false
+    private var settingsWarmupVisits = 0
+    private val actionButtons = linkedMapOf<String, String>()
+    private val inlineFileSelectors = linkedMapOf<String, StringSetting>()
+
+    @JvmStatic
+    fun recordSettingsScroll() { settingsScrollEvents++ }
 
     @JvmStatic
     fun recordSuppressedCompatOverlay() { suppressedCompatOverlays++ }
 
-    // Navigation resolves after the first frame. Use the opening request here so
-    // editing examples cannot leak into the background snapshot before that happens.
-    fun isFloydSettingsScreen(): Boolean = floydScreenRequested &&
-        mc.screen?.javaClass?.name == "org.polyfrost.oneconfig.internal.ui.compose.impls.OneConfigUIScreen"
+    fun isFloydSettingsScreen(): Boolean = mc.screen is FloydSettingsScreen
+
+    private fun refreshVisibility() {
+        ownProperties().forEach { it.revaluateDisplay() }
+    }
+
+    /** An action can update several underlying settings without calling their UI properties. */
+    fun refreshSettings() {
+        ownProperties().forEach {
+            it.revaluateDisplay()
+            bumpResetEpoch(it)
+        }
+    }
+    private fun ownProperties(): List<Property<*>> = listOfNotNull(configTree, themeTree)
+        .flatMap { it.map.values.filterIsInstance<Property<*>>() }
+    fun themeSettingsTree(): Tree = checkNotNull(themeTree)
 
     @JvmStatic
     fun recordSuppressedOpeningSound() { suppressedOpeningSounds++ }
@@ -49,7 +68,7 @@ object FloydOneConfig {
     @JvmStatic
     fun recordSuppressedClosingSound() { suppressedClosingSounds++ }
 
-    fun isFloydMenuRequested(): Boolean = floydScreenRequested
+    fun isFloydMenuRequested(): Boolean = isFloydSettingsScreen()
 
     fun searchTree(query: String): Tree {
         val matches = checkNotNull(configTree).map.filterValues { node ->
@@ -59,10 +78,19 @@ object FloydOneConfig {
         return Tree("$ID.search", Branding.DISPLAY_NAME, null, matches)
     }
 
-    fun isFloydPage(): Boolean = floydScreenRequested && (
-        org.polyfrost.oneconfig.internal.ui.shell.ShellState.awaitingInitialRoute ||
-            (org.polyfrost.oneconfig.internal.ui.shell.LocalNavController.wrapper.currentRoute as? ModConfigRoute)?.id == ID
-        )
+    @JvmStatic
+    fun beginSettingsWarmup() { preparingSettings = registered }
+    @JvmStatic
+    fun endSettingsWarmup() { preparingSettings = false }
+    @JvmStatic
+    fun shouldWarmSettings(): Boolean = preparingSettings
+    @JvmStatic
+    fun recordSettingsWarmup() {
+        settingsWarmupVisits++
+        FloydSettingsNavigation.warmupScrollIndex = ((settingsWarmupVisits - 1) % 3) * 8
+    }
+
+    fun isFloydPage(): Boolean = isFloydSettingsScreen() || preparingSettings
 
     fun categoryTree(category: String): Tree = categoryTrees.getOrPut(category) {
         val root = checkNotNull(configTree)
@@ -71,39 +99,39 @@ object FloydOneConfig {
     }
 
     fun initialize() {
-        disableAmbientMusic()
-        FloydOneConfigTheme.apply()
-        // Reserve Right Shift for the panel GUI. Leave any other upstream binding alone.
-        val nativeBind = OneConfigConfig.oneConfigKeybind
-        if (nativeBind.keyCodes?.contentEquals(intArrayOf(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT)) == true) {
-            nativeBind.keyCodes = null
-            KeybindManager.refreshMinecraftBinding(nativeBind)
-            OneConfigConfig.INSTANCE.save()
-        }
+        // Older builds exposed this tree through OneConfig. Remove only that legacy entry.
+        org.polyfrost.oneconfig.api.config.v1.CompatSnapshots.untrack(ID)
+        org.polyfrost.oneconfig.api.config.v1.ConfigManager.active().unregister(ID)
         register()
+        org.polyfrost.oneconfig.internal.ui.themes.ThemeRegistry.init()
+        screen.queueWarmup()
     }
 
-    fun open() {
-        disableAmbientMusic()
-        floydScreenRequested = true
-        FloydOneConfigTheme.apply()
-        register()
-        OneConfigUI.open(ModConfigRoute(ID, "Render"))
-    }
+    fun open(openingKey: Int? = null) { mc.setScreen(createScreen(openingKey)) }
 
-    fun createScreen(): Screen {
-        disableAmbientMusic()
-        floydScreenRequested = true
-        FloydOneConfigTheme.apply()
+    fun createScreen(openingKey: Int? = null): Screen {
         register()
-        return OneConfigUI.createScreen(ModConfigRoute(ID, "Render")) as? Screen
-            ?: error("Could not create the settings screen")
+        screen.prepareOpen(openingKey)
+        return screen
     }
 
     fun state(): Map<String, Any?> = mapOf(
         "registered" to registered,
         "optionCount" to optionCount,
-        "primary" to "oneconfig",
+        "primary" to "floyd",
+        "isolatedScreen" to true,
+        "oneConfigConfigIds" to org.polyfrost.oneconfig.api.config.v1.ConfigManager.active().trees().map { it.getID() },
+        "registeredWithOneConfig" to org.polyfrost.oneconfig.api.config.v1.ConfigManager.active().trees().any { it.getID() == ID },
+        "floydScreenActive" to isFloydSettingsScreen(),
+        "openingProgress" to screen.openingProgress,
+        "openingAnimationFrames" to screen.openingAnimationFrames,
+        "openingAnimationMs" to 250,
+        "closingRequested" to screen.closingRequested,
+        "closingAnimationMs" to 160,
+        "upstreamSearchQuery" to org.polyfrost.oneconfig.internal.ui.shell.ShellState.searchQuery,
+        "upstreamLastRoute" to org.polyfrost.oneconfig.internal.ui.shell.ShellState.lastRoute?.toString(),
+        "upstreamTheme" to org.polyfrost.oneconfig.internal.ThemeConfig.activeTheme,
+        "upstreamAccent" to "%08X".format(org.polyfrost.oneconfig.internal.ThemeConfig.accentColor.rawArgb),
         "secondary" to "clickgui",
         "primaryKey" to (LegacyClickGUIModule.settings["Keybind"] as? KeybindSetting)?.value?.name,
         "secondaryKey" to (gg.floyd.features.impl.render.ClickGUIModule.settings["Open GUI Key"] as? KeybindSetting)?.value?.name,
@@ -112,21 +140,41 @@ object FloydOneConfig {
         "theme" to FloydOneConfigTheme.state(),
         "sidebarCategories" to FloydSettingsNavigation.categories,
         "selectedCategory" to FloydSettingsNavigation.selectedCategory,
+        "themeEditorOpen" to FloydSettingsNavigation.themeEditorOpen,
+        "themeEditorLocation" to "sidebar-bottom-left",
+        "themeListedAsFeature" to (configTree?.map?.values?.any { it.getMetadata<String>("subcategory") == FloydUiTheme.name } == true),
+        "themeEditorHasEnabledControl" to (themeTree?.map?.values?.any { it.title?.toString() == "Enabled" } == true),
+        "themeEditorHasKeybindControl" to (themeTree?.map?.values?.any { it.title?.toString() == "Keybind" } == true),
         "highlightOffsetDp" to FloydSettingsNavigation.highlightOffsetDp,
         "highlightAnimationFrames" to FloydSettingsNavigation.highlightAnimationFrames,
-        "ambientMusicEnabled" to OneConfigConfig.enableUIAmbience,
+        "highlightTargetDp" to FloydSettingsNavigation.highlightTargetDp,
+        "themeButtonOffsetDp" to FloydSettingsNavigation.themeButtonOffsetDp,
+        "presetHighlightOffsetDp" to FloydSettingsNavigation.presetHighlightOffsetDp,
+        "presetHighlightAnimationFrames" to FloydSettingsNavigation.presetHighlightAnimationFrames,
+        "selectionAnimationMs" to 220,
+        "ambientMusicEnabled" to false,
+        "upstreamAmbientMusicEnabled" to OneConfigConfig.enableUIAmbience,
         "ambientMusicPlaying" to ambientMusicPlaying(),
+        "upstreamAmbienceRequested" to upstreamAmbienceRequested(),
         "openingSoundEnabled" to false,
         "suppressedOpeningSounds" to suppressedOpeningSounds,
         "closingSoundEnabled" to false,
         "suppressedClosingSounds" to suppressedClosingSounds,
-        "searchQuery" to org.polyfrost.oneconfig.internal.ui.shell.ShellState.searchQuery,
-        "searchResultCount" to searchTree(org.polyfrost.oneconfig.internal.ui.shell.ShellState.searchQuery).map.size,
+        "searchQuery" to FloydSettingsNavigation.searchQuery,
+        "searchResultCount" to searchTree(FloydSettingsNavigation.searchQuery).map.size,
         "hudPreviewEnabled" to org.polyfrost.oneconfig.api.hud.v1.HudManager.isConfigUiOpen,
         "hudForcedInScreens" to org.polyfrost.oneconfig.api.hud.v1.HudManager.overrideShowInScreens,
         "odinLoaded" to net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("odin"),
         "compatHudOverlaysSuppressed" to isFloydSettingsScreen(),
         "suppressedCompatOverlayFrames" to suppressedCompatOverlays,
+        "scrollSpeedMultiplier" to 0.25f,
+        "settingsScrollEvents" to settingsScrollEvents,
+        "scrollPrefetchAheadDp" to 1200,
+        "settingsWarmupVisits" to settingsWarmupVisits,
+        "firstVisibleRow" to FloydSettingsNavigation.firstVisibleRow,
+        "scrollOffset" to FloydSettingsNavigation.scrollOffset,
+        "actionButtonLabels" to actionButtons.toMap(),
+        "inlineFileSelectors" to inlineFileSelectors.mapValues { it.value.value },
     )
 
     private fun register() {
@@ -155,8 +203,17 @@ object FloydOneConfig {
                 { module.enabled }, { if (it != module.enabled) module.toggle() }, Visualizer.SwitchVisualizer::class.java)
             group(toggle, module)
             tree.put(toggle)
+            val previous = module.settings.values.filterIsInstance<ActionSetting>().firstOrNull { it.name.startsWith("Previous ") }
+            val next = module.settings.values.filterIsInstance<ActionSetting>().firstOrNull { it.name.startsWith("Next ") }
+            val file = module.settings.values.filterIsInstance<StringSetting>().firstOrNull { it.name in listOf("Image", "Skin", "Font") }
+            val inlineCycler = file != null && previous != null && next != null
             module.settings.values.forEach { setting ->
+                if (inlineCycler && (setting === previous || setting === next)) return@forEach
                 val prop = adapt("${prefix}_${slug(setting.name)}", setting) ?: return@forEach
+                if (inlineCycler && setting === file) {
+                    prop.addMetadata("visualizer", FloydFileSelectorVisualizer(previous!!, next!!))
+                    inlineFileSelectors[module.name] = file!!
+                }
                 group(prop, module)
                 prop.addDisplayCondition { if (setting.isVisible) Property.Display.SHOWN else Property.Display.HIDDEN }
                 tree.put(prop)
@@ -168,20 +225,30 @@ object FloydOneConfig {
                 }
             }
         }
-        // OneConfig's compat bridge provides profiles/resets while Floyd retains its own storage.
-        CompatSnapshots.register(tree)
+        // Keep this adapter private to Floyd's screen. Do not register a OneConfig mod/config.
         configTree = tree
+        themeTree = Tree("$ID.theme-editor", "Theme", null, null).also { editor ->
+            FloydUiTheme.settings.values.filter { it.name != "Keybind" && it.name != "Preset" }.forEach { setting ->
+                val prop = adapt("ui_theme_${slug(setting.name)}", setting) ?: return@forEach
+                prop.addMetadata("category", "Theme")
+                prop.addMetadata("subcategory", "Custom Colors")
+                prop.addDisplayCondition { if (setting.isVisible) Property.Display.SHOWN else Property.Display.HIDDEN }
+                editor.put(prop)
+                if (setting is ColorSetting) addColorAnimation(editor, "ui_theme", FloydUiTheme, setting)
+            }
+            editor.map.values.forEach { node ->
+                node.addMetadata("category", "Theme")
+                node.addMetadata("subcategory", "Custom Colors")
+            }
+        }
         optionCount = tree.map.size
         registered = true
     }
 
-    private fun disableAmbientMusic() {
-        val changed = OneConfigConfig.enableUIAmbience || OneConfigConfig.showFirstLaunchMessage
-        OneConfigConfig.enableUIAmbience = false
-        OneConfigConfig.showFirstLaunchMessage = false
-        org.polyfrost.oneconfig.internal.ui.sound.UiSounds.refreshAmbience()
-        if (changed) OneConfigConfig.INSTANCE.save()
-    }
+    private fun upstreamAmbienceRequested(): Boolean? = runCatching {
+        org.polyfrost.oneconfig.internal.ui.sound.UiSounds::class.java
+            .getDeclaredField("ambienceActive").apply { isAccessible = true }.getBoolean(null)
+    }.getOrNull()
 
     private fun ambientMusicPlaying(): Boolean? = runCatching {
         val serviceField = org.polyfrost.oneconfig.internal.ui.sound.UiSounds::class.java
@@ -282,15 +349,23 @@ object FloydOneConfig {
 
     private fun <T : Any> property(id: String, title: String, description: String, default: T,
         getter: () -> T, setter: (T) -> Unit, visualizer: Class<out Visualizer>): Property<T> =
-        Properties.functional({ getter() }, { setter(it) }, id, title, description).apply {
+        Properties.functional({ getter() }, { setter(it); refreshVisibility() }, id, title, description).apply {
             addMetadata("visualizer", visualizer)
             addMetadata("default", default)
         }
 
     private fun actionProperty(id: String, title: String, description: String, action: () -> Unit): Property<Runnable> =
-        Properties.simple(id, title, description, Runnable(action)).apply {
+        Properties.simple(id, title, description, Runnable { action(); refreshSettings() }).apply {
             addMetadata("visualizer", Visualizer.ButtonVisualizer::class.java)
-            addMetadata("text", "Open")
+            val verb = title.substringBefore(' ')
+            val label = when (verb) {
+                "Open", "Reload", "Next", "Previous", "List", "Reset", "Clear", "Pick", "Toggle", "Stalk", "Customize" -> verb
+                "Edit" -> "Edit"
+                "Click" -> "Open" // Secondary Click GUI screen.
+                else -> "Run"
+            }
+            addMetadata("text", label)
+            actionButtons[title] = label
         }
 
     private fun button(tree: Tree, id: String, title: String, description: String,

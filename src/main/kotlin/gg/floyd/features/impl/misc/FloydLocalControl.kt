@@ -11,6 +11,9 @@ import gg.floyd.clickgui.LegacyFloydClickGUI
 import gg.floyd.clickgui.FloydOneConfig
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
+import gg.floyd.clickgui.settings.impl.SelectorSetting
+import gg.floyd.clickgui.settings.impl.ColorSetting
+import gg.floyd.utils.Color
 import gg.floyd.config.FloydSidecarConfig
 import gg.floyd.events.core.EventBus
 import gg.floyd.features.ModuleManager
@@ -22,6 +25,7 @@ import gg.floyd.features.impl.camera.FloydCamera
 import gg.floyd.features.impl.hiders.FloydHiders
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydFellNotification
+import gg.floyd.features.impl.render.FloydNotifier
 import gg.floyd.features.impl.render.FloydFont
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
@@ -30,6 +34,7 @@ import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydSparklingCritterEsp
 import gg.floyd.features.impl.render.FloydMusicOverlay
 import gg.floyd.features.impl.render.FloydPanelStyle
+import gg.floyd.features.impl.render.FloydCustomSky
 import gg.floyd.features.impl.render.FloydRender
 import gg.floyd.features.impl.cosmetic.FloydCape
 import gg.floyd.features.impl.cosmetic.FloydConeHat
@@ -476,12 +481,14 @@ object FloydLocalControl : Module(
             "mobEsp" to FloydMobEsp.state(),
             "sparklingCritterEsp" to FloydSparklingCritterEsp.state(),
             "fellNotification" to FloydFellNotification.state(),
+            "notifier" to FloydNotifier.state(),
             "hud" to FloydHud.state(),
             "inventoryHud" to FloydInventoryHud.state(),
             "skyBlockLevel7Guide" to FloydSkyBlockLevel7Guide.state(),
             "customScoreboard" to FloydCustomScoreboard.state(),
             "musicOverlay" to FloydMusicOverlay.state(),
-            "panelStyle" to FloydPanelStyle.state()
+            "panelStyle" to FloydPanelStyle.state(),
+            "customSky" to FloydCustomSky.state()
         )
         root["qol"] = emptyMap<String, Any?>()
         root["cosmetics"] = mapOf(
@@ -642,9 +649,18 @@ object FloydLocalControl : Module(
         val action = requiredString(body, "action")
         callClient {
             when (action) {
-                "inputKey" -> net.minecraft.client.KeyMapping.click(
-                    com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(requiredInt(body, "keyCode"))
-                )
+                "inputKey" -> {
+                    val code = requiredInt(body, "keyCode")
+                    val event = KeyEvent(code, 0, 0)
+                    when (body["event"]?.asString) {
+                        null -> net.minecraft.client.KeyMapping.click(
+                            com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(code)
+                        )
+                        "press" -> mc.screen?.keyPressed(event)
+                        "release" -> mc.screen?.keyReleased(event)
+                        else -> throw IllegalArgumentException("unknown_key_event")
+                    }
+                }
                 "attack" -> tapKey(mc.options.keyAttack, body)
                 "use" -> tapKey(mc.options.keyUse, body)
                 "swing", "swingMainHand" -> {
@@ -763,8 +779,16 @@ object FloydLocalControl : Module(
                     when (setting) {
                         is BooleanSetting -> setting.value = body["value"]?.takeIf { !it.isJsonNull }?.asBoolean ?: throw IllegalArgumentException("missing_value")
                         is NumberSetting<*> -> setting.setNumericValue(body["value"]?.takeIf { !it.isJsonNull }?.asDouble ?: throw IllegalArgumentException("missing_value"))
+                        is SelectorSetting -> setting.value = body["value"]?.takeIf { !it.isJsonNull }?.asInt ?: throw IllegalArgumentException("missing_value")
+                        is ColorSetting -> {
+                            val hex = requiredString(body, "value").removePrefix("#")
+                            require(hex.length == 6 || hex.length == 8) { "invalid_color" }
+                            val argb = hex.toLong(16).toInt() or if (hex.length == 6) (0xFF shl 24) else 0
+                            setting.value = Color(argb)
+                        }
                         else -> throw IllegalArgumentException("unsupported_setting_type")
                     }
+                    if (FloydOneConfig.isFloydSettingsScreen()) FloydOneConfig.refreshSettings()
                 }
                 "setModuleEnabled" -> {
                     val moduleName = requiredString(body, "module")
@@ -772,6 +796,7 @@ object FloydLocalControl : Module(
                     val want = body["enabled"]?.takeIf { !it.isJsonNull }?.asBoolean ?: true
                     if (module.enabled != want) module.toggle()
                 }
+                "profileSky" -> gg.floyd.utils.render.SkyGpuTimer.start(number(body, "frames")?.toInt() ?: 60)
                 "reloadConfig" -> ModuleManager.loadConfigurations()
                 "reloadMod", "reloadResources" -> {
                     ModuleManager.loadConfigurations()
@@ -791,7 +816,8 @@ object FloydLocalControl : Module(
         val screen = requiredString(readJson(exchange), "screen")
         callClient {
             when (screen) {
-                "floyd", "floydaddons", "oneconfig", "legacy", "legacygui", "oldgui" -> FloydOneConfig.open()
+                "floyd", "floydaddons", "legacy", "legacygui", "oldgui" -> FloydOneConfig.open()
+                "oneconfig" -> org.polyfrost.oneconfig.api.ui.v1.OneConfigUI.open()
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
                 "calculator", "calc" -> FloydCalculator.toggleVisibility()

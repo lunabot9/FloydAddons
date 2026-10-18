@@ -11,8 +11,8 @@ import kotlin.test.assertEquals
 
 class FloydCustomScoreboardFontStyleTest {
     @Test
-    fun `scoreboard larp defaults to the current footer and controls its text`() {
-        val setting = FloydCustomScoreboard.settings["Scoreboard Larp"] as StringSetting
+    fun `scoreboard name defaults to the current footer and controls its text`() {
+        val setting = FloydCustomScoreboard.settings["Scoreboard Name"] as StringSetting
         val previous = setting.value
 
         try {

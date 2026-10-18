@@ -10,8 +10,12 @@ uniform vec3 u_grassSecondaryColor;
 uniform vec3 u_sunColor;
 uniform vec3 u_fogColor;
 uniform vec4 u_postFx; // contrast, saturation, brightness, vignette
+uniform int u_worldSkyMode; // 0: menu camera; 1..6: world sky selection
+uniform mat4 u_inverseSkyMatrix;
 
 out vec4 outColor;
+uniform int u_skyLayer; // 0: native, 1: soft gas, 2: crisp full-resolution stars
+float starVisibility = 1.0;
 
 const float TAU = 6.28318530718;
 const vec3 SITE_INK = vec3(0.0392, 0.0275, 0.0118);       // #0A0703
@@ -330,10 +334,241 @@ vec3 PostEffects(vec3 color, vec2 screenUv) {
     return color;
 }
 
+vec3 WorldStars(vec3 direction, float time) {
+    return vec3(0.80, 0.85, 1.0) * (
+        DefinedStarLayer(direction, 78.0, 0.975, time)
+        + DefinedStarLayer(direction, 150.0, 0.985, time * 0.8) * 0.7);
+}
+
+vec3 GoldenAuroraWorld(vec3 direction, float time) {
+    // Keep the menu's curtain above, with a continuous starfield replacing its ocean below.
+    vec3 color = SkyColor(direction, time);
+    // Use the upper sky's exact zenith color below as well. The golden curtain stays
+    // above, while the surrounding starfield shares one muted background on both sides.
+    vec3 lowerHaze = mix(SITE_INK, u_skyTopColor, 0.10) * 0.27;
+    color = mix(lowerHaze, color, smoothstep(-0.24, 0.08, direction.y));
+    float upperStarMask = smoothstep(0.055, 0.19, direction.y);
+    color += WorldStars(direction, time) * (1.0 - upperStarMask);
+    return color;
+}
+
+// The world skies below are generated entirely from math, with no panorama samplers.
+float SkyHash(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float SkyNoise(vec3 p) {
+    vec3 cell = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(SkyHash(cell), SkyHash(cell + vec3(1,0,0)), f.x),
+        mix(SkyHash(cell + vec3(0,1,0)), SkyHash(cell + vec3(1,1,0)), f.x), f.y),
+        mix(mix(SkyHash(cell + vec3(0,0,1)), SkyHash(cell + vec3(1,0,1)), f.x),
+        mix(SkyHash(cell + vec3(0,1,1)), SkyHash(cell + vec3(1,1,1)), f.x), f.y), f.z);
+}
+
+float SkyFbm(vec3 p) {
+    float result = 0.0;
+    float amplitude = 0.54;
+    for (int octave = 0; octave < 4; ++octave) {
+        result += amplitude * SkyNoise(p);
+        p = p.yzx * 2.03 + vec3(13.7, 7.1, 19.3);
+        amplitude *= 0.48;
+    }
+    return result;
+}
+
+vec3 SpaceStarLayer(vec3 direction, float scale, float threshold, float time) {
+    if (u_skyLayer == 1) return vec3(0.0);
+    vec3 ad = abs(direction);
+    vec2 plane;
+    float face;
+    if (ad.x > ad.y && ad.x > ad.z) { plane = direction.yz / ad.x; face = direction.x > 0.0 ? 1.0 : 2.0; }
+    else if (ad.y > ad.z) { plane = direction.xz / ad.y; face = direction.y > 0.0 ? 3.0 : 4.0; }
+    else { plane = direction.xy / ad.z; face = direction.z > 0.0 ? 5.0 : 6.0; }
+    vec2 grid = plane * scale;
+    vec2 cell = floor(grid);
+    float seed = SkyHash(vec3(cell, face * 31.0));
+    vec2 offset = vec2(SkyHash(vec3(cell + 11.3, face)), SkyHash(vec3(cell + 39.7, face)));
+    vec2 p = fract(grid) - mix(vec2(0.2), vec2(0.8), offset);
+    float d = length(p);
+    float aa = max(length(fwidth(grid)) * 0.45, 0.012);
+    float core = 1.0 - smoothstep(0.02, 0.02 + aa, d);
+    float halo = exp(-d * 23.0) * 0.13;
+    float spikes = exp(-abs(p.x) * 65.0 - abs(p.y) * 8.0)
+        + exp(-abs(p.y) * 65.0 - abs(p.x) * 8.0);
+    float chosen = smoothstep(threshold, 1.0, seed);
+    float bright = smoothstep(0.998, 1.0, seed);
+    vec3 tint = mix(vec3(0.62, 0.77, 1.0), vec3(1.0, 0.69, 0.43), offset.x);
+    float twinkle = 0.88 + 0.12 * sin(time * (0.8 + seed) + seed * 53.0);
+    return tint * chosen * (core * 1.6 + halo + spikes * bright * 0.20) * twinkle;
+}
+
+vec3 SpaceStars(vec3 direction, float time) {
+    return SpaceStarLayer(direction, 65.0, 0.975, time)
+        + SpaceStarLayer(direction, 145.0, 0.987, time) * 0.65;
+}
+
+vec3 SpaceTone(vec3 radiance) {
+    // Smooth exposure, rather than clipping bright gas into flat patches of neon.
+    return pow(vec3(1.0) - exp(-max(radiance, vec3(0.0))), vec3(0.72));
+}
+
+vec3 GasPosition(vec3 p, float time) {
+    vec3 wind = vec3(time * 0.018, -time * 0.010, time * 0.006);
+    vec3 q = p + wind;
+    float warp = SkyFbm(q * 0.65 + vec3(2.1, 9.4, 5.7));
+    return q + vec3(warp, SkyNoise(q * 0.9 + 13.0), SkyNoise(q.zxy * 0.8 + 29.0)) * 1.3;
+}
+
+vec3 VolumetricNebula(vec3 direction, float time, bool galaxy) {
+    vec3 axis = normalize(galaxy ? vec3(-0.35, 0.83, 0.27) : vec3(0.35, 0.76, -0.24));
+    float structure = SkyFbm(direction * 3.8 + vec3(time * 0.008, 7.3, -time * 0.004));
+    float band = exp(-pow((dot(direction, axis) + (structure - 0.5) * 0.28)
+        * (galaxy ? 6.0 : 2.8), 2.0));
+    float complex = smoothstep(0.30, 0.66, structure);
+    vec3 light = normalize(galaxy ? vec3(1.0, 0.25, -0.15) : vec3(-0.45, 0.23, 1.0));
+    if (galaxy) light = normalize(light - axis * dot(light, axis));
+    vec3 color = vec3(0.0012, 0.0010, 0.005);
+    float transmission = 1.0;
+    const float stepSize = 0.30;
+    for (int step = 0; step < 12; ++step) {
+        float distance = 1.35 + float(step) * stepSize;
+        vec3 p = GasPosition(direction * distance * (galaxy ? 1.8 : 1.25), time * (galaxy ? 2.0 : 1.0));
+        float cloud = SkyFbm(p * 1.55);
+        float fine = SkyNoise(p * 8.0 + vec3(time * 0.015, 0.0, 0.0));
+        float density = max(cloud - 0.39, 0.0) * (0.6 + fine * 0.85) * band * (galaxy ? 1.0 : complex);
+        float dust = smoothstep(0.40, 0.65, SkyFbm(p * 1.15 + 19.7));
+        float ion = SkyNoise(p * 0.8 + 7.3);
+        float source = exp(-length(p - light * 3.3) * 0.65);
+        vec3 emission;
+        if (galaxy) {
+            emission = mix(vec3(0.055, 0.17, 0.65), vec3(0.55, 0.72, 1.0), ion);
+            emission += vec3(1.0, 0.72, 0.42) * source * 2.6;
+        } else {
+            emission = mix(vec3(0.24, 0.035, 0.66), vec3(1.15, 0.09, 0.48), ion);
+            emission += vec3(0.65, 0.35, 0.85) * pow(max(cloud - 0.32, 0.0) * 2.0, 3.0) * 2.4;
+            float filament = pow(1.0 - abs(SkyNoise(p * 4.5) * 2.0 - 1.0), 8.0);
+            emission += vec3(0.8, 0.30, 0.65) * filament * 0.7;
+        }
+        float alpha = 1.0 - exp(-density * stepSize * (1.6 + dust * 3.0));
+        // Dust absorbs the background before luminous gas is accumulated through the shell.
+        color += transmission * emission * alpha * (1.0 - dust * 0.92);
+        transmission *= 1.0 - alpha;
+    }
+    starVisibility = 0.45 + transmission * 0.55;
+    vec3 stars = SpaceStars(direction, time);
+    if (galaxy) stars += SpaceStarLayer(direction, 230.0, 0.93, time) * band * 0.6;
+    return SpaceTone(color * 1.5) + stars * (0.45 + transmission * 0.55);
+}
+
+vec3 EmeraldAuroraSky(vec3 direction, float time) {
+    vec4 curtain = AuroraCurtain(direction, time * 1.25);
+    float intensity = dot(curtain.rgb, vec3(0.55, 0.3, 0.15));
+    float elevation = max(direction.y, 0.0);
+    vec3 tint = mix(vec3(0.035, 1.0, 0.28), vec3(0.04, 0.46, 1.0), smoothstep(0.20, 0.70, elevation));
+    vec3 light = tint * intensity * 2.4;
+    light += vec3(0.32, 0.035, 0.55) * intensity * smoothstep(0.45, 0.7, elevation) * 0.6;
+    vec3 haze = vec3(0.002, 0.008, 0.017) + vec3(0.0, 0.015, 0.018) * exp(-abs(direction.y) * 9.0);
+    starVisibility = 0.85;
+    return SpaceTone(haze + light) + SpaceStars(direction, time) * 0.85;
+}
+
+float CloudDensity(vec3 p, float time) {
+    vec3 wind = vec3(time * 0.035, -time * 0.007, time * 0.018);
+    float billow = SkyFbm(p * 0.62 + wind);
+    float erosion = SkyNoise(p * 5.5 - wind * 0.6);
+    return max((billow - 0.49) * 4.8 - (1.0 - erosion) * 0.10, 0.0);
+}
+
+vec3 RoseCloudSky(vec3 direction, float time) {
+    vec3 sun = normalize(vec3(-0.5, 0.25, 1.0));
+    vec3 sky = mix(vec3(0.11, 0.045, 0.16), vec3(0.48, 0.19, 0.21), 0.5 - direction.y * 0.4);
+    float glow = pow(max(dot(direction, sun), 0.0), 12.0);
+    sky += vec3(0.8, 0.34, 0.13) * glow * 0.5;
+    // A shared weather field groups billows into banks instead of filling every ray
+    // with independent overlapping clouds. Keep the lower sky open below the horizon.
+    float weather = SkyFbm(direction * 1.65 + vec3(time * 0.003, 12.7, -time * 0.002));
+    float coverage = smoothstep(0.44, 0.64, weather) * smoothstep(-0.12, 0.25, direction.y);
+    vec3 color = vec3(0.0);
+    float transmission = 1.0;
+    const float stepSize = 0.29;
+    for (int step = 0; step < 16; ++step) {
+        vec3 p = direction * (1.8 + float(step) * stepSize) + vec3(1.4, 0.8, 2.1);
+        float density = CloudDensity(p, time) * coverage;
+        float sunDensity = CloudDensity(p + sun * 0.45, time) * coverage;
+        float direct = exp(-sunDensity * 4.0);
+        float silver = clamp((density - sunDensity) * 3.0, 0.0, 1.0);
+        vec3 scattering = vec3(0.16, 0.075, 0.20) + vec3(1.0, 0.50, 0.31) * direct * 1.25;
+        scattering += vec3(1.0, 0.70, 0.44) * silver * (0.3 + glow) * 0.8;
+        float alpha = 1.0 - exp(-density * stepSize * 1.9);
+        color += transmission * scattering * alpha;
+        transmission *= 1.0 - alpha;
+    }
+    starVisibility = transmission * 0.25;
+    return SpaceTone(color + sky * transmission) + SpaceStars(direction, time) * transmission * 0.25;
+}
+
+vec3 EclipseSky(vec3 direction, float time) {
+    vec3 sun = normalize(vec3(0.17, 0.55, 1.0));
+    vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), sun));
+    vec3 up = cross(sun, right);
+    float radius = acos(clamp(dot(direction, sun), -1.0, 1.0));
+    float angle = atan(dot(direction, up), dot(direction, right));
+    vec3 samplePoint = vec3(cos(angle), sin(angle), radius * 9.0 - time * 0.18);
+    float turbulence = SkyFbm(samplePoint * 4.0);
+    float fine = SkyNoise(samplePoint * 17.0 + time * 0.04);
+    float edge = 0.145;
+    float rim = exp(-pow((radius - edge) / 0.0045, 2.0));
+    float outer = max(radius - edge, 0.0);
+    float rayShape = SkyFbm(vec3(cos(angle) * 12.0, sin(angle) * 12.0, time * 0.035));
+    float rays = pow(rayShape * 1.5, 3.0) * exp(-outer * (7.0 + rayShape * 8.0));
+    rays *= 0.72 + 0.28 * SkyNoise(vec3(cos(angle) * 50.0, sin(angle) * 50.0, outer * 30.0 - time * 0.6));
+    float prominences = exp(-pow((outer - turbulence * 0.028) * 75.0, 2.0)) * pow(fine, 4.0);
+    vec3 corona = mix(vec3(2.4, 1.1, 0.45), vec3(0.8, 0.045, 0.01), smoothstep(0.0, 0.2, outer))
+        * rays + vec3(2.4, 1.4, 0.68) * rim;
+    corona += vec3(1.3, 0.045, 0.006) * prominences;
+    float mist = SkyFbm(direction * 5.0 + vec3(time * 0.012, 0.0, time * 0.004));
+    vec3 background = vec3(0.003, 0.001, 0.005) + vec3(0.12, 0.006, 0.016) * pow(mist, 3.0);
+    starVisibility = 0.8 * smoothstep(edge - 0.001, edge + 0.002, radius);
+    vec3 color = SpaceTone(background + corona) + SpaceStars(direction, time) * 0.8;
+    return mix(vec3(0.001, 0.0005, 0.002), color, smoothstep(edge - 0.001, edge + 0.002, radius));
+}
+
+vec3 ProceduralWorldSky(vec3 direction, float time) {
+    if (u_worldSkyMode == 2) return VolumetricNebula(direction, time, false);
+    if (u_worldSkyMode == 3) return EmeraldAuroraSky(direction, time);
+    if (u_worldSkyMode == 4) return EclipseSky(direction, time);
+    if (u_worldSkyMode == 5) return VolumetricNebula(direction, time, true);
+    return RoseCloudSky(direction, time);
+}
+
 void main() {
     float sceneTime = u_time * max(u_speed, 0.01);
     vec2 screenUv = gl_FragCoord.xy / u_resolution.xy;
     vec2 uv = (screenUv * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
+
+    if (u_worldSkyMode != 0) {
+        vec4 ray = u_inverseSkyMatrix * vec4(screenUv * 2.0 - 1.0, 0.5, 1.0);
+        vec3 direction = normalize(ray.xyz / ray.w);
+        if (u_skyLayer == 2) {
+            vec3 stars = SpaceStars(direction, sceneTime);
+            if (u_worldSkyMode == 5) {
+                vec3 axis = normalize(vec3(-0.35, 0.83, 0.27));
+                float structure = SkyFbm(direction * 3.8 + vec3(sceneTime * 0.008, 7.3, -sceneTime * 0.004));
+                float band = exp(-pow((dot(direction, axis) + (structure - 0.5) * 0.28) * 6.0, 2.0));
+                stars += SpaceStarLayer(direction, 230.0, 0.93, sceneTime) * band * 0.6;
+            }
+            outColor = vec4(stars, 1.0);
+            return;
+        }
+        vec3 color = u_worldSkyMode >= 2 ? ProceduralWorldSky(direction, sceneTime)
+            : PostEffects(GoldenAuroraWorld(direction, sceneTime), vec2(0.5));
+        outColor = vec4(clamp(color, 0.0, 1.0), u_skyLayer == 1 ? starVisibility : 1.0);
+        return;
+    }
 
     vec3 cameraPosition = CameraPath(sceneTime);
     vec3 cameraTarget = CameraTarget(sceneTime);
