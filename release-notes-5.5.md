@@ -16,4 +16,4 @@
 ## Downloads
 Choose the JAR matching Minecraft **26.1**, **26.1.2**, or **26.2**. **Fabric API** and **Fabric Language Kotlin** are required.
 
-All three targets passed their builds and automated checks. Live-client verification used Minecraft 26.1.2. SHA-256 checksums are attached alongside the three runtime JARs.
+All three targets passed their builds and automated checks. SHA-256 checksums are attached alongside the three runtime JARs.
