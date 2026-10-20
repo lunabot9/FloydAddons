@@ -8,6 +8,11 @@ logs/
 
 __pycache__/
 *.pyc
+*.bundle
+**/polinex/
+**/Polinex*.java
+**/Polinex*.kt
+docs/polinex-*.md
 node_modules/
 .wrangler/
 

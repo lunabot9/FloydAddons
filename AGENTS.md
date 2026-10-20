@@ -1,5 +1,14 @@
 # Repository expectations
 
+- This checkout and its GitHub remote are for public builds only. Keep all local-only
+  extension source and private JARs outside this checkout, in local storage with no
+  GitHub remote. Never publish the Ginger Snaps installed JAR or upload it as a release.
+- Before any push, run `python scripts/verify-public-distribution.py --ref HEAD`.
+  Keep `core.hooksPath=.githooks` enabled; do not bypass the pre-push check.
+- Before uploading release artifacts, run
+  `python scripts/verify-public-distribution.py --artifacts <each-public-jar>`.
+  Use only the verified public build outputs, never a profile's installed mod.
+
 - For user-visible gameplay, rendering, HUD, GUI, font, or integration changes, use
   `$floyd-client-testing`.
 - Never launch the root multi-version `runClient`; use exactly one configured

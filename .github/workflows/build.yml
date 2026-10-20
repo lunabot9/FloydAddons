@@ -29,6 +29,13 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: verify public source history
+        run: |
+          python3 scripts/test-public-distribution.py
+          python3 scripts/verify-public-distribution.py --ref HEAD
 
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
@@ -41,13 +48,18 @@ jobs:
 
       - name: setup gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
 
       # Compiles the mod, runs the test suite (src/test), and produces the runtime jar.
       # This is the step the old workflow was missing entirely — without it no jar was ever
       # built and the tests never ran, so CI "passed" without actually verifying or producing
       # anything. (The old per-push scripts/ chmod + skipped verify step are gone.)
       - name: build and test
-        run: ./gradlew ":${{ matrix.minecraft }}:build" --stacktrace
+        run: ./gradlew ":${{ matrix.minecraft }}:clean" ":${{ matrix.minecraft }}:build" --stacktrace
+
+      - name: verify public release archives
+        run: python3 scripts/verify-public-distribution.py --artifacts versions/${{ matrix.minecraft }}/build/libs/*.jar
 
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
