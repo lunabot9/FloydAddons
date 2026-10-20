@@ -19,6 +19,20 @@ class ModuleConfigTest {
     lateinit var tempDir: Path
 
     @Test
+    fun `failed load cannot overwrite the existing config with defaults`() {
+        val configPath = tempDir.resolve("failed-load.json")
+        val original = """[{"name":"Broken","enabled":true,"settings":{"Keep":"unchanged"}}]"""
+        java.nio.file.Files.writeString(configPath, original)
+        val module = object : Module(name = "Broken", category = Category.RENDER, description = "Test failure.") {
+            override fun onEnable() { error("Simulated startup failure") }
+        }
+        val config = ModuleConfig(configPath.toFile())
+        config.modules["broken"] = module
+        config.load()
+        config.save()
+        assertEquals(original, java.nio.file.Files.readString(configPath))
+    }
+    @Test
     fun `legacy scoreboard larp text loads under scoreboard name`() {
         val module = object : Module(
             name = "Custom Scoreboard", category = Category.RENDER, description = "Test scoreboard."

@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
-/** One game framebuffer per requested analysis. No desktop capture or background recording. */
+/** One game framebuffer per requested analysis or enabled gameplay comment. No desktop capture or background recording. */
 internal object AgentGameplayVision {
     fun capture(): CompletableFuture<File> {
         val result = CompletableFuture<File>()

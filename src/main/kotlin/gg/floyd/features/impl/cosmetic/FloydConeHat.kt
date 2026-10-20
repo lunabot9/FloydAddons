@@ -67,11 +67,12 @@ object FloydConeHat : Module(
 
     @JvmStatic
     fun isSharedActiveFor(id: Int): Boolean =
-        if (FloydSelfPlayer.isSelf(id)) isActive()
+        if (gg.floyd.clickgui.FloydSettingsModelPreviews.isConePreviewEntity(id)) true
+        else if (FloydSelfPlayer.isSelf(id)) isActive()
         else FloydSharedCosmetics.appearanceForEntity(id)?.cone?.enabled == true
 
     @JvmStatic fun textureFor(id: Int): Identifier =
-        if (FloydSelfPlayer.isSelf(id)) texture() else builtinTexture
+        if (FloydSelfPlayer.isSelf(id) || gg.floyd.clickgui.FloydSettingsModelPreviews.isConePreviewEntity(id)) texture() else builtinTexture
     @JvmStatic fun heightFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.cone?.height ?: height
     @JvmStatic fun radiusFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.cone?.radius ?: radius
     @JvmStatic fun yOffsetFor(id: Int): Float = FloydSharedCosmetics.appearanceForEntity(id)?.cone?.yOffset ?: yOffset
@@ -80,7 +81,7 @@ object FloydConeHat : Module(
 
     @JvmStatic
     fun currentRotationFor(id: Int): Float {
-        if (FloydSelfPlayer.isSelf(id)) return currentRotation()
+        if (FloydSelfPlayer.isSelf(id) || gg.floyd.clickgui.FloydSettingsModelPreviews.isConePreviewEntity(id)) return currentRotation()
         val cone = FloydSharedCosmetics.appearanceForEntity(id)?.cone ?: return 0.0f
         return normalizeRotation(cone.rotation + (System.currentTimeMillis() / 1000.0f) * cone.spinSpeed)
     }

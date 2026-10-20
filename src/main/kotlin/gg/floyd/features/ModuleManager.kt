@@ -49,6 +49,7 @@ import gg.floyd.features.impl.misc.FloydLocalControl
 import gg.floyd.features.impl.player.FloydNickHider
 import gg.floyd.features.impl.player.FloydPlayerSize
 import gg.floyd.features.impl.pvp.FloydAutoTotem
+import gg.floyd.features.impl.pvp.FloydAutoExperiments
 import gg.floyd.features.impl.pvp.FloydAutoClicker
 import gg.floyd.features.impl.pvp.FloydLoadoutSwapper
 import gg.floyd.features.impl.pvp.FloydPlayerEsp
@@ -129,7 +130,7 @@ object ModuleManager {
             // Camera (each feature is its own module).
             FloydFreecam, FloydFreelook, FloydF5Customizer,
             FloydSkin, FloydCape, FloydConeHat, FloydPlayerModel, FloydSharedCosmetics,
-            FloydLoadoutSwapper, FloydAutoTotem, FloydPlayerEsp, FloydAutoClicker,
+            FloydLoadoutSwapper, FloydAutoTotem, FloydAutoExperiments, FloydPlayerEsp, FloydAutoClicker,
             FloydDiscordPresence, FloydLocalControl, FloydCalculator,
             // Misc compatibility (each feature is its own module).
             FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule, FloydFocusLossPrevention,

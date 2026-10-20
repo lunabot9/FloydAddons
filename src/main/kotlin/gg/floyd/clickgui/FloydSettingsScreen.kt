@@ -93,7 +93,7 @@ class FloydSettingsScreen : ComposeScreen(RenderMode.CONTINUOUS) {
         closingAtNanos = System.nanoTime()
         closingRequested = true
     }
-    override fun removed() { ModuleManager.saveConfigurations(); super.removed() }
+    override fun removed() { FloydSettingsModelPreviews.close(); ModuleManager.saveConfigurations(); super.removed() }
     // The retained scene may still focus a text field. GLFW sends a character callback after
     // the key callback that opened us, so consume that key's text/repeats until its release.
     override fun charTyped(event: CharacterEvent): Boolean =

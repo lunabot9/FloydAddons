@@ -174,40 +174,15 @@ class FloydSkyBlockPackDisablerTest {
     }
 
     @Test
-    fun `selectRenderableModel coerces pack-defined heads to the vanilla head model`() {
-        val playerHead = Identifier.parse("minecraft:item/player_head")
-        val deadPackModel = Identifier.parse("hypixel_skyblock:item/abiphones/x/abiphone_x_blue")
-        assertEquals(
-            playerHead,
-            FloydSkyBlockItemModelPolicy.selectRenderableModel(
-                resolvedModel = deadPackModel,
-                isPackDefinedHead = true,
-                playerHeadModel = playerHead,
-            ),
-        )
+    fun `pack heads remain three dimensional skulls`() {
+        val head = Identifier.parse("minecraft:player_head")
+        assertEquals(head, FloydSkyBlockItemModelPolicy.selectRenderableModel(Identifier.parse("hypixel_skyblock:head"), true, head))
     }
 
     @Test
-    fun `selectRenderableModel leaves non-head and already-vanilla models untouched`() {
-        val playerHead = Identifier.parse("minecraft:item/player_head")
-        // Non-head custom item resolving to a dead pack model must NOT become a head.
-        assertEquals(
-            Identifier.parse("hypixel_skyblock:item/swords/aspect_of_the_void"),
-            FloydSkyBlockItemModelPolicy.selectRenderableModel(
-                resolvedModel = Identifier.parse("hypixel_skyblock:item/swords/aspect_of_the_void"),
-                isPackDefinedHead = false,
-                playerHeadModel = playerHead,
-            ),
-        )
-        // An already-vanilla head model is fine as-is.
-        assertEquals(
-            playerHead,
-            FloydSkyBlockItemModelPolicy.selectRenderableModel(
-                resolvedModel = playerHead,
-                isPackDefinedHead = true,
-                playerHeadModel = playerHead,
-            ),
-        )
+    fun `non-head vanilla fallbacks still apply`() {
+        val other = Identifier.parse("hypixel_skyblock:sword")
+        assertEquals(other, FloydSkyBlockItemModelPolicy.selectRenderableModel(other, false, Identifier.parse("minecraft:player_head")))
     }
 
     private fun syntheticPack(withHeadTexture: Boolean): Path {

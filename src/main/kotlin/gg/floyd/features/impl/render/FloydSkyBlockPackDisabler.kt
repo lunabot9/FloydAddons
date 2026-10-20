@@ -101,16 +101,7 @@ internal object FloydSkyBlockItemModelPolicy {
         else -> currentModel
     }
 
-    /**
-     * Ensures a SkyBlock head whose pack model is unavailable (texture stripped or registry miss)
-     * still renders as a real head instead of a null/empty item. Falls back to the vanilla
-     * player-head model, which then draws whichever skin is available — the item's own NBT profile,
-     * the static registry profile, or the preserved live-pack head texture.
-     */
-    fun selectRenderableModel(
-        resolvedModel: Identifier,
-        isPackDefinedHead: Boolean,
-        playerHeadModel: Identifier,
-    ): Identifier =
+    /** Keep head items as skull models; their skin loader preserves the original PNG alpha. */
+    fun selectRenderableModel(resolvedModel: Identifier, isPackDefinedHead: Boolean, playerHeadModel: Identifier): Identifier =
         if (isPackDefinedHead && resolvedModel.namespace == "hypixel_skyblock") playerHeadModel else resolvedModel
 }

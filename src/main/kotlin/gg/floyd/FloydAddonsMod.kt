@@ -79,6 +79,7 @@ object FloydAddonsMod : ClientModInitializer {
     }
 
     internal fun onClientStopping() {
+        gg.floyd.agent.FloydAgent.shutdown()
         FloydLocalControl.stop()
         FloydDiscordPresence.shutdown()
         ModuleManager.saveConfigurations()

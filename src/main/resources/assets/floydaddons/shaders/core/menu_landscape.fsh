@@ -70,10 +70,11 @@ float DefinedStarLayer(vec3 direction, float scale, float threshold, float time)
     float angle01 = PanoramaAngle(direction) / TAU + 0.5;
     vec2 grid = vec2(angle01, direction.y * 0.70 + 0.20) * vec2(scale * 2.0, scale);
     vec2 cell = floor(grid);
-    vec2 starPosition = mix(vec2(0.18), vec2(0.82), Hash2(cell + 4.7));
-    vec2 local = fract(grid) - starPosition;
     float seed = Hash(cell + 19.7);
     float selected = smoothstep(threshold, 1.0, seed);
+    if (selected <= 0.0) return 0.0;
+    vec2 starPosition = mix(vec2(0.18), vec2(0.82), Hash2(cell + 4.7));
+    vec2 local = fract(grid) - starPosition;
     float distanceToStar = length(local);
     float core = 1.0 - smoothstep(0.010, 0.044, distanceToStar);
     float halo = exp(-distanceToStar * 24.0);
@@ -85,6 +86,7 @@ float DefinedStarLayer(vec3 direction, float scale, float threshold, float time)
 
 vec3 DefinedStarField(vec3 direction, float time) {
     float elevationMask = smoothstep(0.055, 0.19, direction.y);
+    if (elevationMask <= 0.0) return vec3(0.0);
     float stars = DefinedStarLayer(direction, 78.0, 0.982, time)
         + DefinedStarLayer(direction + vec3(0.0, 0.014, 0.0), 128.0, 0.989, time * 1.17) * 0.78
         + DefinedStarLayer(direction + vec3(0.0, 0.027, 0.0), 184.0, 0.994, time * 1.31) * 0.54;
@@ -95,6 +97,9 @@ vec3 DefinedStarField(vec3 direction, float time) {
 
 vec4 AuroraCurtain(vec3 direction, float time) {
     float elevation = direction.y;
+    float skyMask = smoothstep(0.07, 0.18, elevation)
+        * (1.0 - smoothstep(0.88, 1.00, elevation));
+    if (skyMask <= 0.0) return vec4(0.0);
     float angle = PanoramaAngle(direction);
     vec2 panoramaCircle = normalize(direction.xz);
     float flowTime = time * 0.075;
@@ -146,8 +151,6 @@ vec4 AuroraCurtain(vec3 direction, float time) {
         elevation * 54.0 - flowTime * 4.8 + fineFlow * 3.2 + streamFlow * 2.0
     );
     float breathing = 0.86 + 0.14 * sin(time * 0.16 + broadFlow * 3.4);
-    float skyMask = smoothstep(0.07, 0.18, elevation)
-        * (1.0 - smoothstep(0.88, 1.00, elevation));
     float intensity = (bandA * 0.88 + bandB * 0.55 + bandC * 0.42)
         * curtainStrands * verticalShimmer * breathing * skyMask;
 
@@ -342,13 +345,15 @@ vec3 WorldStars(vec3 direction, float time) {
 
 vec3 GoldenAuroraWorld(vec3 direction, float time) {
     // Keep the menu's curtain above, with a continuous starfield replacing its ocean below.
+    // The lower starfield completely replaces SkyColor below this transition.
+    vec3 lowerHaze = mix(SITE_INK, u_skyTopColor, 0.10) * 0.27;
+    if (direction.y <= -0.24) return lowerHaze + WorldStars(direction, time);
     vec3 color = SkyColor(direction, time);
     // Use the upper sky's exact zenith color below as well. The golden curtain stays
     // above, while the surrounding starfield shares one muted background on both sides.
-    vec3 lowerHaze = mix(SITE_INK, u_skyTopColor, 0.10) * 0.27;
     color = mix(lowerHaze, color, smoothstep(-0.24, 0.08, direction.y));
     float upperStarMask = smoothstep(0.055, 0.19, direction.y);
-    color += WorldStars(direction, time) * (1.0 - upperStarMask);
+    if (upperStarMask < 1.0) color += WorldStars(direction, time) * (1.0 - upperStarMask);
     return color;
 }
 

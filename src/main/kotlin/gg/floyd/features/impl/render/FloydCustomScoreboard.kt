@@ -397,7 +397,7 @@ object FloydCustomScoreboard : Module(
         return ScoreLine(text, StyledScoreboardText.EMPTY, textWidth(text), 0f)
     }
 
-    /** The per-toggle font selection (custom vs pinned vanilla); layout and draw must agree. */
+    /** Always-custom font selection; layout and draw must agree. */
     private fun panelFont() = FloydFont.panelFont(FloydFont.PanelFont.SCOREBOARD)
 
     private fun textWidth(text: String): Float =

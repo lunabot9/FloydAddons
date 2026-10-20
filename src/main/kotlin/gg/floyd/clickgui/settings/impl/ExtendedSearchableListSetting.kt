@@ -48,6 +48,7 @@ class ExtendedSearchableListSetting(
     private val showActionsRow: Boolean = false,
 ) : SearchableListSetting(name, optionsProvider, selectedProvider, onToggle, desc) {
     internal val supportsColors get() = colorProvider != null && onColorChange != null
+    internal override fun optionLabel(id: String): String = displayNameProvider?.invoke(id) ?: super.optionLabel(id)
     internal val canPickFromWorld get() = onAltClick != null
     internal val canClearAll get() = onClearAll != null
     internal fun optionColor(id: String): String? = colorProvider?.invoke(id)

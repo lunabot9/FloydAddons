@@ -175,6 +175,9 @@ object FloydOneConfig {
         "scrollOffset" to FloydSettingsNavigation.scrollOffset,
         "actionButtonLabels" to actionButtons.toMap(),
         "inlineFileSelectors" to inlineFileSelectors.mapValues { it.value.value },
+        "modelPreviews" to FloydSettingsModelPreviews.state(),
+        "headTextures" to gg.floyd.features.impl.render.FloydHeadTextureCache.state(),
+        "searchableLists" to FloydSearchableListVisualizer.state(),
     )
 
     private fun register() {
@@ -203,6 +206,13 @@ object FloydOneConfig {
                 { module.enabled }, { if (it != module.enabled) module.toggle() }, Visualizer.SwitchVisualizer::class.java)
             group(toggle, module)
             tree.put(toggle)
+            if (module === gg.floyd.features.impl.cosmetic.FloydConeHat) {
+                val preview = property("cone_hat_preview", "Preview", "Live preview of your cone texture, size, offset, and spin.", false,
+                    { false }, {}, Visualizer.SwitchVisualizer::class.java)
+                preview.addMetadata("visualizer", FloydConePreviewVisualizer())
+                group(preview, module)
+                tree.put(preview)
+            }
             val previous = module.settings.values.filterIsInstance<ActionSetting>().firstOrNull { it.name.startsWith("Previous ") }
             val next = module.settings.values.filterIsInstance<ActionSetting>().firstOrNull { it.name.startsWith("Next ") }
             val file = module.settings.values.filterIsInstance<StringSetting>().firstOrNull { it.name in listOf("Image", "Skin", "Font") }
@@ -296,6 +306,7 @@ object FloydOneConfig {
         is SearchableListSetting -> property(id, title, setting.description, emptyArray<String>(),
             { setting.selectedOptions().toTypedArray() }, { setting.replaceSelection(it.toSet()) },
             Visualizer.MultiSelectDropdownVisualizer::class.java).apply {
+                addMetadata("visualizer", FloydSearchableListVisualizer(setting))
                 addMetadata("options", setting.availableOptions().toTypedArray())
                 refreshOptions += { addMetadata("options", setting.availableOptions().toTypedArray()) }
             }

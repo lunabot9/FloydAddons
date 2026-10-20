@@ -13,6 +13,9 @@ object AgentVoiceRuntime {
     private var process: Process? = null
     private val replies = LinkedBlockingQueue<String>()
     @Volatile private var generating = false
+    @Volatile var warmingUp = false; private set
+    @Volatile var processStarts = 0; private set
+    @Volatile private var preparedProfile: String? = null
     @Volatile var status = "Not loaded"; private set
 
     fun install() {
@@ -35,9 +38,9 @@ object AgentVoiceRuntime {
         check(child.exitValue() == 0) { "Voice setup failed. Install Python 3.10 or newer, then try again." }
     }
 
-    fun prepare(directory: File) {
-        if (!python().isFile || (process?.isAlive == true && status == "Ready (CPU)")) return
-        synthesize(directory, "", File(directory, "voice-warmup.wav"), warmup = true)
+    fun prepare(directory: File, profile: String = "Verity") {
+        if (!python().isFile || (process?.isAlive == true && status == "Ready (CPU)" && preparedProfile == profile)) return
+        synthesize(directory, "", File(directory, "voice-warmup.wav"), warmup = true, profile = profile)
     }
 
     @Synchronized fun synthesize(directory: File, text: String, output: File, warmup: Boolean = false, profile: String = "Verity") {
@@ -57,27 +60,29 @@ object AgentVoiceRuntime {
             builder.environment()["OMP_NUM_THREADS"] = "4"
             builder.environment()["MKL_NUM_THREADS"] = "4"
             builder.environment()["HF_HUB_DISABLE_TELEMETRY"] = "1"
-            val child = builder.start(); process = child
+            val child = builder.start(); process = child; processStarts++; preparedProfile = null
             Thread({
                 child.inputStream.bufferedReader().useLines { lines -> lines.forEach { if (process === child) replies.offer(it) } }
                 if (process === child) replies.offer("{\"ok\":false}")
             }, "Floyd-Agent-Voice-Reader").apply { isDaemon = true; start() }
         }
-        generating = true
+        warmingUp = warmup; generating = true
         try {
-            status = "Generating $profile voice on CPU..."
+            status = if (warmup) "Warming $profile voice on CPU..." else "Generating $profile voice on CPU..."
             val writer = checkNotNull(process).outputStream.bufferedWriter()
             writer.write(Gson().toJson(mapOf("text" to text, "output" to output.absolutePath, "warmup" to warmup, "profile" to profile))); writer.newLine(); writer.flush()
             val line = replies.poll(300, TimeUnit.SECONDS) ?: error("Natural voice timed out. Check the local voice setup.")
             val result = JsonParser.parseString(line).asJsonObject
             check(result["ok"]?.asBoolean == true) { result["error"]?.asString ?: "Local voice worker stopped." }
-            status = "Ready (CPU)"
+            preparedProfile = profile; status = "Ready (CPU)"
         } catch (e: Exception) { status = e.message ?: "Voice unavailable"; throw e }
-        finally { generating = false }
+        finally { generating = false; warmingUp = false }
     }
 
     fun cancelGeneration() {
-        if (!generating) return
+        // Warmup belongs to the enabled companion, not an individual response.
+        // Cancelling it on every intro/message forces the model to reload from disk.
+        if (!generating || warmingUp) return
         val child = process; process = null; stopWorker(child)
         replies.offer("{\"ok\":false,\"error\":\"Voice generation stopped.\"}")
         status = "Stopped"

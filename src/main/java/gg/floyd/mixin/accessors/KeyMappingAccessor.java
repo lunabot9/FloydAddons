@@ -24,4 +24,8 @@ public interface KeyMappingAccessor {
 
     @Accessor("clickCount")
     void setClickCount(int clickCount);
+
+    /** Set held input without ToggleKeyMapping interpreting each tick as another key press. */
+    @Accessor("isDown")
+    void setRawDown(boolean down);
 }

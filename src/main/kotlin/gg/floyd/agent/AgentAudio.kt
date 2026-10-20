@@ -74,16 +74,26 @@ object AgentAudio {
     fun stopRecording() { recording = false; line?.close() }
     fun stop() { microphoneEpoch.incrementAndGet(); playbackGeneration.incrementAndGet(); AgentVoiceRuntime.cancelGeneration(); stopRecording(); line?.close(); clip?.stop(); clip?.close(); clip = null; speaking = false; mouth = 0f }
 
+    fun prepareSpeech(directory: File, text: String, voice: String): File {
+        val wav = File.createTempFile("voice-ready-", ".wav", directory)
+        try {
+            AgentVoiceRuntime.synthesize(directory, text, wav, profile = voice)
+            return wav
+        } catch (error: Exception) { wav.delete(); throw error }
+    }
+
     fun voices(directory: File): List<String> {
         val text = windows(directory, "voices", emptyMap())
         return listOf("Default") + text.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     }
 
-    fun speak(directory: File, text: String, voice: String, volume: Float, recordedResource: String? = null, started: () -> Unit = {}, progress: (Float) -> Unit = {}, done: () -> Unit) {
+    fun speak(directory: File, text: String, voice: String, volume: Float, recordedResource: String? = null, preparedAudio: File? = null, started: () -> Unit = {}, progress: (Float) -> Unit = {}, done: () -> Unit) {
         val epoch = playbackGeneration.get()
-        val wav = File.createTempFile("voice-", ".wav", directory)
+        val wav = preparedAudio ?: File.createTempFile("voice-", ".wav", directory)
         try {
-            if (recordedResource != null) {
+            if (preparedAudio != null) {
+                check(preparedAudio.isFile) { "Prepared speech is unavailable." }
+            } else if (recordedResource != null) {
                 checkNotNull(AgentAudio::class.java.getResourceAsStream("/assets/floydaddons/agent/$recordedResource")) {
                     "The bundled introduction is unavailable."
                 }.use { source -> wav.outputStream().use { source.copyTo(it) } }

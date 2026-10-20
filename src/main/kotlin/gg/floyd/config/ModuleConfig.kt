@@ -4,7 +4,6 @@ package gg.floyd.config
 
 import com.google.gson.*
 import gg.floyd.FloydAddonsMod
-import gg.floyd.FloydAddonsMod.logger
 import gg.floyd.clickgui.settings.Saving
 import gg.floyd.features.Module
 import org.apache.logging.log4j.LogManager
@@ -16,6 +15,8 @@ import java.io.File
  * This class handles saving Modules, and their settings, into a JSON format.
  */
 class ModuleConfig internal constructor(file: File) {
+    private val logger = LogManager.getLogger("FloydAddons")
+    private var loadFailed = false
 
     /**
      * Main constructor for Addons. (config/floyd/addons/{fileName})
@@ -38,8 +39,11 @@ class ModuleConfig internal constructor(file: File) {
      * Loads configuration from file, into [modules].
      */
     fun load() {
+        loadFailed = false
+        var originalContents: String? = null
         try {
             with(file.bufferedReader().use { it.readText() }) {
+                originalContents = this
                 if (isEmpty()) return
 
                 val jsonArray = JsonParser.parseString(this).asJsonArray ?: return
@@ -71,7 +75,11 @@ class ModuleConfig internal constructor(file: File) {
                 }
             }
         } catch (e: Exception) {
-            logger.error("Error initializing module config", e)
+            loadFailed = true
+            originalContents?.let { contents ->
+                runCatching { File(file.parentFile, "${file.name}.load-failed-${System.currentTimeMillis()}.bak").writeText(contents) }
+            }
+            logger.error("Error initializing module config; saving is blocked to preserve the existing file", e)
         }
     }
 
@@ -79,6 +87,10 @@ class ModuleConfig internal constructor(file: File) {
      * Saves configuration to files, from [modules].
      */
     fun save() {
+        if (loadFailed) {
+            logger.warn("Refusing to overwrite {} after an incomplete configuration load", file)
+            return
+        }
         try {
             // reason doing this is better is that
             // using like a custom serializer leaves 'null' in settings that don't save
@@ -106,7 +118,8 @@ class ModuleConfig internal constructor(file: File) {
         "file" to file.path,
         "exists" to file.exists(),
         "sizeBytes" to file.length(),
-        "moduleCount" to modules.size
+        "moduleCount" to modules.size,
+        "loadFailed" to loadFailed
     )
 
     private companion object {

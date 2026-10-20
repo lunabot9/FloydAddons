@@ -12,6 +12,7 @@ import gg.floyd.clickgui.FloydOneConfig
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
 import gg.floyd.clickgui.settings.impl.SelectorSetting
+import gg.floyd.clickgui.settings.impl.StringSetting
 import gg.floyd.clickgui.settings.impl.ColorSetting
 import gg.floyd.utils.Color
 import gg.floyd.config.FloydSidecarConfig
@@ -483,6 +484,7 @@ object FloydLocalControl : Module(
             "fellNotification" to FloydFellNotification.state(),
             "notifier" to FloydNotifier.state(),
             "agent" to gg.floyd.agent.FloydAgent.state(),
+            "autoExperiments" to gg.floyd.features.impl.pvp.FloydAutoExperiments.state(),
             "hud" to FloydHud.state(),
             "inventoryHud" to FloydInventoryHud.state(),
             "skyBlockLevel7Guide" to FloydSkyBlockLevel7Guide.state(),
@@ -780,6 +782,7 @@ object FloydLocalControl : Module(
                     when (setting) {
                         is BooleanSetting -> setting.value = body["value"]?.takeIf { !it.isJsonNull }?.asBoolean ?: throw IllegalArgumentException("missing_value")
                         is NumberSetting<*> -> setting.setNumericValue(body["value"]?.takeIf { !it.isJsonNull }?.asDouble ?: throw IllegalArgumentException("missing_value"))
+                        is StringSetting -> setting.value = requiredString(body, "value")
                         is SelectorSetting -> setting.value = body["value"]?.takeIf { !it.isJsonNull }?.asInt ?: throw IllegalArgumentException("missing_value")
                         is ColorSetting -> {
                             val hex = requiredString(body, "value").removePrefix("#")
@@ -800,8 +803,21 @@ object FloydLocalControl : Module(
                 "agentCheckConnection" -> gg.floyd.agent.FloydAgent.checkConnection()
                 "agentOpenChat" -> gg.floyd.agent.FloydAgent.openChat()
                 "agentSend" -> gg.floyd.agent.FloydAgent.send(requiredString(body, "text"))
+                "agentStartPetConversation" -> gg.floyd.agent.FloydAgent.startPetConversation()
                 "agentTestVoice" -> gg.floyd.agent.FloydAgent.testVoice()
                 "agentStop" -> gg.floyd.agent.FloydAgent.stopResponse()
+                "experimentsFlowFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFlowFixture.open()
+                "experimentsBottleFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFixture.bottles()
+                "experimentsFocusFixture" -> {
+                    check(mc.singleplayerServer != null) { "Integrated-server QA only" }
+                    (mc.window as gg.floyd.mixin.accessors.WindowFocusAccessor).`floyd$focus`(mc.window.handle(), body["focused"]?.asBoolean ?: true)
+                }
+                "experimentsResizeFixture" -> {
+                    check(mc.singleplayerServer != null) { "Integrated-server QA only" }
+                    mc.resizeGui()
+                }
+                "experimentsFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFixture.open(requiredString(body, "game"), number(body, "goalRound")?.toInt() ?: 12)
+                "experimentsTableFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFixture.table(body["ready"]?.asBoolean ?: true)
                 "profileSky" -> gg.floyd.utils.render.SkyGpuTimer.start(number(body, "frames")?.toInt() ?: 60)
                 "reloadConfig" -> ModuleManager.loadConfigurations()
                 "reloadMod", "reloadResources" -> {

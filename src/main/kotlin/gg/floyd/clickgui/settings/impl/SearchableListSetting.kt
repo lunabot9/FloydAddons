@@ -42,6 +42,14 @@ open class SearchableListSetting(
 
     internal fun availableOptions(): List<String> = optionsProvider()
     internal fun selectedOptions(): Set<String> = selectedProvider()
+    internal open fun optionLabel(id: String): String = gg.floyd.utils.Identifiers.friendlyName(id)
+    internal fun searchOptions(query: String): List<String> {
+        val q = query.trim()
+        val selected = selectedProvider()
+        return availableOptions().filter { q.isEmpty() || it.contains(q, true) || optionLabel(it).contains(q, true) }
+            .sortedWith(compareByDescending<String> { it.equals(q, true) || optionLabel(it).equals(q, true) }
+                .thenByDescending { it in selected })
+    }
     internal fun replaceSelection(selected: Set<String>) {
         (selectedProvider() union selected).filter { (it in selectedProvider()) != (it in selected) }
             .forEach(onToggle)
@@ -74,7 +82,7 @@ open class SearchableListSetting(
     override val isHovered get() = isAreaHovered(lastX, lastY, width, headerH, true)
 
     protected open fun matching(all: List<String>): List<String> =
-        if (searchText.isBlank()) all else all.filter { it.contains(searchText, true) }
+        if (searchText.isBlank()) all else all.filter { it.contains(searchText, true) || optionLabel(it).contains(searchText, true) }
 
     override fun render(x: Float, y: Float, mouseX: Float, mouseY: Float): Float {
         super.render(x, y, mouseX, mouseY)

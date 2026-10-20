@@ -21,8 +21,8 @@ import net.minecraft.resources.Identifier
  *    the SAME runtime-metrics/BYO/MSDF treatment the enabled global override gives the default
  *    font, but never dropped); the custom font even while `minecraft:default` is vanilla.
  *
- * The HUD panels pick between the two via [gg.floyd.features.impl.render.FloydFont.panelFont] —
- * per-panel toggles are pure instance selection, so they apply INSTANTLY (no resource reload).
+ * Scoreboard and inventory HUD use [gg.floyd.features.impl.render.FloydFont.panelFont] to keep
+ * the custom font independently of the global Font module's toggle.
  * Plain-string draw/measure calls resolve through `Style.EMPTY` → [FontDescription.DEFAULT], so
  * every run lands in the pinned FontSet while explicit style fonts pass through untouched. Both
  * rendering and measurement use the same instance (the D6 invariant: widths come from the exact

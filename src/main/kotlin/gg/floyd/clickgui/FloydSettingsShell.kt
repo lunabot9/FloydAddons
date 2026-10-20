@@ -185,6 +185,7 @@ fun FloydSidebar() {
             }
         }
         Spacer(Modifier.weight(1f))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, theme.borderColor, Color.Transparent))))
         val hudInteraction = remember { MutableInteractionSource() }
         val hudHovered by hudInteraction.collectIsHoveredAsState()
         Row(Modifier.fillMaxWidth().height(42.dp).clip(theme.sideBarNavigationEntryShape)

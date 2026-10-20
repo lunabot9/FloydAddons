@@ -38,13 +38,11 @@ import java.nio.file.Path
 object FloydFont : Module(
     name = "Font",
     category = Category.RENDER,
-    description = "Custom font: per-surface toggles (vanilla text, scoreboard, inventory HUD) and a .ttf picker from config/floydaddons/fonts.",
+    description = "Custom font for game text and a .ttf picker from config/floydaddons/fonts. Scoreboard and inventory HUD always use the custom font.",
     toggled = false,
 ) {
-    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Master switch for every custom-font surface below. OFF = the live Minecraft font on normal text and per-panel custom-font toggles decide Floyd HUD text (the ClickGUI keeps its own pinned font).")
+    val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Applies the custom font to normal Minecraft text. Scoreboard, inventory HUD, and ClickGUI always keep their custom font.")
     private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the selected custom font to vanilla game text (chat, hotbar, F3, menus) for normal letters while pack emoji/special glyphs still fall through. OFF restores the live Minecraft/resource-pack font stack for normal game text.")
-    private val scoreboardFont by BooleanSetting("Scoreboard Font", true, desc = "Custom Scoreboard panel uses the custom font. Applies instantly.")
-    private val inventoryHudFont by BooleanSetting("Inventory HUD Font", true, desc = "Inventory HUD stack counts use the custom font. Applies instantly.")
     private val disableTextShadow by BooleanSetting("Disable Text Shadow", false, desc = "Removes the 1px drop shadow under ALL rendered text (vanilla HUD + every Floyd panel) for a cleaner, sharper look. Applies instantly, no reload needed.")
     private val fontDisplaySize by NumberSetting("Font Size", 25.0, 6.0, 50.0, 0.5, desc = "Display size for the global TTF provider. 25 matches the Font mod default. Reload resources (F3+T) to apply.")
     var selectedFont by StringSetting("Font", "", 96, desc = "Optional .ttf in config/floydaddons/fonts to use instead of the bundled font. Reload resources (F3+T) to apply.")
@@ -82,26 +80,19 @@ object FloydFont : Module(
     fun isGlobalCustomFontEnabled(): Boolean =
         enabled && globalCustomFont && minecraftFont
 
-    /** A Floyd HUD panel surface with its own custom-font toggle (see [panelFont]). */
+    /** Floyd HUD surfaces that always retain their custom font, independently of this module. */
     enum class PanelFont { SCOREBOARD, INVENTORY }
 
-    fun usesCustomFont(panel: PanelFont): Boolean = enabled && globalCustomFont && when (panel) {
-        PanelFont.SCOREBOARD -> scoreboardFont
-        PanelFont.INVENTORY -> inventoryHudFont
+    fun usesCustomFont(panel: PanelFont): Boolean = when (panel) {
+        PanelFont.SCOREBOARD, PanelFont.INVENTORY -> true
     }
 
     /**
      * The [Font] a HUD panel should draw AND measure with this frame.
      *
-     * When the panel custom-font toggle is OFF, panels use the live `mc.font` so the disabled path
-     * is the actual Minecraft font stack, not Floyd's separate `floydaddons:vanilla` clone.
-     *
-     * When the panel custom-font toggle is ON and the live Minecraft font is already running
-     * Floyd's global custom-font override, panels also use the live `mc.font` so server-pack emoji
-     * and special glyph providers still fall through behind the custom letters.
-     *
-     * Only when a panel wants the custom font while the global Minecraft-font override is OFF (for
-     * example, panel custom ON + Minecraft Font OFF) do panels use [FloydFonts.panelCustom].
+     * When Minecraft already uses the custom font, keep its live provider stack so server-pack
+     * glyphs still fall through. Otherwise use [FloydFonts.panelCustom], including when this module
+     * is disabled. These panels never fall back to the vanilla letter font.
      * Render-thread only.
      */
     fun panelFont(panel: PanelFont): Font {
@@ -174,8 +165,8 @@ object FloydFont : Module(
         "enabled" to enabled,
         "globalCustomFont" to globalCustomFont,
         "minecraftFont" to minecraftFont,
-        "scoreboardFont" to scoreboardFont,
-        "inventoryHudFont" to inventoryHudFont,
+        "scoreboardFont" to usesCustomFont(PanelFont.SCOREBOARD),
+        "inventoryHudFont" to usesCustomFont(PanelFont.INVENTORY),
         "isGlobalCustomFontEnabled" to isGlobalCustomFontEnabled(),
         "yieldToLiveServerGlyphStack" to shouldYieldToLiveServerGlyphStack(),
         "fontDisplaySize" to fontDisplaySize,

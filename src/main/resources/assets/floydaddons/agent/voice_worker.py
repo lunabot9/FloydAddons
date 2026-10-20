@@ -6,6 +6,7 @@ import sys
 
 model = None
 conditioned_profile = None
+conditionals = {}
 threads_ready = False
 for line in sys.stdin:
     try:
@@ -36,8 +37,12 @@ for line in sys.stdin:
             if profile not in references:
                 raise ValueError("Unknown companion voice profile")
             if profile != conditioned_profile:
-                with torch.inference_mode():
-                    model.prepare_conditionals(references[profile])
+                if profile not in conditionals:
+                    with torch.inference_mode():
+                        model.prepare_conditionals(references[profile])
+                    conditionals[profile] = model.conds
+                else:
+                    model.conds = conditionals[profile]
                 conditioned_profile = profile
             if not job.get("warmup"):
                 # Retain Chatterbox's native generated-audio watermark.
