@@ -9,6 +9,8 @@ logs/
 __pycache__/
 *.pyc
 *.bundle
+*.jar
+.codex-tmp/
 **/polinex/
 **/Polinex*.java
 **/Polinex*.kt
