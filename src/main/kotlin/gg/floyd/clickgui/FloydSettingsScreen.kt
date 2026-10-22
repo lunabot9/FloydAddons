@@ -67,6 +67,9 @@ class FloydSettingsScreen : ComposeScreen(RenderMode.CONTINUOUS) {
         openingProgress = 0f
     }
     private var everOpened = false
+    private var snowSceneActive by mutableStateOf(false)
+    private val snowClock = FloydSnowClock()
+    private var snowfallTime by mutableDoubleStateOf(0.0)
     private var warmupQueued = false
     override val retainsScene: Boolean get() = true
     override val scrollSpeed: Float get() { FloydOneConfig.recordSettingsScroll(); return .25f }
@@ -87,13 +90,13 @@ class FloydSettingsScreen : ComposeScreen(RenderMode.CONTINUOUS) {
         }
     }
 
-    override fun init() { everOpened = true; FloydOneConfigTheme.sync(); renderScope { super.init() } }
+    override fun init() { everOpened = true; snowSceneActive = mc.screen === this; FloydOneConfigTheme.sync(); renderScope { super.init() } }
     override fun onClose() {
         if (closingRequested) return
         closingAtNanos = System.nanoTime()
         closingRequested = true
     }
-    override fun removed() { FloydSettingsModelPreviews.close(); ModuleManager.saveConfigurations(); super.removed() }
+    override fun removed() { snowSceneActive = false; snowClock.pause(); FloydSnowfallDiagnostics.stop(); FloydSettingsModelPreviews.close(); ModuleManager.saveConfigurations(); super.removed() }
     // The retained scene may still focus a text field. GLFW sends a character callback after
     // the key callback that opened us, so consume that key's text/repeats until its release.
     override fun charTyped(event: CharacterEvent): Boolean =
@@ -121,6 +124,12 @@ class FloydSettingsScreen : ComposeScreen(RenderMode.CONTINUOUS) {
     }
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, delta: Float) {
         FloydOneConfigTheme.sync()
+        if (snowSceneActive && !closingRequested && FloydOneConfigTheme.snowfallEnabled) {
+            snowfallTime = snowClock.frame(System.nanoTime())
+        } else {
+            snowClock.pause()
+            FloydSnowfallDiagnostics.stop()
+        }
         if (closingRequested && System.nanoTime() - closingAtNanos >= 160_000_000L) {
             mc.setScreen(null)
             return
@@ -156,17 +165,21 @@ class FloydSettingsScreen : ComposeScreen(RenderMode.CONTINUOUS) {
                         openingProgress = alpha
                     }
                     CompositionLocalProvider(LocalOneConfigContentAlpha provides alpha) {
-                Row(Modifier.fillMaxSize().clip(theme.backgroundShape)
-                    .background(theme.pageBackground).border(1.dp, theme.borderColor, theme.backgroundShape)) {
-                    FloydSidebar()
-                    Column(Modifier.weight(1f).fillMaxHeight().padding(vertical = 19.dp),
-                        verticalArrangement = Arrangement.spacedBy(19.dp)) {
-                        FloydSettingsHeader()
-                        Box(Modifier.weight(1f).fillMaxWidth().clip(androidx.compose.ui.graphics.RectangleShape)) {
-                            FloydSettingsPanel()
+                        Box(Modifier.fillMaxSize().clip(theme.backgroundShape)
+                            .background(theme.pageBackground).border(1.dp, theme.borderColor, theme.backgroundShape)) {
+                            Row(Modifier.fillMaxSize()) {
+                                FloydSidebar()
+                                Column(Modifier.weight(1f).fillMaxHeight().padding(vertical = 19.dp),
+                                    verticalArrangement = Arrangement.spacedBy(19.dp)) {
+                                    FloydSettingsHeader()
+                                    Box(Modifier.weight(1f).fillMaxWidth().clip(androidx.compose.ui.graphics.RectangleShape)) {
+                                        FloydSettingsPanel()
+                                    }
+                                }
+                            }
+                            FloydSnowfall(FloydOneConfigTheme.snowfallEnabled, snowSceneActive,
+                                theme.textColor, alpha, snowfallTime, Modifier.matchParentSize())
                         }
-                    }
-                }
                     }
                 }
             }

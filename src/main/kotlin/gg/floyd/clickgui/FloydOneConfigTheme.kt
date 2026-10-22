@@ -16,7 +16,9 @@ object FloydOneConfigTheme {
     private const val WORDMARK = "assets/floydaddons/brand/floyd-addons.svg"
     private var palette by mutableStateOf(FloydUiPalette.default)
     private var editorState by mutableStateOf(FloydUiPalette.DEFAULT_PRESET to false)
+    private var snowEnabled by mutableStateOf(false)
     val editorSelection get() = editorState
+    val snowfallEnabled get() = snowEnabled
     private var cachedPalette: FloydUiPalette? = null
     private var cachedTheme = PolyGlassDark
 
@@ -25,6 +27,7 @@ object FloydOneConfigTheme {
         val current = FloydUiTheme.palette()
         if (palette != current) palette = current
         editorState = FloydUiTheme.presetName() to FloydUiTheme.customColors
+        snowEnabled = FloydUiTheme.snowfall
     }
 
     val theme get(): org.polyfrost.oneconfig.internal.ui.themes.UITheme {
@@ -71,5 +74,6 @@ object FloydOneConfigTheme {
         "accent" to "#%06X".format(palette["Accent"] and 0xFFFFFF),
         "menuAccent" to "#FFB84D",
         "customization" to FloydUiTheme.state(),
+        "snowfall" to FloydSnowfallDiagnostics.state(FloydUiTheme.snowfall),
     )
 }

@@ -33,6 +33,11 @@ object FloydMenuVideoBackground {
     private var vbo = 0
     private var initialized = false
     private var initFailed = false
+    private var menuFrames=0L
+    fun state()=mapOf("initialized" to initialized,"failed" to initFailed,"menuFrames" to menuFrames,
+        "backgroundSnow" to gg.floyd.features.impl.render.FloydUiTheme.mainMenuSnowfall,
+        "palette" to if(FloydCustomMainMenu.midnightSilver)"Midnight Silver" else "Custom",
+        "accent" to "#%06X".format(FloydCustomMainMenu.shaderColor("Accent",FloydCustomMainMenu.sunColor.rgba) and 0xffffff))
     //? if >=26.2 {
     private var fbo26 = 0
     //?}
@@ -48,6 +53,8 @@ object FloydMenuVideoBackground {
     private var postFxUniform = -1
     private var speedUniform = -1
     private var worldSkyModeUniform = -1
+    private var menuSilverUniform = -1
+    private var backgroundSnowUniform = -1
     private var inverseSkyMatrixUniform = -1
     private val inverseSkyMatrixBuffer = BufferUtils.createFloatBuffer(16)
     private var skyFramebuffer = 0
@@ -185,16 +192,18 @@ object FloydMenuVideoBackground {
 
             GL20C.glUniform1i(skyLayerUniform, 0)
             GL20C.glUniform1i(worldSkyModeUniform, 0)
+            GL20C.glUniform1i(menuSilverUniform,if(FloydCustomMainMenu.midnightSilver)1 else 0)
+            GL20C.glUniform1i(backgroundSnowUniform,if(gg.floyd.features.impl.render.FloydUiTheme.mainMenuSnowfall)1 else 0)
             GL20C.glUniform1f(timeUniform, time)
             GL20C.glUniform2f(resolutionUniform, targetWidth.toFloat(), targetHeight.toFloat())
             GL20C.glUniform1f(speedUniform, FloydCustomMainMenu.backgroundSpeed)
 
-            val skyTop = rgb(FloydCustomMainMenu.skyTopColor.rgba)
-            val skyHorizon = rgb(FloydCustomMainMenu.skyHorizonColor.rgba)
-            val grassPrimary = rgb(FloydCustomMainMenu.grassPrimaryColor.rgba)
-            val grassSecondary = rgb(FloydCustomMainMenu.grassSecondaryColor.rgba)
-            val sun = rgb(FloydCustomMainMenu.sunColor.rgba)
-            val fog = rgb(FloydCustomMainMenu.fogColor.rgba)
+            val skyTop = rgb(FloydCustomMainMenu.shaderColor("Sidebar Background",FloydCustomMainMenu.skyTopColor.rgba))
+            val skyHorizon = rgb(FloydCustomMainMenu.shaderColor("Page Background",FloydCustomMainMenu.skyHorizonColor.rgba))
+            val grassPrimary = rgb(FloydCustomMainMenu.shaderColor("Page Background",FloydCustomMainMenu.grassPrimaryColor.rgba))
+            val grassSecondary = rgb(FloydCustomMainMenu.shaderColor("Border",FloydCustomMainMenu.grassSecondaryColor.rgba))
+            val sun = rgb(FloydCustomMainMenu.shaderColor("Accent",FloydCustomMainMenu.sunColor.rgba))
+            val fog = rgb(FloydCustomMainMenu.shaderColor("Border",FloydCustomMainMenu.fogColor.rgba))
 
             GL20C.glUniform3f(skyTopUniform, skyTop[0], skyTop[1], skyTop[2])
             GL20C.glUniform3f(skyHorizonUniform, skyHorizon[0], skyHorizon[1], skyHorizon[2])
@@ -211,6 +220,7 @@ object FloydMenuVideoBackground {
             )
 
             GL11C.glDrawArrays(GL11C.GL_TRIANGLE_STRIP, 0, 4)
+            menuFrames++
             resyncBlazeStateAfterRawPass()
         }.onFailure { error ->
             initFailed = true
@@ -283,6 +293,8 @@ object FloydMenuVideoBackground {
 
             GL20C.glUniform1i(skyLayerUniform, skyLayer)
             GL20C.glUniform1i(worldSkyModeUniform, worldSkyMode)
+            GL20C.glUniform1i(menuSilverUniform,if(FloydCustomMainMenu.midnightSilver && worldSkyMode==0)1 else 0)
+            GL20C.glUniform1i(backgroundSnowUniform,if(worldSkyMode==0 && gg.floyd.features.impl.render.FloydUiTheme.mainMenuSnowfall)1 else 0)
             if (inverseProjectionView != null) {
                 inverseProjectionView.get(inverseSkyMatrixBuffer)
                 GL20C.glUniformMatrix4fv(inverseSkyMatrixUniform, false, inverseSkyMatrixBuffer)
@@ -291,12 +303,12 @@ object FloydMenuVideoBackground {
             GL20C.glUniform2f(resolutionUniform, targetWidth.toFloat(), targetHeight.toFloat())
             GL20C.glUniform1f(speedUniform, if (worldSkyMode >= 2) animationSpeed else FloydCustomMainMenu.backgroundSpeed * animationSpeed)
 
-            val skyTop = rgb(FloydCustomMainMenu.skyTopColor.rgba)
-            val skyHorizon = rgb(FloydCustomMainMenu.skyHorizonColor.rgba)
-            val grassPrimary = rgb(FloydCustomMainMenu.grassPrimaryColor.rgba)
-            val grassSecondary = rgb(FloydCustomMainMenu.grassSecondaryColor.rgba)
-            val sun = rgb(FloydCustomMainMenu.sunColor.rgba)
-            val fog = rgb(FloydCustomMainMenu.fogColor.rgba)
+            val skyTop = rgb(FloydCustomMainMenu.shaderColor("Sidebar Background",FloydCustomMainMenu.skyTopColor.rgba,worldSkyMode))
+            val skyHorizon = rgb(FloydCustomMainMenu.shaderColor("Page Background",FloydCustomMainMenu.skyHorizonColor.rgba,worldSkyMode))
+            val grassPrimary = rgb(FloydCustomMainMenu.shaderColor("Page Background",FloydCustomMainMenu.grassPrimaryColor.rgba,worldSkyMode))
+            val grassSecondary = rgb(FloydCustomMainMenu.shaderColor("Border",FloydCustomMainMenu.grassSecondaryColor.rgba,worldSkyMode))
+            val sun = rgb(FloydCustomMainMenu.shaderColor("Accent",FloydCustomMainMenu.sunColor.rgba,worldSkyMode))
+            val fog = rgb(FloydCustomMainMenu.shaderColor("Border",FloydCustomMainMenu.fogColor.rgba,worldSkyMode))
 
             GL20C.glUniform3f(skyTopUniform, skyTop[0], skyTop[1], skyTop[2])
             GL20C.glUniform3f(skyHorizonUniform, skyHorizon[0], skyHorizon[1], skyHorizon[2])
@@ -313,7 +325,7 @@ object FloydMenuVideoBackground {
             )
 
             GL11C.glDrawArrays(GL11C.GL_TRIANGLE_STRIP, 0, 4)
-            if (worldSkyMode == 0) resyncBlazeStateAfterRawPass()
+            if (worldSkyMode == 0) { menuFrames++;resyncBlazeStateAfterRawPass() }
         }.onFailure { error ->
             initFailed = true
             FloydAddonsMod.logger.error("Failed to render direct custom menu landscape shader", error)
@@ -366,7 +378,8 @@ object FloydMenuVideoBackground {
         //?}
     }
 
-    private fun menuTimeSeconds(): Float = (System.currentTimeMillis() % 1_200_000L) / 1000f
+    private val animationStartedNanos = System.nanoTime()
+    private fun menuTimeSeconds(): Float = (System.nanoTime() - animationStartedNanos) / 1_000_000_000f
 
     private fun rgb(argb: Int): FloatArray = floatArrayOf(
         ((argb ushr 16) and 0xFF) / 255f,
@@ -470,6 +483,8 @@ object FloydMenuVideoBackground {
             speedUniform = GL20C.glGetUniformLocation(program, "u_speed")
             skyLayerUniform = GL20C.glGetUniformLocation(program, "u_skyLayer")
             worldSkyModeUniform = GL20C.glGetUniformLocation(program, "u_worldSkyMode")
+            menuSilverUniform = GL20C.glGetUniformLocation(program, "u_menuSilverPalette")
+            backgroundSnowUniform = GL20C.glGetUniformLocation(program, "u_backgroundSnow")
             inverseSkyMatrixUniform = GL20C.glGetUniformLocation(program, "u_inverseSkyMatrix")
             skyTopUniform = GL20C.glGetUniformLocation(program, "u_skyTopColor")
             skyHorizonUniform = GL20C.glGetUniformLocation(program, "u_skyHorizonColor")

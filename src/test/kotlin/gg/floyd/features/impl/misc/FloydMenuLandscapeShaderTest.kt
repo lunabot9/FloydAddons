@@ -19,11 +19,11 @@ class FloydMenuLandscapeShaderTest {
     }
 
     @Test
-    fun `website palette and strong reflection remain`() {
-        assertContains(shader, "const vec3 SITE_INK = vec3(0.0392, 0.0275, 0.0118)")
-        assertContains(shader, "const vec3 SITE_PANEL = vec3(0.1059, 0.0784, 0.0314)")
-        assertContains(shader, "const vec3 SITE_AMBER = vec3(1.0000, 0.7216, 0.3020)")
-        assertContains(shader, "const vec3 SITE_ORANGE = vec3(0.9686, 0.5098, 0.1176)")
+    fun `menu uses supplied palette colors and retains strong reflection`() {
+        assertContains(shader, "SITE_INK = u_skyTopColor;")
+        assertContains(shader, "SITE_PANEL = u_skyHorizonColor;")
+        assertContains(shader, "SITE_AMBER = u_sunColor;")
+        assertContains(shader, "SITE_IVORY = mix(u_sunColor, vec3(1.0), 0.80);")
         assertContains(shader, "0.82 + fresnel * 0.16")
     }
 

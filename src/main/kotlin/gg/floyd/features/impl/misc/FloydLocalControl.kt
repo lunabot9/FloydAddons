@@ -807,6 +807,8 @@ object FloydLocalControl : Module(
                 "agentTestVoice" -> gg.floyd.agent.FloydAgent.testVoice()
                 "agentStop" -> gg.floyd.agent.FloydAgent.stopResponse()
                 "experimentsFlowFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFlowFixture.open()
+                "sackSupercraftFixture" -> gg.floyd.supercraft.SackSupercraftFixture.open(body["rejectCraft"]?.asBoolean ?: false,body["intoSacks"]?.asBoolean ?: false,body["selectedCrafts"]?.asLong ?: 1L,body["stockAmount"]?.asLong ?: 321L,body["extraStock"]?.asLong ?: 0L,body["rawWart"]?.asLong ?: 0L,body["sugarAmount"]?.asLong ?: 159L,body["closeAfterCraft"]?.asBoolean ?: false)
+                "sackSupercraftStart" -> gg.floyd.supercraft.SackSupercraft.start(requiredString(body,"sack"))
                 "experimentsBottleFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFixture.bottles()
                 "experimentsFocusFixture" -> {
                     check(mc.singleplayerServer != null) { "Integrated-server QA only" }

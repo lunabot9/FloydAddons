@@ -119,6 +119,7 @@ object ModuleManager {
     init {
         registerModules(config = ModuleConfig(file = File(FloydAddonsMod.configFile, "floydaddons-config.json")),
             ClickGUIModule, LegacyClickGUIModule,
+            gg.floyd.supercraft.SackSupercraft,
 
             // FloydAddons feature groups.
             gg.floyd.agent.FloydAgent, FloydFont, FloydPanelStyle, FloydUiTheme, FloydCustomSky, FloydNotifier, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,

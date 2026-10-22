@@ -61,6 +61,7 @@ object FloydAddonsMod : ClientModInitializer {
                 stalkCommand,
                 calculatorCommand,
                 autoClickerCommand,
+                supercraftCommand,
             ).forEach { commodore -> commodore.register(dispatcher) }
         }
 

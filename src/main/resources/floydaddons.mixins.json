@@ -35,6 +35,7 @@
     "mixins.ChatComponentMixin",
     "mixins.ClientPacketListenerMixin",
     "mixins.ExperimentContainerUpdateMixin",
+    "mixins.SackSupercraftContainerMixin",
     "mixins.ExperimentWindowFocusMixin",
     "accessors.WindowFocusAccessor",
     "mixins.CopperGolemRendererMixin",

@@ -25,6 +25,10 @@ object FloydUiTheme : Module(
         desc = "Six complete palettes. Turn Custom Colors off to preview the selected preset.")
     var customColors by BooleanSetting("Custom Colors", false,
         desc = "Use your own colors below. Off uses the selected preset and keeps your custom colors saved.")
+    var snowfall by BooleanSetting("Snowfall", false,
+        desc = "Gentle snow inside Floyd's settings GUI. Off by default; only animates while the GUI is visible.")
+    var mainMenuSnowfall by BooleanSetting("Main Menu Snowfall", true,
+        desc = "Depth-layered snow in the animated title-screen background, behind the menu buttons.")
     private val customizePreset by ActionSetting("Customize Preset",
         desc = "Copy the selected preset into the color pickers and turn Custom Colors on. Replaces your custom colors.") {
         customizeSelectedPreset()

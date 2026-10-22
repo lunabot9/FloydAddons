@@ -35,6 +35,9 @@ object FloydCustomMainMenu : Module(
     description = "Replaces the vanilla title flow with Floyd's animated custom main menu.",
     toggled = true,
 ) {
+    val midnightSilver by BooleanSetting("Midnight Silver Palette",true,desc="Use Midnight Silver's charcoal, slate and silver colors for the menu shader. Turn off to use the saved custom color pickers.")
+    fun shaderColor(role:String,custom:Int,worldSkyMode:Int=0):Int = if(midnightSilver && worldSkyMode==0)
+        gg.floyd.clickgui.FloydUiPalette.presets.getValue("Midnight Silver")[role] else custom
     val backgroundSpeed by NumberSetting("Background Speed", 1.0f, 0.2f, 3.0f, 0.05f, desc = "Playback speed of the landscape shader background.")
     val backgroundContrast by NumberSetting("Background Contrast", 1.1f, 0.5f, 2.0f, 0.05f, desc = "Post-process contrast for the landscape shader.")
     val backgroundSaturation by NumberSetting("Background Saturation", 1.3f, 0.0f, 2.5f, 0.05f, desc = "Post-process saturation for the landscape shader.")

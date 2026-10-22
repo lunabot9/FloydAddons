@@ -11,6 +11,8 @@ uniform vec3 u_sunColor;
 uniform vec3 u_fogColor;
 uniform vec4 u_postFx; // contrast, saturation, brightness, vignette
 uniform int u_worldSkyMode; // 0: menu camera; 1..6: world sky selection
+uniform int u_menuSilverPalette;
+uniform int u_backgroundSnow;
 uniform mat4 u_inverseSkyMatrix;
 
 out vec4 outColor;
@@ -18,11 +20,12 @@ uniform int u_skyLayer; // 0: native, 1: soft gas, 2: crisp full-resolution star
 float starVisibility = 1.0;
 
 const float TAU = 6.28318530718;
-const vec3 SITE_INK = vec3(0.0392, 0.0275, 0.0118);       // #0A0703
-const vec3 SITE_PANEL = vec3(0.1059, 0.0784, 0.0314);     // #1B1408
-const vec3 SITE_AMBER = vec3(1.0000, 0.7216, 0.3020);     // #FFB84D
-const vec3 SITE_ORANGE = vec3(0.9686, 0.5098, 0.1176);    // #F7821E
-const vec3 SITE_IVORY = vec3(1.0000, 0.9529, 0.8588);     // #FFF3DB
+// World sky styles keep their existing palette; the menu overrides these after that branch.
+vec3 SITE_INK = vec3(0.0392, 0.0275, 0.0118);
+vec3 SITE_PANEL = vec3(0.1059, 0.0784, 0.0314);
+vec3 SITE_AMBER = vec3(1.0000, 0.7216, 0.3020);
+vec3 SITE_ORANGE = vec3(0.9686, 0.5098, 0.1176);
+vec3 SITE_IVORY = vec3(1.0000, 0.9529, 0.8588);
 
 float Hash(float n) {
     return fract(sin(n) * 43758.5453123);
@@ -154,9 +157,14 @@ vec4 AuroraCurtain(vec3 direction, float time) {
     float intensity = (bandA * 0.88 + bandB * 0.55 + bandC * 0.42)
         * curtainStrands * verticalShimmer * breathing * skyMask;
 
-    vec3 color = SITE_AMBER * bandA * 0.78
-        + SITE_ORANGE * bandB * 0.58
-        + SITE_IVORY * bandC * 0.32;
+    // Distinct ribbon tints retain the original layered aurora variation over the silver base.
+    bool silverMenu = u_worldSkyMode == 0 && u_menuSilverPalette == 1;
+    vec3 ribbonA = silverMenu ? vec3(0.42, 0.68, 0.96) : SITE_AMBER;
+    vec3 ribbonB = silverMenu ? vec3(0.49, 0.34, 0.76) : SITE_ORANGE;
+    vec3 ribbonC = silverMenu ? vec3(0.76, 0.94, 1.00) : SITE_IVORY;
+    vec3 color = ribbonA * bandA * 0.78
+        + ribbonB * bandB * 0.58
+        + ribbonC * bandC * 0.32;
     color = mix(color, SITE_IVORY * (bandA + bandB), pow(narrowFolds, 6.0) * 0.15);
     return vec4(
         color * curtainStrands * verticalShimmer * breathing * skyMask,
@@ -550,6 +558,42 @@ vec3 ProceduralWorldSky(vec3 direction, float time) {
     return RoseCloudSky(direction, time);
 }
 
+// Keep flakes round in screen-height units. Ray-space discs stretch near the edges
+// and subpixel hard edges shimmer as the landscape camera moves.
+vec4 BackgroundSnow(vec3 cameraPosition, vec3 direction, float time, vec2 screenUv) {
+    vec3 tint = mix(u_fogColor, vec3(0.80, 0.87, 0.94), 0.62);
+    float sceneDepth = direction.y < -0.005 ? max(cameraPosition.y / -direction.y, 0.0) : 1000.0;
+    float opacity = 0.0;
+    for (int layer = 0; layer < 3; layer++) {
+        float depth = layer == 0 ? 9.0 : (layer == 1 ? 24.0 : 55.0);
+        float density = layer == 0 ? 4.5 : (layer == 1 ? 7.0 : 10.0);
+        float speed = layer == 0 ? 0.038 : (layer == 1 ? 0.019 : 0.008);
+        vec2 plane = vec2(screenUv.x * u_resolution.x / u_resolution.y, screenUv.y);
+        // A little parallax and wind; no camera-ray distortion or cell-edge jumps.
+        plane += vec2(cameraPosition.x * 0.002 / (1.0 + float(layer)), time * speed);
+        float wind = layer == 0 ? 0.14 : (layer == 1 ? -0.07 : 0.03);
+        plane.x += time * speed * wind;
+        vec2 grid = plane * density;
+        vec2 cell = floor(grid);
+        vec2 center = mix(vec2(0.22), vec2(0.78), Hash2(cell + float(layer) * 37.1));
+        float seed = Hash(cell + float(layer) * 19.3);
+        vec2 local = fract(grid) - center;
+        local.x += sin(time * 0.45 + seed * TAU) * 0.045;
+        float sizePixels = layer == 0 ? mix(2.4, 3.8, seed)
+            : (layer == 1 ? mix(1.2, 2.2, seed) : mix(0.6, 1.1, seed));
+        float radius = sizePixels * density / 1080.0;
+        float distanceToFlake = length(local);
+        // Analytic pixel width: derivatives of fract/hash distance create grid-line
+        // artifacts where neighboring pixels cross a particle-cell boundary.
+        float edge = density / u_resolution.y * 0.85;
+        float flake = 1.0 - smoothstep(max(0.0, radius - edge), radius + edge, distanceToFlake);
+        float inFrontOfWater = 1.0 - smoothstep(sceneDepth - 4.0, sceneDepth + 4.0, depth);
+        float presence = layer == 0 ? 0.78 : (layer == 1 ? 0.55 : 0.55);
+        opacity += flake * step(presence, seed) * exp(-depth * 0.018) * inFrontOfWater * 0.50;
+    }
+    return vec4(tint, min(opacity, 0.55));
+}
+
 void main() {
     float sceneTime = u_time * max(u_speed, 0.01);
     vec2 screenUv = gl_FragCoord.xy / u_resolution.xy;
@@ -575,6 +619,12 @@ void main() {
         return;
     }
 
+    SITE_INK = u_skyTopColor;
+    SITE_PANEL = u_skyHorizonColor;
+    SITE_AMBER = u_sunColor;
+    SITE_ORANGE = mix(u_sunColor, u_skyHorizonColor, 0.60);
+    SITE_IVORY = mix(u_sunColor, vec3(1.0), 0.80);
+
     vec3 cameraPosition = CameraPath(sceneTime);
     vec3 cameraTarget = CameraTarget(sceneTime);
     vec3 forward = normalize(cameraTarget - cameraPosition);
@@ -585,6 +635,10 @@ void main() {
     vec3 color = direction.y < 0.0
         ? OceanColor(cameraPosition, direction, sceneTime)
         : SkyColor(direction, sceneTime);
+    if (u_backgroundSnow == 1) {
+        vec4 snowfall = BackgroundSnow(cameraPosition, direction, u_time, screenUv);
+        color = mix(color, snowfall.rgb, snowfall.a);
+    }
     color = PostEffects(color, screenUv);
     outColor = vec4(clamp(color, 0.0, 1.0), 1.0);
 }
