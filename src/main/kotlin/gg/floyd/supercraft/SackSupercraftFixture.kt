@@ -30,14 +30,15 @@ object SackSupercraftFixture {
     private var extraStock=0L
     private var rawWart=false
     private var closeAfterCraft=false
+    private var ignoreMaximum=false
     private var commands=mutableListOf<String>()
     @Volatile private var diagnostics:Map<String,Any?> = emptyMap()
     fun state()=diagnostics
     private fun publish() { diagnostics=mapOf("active" to active,"crafts" to crafts,"attempts" to attempts,"invalidClicks" to invalid,"stock" to stock.toMap(),"commands" to commands.toList(),"reject" to reject,"intoSacks" to intoSacks,"selectedCrafts" to selectedCrafts,"maxSelections" to maxSelections,"partialPackets" to partialPackets,"extraStock" to extraStock) }
-    fun open(rejectCraft:Boolean=false,sacks:Boolean=false,amount:Long=1,stockAmount:Long=321,otherStorage:Long=0,rawAmount:Long=0,sugarAmount:Long=159,closeOnCraft:Boolean=false) {
+    fun open(rejectCraft:Boolean=false,sacks:Boolean=false,amount:Long=1,stockAmount:Long=321,otherStorage:Long=0,rawAmount:Long=0,sugarAmount:Long=159,closeOnCraft:Boolean=false,ignoreMax:Boolean=false) {
         val mc=Minecraft.getInstance();val server=mc.singleplayerServer ?: error("Integrated server required")
         require(amount in 1..20000 && stockAmount in 0..10_000_000 && otherStorage in 0..10_000_000 && rawAmount in 0..10_000_000 && sugarAmount in 0..10_000_000)
-        server.execute { active=true;reject=rejectCraft;crafts=0;invalid=0;attempts=0;intoSacks=sacks;selectedCrafts=amount;maxSelections=0;partialPackets=0;extraStock=otherStorage;rawWart=rawAmount>0;closeAfterCraft=closeOnCraft;commands=mutableListOf();stock=linkedMapOf("ENCHANTED_NETHER_STALK" to stockAmount,"ENCHANTED_SUGAR" to sugarAmount,"NETHER_STALK" to rawAmount);publish();openSack() }
+        server.execute { active=true;reject=rejectCraft;crafts=0;invalid=0;attempts=0;intoSacks=sacks;selectedCrafts=amount;maxSelections=0;partialPackets=0;extraStock=otherStorage;rawWart=rawAmount>0;closeAfterCraft=closeOnCraft;ignoreMaximum=ignoreMax;commands=mutableListOf();stock=linkedMapOf("ENCHANTED_NETHER_STALK" to stockAmount,"ENCHANTED_SUGAR" to sugarAmount,"NETHER_STALK" to rawAmount);publish();openSack() }
     }
     fun command(value:String) {
         val server=Minecraft.getInstance().singleplayerServer ?: return
@@ -50,7 +51,7 @@ object SackSupercraftFixture {
             }
         }
     }
-    private fun item(id:String,name:String,lore:List<String> = emptyList())=ItemStack(Items.PAPER).apply {
+    private fun item(id:String,name:String,lore:List<String> = emptyList(),base:net.minecraft.world.item.Item=Items.PAPER)=ItemStack(base).apply {
         set(DataComponents.CUSTOM_NAME,Component.literal(name))
         set(DataComponents.CUSTOM_DATA,CustomData.of(CompoundTag().apply { putString("id",id) }))
         set(DataComponents.LORE,ItemLore(lore.map(Component::literal)))
@@ -82,11 +83,13 @@ object SackSupercraftFixture {
         fun external()=if(input=="ENCHANTED_NETHER_STALK")extraStock else 0L
         val contents=SimpleContainer(54)
         contents.setItem(25,item(output,name))
-        fun pickaxe()=item("FLOYD_FIXTURE_SUPERCRAFT","Supercraft",listOf("Crafting $selectedCrafts items into your ${if(intoSacks)"sacks" else "inventory"}!","✔ ${(stock[input] ?: 0)+external()}/${selectedCrafts*160} $inputName","Shift-Click to set maximum amount!","Click to perform Supercraft!"))
+        fun pickaxe()=item("FLOYD_FIXTURE_SUPERCRAFT","Supercraft",listOf("✔ ${(stock[input] ?: 0)+external()}/${selectedCrafts*160} $inputName","Ingredients are taken from your","inventory, sacks, ender chests and","backpacks.","Crafting $selectedCrafts ${if(selectedCrafts==1L)"item" else "items"} into your ${if(intoSacks)"sacks" else "inventory"}!","Right-Click to set amount!","Click to craft!"),Items.GOLDEN_PICKAXE)
         contents.setItem(32,pickaxe())
-        menu("$name Recipe",contents) { slot,button,clickType,who,current ->
+        contents.setItem(14,item("FLOYD_FIXTURE_DECORATION","Recipe Options",listOf("Choose a recipe."),Items.STONE_PICKAXE))
+        // Actual server menus use the output name without a "Recipe" suffix.
+        menu(name,contents) { slot,button,clickType,who,current ->
             if(slot==32 && button==0 && clickType==ContainerInput.QUICK_MOVE) {
-                selectedCrafts=minOf(((stock[input] ?: 0)+external())/160,20000)
+                if(!ignoreMaximum)selectedCrafts=minOf(((stock[input] ?: 0)+external())/160,20000)
                 maxSelections++;contents.setItem(32,pickaxe());publish();return@menu
             }
             if(slot!=32 || button!=0 || clickType!=ContainerInput.PICKUP) { invalid++;publish();return@menu }

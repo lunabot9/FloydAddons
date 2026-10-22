@@ -1,9 +1,9 @@
 # Floyd Addons 5.6
 
 ## Added
-- Sack Supercraft in QoL. Use `/supercraft` for clickable sack names and command completion, or start from the button in an opened sack.
+- Sack Supercraft in QoL. Use `/supercraft` for grouped, clickable regular and enchanted sack names and command completion, or start from the button in an opened sack.
 - Craft eligible resources through their highest supported tiers: open the recipe, shift-click the pickaxe to select the maximum, craft, then continue through the remaining items.
-- Saved tier exceptions with `/supercraft except <item>` and `/supercraft allow <item>`, plus an optional Auto Craft Opened Sack setting.
+- A left-side sack panel with the Supercraft Sack button at the top. Click item icons to save exclusions; ignored items show a red X. `/supercraft except <item>` and `/supercraft allow <item>` also work, and automatic crafting when opening sacks is optional.
 - Optional snowfall inside Floyd's settings GUI, off by default and controlled from Theme.
 
 ## Improved
@@ -11,6 +11,7 @@
 - Added visible near, middle, and distant snow behind the title-screen buttons, with separate sizes, speeds, and drift.
 - Gave title-screen snow its own Theme toggle, separate from GUI snow.
 - Removed stretching and grid-line artifacts from the snow effect, softened its edges, and prevented animation-clock wraparound jumps.
+- Matched Supercraft detection to the real recipe screen and golden-pickaxe tooltip, including recipe screens titled with only the item's name.
 
 ## Crafting behavior
 Sack Supercraft waits for the updated maximum amount and matching recipe costs before crafting, then waits for confirmation before moving on. Missing confirmations or unsupported menu layouts stop the run. The server's maximum can include matching materials in inventory and other storage. Forge, trade, and equipment recipes are excluded.

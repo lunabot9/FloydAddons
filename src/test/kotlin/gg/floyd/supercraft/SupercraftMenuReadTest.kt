@@ -23,4 +23,12 @@ class SupercraftMenuReadTest {
     @Test fun `bulk cost lore supports the server multiplier decoration`() {
         assertEquals(mapOf("ENCHANTED_NETHER_STALK" to 32L),SupercraftMenuRead.costs(" ✔ 177,889/32 (5,559x) Enchanted Nether Wart",names))
     }
+    @Test fun `live golden pickaxe tooltip needs no advertised shift click line`() {
+        val names=mapOf("ENCHANTED_SUGAR" to "Enchanted Sugar")
+        val recipe=SackRecipe("ENCHANTED_SUGAR_CANE",1,mapOf("ENCHANTED_SUGAR" to 160))
+        val live="Supercraft\n✔ 2,536/160 Enchanted Sugar\nIngredients are taken from your\ninventory, sacks, ender chests and\nbackpacks.\nCrafting 1 item into your sacks!\nRight-Click to set amount!\nClick to craft!"
+        assertEquals(SupercraftAmount(1,true),SupercraftMenuRead.amount(live))
+        assertTrue(SupercraftMenuRead.agrees(recipe,SupercraftMenuRead.amount(live)!!,SupercraftMenuRead.costs(live,names)!!))
+        assertEquals(15L,SupercraftMenuRead.maximumCrafts(live,names,recipe))
+    }
 }

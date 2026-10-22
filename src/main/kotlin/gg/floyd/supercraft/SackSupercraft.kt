@@ -23,7 +23,7 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
     description="Upgrade a sack's resources through their highest supported crafting tiers. Selects the server's maximum amount; Supercraft can use the same materials from inventory and other storage.",toggled=true) {
     private val showButton by BooleanSetting("Sack Menu Button",true,desc="Show a Supercraft action in an opened sack.")
     private val autoOpenedSack by BooleanSetting("Auto Craft Opened Sack",false,desc="Start once when you open a recognized sack. Configure protected tiers before enabling this.")
-    var keepTiers by StringSetting("Keep At Current Tier","",8192,desc="Comma-separated item names or SkyBlock IDs. These tiers may be produced but will never be consumed for an upgrade.")
+    var keepTiers by StringSetting("Keep At Current Tier","",8192,desc="Saved protected tiers managed in the sack's exceptions panel or with /supercraft except.").hide()
     private val delay by NumberSetting("Click Delay",400,250,1500,50,desc="Minimum milliseconds between acknowledged recipe clicks.")
     private val stopAction by ActionSetting("Stop Crafting","Stop without sending any further commands or clicks.") { stop("Stopped by user") }
     private data class Catalog(val sacks:Map<String,Set<String>>,val names:Map<String,String>,val recipes:List<SackRecipe>)
@@ -60,6 +60,8 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
     private var maxButton=-1
     private var buttonRevision=0L
     private var sentButtonRevision=0L
+    private var beforeMaximumCrafts=0L
+    private var resourceMaximumCrafts=0L
     private var ledger=linkedMapOf<String,Long>()
     private var transactions=0
     private var listRequests=0
@@ -77,15 +79,32 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         val key=SackCraftPlanner.key(name).removePrefix("LARGE_").removePrefix("MEDIUM_").removePrefix("SMALL_").removeSuffix("_SACK")
         return catalog.sacks.keys.singleOrNull { SackCraftPlanner.key(it)==key }
     }
+    fun itemId(stack:ItemStack):String=id(stack).takeIf { it in catalog.names }.orEmpty()
+    fun ignoredIds():Set<String> = protected()
+    fun toggleIgnored(id:String) { if(id in catalog.names)exception(id,id !in protected()) }
+    fun sackName(title:String):String? = sackKey(title)
+    fun itemBelongsToSack(sack:String,id:String):Boolean = id in catalog.sacks[sackKey(sack) ?: sack].orEmpty()
+    fun isCrafting():Boolean = phase!=Phase.IDLE
     fun names():List<String> = catalog.sacks.keys.sorted()
     fun itemNames():List<String> = catalog.names.values.sorted()
     fun listExceptions() { modMessage("Protected tiers: "+protected().joinToString { catalog.names[it] ?: it }.ifEmpty { "none" }) }
     fun listSacks() {
         listRequests++
-        modMessage(if(observedSacks.isEmpty())"Sack names (ownership is checked when opened):" else "Sack names (seen sacks are marked ✓):")
-        names().forEach { name -> modMessage(Component.literal((if(name in observedSacks)"✓ " else "")+name)
-            .withStyle { it.withClickEvent(ClickEvent.SuggestCommand("/supercraft $name")) }) }
-        modMessage("Click a name to fill the command. /supercraft except <item> keeps that tier; /supercraft stop cancels.")
+        fun group(label:String,entries:List<String>,stripEnchanted:Boolean=false) {
+            val line=Component.literal("$label: ")
+            entries.forEachIndexed { index,name ->
+                if(index>0)line.append(" · ")
+                val display=if(stripEnchanted)name.removePrefix("Enchanted ") else name
+                line.append(Component.literal((if(name in observedSacks)"✓ " else "")+display)
+                    .withStyle { it.withUnderlined(true).withClickEvent(ClickEvent.SuggestCommand("/supercraft $name")) })
+            }
+            modMessage(line)
+        }
+        val all=names()
+        group("Regular sacks",all.filterNot { it.startsWith("Enchanted ") })
+        // Keep these last so every enchanted choice remains visible in the collapsed chat too.
+        group("Enchanted sacks",all.filter { it.startsWith("Enchanted ") },true)
+        modMessage("Click a sack to fill /supercraft. Exceptions: /supercraft except <item>. Stop: /supercraft stop.")
     }
     fun exception(value:String,add:Boolean) {
         val needle=SackCraftPlanner.key(value)
@@ -220,7 +239,8 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         if(phase==Phase.SACK_CONTENTS) { if(sackKey(title)==selected)buildPlan();return }
         if(phase==Phase.RESULT)return
         val step=steps[stepIndex];val expected=step.recipe.output
-        if(!title.contains("recipe",true) && !title.contains("craft",true))return
+        // Live recipe titles can be only the output name (e.g. "Enchanted Sugar Cane").
+        // Validate the output and explicit Supercraft controls below, not an English title suffix.
         if(items.none { id(it)==expected })return
         val buttons=items.indices.filter { slot ->
             val body=text(items[slot]);val name=clean(items[slot].hoverName.string)
@@ -230,16 +250,22 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         if(buttons.size==1) {
             val slot=buttons.single();val body=text(items[slot])
             val amount=SupercraftMenuRead.amount(body) ?: run { status="Waiting for an explicit server craft amount";return }
+            val costs=SupercraftMenuRead.costs(body,catalog.names)
+            if(costs==null || !SupercraftMenuRead.agrees(step.recipe,amount,costs)) { stop("Server recipe differs from the planned ingredients; stopped");return }
             if(!maxSelected) {
-                val canMax=body.lines().any { line -> line.contains("Shift-Click",true) && line.contains("max",true) }
-                if(!canMax) { status="Waiting for the advertised maximum-amount action";return }
+                val stack=items[slot]
+                if(stack.item!=net.minecraft.world.item.Items.GOLDEN_PICKAXE || !clean(stack.hoverName.string).equals("Supercraft",true)) { status="Waiting for the Supercraft pickaxe";return }
+                resourceMaximumCrafts=SupercraftMenuRead.maximumCrafts(body,catalog.names,step.recipe) ?: run { stop("Could not verify available recipe ingredients");return }
+                beforeMaximumCrafts=amount.outputs/step.recipe.count
                 maxSelected=true;maxButton=slot;sentButtonRevision=buttonRevision;phase=Phase.MAXIMUM
                 status="Selecting maximum for ${catalog.names[expected]}";deadline=clock+8000;click(slot,true);return
             }
             if(phase==Phase.MAXIMUM && buttonRevision<=sentButtonRevision)return
+            val actualCrafts=amount.outputs/step.recipe.count
+            if(actualCrafts==beforeMaximumCrafts && actualCrafts<resourceMaximumCrafts || actualCrafts==1L && resourceMaximumCrafts>1L) {
+                stop("Maximum craft amount was not confirmed; stopped before crafting");return
+            }
             if(!Regex("(?im)^(?:Left-)?Click to (?:perform )?(?:Supercraft|craft)(?:!|\\.)?$").containsMatchIn(body)) { status="Waiting for the server's craft action";return }
-            val costs=SupercraftMenuRead.costs(body,catalog.names)
-            if(costs==null || !SupercraftMenuRead.agrees(step.recipe,amount,costs)) { stop("Server recipe differs from the planned ingredients; stopped");return }
             baselineOutput=countInventory(expected);pendingOutput=amount.outputs;intoSacks=amount.intoSacks
             phase=Phase.RESULT;status="Crafting ${catalog.names[expected]} ($remaining remaining)"
             deadline=clock+8000;click(slot);return
@@ -253,7 +279,6 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         }
         if(navigation.size==1 && navigationClicks<3) { navigationClicks++;click(navigation.single()) }
     }
-    private fun buttonRect()=intArrayOf(mc.window.guiScaledWidth-142,mc.window.guiScaledHeight-28,mc.window.guiScaledWidth-8,mc.window.guiScaledHeight-8)
     init {
         on<TickEvent.ClientEnd> { tick() }
         on<ScreenEvent.Open> {
@@ -275,14 +300,17 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
             if(screen !is AbstractContainerScreen<*>)return@on
             if(phase!=Phase.IDLE)guiGraphics.drawString(ClickGuiFont.font,"Supercraft: $status",8,8,0xFFD6DFEA.toInt(),false)
             if(!showButton || sackKey(screen.title.string)==null)return@on
-            val r=buttonRect();guiGraphics.fill(r[0],r[1],r[2],r[3],0xDD26313D.toInt())
-            guiGraphics.drawString(ClickGuiFont.font,"Supercraft Sack",r[0]+12,r[1]+6,0xFFE2E8F0.toInt(),false)
+            val chest=screen.menu as? ChestMenu ?: return@on
+            val visible=chest.slots.take(chest.rowCount*9).map { it.item }
+            SackSupercraftPanel.render(guiGraphics,screen,visible,ignoredIds(),mouseX,mouseY)
         }
         on<ScreenEvent.MouseClick> {
             if(screen !is AbstractContainerScreen<*>)return@on
-            val sack=sackKey(screen.title.string);val r=buttonRect()
-            if(showButton && click.button()==0 && sack!=null && click.x()>=r[0] && click.x()<r[2] && click.y()>=r[1] && click.y()<r[3]) { cancel();start(sack) }
+            if(showButton && sackKey(screen.title.string)!=null && SackSupercraftPanel.click(screen,click.x(),click.y(),click.button()))cancel()
             else if(phase!=Phase.IDLE)stop("Stopped after manual menu input")
+        }
+        on<ScreenEvent.MouseScroll> {
+            if(screen is AbstractContainerScreen<*> && showButton && sackKey(screen.title.string)!=null && SackSupercraftPanel.scroll(screen,x,y,vertical))cancel()
         }
         on<ScreenEvent.KeyPress> { if(phase!=Phase.IDLE && input.key()==256)stop("Stopped after closing the menu") }
     }

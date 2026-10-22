@@ -26,4 +26,17 @@ object SupercraftMenuRead {
         val crafts=amount.outputs/recipe.count
         return costs==recipe.ingredients.mapValues { (_,n)->runCatching { Math.multiplyExact(n,crafts) }.getOrElse { return false } }
     }
+    fun maximumCrafts(text:String,names:Map<String,String>,recipe:SackRecipe):Long? {
+        val pattern=Regex("^\\s*[✔✓] ([0-9,]+)/[0-9,]+ (?:\\([0-9,]+x\\) )?(.+?)\\s*$")
+        val owned=linkedMapOf<String,Long>()
+        clean(text).lines().forEach { line ->
+            val match=pattern.matchEntire(line) ?: return@forEach
+            val id=names.entries.singleOrNull { it.value.equals(match.groupValues[2],true) }?.key ?: return null
+            val amount=match.groupValues[1].replace(",","").toLongOrNull() ?: return null
+            if(id in owned)return null
+            owned[id]=amount
+        }
+        if(owned.keys!=recipe.ingredients.keys)return null
+        return recipe.ingredients.minOf { (id,cost)->owned.getValue(id)/cost }
+    }
 }

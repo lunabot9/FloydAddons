@@ -18,6 +18,7 @@
     "accessors.KeyMappingCategoryAccessor",
     "accessors.LivingEntityRendererAccessor",
     "accessors.ScreenFontAccessor",
+    "accessors.SackContainerLayoutAccessor",
     "mixins.AnimationItemInHandRendererMixin",
     "mixins.AnimationLivingEntityMixin",
     "mixins.AnimationToggleKeyMappingMixin",

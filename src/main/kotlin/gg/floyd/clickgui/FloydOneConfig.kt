@@ -140,6 +140,7 @@ object FloydOneConfig {
         "theme" to FloydOneConfigTheme.state(),
         "menuShader" to gg.floyd.features.impl.misc.FloydMenuVideoBackground.state(),
         "sackSupercraft" to gg.floyd.supercraft.SackSupercraft.state(),
+        "sackSupercraftPanel" to gg.floyd.supercraft.SackSupercraftPanel.state(),
         "sackSupercraftFixture" to gg.floyd.supercraft.SackSupercraftFixture.state(),
         "sidebarCategories" to FloydSettingsNavigation.categories,
         "selectedCategory" to FloydSettingsNavigation.selectedCategory,
