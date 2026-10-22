@@ -13,7 +13,7 @@ object SupercraftMenuRead {
         val result=linkedMapOf<String,Long>()
         clean(text).lines().forEach { line ->
             val match=pattern.matchEntire(line) ?: return@forEach
-            val name=match.groupValues[2]
+            val name=SackCraftPlanner.displayName(match.groupValues[2])
             val id=names.entries.firstOrNull { it.value.equals(name,true) }?.key ?: return null
             val count=match.groupValues[1].replace(",","").toLongOrNull()?.takeIf { it>0 } ?: return null
             if(id in result)return null
@@ -31,7 +31,7 @@ object SupercraftMenuRead {
         val owned=linkedMapOf<String,Long>()
         clean(text).lines().forEach { line ->
             val match=pattern.matchEntire(line) ?: return@forEach
-            val id=names.entries.singleOrNull { it.value.equals(match.groupValues[2],true) }?.key ?: return null
+            val id=names.entries.singleOrNull { it.value.equals(SackCraftPlanner.displayName(match.groupValues[2]),true) }?.key ?: return null
             val amount=match.groupValues[1].replace(",","").toLongOrNull() ?: return null
             if(id in owned)return null
             owned[id]=amount

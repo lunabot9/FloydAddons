@@ -92,6 +92,10 @@ object FloydOneConfig {
 
     fun isFloydPage(): Boolean = isFloydSettingsScreen() || preparingSettings
 
+    fun moduleEnableProperty(name: String): Property<*>? = configTree?.map?.values?.filterIsInstance<Property<*>>()?.firstOrNull {
+        it.getMetadata<Boolean>("floyd_module_toggle") == true && it.getMetadata<String>("subcategory") == name
+    }
+
     fun categoryTree(category: String): Tree = categoryTrees.getOrPut(category) {
         val root = checkNotNull(configTree)
         Tree("$ID.${slug(category)}", Branding.DISPLAY_NAME, null,
@@ -182,6 +186,7 @@ object FloydOneConfig {
         "modelPreviews" to FloydSettingsModelPreviews.state(),
         "headTextures" to gg.floyd.features.impl.render.FloydHeadTextureCache.state(),
         "searchableLists" to FloydSearchableListVisualizer.state(),
+        "moduleSections" to FloydModuleExpansion.state(),
     )
 
     private fun register() {
@@ -208,6 +213,8 @@ object FloydOneConfig {
             val prefix = slug(module.name)
             val toggle = property("${prefix}_enabled", "Enabled", module.description, module.enabled,
                 { module.enabled }, { if (it != module.enabled) module.toggle() }, Visualizer.SwitchVisualizer::class.java)
+            toggle.addMetadata("floyd_module_toggle", true)
+            toggle.addMetadata("visualizer", FloydModuleEnableVisualizer)
             group(toggle, module)
             tree.put(toggle)
             if (module === gg.floyd.features.impl.cosmetic.FloydConeHat) {

@@ -6,6 +6,7 @@ import gg.floyd.events.WorldEvent
 import gg.floyd.events.core.on
 import gg.floyd.features.Category
 import gg.floyd.features.Module
+import gg.floyd.utils.font.ClickGuiFont
 import gg.floyd.utils.ui.rendering.NVGPIPRenderer
 import gg.floyd.utils.ui.rendering.NVGRenderer
 import net.minecraft.client.gui.GuiGraphics
@@ -44,6 +45,8 @@ object FloydNotifier : Module(
     fun state(): Map<String, Any?> = mapOf(
         "enabled" to enabled,
         "position" to "bottom-right",
+        "font" to ClickGuiFont.FONT_ID.toString(),
+        "customFontForced" to true,
         "durationSeconds" to duration,
         "maxVisible" to maximumVisible,
         "showInMenus" to showInMenus,
@@ -60,6 +63,7 @@ object FloydNotifier : Module(
         val cards = notifications.visible(maximumVisible)
         if (cards.isEmpty()) return
         val palette = FloydUiTheme.palette()
+        val font = ClickGuiFont.font
         val width = minOf(188, graphics.guiWidth() - 16).coerceAtLeast(48)
         val height = 38
         cards.forEachIndexed { index, card ->
@@ -84,10 +88,11 @@ object FloydNotifier : Module(
                 NVGRenderer.rect(8f, height - 4f, width - 16f, 1.5f, trackColor, .75f)
                 NVGRenderer.rect(8f, height - 4f, (width - 16f) * card.progress, 1.5f, accentColor, .75f)
             }
-            val label = mc.font.plainSubstrByWidth(card.entry.name, width - 38)
-            graphics.drawString(mc.font, label, x + 31, y + 7,
+            graphics.nextStratum()
+            val label = font.plainSubstrByWidth(card.entry.name, width - 38)
+            graphics.drawString(font, label, x + 31, y + 7,
                 alphaColor(palette["Primary Text"], alpha), false)
-            graphics.drawString(mc.font, if (card.entry.enabled) "Enabled" else "Disabled", x + 31, y + 20,
+            graphics.drawString(font, if (card.entry.enabled) "Enabled" else "Disabled", x + 31, y + 20,
                 alphaColor(palette["Secondary Text"], alpha), false)
         }
     }

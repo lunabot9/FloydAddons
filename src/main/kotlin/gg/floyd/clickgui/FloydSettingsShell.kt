@@ -249,11 +249,12 @@ internal fun FloydSettingsList(tree: Tree, page: String, search: Boolean) {
         }
         return
     }
+    val sections = remember(entries) { moduleSections(entries) }
     key(page) {
         val list = rememberLazyListState(cacheWindow = LazyLayoutCacheWindow(ahead = 1200.dp, behind = 600.dp))
         if (FloydOneConfig.shouldWarmSettings()) {
             val warmupIndex = FloydSettingsNavigation.warmupScrollIndex
-            LaunchedEffect(list, warmupIndex) { list.scrollToItem(warmupIndex.coerceAtMost(entries.lastIndex)) }
+            LaunchedEffect(list, warmupIndex) { list.scrollToItem(warmupIndex.coerceAtMost(sections.lastIndex)) }
         }
         LaunchedEffect(list) {
             snapshotFlow { list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset }.collect {
@@ -263,14 +264,9 @@ internal fun FloydSettingsList(tree: Tree, page: String, search: Boolean) {
         Box(Modifier.fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(horizontal = 26.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(entries, key = { entry -> when (entry) {
-                    is ConfigListEntry.CategoryHeader -> "category:${entry.title}"
-                    is ConfigListEntry.SubcategoryHeader -> "section:${entry.title}"
-                    is ConfigListEntry.Item -> "setting:${System.identityHashCode(entry.node.let { node -> if (node is SettingNode.Leaf) node.prop else (node as SettingNode.Accordion).tree })}"
-                } }, contentType = { entry -> when (entry) {
-                    is ConfigListEntry.Item -> (entry.node as? SettingNode.Leaf)?.prop?.getMetadata<Any>("visualizer") ?: "accordion"
-                    else -> entry.javaClass
-                } }) { ConfigListRow(it) }
+                items(sections, key = { it.name }) { section ->
+                    FloydModuleSection(section, search, page)
+                }
             }
             VerticalScrollbar(rememberScrollbarAdapter(list), Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(end = 12.dp))
         }

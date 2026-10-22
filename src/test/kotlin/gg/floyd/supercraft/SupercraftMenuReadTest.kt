@@ -4,6 +4,13 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
 class SupercraftMenuReadTest {
+    @Test fun `live gemstone glyphs still match sanitized catalog names`() {
+        val names=mapOf("FINE_RUBY_GEM" to "Fine Ruby Gemstone")
+        val recipe=SackRecipe("FLAWLESS_RUBY_GEM",1,mapOf("FINE_RUBY_GEM" to 80))
+        val lore="✔ 6,401/80 \uE010 Fine Ruby Gemstone"
+        assertTrue(SupercraftMenuRead.agrees(recipe,SupercraftAmount(1,true),SupercraftMenuRead.costs(lore,names)!!))
+        assertEquals(80L,SupercraftMenuRead.maximumCrafts(lore,names,recipe))
+    }
     private val names=mapOf("ENCHANTED_NETHER_STALK" to "Enchanted Nether Wart","GOLDEN_CARROT" to "Golden Carrot")
     @Test fun `server amount selects storage acknowledgement mode`() {
         assertEquals(SupercraftAmount(1111,true),SupercraftMenuRead.amount("§aCrafting 1,111 items into your sacks!"))

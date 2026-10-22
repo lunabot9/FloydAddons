@@ -1,6 +1,10 @@
 package gg.floyd.supercraft
 
 import com.google.gson.JsonParser
+import com.google.common.collect.ImmutableMultimap
+import com.mojang.authlib.GameProfile
+import com.mojang.authlib.properties.Property
+import com.mojang.authlib.properties.PropertyMap
 import gg.floyd.FloydAddonsMod
 import gg.floyd.clickgui.settings.impl.*
 import gg.floyd.events.*
@@ -18,22 +22,33 @@ import net.minecraft.network.chat.Component
 import net.minecraft.world.inventory.ChestMenu
 import net.minecraft.world.inventory.ContainerInput
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.resources.Identifier
+import net.minecraft.nbt.CompoundTag
+import net.minecraft.world.item.component.CustomData
+import net.minecraft.world.item.component.ResolvableProfile
+import java.util.UUID
 
 object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
-    description="Upgrade a sack's resources through their highest supported crafting tiers. Selects the server's maximum amount; Supercraft can use the same materials from inventory and other storage.",toggled=true) {
+    description="Normal sacks craft only the next direct enchanted tier. Enchanted sacks continue through approved highest tiers. Maximum amounts can use the same materials from other storage.",toggled=true) {
     private val showButton by BooleanSetting("Sack Menu Button",true,desc="Show a Supercraft action in an opened sack.")
     private val autoOpenedSack by BooleanSetting("Auto Craft Opened Sack",false,desc="Start once when you open a recognized sack. Configure protected tiers before enabling this.")
-    var keepTiers by StringSetting("Keep At Current Tier","",8192,desc="Saved protected tiers managed in the sack's exceptions panel or with /supercraft except.").hide()
+    var keepTiers by StringSetting("Keep At Current Tier","",8192,desc="Never craft these ignored outputs. Existing input-tier selections also retain their protection.").hide()
     private val delay by NumberSetting("Click Delay",400,250,1500,50,desc="Minimum milliseconds between acknowledged recipe clicks.")
     private val stopAction by ActionSetting("Stop Crafting","Stop without sending any further commands or clicks.") { stop("Stopped by user") }
-    private data class Catalog(val sacks:Map<String,Set<String>>,val names:Map<String,String>,val recipes:List<SackRecipe>)
+    private data class Icon(val item:String,val model:String?,val texture:String?,val glint:Boolean)
+    private data class Catalog(val sacks:Map<String,Set<String>>,val names:Map<String,String>,val recipes:List<SackRecipe>,val icons:Map<String,Icon>)
     private val catalog by lazy {
         val stream=javaClass.getResourceAsStream("/assets/floydaddons/data/sack_supercraft.json") ?: error("Sack recipes missing")
         val json=stream.bufferedReader().use { JsonParser.parseReader(it).asJsonObject }
         Catalog(json.getAsJsonObject("sacks").entrySet().associate { (name,sack)->name to sack.asJsonObject.getAsJsonArray("contents").map { it.asString }.toSet() },
-            json.getAsJsonObject("names").entrySet().associate { it.key to it.value.asString },
-            json.getAsJsonArray("recipes").map { e->val r=e.asJsonObject;SackRecipe(r["output"].asString,r["count"].asLong,r.getAsJsonObject("ingredients").entrySet().associate { it.key to it.value.asLong }) })
+            json.getAsJsonObject("names").entrySet().associate { it.key to SackCraftPlanner.displayName(it.value.asString) },
+            json.getAsJsonArray("recipes").map { e->val r=e.asJsonObject;SackRecipe(r["output"].asString,r["count"].asLong,r.getAsJsonObject("ingredients").entrySet().associate { it.key to it.value.asLong }) },
+            json.getAsJsonObject("icons")?.entrySet()?.associate { (id,e)->val i=e.asJsonObject;id to Icon(i["item"].asString,i["model"]?.asString,i["texture"]?.asString,i["glint"]?.asBoolean ?: false) }.orEmpty())
     }
+    private val iconCache=hashMapOf<String,ItemStack>()
+    private val targetCache=hashMapOf<String,Set<String>>()
     private enum class Phase { IDLE,SACK_LIST,SACK_CONTENTS,RECIPE,MAXIMUM,RESULT }
     private var phase=Phase.IDLE
     private var status="Open a sack, or use /supercraft <sack name>"
@@ -63,6 +78,8 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
     private var beforeMaximumCrafts=0L
     private var resourceMaximumCrafts=0L
     private var ledger=linkedMapOf<String,Long>()
+    private var normalBudget:MutableMap<String,Long>?=null
+    private var runRecipes=emptyList<SackRecipe>()
     private var transactions=0
     private var listRequests=0
     private var lastAutoScreen:net.minecraft.client.gui.screens.Screen?=null
@@ -73,21 +90,51 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
     private fun id(s:ItemStack):String {
         val custom=s.get(DataComponents.CUSTOM_DATA)?.copyTag()?.getString("id")?.orElse("").orEmpty()
         if(custom.isNotBlank())return custom
-        return catalog.names.entries.firstOrNull { clean(s.hoverName.string).equals(it.value,true) }?.key.orEmpty()
+        return catalog.names.entries.firstOrNull { SackCraftPlanner.displayName(s.hoverName.string).equals(it.value,true) }?.key.orEmpty()
     }
     private fun sackKey(name:String):String? {
-        val key=SackCraftPlanner.key(name).removePrefix("LARGE_").removePrefix("MEDIUM_").removePrefix("SMALL_").removeSuffix("_SACK")
-        return catalog.sacks.keys.singleOrNull { SackCraftPlanner.key(it)==key }
+        return SackCraftPlanner.sackName(name,catalog.sacks.keys)
     }
     fun itemId(stack:ItemStack):String=id(stack).takeIf { it in catalog.names }.orEmpty()
+    fun displayName(id:String):String = catalog.names[id] ?: id
     fun ignoredIds():Set<String> = protected()
     fun toggleIgnored(id:String) { if(id in catalog.names)exception(id,id !in protected()) }
     fun sackName(title:String):String? = sackKey(title)
     fun itemBelongsToSack(sack:String,id:String):Boolean = id in catalog.sacks[sackKey(sack) ?: sack].orEmpty()
+    fun upgradeTargets(sack:String):Set<String> {
+        val name=sackKey(sack) ?: return emptySet()
+        return targetCache.getOrPut(name) {
+            val resources=catalog.sacks[name].orEmpty()
+            if(name.startsWith("Enchanted ") || name=="Gemstone")SackCraftPlanner.upgradeTargets(resources,SackCraftPlanner.familyRecipes(catalog.recipes),catalog.names.keys)
+            else SackCraftPlanner.directRecipes(resources,catalog.recipes).map { it.output }.toSortedSet()
+        }
+    }
+    /** Factual base-item/model/profile metadata, cached once; UI callers receive independent copies. */
+    fun targetIcon(id:String):ItemStack {
+        if(id !in catalog.names)return ItemStack.EMPTY
+        return iconCache.getOrPut(id) {
+            val meta=catalog.icons[id]
+            val base=when(meta?.item) { "minecraft:skull"->"minecraft:player_head";"minecraft:double_plant"->"minecraft:sunflower";"minecraft:log"->"minecraft:oak_log";"minecraft:log2"->"minecraft:acacia_log";"minecraft:dye"->"minecraft:green_dye";"minecraft:fish"->"minecraft:cod";else->meta?.item ?: "minecraft:paper" }
+            val native=meta?.model?.takeIf { it.startsWith("minecraft:") } ?: base
+            val item=runCatching { BuiltInRegistries.ITEM.getValue(Identifier.parse(native)) }.getOrNull()?.takeUnless { it==Items.AIR } ?: Items.PAPER
+            ItemStack(item).apply {
+                set(DataComponents.CUSTOM_NAME,Component.literal(catalog.names.getValue(id)))
+                set(DataComponents.CUSTOM_DATA,CustomData.of(CompoundTag().apply { putString("id",id) }))
+                if(meta?.glint==true)set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE,true)
+                meta?.model?.let { raw -> runCatching { Identifier.parse(raw) }.getOrNull()?.let { model ->
+                    if(model.namespace=="minecraft" || mc.resourceManager.getResource(Identifier.fromNamespaceAndPath(model.namespace,"items/${model.path}.json")).isPresent)set(DataComponents.ITEM_MODEL,model)
+                } }
+                meta?.texture?.let { texture ->
+                    val properties=PropertyMap(ImmutableMultimap.of("textures",Property("textures",texture)))
+                    set(DataComponents.PROFILE,ResolvableProfile.createResolved(GameProfile(UUID.nameUUIDFromBytes("floyd-sack:$id".toByteArray()),"FloydSackTarget",properties)))
+                }
+            }
+        }.copy()
+    }
     fun isCrafting():Boolean = phase!=Phase.IDLE
     fun names():List<String> = catalog.sacks.keys.sorted()
     fun itemNames():List<String> = catalog.names.values.sorted()
-    fun listExceptions() { modMessage("Protected tiers: "+protected().joinToString { catalog.names[it] ?: it }.ifEmpty { "none" }) }
+    fun listExceptions() { modMessage("Ignored upgrade outputs: "+protected().joinToString { catalog.names[it] ?: it }.ifEmpty { "none" }) }
     fun listSacks() {
         listRequests++
         fun group(label:String,entries:List<String>,stripEnchanted:Boolean=false) {
@@ -113,7 +160,7 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         val kept=protected().toMutableSet();if(add)kept+=item else kept-=item
         keepTiers=kept.sorted().joinToString(", ");ModuleManager.saveConfigurations()
         if(phase!=Phase.IDLE)stop("Exceptions changed; start again to use the new plan")
-        modMessage(if(add)"Keeping ${catalog.names[item]} at its current tier." else "Upgrades allowed for ${catalog.names[item]}.")
+        modMessage(if(add)"Will never craft ${catalog.names[item]}." else "Crafting ${catalog.names[item]} is allowed.")
     }
     private fun protected():Set<String> = keepTiers.split(',').mapNotNull { token ->
         val key=SackCraftPlanner.key(token);catalog.names.keys.firstOrNull { it==key } ?: catalog.names.entries.firstOrNull { SackCraftPlanner.key(it.value)==key }?.key
@@ -184,6 +231,7 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         if(gained!=pendingOutput) { stop("Unexpected output quantity; stopped to protect your items");return }
         val crafted=gained/recipe.count;remaining=0;confirmedCrafts+=crafted;pendingOutput=0;transactions++
         recipe.ingredients.forEach { (id,cost)->ledger[id]=maxOf(0,(ledger[id] ?: 0)-Math.multiplyExact(cost,crafted)) }
+        normalBudget?.let { budget -> recipe.ingredients.forEach { (id,cost)->budget[id]=maxOf(0,(budget[id] ?: 0)-Math.multiplyExact(cost,crafted)) } }
         ledger[recipe.output]=Math.addExact(ledger[recipe.output] ?: 0,gained)
         phase=Phase.RECIPE;nextAt=now()+delay.toLong();deadline=now()+12000
         status="Confirmed $crafted × ${catalog.names[recipe.output]}"
@@ -192,16 +240,28 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         val current=menu ?: return
         val player=mc.player ?: return
         if(!current.carried.isEmpty || player.containerMenu!==current || slot !in items.indices) { stop("Menu or cursor changed; stopped");return }
+        if(phase==Phase.MAXIMUM || phase==Phase.RESULT) {
+            val recipe=steps.getOrNull(stepIndex)?.recipe
+            if(recipe==null || recipe !in runRecipes || !SackCraftPlanner.allowed(recipe,protected())) { stop("Ignored upgrade target; stopped before clicking");return }
+        }
         sentAt=now();sentRevision=revision;nextAt=sentAt+delay.toLong()
         mc.gameMode?.handleContainerInput(current.containerId,slot,0,if(shift)ContainerInput.QUICK_MOVE else ContainerInput.PICKUP,player)
     }
     private fun buildPlan() {
         val stock=linkedMapOf<String,Long>()
-        items.forEach { item -> val key=id(item);val amount=SackCraftPlanner.stored(text(item))
-            if(key in catalog.sacks[selected].orEmpty() && amount!=null)stock[key]=amount }
+        items.forEach { item -> val key=id(item)
+            if(key in catalog.sacks[selected].orEmpty()) {
+                val parsed=SackCraftPlanner.sackStock(key,text(item),selected=="Gemstone")
+                if(selected=="Gemstone" && parsed.isEmpty()) { stop("Could not read exact Rough, Flawed and Fine counts; stopped before crafting");return }
+                stock.putAll(parsed)
+            }
+        }
         if(stock.isEmpty())return
-        val plan=runCatching { SackCraftPlanner.plan(stock,catalog.recipes,protected()) }.getOrElse { stop("Could not build a bounded recipe plan");return }
-        if(plan.steps.isEmpty()) { stop("No eligible upgrades: resources are below recipe amounts, protected, or already at the highest supported tier");return }
+        val highest=selected.startsWith("Enchanted ") || selected=="Gemstone"
+        runRecipes=if(highest)SackCraftPlanner.familyRecipes(catalog.recipes) else SackCraftPlanner.directRecipes(catalog.sacks[selected].orEmpty(),catalog.recipes)
+        normalBudget=if(highest)null else stock.toMutableMap()
+        val plan=runCatching { if(highest)SackCraftPlanner.plan(stock,runRecipes,protected()) else SackCraftPlanner.planDirect(stock,runRecipes,protected()) }.getOrElse { stop("Could not build a bounded recipe plan");return }
+        if(plan.steps.isEmpty()) { stop(if(highest)"No allowed highest-tier upgrades: targets are ignored, amounts are too low, or resources are already upgraded" else "No allowed direct enchanted upgrades: targets are ignored, amounts are too low, or no direct counterpart exists");return }
         observedSacks+=selected;ledger=stock;transactions=0;steps=plan.steps;stepIndex=0;remaining=steps[0].crafts;openRecipe()
     }
     private fun openRecipe() {
@@ -221,7 +281,7 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         if(clock<nextAt)return
         if(phase==Phase.RECIPE && remaining==0L) {
             if(transactions>=1000) { stop("Reached 1,000 confirmed transactions; start again to continue");return }
-            val plan=runCatching { SackCraftPlanner.plan(ledger,catalog.recipes,protected()) }.getOrElse { stop("Could not replan confirmed outputs");return }
+            val plan=runCatching { normalBudget?.let { SackCraftPlanner.planDirect(it,runRecipes,protected()) } ?: SackCraftPlanner.plan(ledger,runRecipes,protected()) }.getOrElse { stop("Could not replan confirmed outputs");return }
             if(plan.steps.isEmpty()) { stop("Finished: $confirmedCrafts confirmed crafts");modMessage(status);return }
             steps=plan.steps;stepIndex=0;remaining=steps[0].crafts;openRecipe();return
         }
@@ -239,6 +299,7 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         if(phase==Phase.SACK_CONTENTS) { if(sackKey(title)==selected)buildPlan();return }
         if(phase==Phase.RESULT)return
         val step=steps[stepIndex];val expected=step.recipe.output
+        if(!SackCraftPlanner.allowed(step.recipe,protected())) { stop("Ignored upgrade target; stopped before crafting");return }
         // Live recipe titles can be only the output name (e.g. "Enchanted Sugar Cane").
         // Validate the output and explicit Supercraft controls below, not an English title suffix.
         if(items.none { id(it)==expected })return
@@ -291,7 +352,7 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
             if(phase!=Phase.RESULT || !intoSacks)return@on
             val match=Regex("^You Supercrafted (.+?)(?:x([0-9,]+))?!$").matchEntire(clean(value)) ?: return@on
             val recipe=steps.getOrNull(stepIndex)?.recipe ?: return@on
-            if(!match.groupValues[1].trim().equals(catalog.names[recipe.output],true))return@on
+            if(!SackCraftPlanner.displayName(match.groupValues[1]).equals(catalog.names[recipe.output],true))return@on
             val amount=match.groupValues[2].takeIf { it.isNotBlank() }?.replace(",","")?.toLongOrNull() ?: 1L
             confirmed(amount,recipe)
         }

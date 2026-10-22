@@ -1,6 +1,6 @@
 {
   "source": "https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO",
-  "description": "Sack-contained crafting recipes only; no forge, NPC trades, equipment, or unpacking recipes. Runtime validates server recipe output before clicking.",
+  "description": "Resource crafting metadata. Runtime uses an approved compression-family subset, direct upgrades for normal sacks, and highest crafting tiers for enchanted sacks. No forge recipes, currency trades, or equipment automation.",
   "sacks": {
     "Agronomy": {
       "item": "LARGE_AGRONOMY_SACK",
@@ -1557,7 +1557,19 @@
     "YOGGIE": "Yoggie",
     "YOUNG_FRAGMENT": "Young Dragon Fragment",
     "Z": "Z",
-    "ZOMBUD": "Zombud"
+    "ZOMBUD": "Zombud",
+    "FLAWLESS_JADE_GEM": "\ue053 Flawless Jade Gemstone",
+    "FLAWLESS_AMBER_GEM": "\ue015 Flawless Amber Gemstone",
+    "FLAWLESS_TOPAZ_GEM": "\ue01c Flawless Topaz Gemstone",
+    "FLAWLESS_SAPPHIRE_GEM": "\ue003 Flawless Sapphire Gemstone",
+    "FLAWLESS_AMETHYST_GEM": "\ue008 Flawless Amethyst Gemstone",
+    "FLAWLESS_JASPER_GEM": "\ue00d Flawless Jasper Gemstone",
+    "FLAWLESS_RUBY_GEM": "\ue010 Flawless Ruby Gemstone",
+    "FLAWLESS_OPAL_GEM": "\ue027 Flawless Opal Gemstone",
+    "FLAWLESS_ONYX_GEM": "\ue007 Flawless Onyx Gemstone",
+    "FLAWLESS_AQUAMARINE_GEM": "\ue00c Flawless Aquamarine Gemstone",
+    "FLAWLESS_CITRINE_GEM": "\ue054 Flawless Citrine Gemstone",
+    "FLAWLESS_PERIDOT_GEM": "\ue051 Flawless Peridot Gemstone"
   },
   "recipes": [
     {
@@ -3064,6 +3076,3580 @@
         "WORM_MEMBRANE": 1,
         "CLAY_BALL": 1
       }
+    },
+    {
+      "output": "FLAWLESS_JADE_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_JADE_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_AMBER_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_AMBER_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_TOPAZ_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_TOPAZ_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_SAPPHIRE_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_SAPPHIRE_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_AMETHYST_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_AMETHYST_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_JASPER_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_JASPER_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_RUBY_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_RUBY_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_OPAL_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_OPAL_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_ONYX_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_ONYX_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_AQUAMARINE_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_AQUAMARINE_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_CITRINE_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_CITRINE_GEM": 80
+      }
+    },
+    {
+      "output": "FLAWLESS_PERIDOT_GEM",
+      "count": 1,
+      "ingredients": {
+        "FINE_PERIDOT_GEM": 80
+      }
     }
-  ]
+  ],
+  "icons": {
+    "ABSOLUTE_ENDER_PEARL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/absolute_ender_pearl"
+    },
+    "AGARIMOO_TONGUE": {
+      "item": "minecraft:mutton",
+      "glint": true,
+      "model": "minecraft:mutton"
+    },
+    "AGATHA_COUPON": {
+      "item": "minecraft:name_tag",
+      "glint": false,
+      "model": "minecraft:name_tag"
+    },
+    "AGGOURDIAN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:goat_horn"
+    },
+    "ALLIGATOR_SKIN": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/alligator_skin"
+    },
+    "ALL_IN_ALOE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2Mjc3NTc5OTc0OCwKICAicHJvZmlsZUlkIiA6ICIzOThiZGM3NWVhYzQ0ZjMzYWEyMDBiMTYyNTRmMDhlOSIsCiAgInByb2ZpbGVOYW1lIiA6ICJJa2h3YW4wNTEwIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzI0MTE2MzYxMjI1OGQzMGRjNmVmNjNiMjFmNjFiYTg5YzYyMmU1ZGNlYmQ5OWZkMzZhM2I1MDdlODBjZGM3MjUiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "ANCIENT_CLAW": {
+      "item": "minecraft:flint",
+      "glint": false,
+      "model": "minecraft:flint"
+    },
+    "APPLE": {
+      "item": "minecraft:apple",
+      "glint": false,
+      "model": "minecraft:apple"
+    },
+    "ARACHNE_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/combat_1/arachne_fragment"
+    },
+    "ARACHNE_KEEPER_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/combat_1/arachnes_calling"
+    },
+    "ARCHITECT_FIRST_DRAFT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/dungeons/architects_first_draft"
+    },
+    "ASCENSION_ROPE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/ascension_rope"
+    },
+    "ASHWREATH": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM2NjQ2OSwKICAicHJvZmlsZUlkIiA6ICJiZTFkOTJiYTkwY2E0NzMwYTIyMzQ2MTIxZWM2MTNmMyIsCiAgInByb2ZpbGVOYW1lIiA6ICJUZW5zb3JCeXRlIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzU4OTBmNTA3ODBmZGVjZWRhYTg1YWE0MGJmMzM5OWU5NDM5ZWU2ODU5NGM2ZDAyMjY4ODE2NTYwODE3MTY4MWQiCiAgICB9CiAgfQp9"
+    },
+    "BAMBOO": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:bamboo",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY3Mjc2ODM2NTY2NiwKICAicHJvZmlsZUlkIiA6ICI1MDBmZWZlMWUzZjU0NTA4OTc1YzZmMTE5ZGIyZDY1NiIsCiAgInByb2ZpbGVOYW1lIiA6ICJUZWNoU2VlZCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS8zYWMxNmIwN2QzMDE3ZDE1OWJlN2FiMzExODVkODQ5MGY4MTZhZWQwMGZhYzQ4MmYxMmUzM2E0ZDdjZmU4ZjUxIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "BEZOS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/bezos"
+    },
+    "BIOFUEL": {
+      "item": "minecraft:dye",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/biofuel"
+    },
+    "BLASTBERRY": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM3NjYzOCwKICAicHJvZmlsZUlkIiA6ICI4MTFkNjM0NzUwY2Y0ZDI0OTJmZDcxYTViZjZhZjI3MSIsCiAgInByb2ZpbGVOYW1lIiA6ICJzcGlmZnRvcGlhbW1wMSIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9iYWNhZTBlODdmZmVhZGI3NTAyNjBjMmU2NTMxMDA0ZDY5ZDE0NDczMzc2Y2IyMjU3N2ZhZmU3MDU2OTM0OWYzIgogICAgfQogIH0KfQ=="
+    },
+    "BLAZE_ASHES": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/blaze_ashes"
+    },
+    "BLAZE_POWDER": {
+      "item": "minecraft:blaze_powder",
+      "glint": false,
+      "model": "minecraft:blaze_powder"
+    },
+    "BLAZE_ROD": {
+      "item": "minecraft:blaze_rod",
+      "glint": false,
+      "model": "minecraft:blaze_rod"
+    },
+    "BLAZE_ROD_DISTILLATE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/minion/fuel/distillate/blaze_rod_distillate"
+    },
+    "BLESSED_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/blessed_bait"
+    },
+    "BLESSED_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/blessed_frog_bronze"
+    },
+    "BLESSED_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/blessed_frog_silver"
+    },
+    "BLOBFISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/blobfish_bronze"
+    },
+    "BLOBFISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/blobfish_silver"
+    },
+    "BLUE_ICE_HUNK": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/hunk_of_blue_ice"
+    },
+    "BLUE_RING": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/blue_ring"
+    },
+    "BLUE_SHARK_TOOTH": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "hypixel_skyblock:item/community_center/mayor/marina/blue_shark_tooth"
+    },
+    "BOB_OMB": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/bob_omb"
+    },
+    "BONE": {
+      "item": "minecraft:bone",
+      "glint": false,
+      "model": "minecraft:bone"
+    },
+    "BONZO_FRAGMENT": {
+      "item": "minecraft:red_mushroom",
+      "glint": true,
+      "model": "minecraft:red_mushroom"
+    },
+    "BOTROOT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:weeping_vines"
+    },
+    "BOX_OF_SEEDS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/box_of_seeds"
+    },
+    "BRITTLE_POWDER": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk0MzU0NiwKICAicHJvZmlsZUlkIiA6ICJiMWQ4MTJlYzI4YTU0NDNhOTUxODhmNDkyZjVjYzIyMSIsCiAgInByb2ZpbGVOYW1lIiA6ICJzcGlmZnRvcGlhIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2FlYzI3M2U5MTkzOGMyNTMyNTgxOTNlMDY3OTYxNzRlODM5N2VhNjBiMTE1ZjA5MjMzMzQzYjFiNjI5M2EzZTUiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "BROKEN_RADAR": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/broken_radar"
+    },
+    "BRONZE_BOWL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/bronze_bowl"
+    },
+    "BROWN_MUSHROOM": {
+      "item": "minecraft:brown_mushroom",
+      "glint": false,
+      "model": "minecraft:brown_mushroom"
+    },
+    "BULLFROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/bullfrog_bronze"
+    },
+    "BULLFROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/bullfrog_silver"
+    },
+    "BURNING_EYE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/burning_eye"
+    },
+    "BUSTED_BELT_BUCKLE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/junk/busted_belt_buckle"
+    },
+    "CACTUS": {
+      "item": "minecraft:cactus",
+      "glint": false,
+      "model": "minecraft:cactus"
+    },
+    "CACTUS_FLOWER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:cactus_flower"
+    },
+    "CANE_KNOT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:kelp"
+    },
+    "CAN_OF_WORMS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/can_of_worms"
+    },
+    "CARNIVAL_TICKET": {
+      "item": "minecraft:name_tag",
+      "glint": false,
+      "model": "minecraft:name_tag"
+    },
+    "CARROT_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/carrot_bait"
+    },
+    "CARROT_ITEM": {
+      "item": "minecraft:carrot",
+      "glint": false,
+      "model": "minecraft:carrot"
+    },
+    "CARROT_ZEST": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:fire_coral"
+    },
+    "CAVE_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/cave_frog_bronze"
+    },
+    "CAVE_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/cave_frog_silver"
+    },
+    "CHEESEBITE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM3MTQwOCwKICAicHJvZmlsZUlkIiA6ICI4MDQ2MzdjMTA1ZGY0MzM0ODE3YTNmMDcxMTMyOTYyMSIsCiAgInByb2ZpbGVOYW1lIiA6ICJQcmluY2VDUiIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS80MTFmMTljNzgzOTU5ODA3MzM4ZTJiZjcwODBiMWUzNGFiYjhjNDUyNDY0YzBkY2U1YmRmNDM0Y2RjMjUwNzE3IgogICAgfQogIH0KfQ=="
+    },
+    "CHEESE_FUEL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/tasty_cheese"
+    },
+    "CHILI_PEPPER": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY3OTU2MTY4OTMyMSwKICAicHJvZmlsZUlkIiA6ICI3MWM1OTI5YmYzOTI0MGQwODBhYWM1OTNlODFkZTQ0ZiIsCiAgInByb2ZpbGVOYW1lIiA6ICJkb2NrbGFuZGJveTk5IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2Y4NTljOGRmMTEwOWMwOGE3NTYyNzVmMWQyODg3YzI3NDgwNDlmZTMzODc3NzY5YTdiNDE1ZDU2ZWRhNDY5ZDgiCiAgICB9CiAgfQp9"
+    },
+    "CHLORONITE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM4MTc0OSwKICAicHJvZmlsZUlkIiA6ICIxMzEzZGFmMDc2OGQ0YmQ5Yjc1ODJkMGI1NWUwZGQxNiIsCiAgInByb2ZpbGVOYW1lIiA6ICJMZW50aWNjaGllIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzk4MDU2Yjk2MGZmMzg1YzIwY2ZmYzNkMTUyNDUwMGZjZDNiZjhjMzFiNmRjYWZkODUyMGY0MWRmYTc0OWRkMjgiCiAgICB9CiAgfQp9"
+    },
+    "CHOCOBERRY": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM5MDI5NiwKICAicHJvZmlsZUlkIiA6ICI5MGQ1NDY0OGEzNWE0YmExYTI2Yjg1YTg4NTU4OGJlOSIsCiAgInByb2ZpbGVOYW1lIiA6ICJFdW4wbWlhIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzE2N2JiOTg4MGEzYWIzNzQzNWEyMWIxZjEzNWEwMWE5NmNjYTQ1YjQ5ZGFlYjRhMWU5MWJhZjM1OGUzN2Q4OWQiCiAgICB9CiAgfQp9"
+    },
+    "CHOCONUT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM5MTk5OCwKICAicHJvZmlsZUlkIiA6ICI3MjU1MDA3NjQzYzQ0YTZiYjM3MjJlNzc3OTk5OTFkOSIsCiAgInByb2ZpbGVOYW1lIiA6ICJ4M250YW55IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzJhOGQ3NGI3N2EwZTUxMGQwNThjNTQ0YzcyOTJhODg0NGU3MGI5MjkzODgwY2FmZmM1NjJjZTVhYjVhNDlhZDgiCiAgICB9CiAgfQp9"
+    },
+    "CHORUS_FRUIT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMTkzNjY2MiwKICAicHJvZmlsZUlkIiA6ICJlOThhZTBlMTI5MDg0ZDA5OTk0MTg4N2Q2YTk0ZTI2NCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTZXh5SGF1c2VNYXN0ZXIiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZTA0NDIzODUwMzEwMmY2NGYzMGY0ZDU4ZjA4NDNiMjE1ZDhkZDU0ZmM5ZjFmNzBjYzE3ZDhkZDg5MWJiM2U1ZSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "CHUM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/farming_1/chum"
+    },
+    "CINDERSHADE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2NTQ1NjM0MCwKICAicHJvZmlsZUlkIiA6ICIzY2ZhYzBlMjQxNzg0ZTcwOWNkYzQ2YWU5YTg1ZjFlMyIsCiAgInByb2ZpbGVOYW1lIiA6ICJDb21iaW1hZ25ldHJvbjMiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTA2NDZiYzA1NTgxNTUyMDcyMDQ3MTFjZjVkM2QwNzkyMGUwZTk4YzliMmJlMGI2MTA3YmVjYjQwOWE5NzQyNyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "CLAY_BALL": {
+      "item": "minecraft:clay_ball",
+      "glint": false,
+      "model": "minecraft:clay_ball"
+    },
+    "COAL": {
+      "item": "minecraft:coal",
+      "glint": false,
+      "model": "minecraft:coal"
+    },
+    "COALROOT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2NTQ1OTE1NCwKICAicHJvZmlsZUlkIiA6ICJhNzdkNmQ2YmFjOWE0NzY3YTFhNzU1NjYxOTllYmY5MiIsCiAgInByb2ZpbGVOYW1lIiA6ICIwOEJFRDUiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjk0NjQ0M2ZhMDAzOTM1NGVkZDMxYTcwYzc0OWM0Zjk2MzQ2NDc0NGRjMjBiNzkxMzdiZDk5MTAzNTZlZTkwIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "COBBLESTONE": {
+      "item": "minecraft:cobblestone",
+      "glint": false,
+      "model": "minecraft:cobblestone"
+    },
+    "COMMON_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/common_frog_bronze"
+    },
+    "COMMON_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/common_frog_silver"
+    },
+    "COMPACTED_MOONFLOWER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/greenhouse/moonflower/compacted_moonflower"
+    },
+    "COMPACTED_SUNFLOWER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/greenhouse/sunflower/compacted_sunflower"
+    },
+    "COMPACTED_WILD_ROSE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/greenhouse/wild_rose/compacted_wild_rose"
+    },
+    "COMPACT_OOZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/compact_ooze"
+    },
+    "COMPOST": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/compost"
+    },
+    "CONCENTRATED_STONE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/concentrated_stone"
+    },
+    "CONDENSED_WATER_LILY": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/lily_pad/condensed_lily_pad"
+    },
+    "CONSOLE_PANEL": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk0NDYyNywKICAicHJvZmlsZUlkIiA6ICJmMGMwMDM5OGEyMTQ0ZGM3OWE5MDk4NjMzMDQ0ZDY5MSIsCiAgInByb2ZpbGVOYW1lIiA6ICJLb21lbmRhbnRaUGxvY2thIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2U0NzlkNGVmMjQxM2ZjZGM0YjM5Y2RjMjBjNTU2NGI1YjhkMjRjMWVkZjRkY2VjMWQwNjNiM2UyZDhjMjVmNTMiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "CONTROL_SWITCH": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/control_switch"
+    },
+    "CORLEONITE": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/corleonite"
+    },
+    "CORNUCOPIA": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:nautilus_shell"
+    },
+    "CORRUPTED_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/corrupted_bait"
+    },
+    "CORRUPTED_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/corrupted_fragment"
+    },
+    "CORRUPTED_NETHER_STAR": {
+      "item": "minecraft:nether_star",
+      "glint": false,
+      "model": "minecraft:nether_star"
+    },
+    "CREAMBLOOM": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM5Njc5MSwKICAicHJvZmlsZUlkIiA6ICJkMTQ4NjFiM2UwZmM0Njk5OTFlMTcyNTllMzdiZjZhZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJyYXhpdG9jbCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS82MGU5OGMwYjU5OGUyZjVjZTdjNWVlODE4M2VkMTU3YzU0MzZhMDA1ODVkYTcxMWY4YTg3ZjI0ZWExZmYwNTViIgogICAgfQogIH0KfQ=="
+    },
+    "CROPIE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/cropie",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY2MjUwMjkyOTIyNCwKICAicHJvZmlsZUlkIiA6ICJjOWRlZTM4MDUzYjg0YzI5YjZlZjA5YjJlMDM5OTc0ZiIsCiAgInByb2ZpbGVOYW1lIiA6ICJTQVJfRGVjZW1iZXI1IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2RkMDFjYmEyM2VkZTJjZDI4OTUxMDdmMGMwMjU4ZTk3MWQyNDg1NTM4ZmU5NjQ5ZWYyODUzYmQyNmU2MjMyZGMiCiAgICB9CiAgfQp9"
+    },
+    "CRUDE_GABAGOOL": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY2MTYwNjkyNjE3OSwKICAicHJvZmlsZUlkIiA6ICIwOTZkYWUzZWY1MmU0YWU4ODk3ODY2N2EyOGIwZWFhNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJHd0FiaXlCZ2dnIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzdlNjU2NGJiZmE3NDljOWUwZWYzYWMyYTNmMjExMDEzOWE1NTk0NDg0MWQxMDczNWNmOTAwZDFlMjkwMzk0MTgiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "CRUDE_GABAGOOL_DISTILLATE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/minion/fuel/distillate/gabagool_distillate"
+    },
+    "CRYSTALIZED_MOONLIGHT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/community_center/mayor/finnegan/crystalized_moonlight"
+    },
+    "CRYSTAL_FRAGMENT": {
+      "item": "minecraft:quartz",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/crystal_fragment"
+    },
+    "CUP_OF_BLOOD": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/cup_of_blood"
+    },
+    "DARK_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/dark_bait"
+    },
+    "DARK_CANDY": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTYzNTEyMjkwMDI5NSwKICAicHJvZmlsZUlkIiA6ICI4ODBiZWMwYTE0MmM0YzRlYTJlZjliMTFiMTBkNWNiNyIsCiAgInByb2ZpbGVOYW1lIiA6ICJmZ2FiIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzdjODY2ZTQyMzk1NTE0MjhmOWM4MTRkOWRjMTFlNzAwMmUwNDNiODdmNTkwZjFmZGNiNGZmNmJiNDk3YjhlMTgiCiAgICB9CiAgfQp9"
+    },
+    "DEAD_PLANT": {
+      "item": "minecraft:deadbush",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/greenhouse/dead_plant"
+    },
+    "DEEPFRIES": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/deepfries"
+    },
+    "DEEP_ROOT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/resources/deep_root"
+    },
+    "DERELICT_ASHE": {
+      "item": "minecraft:gunpowder",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/blaze/tokens/derelict_ashe"
+    },
+    "DESIGNER_COFFEE_BEANS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:beetroot_seeds"
+    },
+    "DEVOURER": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMTk0MTM4OCwKICAicHJvZmlsZUlkIiA6ICIyMDZlMWZkYjI5Yzk0NGYxOTQ5OTg4NzAwNTQxMGQ2NyIsCiAgInByb2ZpbGVOYW1lIiA6ICJoNHlsMzMiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDEwMGQzYjgxYzhkZDBhZjIyYWYzYjQyYzk3MDQ1YmQ4NDQ0MzhkMmYwMjk3YjBmMjY3YTQ2YmQzNWZmYjMzZiIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "DIAMOND": {
+      "item": "minecraft:diamond",
+      "glint": false,
+      "model": "minecraft:diamond"
+    },
+    "DIGESTED_MUSHROOMS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/digested_mushrooms"
+    },
+    "DIRTY_FINGERNAILS": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk0Njk2OSwKICAicHJvZmlsZUlkIiA6ICIzZDU1OGQ3Y2NmZjk0ODdkYWE1MzhkMjM4NGE3OWFkZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJDcnlwdGljTG9zZXIxMyIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9jNDY2ZDUxOTZlMGNjNDc0N2RjODUyZDQ4ZTczMzEzNTcxZmI3NDI4ZmY1ZTA2OWVlMTM0ODQxZWYxOGFjMDJiIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "DIVER_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/emperors_skull"
+    },
+    "DOUBLE_PLANT": {
+      "item": "minecraft:double_plant",
+      "glint": false,
+      "model": "minecraft:sunflower"
+    },
+    "DOUBLE_PLANT-1": {
+      "item": "minecraft:double_plant",
+      "glint": false,
+      "model": "minecraft:lilac"
+    },
+    "DOUBLE_PLANT-4": {
+      "item": "minecraft:double_plant",
+      "glint": false,
+      "model": "minecraft:rose_bush"
+    },
+    "DOUBLE_PLANT-5": {
+      "item": "minecraft:double_plant",
+      "glint": false,
+      "model": "minecraft:peony"
+    },
+    "DO_NOT_EAT_SHROOM": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2Mjc3NTgxMzk3MCwKICAicHJvZmlsZUlkIiA6ICI4MWU4ZWU1MTE1ZmE0NzU5OTU1YTAzMThkNTNhNjViYyIsCiAgInByb2ZpbGVOYW1lIiA6ICJDb25zaWRlclRoYXQiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvM2YyMjE3OGUyZTcyZDY5MjlhNmVmOTE5OTc5NWE5M2NmYmFkOTk5YmJlZTBhYmEyMzViMjc3ZDBiMThlMGU5NCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "DUNG": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/pests/dung"
+    },
+    "DUNGEON_CHEST_KEY": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/dungeon_chest_key"
+    },
+    "DUNGEON_DECOY": {
+      "item": "minecraft:polar_bear_spawn_egg",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/decoy"
+    },
+    "DUNGEON_TRAP": {
+      "item": "minecraft:heavy_weighted_pressure_plate",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/trap"
+    },
+    "DUSKBLOOM": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMTk0Nzg4MCwKICAicHJvZmlsZUlkIiA6ICIwMTIxYzFjZDUxOTM0M2NmYWM4YzgyZThiNjVjYTFjZiIsCiAgInByb2ZpbGVOYW1lIiA6ICJfVmV4X1RWIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzdkY2E3OTUxYjM2ZjVmNzQ5ZTg4Mzc1OGIzNzljODAwOGNhNTVmMjQ1OTg3ZTRlZjBjMzc4OGNmMGM5MDNkNSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "DUSTGRAIN": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2NTQ2MDQ0NSwKICAicHJvZmlsZUlkIiA6ICI1MzgyNzM1OGIzOTc0ZmJiOTg0OTY5MWM5Yzg3NTA1YiIsCiAgInByb2ZpbGVOYW1lIiA6ICJPdmVyQmlnYm95MTIzIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzg2OTgzMzFmMTgzYTU4NmFlNzI1OGQ2YjNjODNjY2QzNjIwYmIyNDExZDgwMzEyM2JkNjcwNjQ0NGMxZWZkZjMiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "ECTOPLASM": {
+      "item": "minecraft:prismarine_crystals",
+      "glint": true,
+      "model": "minecraft:prismarine_crystals"
+    },
+    "EGG": {
+      "item": "minecraft:egg",
+      "glint": false,
+      "model": "minecraft:egg"
+    },
+    "ELECTRON_TRANSMITTER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/electron_transmitter"
+    },
+    "EMERALD": {
+      "item": "minecraft:emerald",
+      "glint": false,
+      "model": "minecraft:emerald"
+    },
+    "ENCHANTED_ACACIA_LOG": {
+      "item": "minecraft:log2",
+      "glint": true,
+      "model": "minecraft:acacia_log"
+    },
+    "ENCHANTED_ANCIENT_CLAW": {
+      "item": "minecraft:flint",
+      "glint": true,
+      "model": "minecraft:flint"
+    },
+    "ENCHANTED_BAKED_POTATO": {
+      "item": "minecraft:baked_potato",
+      "glint": true,
+      "model": "minecraft:baked_potato"
+    },
+    "ENCHANTED_BIRCH_LOG": {
+      "item": "minecraft:log",
+      "glint": true,
+      "model": "minecraft:birch_log"
+    },
+    "ENCHANTED_BLAZE_POWDER": {
+      "item": "minecraft:blaze_powder",
+      "glint": true,
+      "model": "minecraft:blaze_powder"
+    },
+    "ENCHANTED_BLAZE_ROD": {
+      "item": "minecraft:blaze_rod",
+      "glint": true,
+      "model": "minecraft:blaze_rod"
+    },
+    "ENCHANTED_BONE": {
+      "item": "minecraft:bone",
+      "glint": true,
+      "model": "minecraft:bone"
+    },
+    "ENCHANTED_BONE_BLOCK": {
+      "item": "minecraft:quartz_block",
+      "glint": true,
+      "model": "minecraft:chiseled_quartz_block"
+    },
+    "ENCHANTED_BREAD": {
+      "item": "minecraft:bread",
+      "glint": true,
+      "model": "minecraft:bread"
+    },
+    "ENCHANTED_BROWN_MUSHROOM": {
+      "item": "minecraft:brown_mushroom",
+      "glint": true,
+      "model": "minecraft:brown_mushroom"
+    },
+    "ENCHANTED_CACTUS": {
+      "item": "minecraft:cactus",
+      "glint": true,
+      "model": "minecraft:cactus"
+    },
+    "ENCHANTED_CACTUS_GREEN": {
+      "item": "minecraft:dye",
+      "glint": true,
+      "model": "minecraft:green_dye"
+    },
+    "ENCHANTED_CARROT": {
+      "item": "minecraft:carrot",
+      "glint": true,
+      "model": "minecraft:carrot"
+    },
+    "ENCHANTED_CHARCOAL": {
+      "item": "minecraft:coal",
+      "glint": true,
+      "model": "minecraft:charcoal"
+    },
+    "ENCHANTED_CLAY_BALL": {
+      "item": "minecraft:clay_ball",
+      "glint": true,
+      "model": "minecraft:clay_ball"
+    },
+    "ENCHANTED_CLAY_BLOCK": {
+      "item": "minecraft:clay",
+      "glint": true,
+      "model": "minecraft:clay"
+    },
+    "ENCHANTED_CLOWNFISH": {
+      "item": "minecraft:fish",
+      "glint": true,
+      "model": "minecraft:tropical_fish"
+    },
+    "ENCHANTED_COAL": {
+      "item": "minecraft:coal",
+      "glint": true,
+      "model": "minecraft:coal"
+    },
+    "ENCHANTED_COAL_BLOCK": {
+      "item": "minecraft:coal_block",
+      "glint": true,
+      "model": "minecraft:coal_block"
+    },
+    "ENCHANTED_COBBLESTONE": {
+      "item": "minecraft:cobblestone",
+      "glint": true,
+      "model": "minecraft:cobblestone"
+    },
+    "ENCHANTED_COCOA": {
+      "item": "minecraft:dye",
+      "glint": true,
+      "model": "minecraft:cocoa_beans"
+    },
+    "ENCHANTED_COOKED_FISH": {
+      "item": "minecraft:cooked_fish",
+      "glint": true,
+      "model": "minecraft:cooked_cod"
+    },
+    "ENCHANTED_COOKED_MUTTON": {
+      "item": "minecraft:cooked_mutton",
+      "glint": true,
+      "model": "minecraft:cooked_mutton"
+    },
+    "ENCHANTED_COOKED_RABBIT": {
+      "item": "minecraft:cooked_rabbit",
+      "glint": true,
+      "model": "minecraft:cooked_rabbit"
+    },
+    "ENCHANTED_COOKED_SALMON": {
+      "item": "minecraft:cooked_fish",
+      "glint": true,
+      "model": "minecraft:cooked_salmon"
+    },
+    "ENCHANTED_COOKIE": {
+      "item": "minecraft:cookie",
+      "glint": true,
+      "model": "minecraft:cookie"
+    },
+    "ENCHANTED_DANDELION": {
+      "item": "minecraft:yellow_flower",
+      "glint": true,
+      "model": "minecraft:dandelion"
+    },
+    "ENCHANTED_DARK_OAK_LOG": {
+      "item": "minecraft:log2",
+      "glint": true,
+      "model": "minecraft:dark_oak_log"
+    },
+    "ENCHANTED_DIAMOND": {
+      "item": "minecraft:diamond",
+      "glint": true,
+      "model": "minecraft:diamond"
+    },
+    "ENCHANTED_DIAMOND_BLOCK": {
+      "item": "minecraft:diamond_block",
+      "glint": true,
+      "model": "minecraft:diamond_block"
+    },
+    "ENCHANTED_EGG": {
+      "item": "minecraft:egg",
+      "glint": true,
+      "model": "minecraft:egg"
+    },
+    "ENCHANTED_EMERALD": {
+      "item": "minecraft:emerald",
+      "glint": true,
+      "model": "minecraft:emerald"
+    },
+    "ENCHANTED_EMERALD_BLOCK": {
+      "item": "minecraft:emerald_block",
+      "glint": true,
+      "model": "minecraft:emerald_block"
+    },
+    "ENCHANTED_ENDER_PEARL": {
+      "item": "minecraft:ender_pearl",
+      "glint": true,
+      "model": "minecraft:ender_pearl"
+    },
+    "ENCHANTED_ENDSTONE": {
+      "item": "minecraft:end_stone",
+      "glint": true,
+      "model": "minecraft:end_stone"
+    },
+    "ENCHANTED_EYE_OF_ENDER": {
+      "item": "minecraft:ender_eye",
+      "glint": true,
+      "model": "minecraft:ender_eye"
+    },
+    "ENCHANTED_FEATHER": {
+      "item": "minecraft:feather",
+      "glint": true,
+      "model": "minecraft:feather"
+    },
+    "ENCHANTED_FIG_LOG": {
+      "item": "minecraft:skull",
+      "glint": true,
+      "model": "minecraft:stripped_spruce_log",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcxNjQzNTcxNDQwOSwKICAicHJvZmlsZUlkIiA6ICI5NzBmYWNjMzY0YWY0MDdkYmY4NGEzYzkxOTVkMjdjNSIsCiAgInByb2ZpbGVOYW1lIiA6ICJDYXJodGlfR2FtZXIiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjFiMGQxN2FmNjE2ZGFiZGMyMWU3MGU2ZDI3YjM5NDAxN2E3MjUxMWVmMjhkYmExN2MxNmNiNGM1YzIxNDJlMCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "ENCHANTED_FLINT": {
+      "item": "minecraft:flint",
+      "glint": true,
+      "model": "minecraft:flint"
+    },
+    "ENCHANTED_GHAST_TEAR": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "minecraft:ghast_tear"
+    },
+    "ENCHANTED_GLACITE": {
+      "item": "minecraft:packed_ice",
+      "glint": true,
+      "model": "hypixel_skyblock:item/glacite/glacite/glacite"
+    },
+    "ENCHANTED_GLOWSTONE": {
+      "item": "minecraft:glowstone",
+      "glint": true,
+      "model": "minecraft:glowstone"
+    },
+    "ENCHANTED_GLOWSTONE_DUST": {
+      "item": "minecraft:glowstone_dust",
+      "glint": true,
+      "model": "minecraft:glowstone_dust"
+    },
+    "ENCHANTED_GOLD": {
+      "item": "minecraft:gold_ingot",
+      "glint": true,
+      "model": "minecraft:gold_ingot"
+    },
+    "ENCHANTED_GOLDEN_CARROT": {
+      "item": "minecraft:golden_carrot",
+      "glint": true,
+      "model": "minecraft:golden_carrot"
+    },
+    "ENCHANTED_GOLD_BLOCK": {
+      "item": "minecraft:gold_block",
+      "glint": true,
+      "model": "minecraft:gold_block"
+    },
+    "ENCHANTED_GRILLED_PORK": {
+      "item": "minecraft:cooked_porkchop",
+      "glint": true,
+      "model": "minecraft:cooked_porkchop"
+    },
+    "ENCHANTED_GUNPOWDER": {
+      "item": "minecraft:gunpowder",
+      "glint": true,
+      "model": "minecraft:gunpowder"
+    },
+    "ENCHANTED_HARD_STONE": {
+      "item": "minecraft:stone",
+      "glint": true,
+      "model": "minecraft:stone"
+    },
+    "ENCHANTED_HAY_BALE": {
+      "item": "minecraft:hay_block",
+      "glint": true,
+      "model": "minecraft:hay_block"
+    },
+    "ENCHANTED_HELIX_LOG": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "minecraft:stripped_mangrove_log"
+    },
+    "ENCHANTED_HONEYCOMB": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "minecraft:honeycomb"
+    },
+    "ENCHANTED_HONEYCOMB_BLOCK": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "minecraft:honeycomb_block"
+    },
+    "ENCHANTED_HUGE_MUSHROOM_1": {
+      "item": "minecraft:brown_mushroom_block",
+      "glint": true,
+      "model": "minecraft:brown_mushroom_block"
+    },
+    "ENCHANTED_HUGE_MUSHROOM_2": {
+      "item": "minecraft:red_mushroom_block",
+      "glint": true,
+      "model": "minecraft:red_mushroom_block"
+    },
+    "ENCHANTED_ICE": {
+      "item": "minecraft:ice",
+      "glint": true,
+      "model": "minecraft:ice"
+    },
+    "ENCHANTED_INK_SACK": {
+      "item": "minecraft:dye",
+      "glint": true,
+      "model": "minecraft:ink_sac"
+    },
+    "ENCHANTED_IRON": {
+      "item": "minecraft:iron_ingot",
+      "glint": true,
+      "model": "minecraft:iron_ingot"
+    },
+    "ENCHANTED_IRON_BLOCK": {
+      "item": "minecraft:iron_block",
+      "glint": true,
+      "model": "minecraft:iron_block"
+    },
+    "ENCHANTED_JUNGLE_LOG": {
+      "item": "minecraft:log",
+      "glint": true,
+      "model": "minecraft:jungle_log"
+    },
+    "ENCHANTED_LAPIS_LAZULI": {
+      "item": "minecraft:dye",
+      "glint": true,
+      "model": "minecraft:lapis_lazuli"
+    },
+    "ENCHANTED_LAPIS_LAZULI_BLOCK": {
+      "item": "minecraft:lapis_block",
+      "glint": true,
+      "model": "minecraft:lapis_block"
+    },
+    "ENCHANTED_LEATHER": {
+      "item": "minecraft:leather",
+      "glint": true,
+      "model": "minecraft:leather"
+    },
+    "ENCHANTED_MAGMA_CREAM": {
+      "item": "minecraft:magma_cream",
+      "glint": true,
+      "model": "minecraft:magma_cream"
+    },
+    "ENCHANTED_MANGROVE_LOG": {
+      "item": "minecraft:skull",
+      "glint": true,
+      "model": "minecraft:mangrove_log",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcxNjQzNTg4ODgxMiwKICAicHJvZmlsZUlkIiA6ICIzNjQ4MzkyNGRmNjQ0ZDlmYTM0NjcyYTRhMWRlYmU2MiIsCiAgInByb2ZpbGVOYW1lIiA6ICJKdWFuQXRpbnM3OSIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS8zOWMxNzE5OGVhMGI2YmJhMzQwM2UzYzBlNGMzZGE0MWYxNjZkNzRiOWFmMTA1OGM4NmI2ZGM0ZDFhZGJhNWMiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "ENCHANTED_MELON": {
+      "item": "minecraft:melon",
+      "glint": true,
+      "model": "minecraft:melon_slice"
+    },
+    "ENCHANTED_MELON_BLOCK": {
+      "item": "minecraft:melon_block",
+      "glint": true,
+      "model": "minecraft:melon"
+    },
+    "ENCHANTED_MITHRIL": {
+      "item": "minecraft:prismarine_crystals",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/mithril"
+    },
+    "ENCHANTED_MOONFLOWER": {
+      "item": "minecraft:red_flower",
+      "glint": true,
+      "model": "minecraft:blue_orchid"
+    },
+    "ENCHANTED_MUTTON": {
+      "item": "minecraft:mutton",
+      "glint": true,
+      "model": "minecraft:mutton"
+    },
+    "ENCHANTED_MYCELIUM": {
+      "item": "minecraft:mycelium",
+      "glint": true,
+      "model": "minecraft:mycelium"
+    },
+    "ENCHANTED_MYCELIUM_CUBE": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/enchanted_mycelium_cube"
+    },
+    "ENCHANTED_NETHERRACK": {
+      "item": "minecraft:netherrack",
+      "glint": true,
+      "model": "minecraft:netherrack"
+    },
+    "ENCHANTED_NETHER_STALK": {
+      "item": "minecraft:nether_wart",
+      "glint": true,
+      "model": "minecraft:nether_wart"
+    },
+    "ENCHANTED_OAK_LOG": {
+      "item": "minecraft:log",
+      "glint": true,
+      "model": "minecraft:oak_log"
+    },
+    "ENCHANTED_OBSIDIAN": {
+      "item": "minecraft:obsidian",
+      "glint": true,
+      "model": "minecraft:obsidian"
+    },
+    "ENCHANTED_PACKED_ICE": {
+      "item": "minecraft:packed_ice",
+      "glint": true,
+      "model": "minecraft:packed_ice"
+    },
+    "ENCHANTED_POISONOUS_POTATO": {
+      "item": "minecraft:poisonous_potato",
+      "glint": true,
+      "model": "minecraft:poisonous_potato"
+    },
+    "ENCHANTED_POPPY": {
+      "item": "minecraft:red_flower",
+      "glint": true,
+      "model": "minecraft:poppy"
+    },
+    "ENCHANTED_PORK": {
+      "item": "minecraft:porkchop",
+      "glint": true,
+      "model": "minecraft:porkchop"
+    },
+    "ENCHANTED_POTATO": {
+      "item": "minecraft:potato",
+      "glint": true,
+      "model": "minecraft:potato"
+    },
+    "ENCHANTED_PRISMARINE_CRYSTALS": {
+      "item": "minecraft:prismarine_crystals",
+      "glint": true,
+      "model": "minecraft:prismarine_crystals"
+    },
+    "ENCHANTED_PRISMARINE_SHARD": {
+      "item": "minecraft:prismarine_shard",
+      "glint": true,
+      "model": "minecraft:prismarine_shard"
+    },
+    "ENCHANTED_PUFFERFISH": {
+      "item": "minecraft:fish",
+      "glint": true,
+      "model": "minecraft:pufferfish"
+    },
+    "ENCHANTED_PUMPKIN": {
+      "item": "minecraft:pumpkin",
+      "glint": true,
+      "model": "minecraft:carved_pumpkin"
+    },
+    "ENCHANTED_QUARTZ": {
+      "item": "minecraft:quartz",
+      "glint": true,
+      "model": "minecraft:quartz"
+    },
+    "ENCHANTED_QUARTZ_BLOCK": {
+      "item": "minecraft:quartz_block",
+      "glint": true,
+      "model": "minecraft:quartz_block"
+    },
+    "ENCHANTED_RABBIT": {
+      "item": "minecraft:rabbit",
+      "glint": true,
+      "model": "minecraft:rabbit"
+    },
+    "ENCHANTED_RABBIT_FOOT": {
+      "item": "minecraft:rabbit_foot",
+      "glint": true,
+      "model": "minecraft:rabbit_foot"
+    },
+    "ENCHANTED_RABBIT_HIDE": {
+      "item": "minecraft:rabbit_hide",
+      "glint": true,
+      "model": "minecraft:rabbit_hide"
+    },
+    "ENCHANTED_RAW_BEEF": {
+      "item": "minecraft:beef",
+      "glint": true,
+      "model": "minecraft:beef"
+    },
+    "ENCHANTED_RAW_CHICKEN": {
+      "item": "minecraft:chicken",
+      "glint": true,
+      "model": "minecraft:chicken"
+    },
+    "ENCHANTED_RAW_FISH": {
+      "item": "minecraft:fish",
+      "glint": true,
+      "model": "minecraft:cod"
+    },
+    "ENCHANTED_RAW_SALMON": {
+      "item": "minecraft:fish",
+      "glint": true,
+      "model": "minecraft:salmon"
+    },
+    "ENCHANTED_REDSTONE": {
+      "item": "minecraft:redstone",
+      "glint": true,
+      "model": "minecraft:redstone"
+    },
+    "ENCHANTED_REDSTONE_BLOCK": {
+      "item": "minecraft:redstone_block",
+      "glint": true,
+      "model": "minecraft:redstone_block"
+    },
+    "ENCHANTED_RED_MUSHROOM": {
+      "item": "minecraft:red_mushroom",
+      "glint": true,
+      "model": "minecraft:red_mushroom"
+    },
+    "ENCHANTED_RED_SAND": {
+      "item": "minecraft:sand",
+      "glint": true,
+      "model": "minecraft:red_sand"
+    },
+    "ENCHANTED_RED_SAND_CUBE": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/enchanted_red_sand_cube"
+    },
+    "ENCHANTED_ROTTEN_FLESH": {
+      "item": "minecraft:rotten_flesh",
+      "glint": true,
+      "model": "minecraft:rotten_flesh"
+    },
+    "ENCHANTED_RUBY_VEILSHROOM": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_3/resources/ruby_veilshroom"
+    },
+    "ENCHANTED_SAND": {
+      "item": "minecraft:sand",
+      "glint": true,
+      "model": "minecraft:sand"
+    },
+    "ENCHANTED_SEA_LUMIES": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/resources/sea_lumies"
+    },
+    "ENCHANTED_SEEDS": {
+      "item": "minecraft:wheat_seeds",
+      "glint": true,
+      "model": "minecraft:wheat_seeds"
+    },
+    "ENCHANTED_SHARK_FIN": {
+      "item": "minecraft:prismarine_shard",
+      "glint": true,
+      "model": "hypixel_skyblock:item/community_center/mayor/marina/shark_fin"
+    },
+    "ENCHANTED_SLIME_BALL": {
+      "item": "minecraft:slime_ball",
+      "glint": true,
+      "model": "minecraft:slime_ball"
+    },
+    "ENCHANTED_SLIME_BLOCK": {
+      "item": "minecraft:slime",
+      "glint": true,
+      "model": "minecraft:slime_block"
+    },
+    "ENCHANTED_SNOW_BLOCK": {
+      "item": "minecraft:snow",
+      "glint": true,
+      "model": "minecraft:snow_block"
+    },
+    "ENCHANTED_SPIDER_EYE": {
+      "item": "minecraft:spider_eye",
+      "glint": true,
+      "model": "minecraft:spider_eye"
+    },
+    "ENCHANTED_SPONGE": {
+      "item": "minecraft:sponge",
+      "glint": true,
+      "model": "minecraft:sponge"
+    },
+    "ENCHANTED_SPRUCE_LOG": {
+      "item": "minecraft:log",
+      "glint": true,
+      "model": "minecraft:spruce_log"
+    },
+    "ENCHANTED_STRING": {
+      "item": "minecraft:string",
+      "glint": true,
+      "model": "minecraft:string"
+    },
+    "ENCHANTED_SUGAR": {
+      "item": "minecraft:sugar",
+      "glint": true,
+      "model": "minecraft:sugar"
+    },
+    "ENCHANTED_SUGAR_CANE": {
+      "item": "minecraft:reeds",
+      "glint": true,
+      "model": "minecraft:sugar_cane"
+    },
+    "ENCHANTED_SULPHUR": {
+      "item": "minecraft:glowstone_dust",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/sulphur"
+    },
+    "ENCHANTED_SULPHUR_CUBE": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/enchanted_sulphur_cube"
+    },
+    "ENCHANTED_SUNFLOWER": {
+      "item": "minecraft:double_plant",
+      "glint": true,
+      "model": "minecraft:sunflower"
+    },
+    "ENCHANTED_TENDER_WOOD": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/tender_wood"
+    },
+    "ENCHANTED_TITANIUM": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/titanium"
+    },
+    "ENCHANTED_TUNGSTEN": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/glacite/tungsten/tungsten"
+    },
+    "ENCHANTED_UMBER": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/glacite/umber/umber"
+    },
+    "ENCHANTED_VINESAP": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/vinesap"
+    },
+    "ENCHANTED_WATER_LILY": {
+      "item": "minecraft:waterlily",
+      "glint": true,
+      "model": "minecraft:lily_pad"
+    },
+    "ENCHANTED_WET_SPONGE": {
+      "item": "minecraft:sponge",
+      "glint": true,
+      "model": "minecraft:wet_sponge"
+    },
+    "ENCHANTED_WHEAT": {
+      "item": "minecraft:wheat",
+      "glint": true,
+      "model": "minecraft:wheat"
+    },
+    "ENCHANTED_WILD_ROSE": {
+      "item": "minecraft:double_plant",
+      "glint": true,
+      "model": "minecraft:rose_bush"
+    },
+    "ENCHANTED_WOOL": {
+      "item": "minecraft:wool",
+      "glint": true,
+      "model": "minecraft:white_wool"
+    },
+    "ENDER_PEARL": {
+      "item": "minecraft:ender_pearl",
+      "glint": false,
+      "model": "minecraft:ender_pearl"
+    },
+    "ENDER_STONE": {
+      "item": "minecraft:end_stone",
+      "glint": false,
+      "model": "minecraft:end_stone"
+    },
+    "ENDSTONE_ROSE": {
+      "item": "minecraft:red_flower",
+      "glint": true,
+      "model": "minecraft:poppy"
+    },
+    "ETHEREAL_VINE": {
+      "item": "minecraft:vine",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/greenhouse/ethereal_vine"
+    },
+    "EXPLODING_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/exploding_frog_bronze"
+    },
+    "EXPLODING_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/exploding_frog_silver"
+    },
+    "FEASTFUNGUS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/feastfungus"
+    },
+    "FEATHER": {
+      "item": "minecraft:feather",
+      "glint": false,
+      "model": "minecraft:feather"
+    },
+    "FEL_PEARL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/fel_pearl"
+    },
+    "FERMENTO": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/fermento",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY2MjUwMjkxNjU1MiwKICAicHJvZmlsZUlkIiA6ICIwOTZkYWUzZWY1MmU0YWU4ODk3ODY2N2EyOGIwZWFhNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJHd0FiaXlCZ2dnIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2NiNDFkYWViNTdkMmFlNjJjNjZlNThlYjZkZWJiMmE3ZDQ0NmUzNDU0MWE3NzEzNTA3MjhjOWRiMTViZWFmYmEiCiAgICB9CiAgfQp9"
+    },
+    "FESTERING_FLY": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk1ODA3MiwKICAicHJvZmlsZUlkIiA6ICI1ZjU5NmViY2JlOTQ0NmQxYmI0M2JlNGYzZjRiOGJlNSIsCiAgInByb2ZpbGVOYW1lIiA6ICJUZWlsMHNzIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2YwOTY4MzcwNDc5NjYxYjc0NjVjZTJkYTQxODk1YTQxOGIwMzgxNmFiMGYyYTk4Y2NlN2ZkZTIwNzE0NDVmMzIiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "FIGSTONE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/logs/stacked/figstone"
+    },
+    "FIG_LOG": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:stripped_spruce_log",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcxNjQzNTYzNjIzMSwKICAicHJvZmlsZUlkIiA6ICJmMjc0YzRkNjI1MDQ0ZTQxOGVmYmYwNmM3NWIyMDIxMyIsCiAgInByb2ZpbGVOYW1lIiA6ICJIeXBpZ3NlbCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS83NDA3OGRhOWI5MzgyZTI3MmMzOTFiYTAxZTIwMGU2YzE3NWNmZWNkNGNjNWQwN2VlYmQ1ODNkYzA2MmYwMGQwIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "FINE_AMBER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amber/fine_amber_gem"
+    },
+    "FINE_AMETHYST_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amethyst/fine_amethyst_gem"
+    },
+    "FINE_AQUAMARINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/aquamarine/fine_aquamarine_gem"
+    },
+    "FINE_CITRINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/citrine/fine_citrine_gem"
+    },
+    "FINE_FLOUR": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/community_center/mayor/finnegan/fine_flour"
+    },
+    "FINE_JADE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jade/fine_jade_gem"
+    },
+    "FINE_JASPER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jasper/fine_jasper_gem"
+    },
+    "FINE_ONYX_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/onyx/fine_onyx_gem"
+    },
+    "FINE_OPAL_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/gemstones/fine_opal_gem"
+    },
+    "FINE_PERIDOT_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/peridot/fine_peridot_gem"
+    },
+    "FINE_RUBY_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/ruby/fine_ruby_gem"
+    },
+    "FINE_SAPPHIRE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/sapphire/fine_sapphire_gem"
+    },
+    "FINE_TOPAZ_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/topaz/fine_topaz_gem"
+    },
+    "FISHY_TREAT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTczNjQyNzQ5OTU5MywKICAicHJvZmlsZUlkIiA6ICIwNTAzNzZmZjAxY2I0OGVjOTUwM2NhMjhjMWU2MzlkMSIsCiAgInByb2ZpbGVOYW1lIiA6ICJKb25haDU1OTAiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOGQ1NjU2ODZlY2E2ZWNmOTJjZjc2N2E4MjA5MWE4NTUxNGRlNzJlNDM5ODAyNzUzZmViZmE0MjdiOThjZTdmNCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "FISH_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/fish_bait"
+    },
+    "FLAMES": {
+      "item": "minecraft:blaze_powder",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/flames"
+    },
+    "FLAMING_HEART": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/flaming_heart"
+    },
+    "FLAWED_AMBER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amber/flawed_amber_gem"
+    },
+    "FLAWED_AMETHYST_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amethyst/flawed_amethyst_gem"
+    },
+    "FLAWED_AQUAMARINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/aquamarine/flawed_aquamarine_gem"
+    },
+    "FLAWED_CITRINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/citrine/flawed_citrine_gem"
+    },
+    "FLAWED_JADE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jade/flawed_jade_gem"
+    },
+    "FLAWED_JASPER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jasper/flawed_jasper_gem"
+    },
+    "FLAWED_ONYX_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/onyx/flawed_onyx_gem"
+    },
+    "FLAWED_OPAL_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/gemstones/flawed_opal_gem"
+    },
+    "FLAWED_PERIDOT_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/peridot/flawed_peridot_gem"
+    },
+    "FLAWED_RUBY_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/ruby/flawed_ruby_gem"
+    },
+    "FLAWED_SAPPHIRE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/sapphire/flawed_sapphire_gem"
+    },
+    "FLAWED_TOPAZ_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/topaz/flawed_topaz_gem"
+    },
+    "FLESHTRAP": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjI1Njc0OCwKICAicHJvZmlsZUlkIiA6ICJjNWVmOGQ1NDIwOWY0OTdlYWYzYzA1NjA3MjZhYTMwNSIsCiAgInByb2ZpbGVOYW1lIiA6ICJNaXNoX0RheCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9jN2Y0NWY2Y2IyZTRiYmY0NWM1NTM3YzRkYzMwNTVhMzIzMDIxZDYyZGI3ZDkxY2M2MGJlYjAyOTU2NDAxZmI5IiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0"
+    },
+    "FLEXBONE": {
+      "item": "minecraft:bone",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/flexbone"
+    },
+    "FLINT": {
+      "item": "minecraft:flint",
+      "glint": false,
+      "model": "minecraft:flint"
+    },
+    "FLORAL_GELATIN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:honey_bottle"
+    },
+    "FLYFISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/flyfish_bronze"
+    },
+    "FLYFISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/flyfish_silver"
+    },
+    "FRIED_FEATHER": {
+      "item": "minecraft:feather",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/fried_feather"
+    },
+    "FROGCOIN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/frogcoin"
+    },
+    "FROG_LEGS": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk2MjE3MywKICAicHJvZmlsZUlkIiA6ICJjNWVmOGQ1NDIwOWY0OTdlYWYzYzA1NjA3MjZhYTMwNSIsCiAgInByb2ZpbGVOYW1lIiA6ICJNaXNoX0RheCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9jMDc2MTY4MTZjYmZiOWMyODdkZDY0NDVhMTI2NzgzMWViZWQ3MGU4OGE3NGRlY2QyNGI4ZGFhNjYxZDQ5OGU0IiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "FROZEN_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/frozen_bait"
+    },
+    "FTX_3070": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/ftx_3070"
+    },
+    "FUNNY_BONE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk1MzMyNCwKICAicHJvZmlsZUlkIiA6ICI4OGMyOGYwOTY3MjU0NmNkYTg3ZjVhMTc0ODU0MzExYiIsCiAgInByb2ZpbGVOYW1lIiA6ICJOaXRlQ2F2ZSIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS8xZThmMzZiMjcxNWFlNGQ4OTdhY2RhN2YwNmNiMmIwNTNkZTUzMjg4NjllM2ZhNzYwOGVmNWVjNzUyMzhhZDJkIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "GAZING_PEARL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/gazing_pearl"
+    },
+    "GELATINOUS_GLOOP": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk1NDU0MCwKICAicHJvZmlsZUlkIiA6ICJjM2ZmNTY5OWZlNWI0OTY2YTYzYzdhMTEzNTBjZGIyNSIsCiAgInByb2ZpbGVOYW1lIiA6ICJUZWNobzkwMDAiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDNlOWU5YjBhOWI1N2E0N2Q0MmNiNWRhNjFlNmU2MzRiZDNjZDVhN2FjNjc0MTI1NDJkNTUxZDk0NWIwNTFmNyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "GHAST_TEAR": {
+      "item": "minecraft:ghast_tear",
+      "glint": false,
+      "model": "minecraft:ghast_tear"
+    },
+    "GIANT_FRAGMENT_BIGFOOT": {
+      "item": "minecraft:lead",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/bigfoots_bola"
+    },
+    "GIANT_FRAGMENT_BOULDER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/jolly_pink_rock"
+    },
+    "GIANT_FRAGMENT_LASER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/lasr_eye"
+    },
+    "GILL_MEMBRANE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/resources/gill_membrane"
+    },
+    "GLACIAL_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/island_relevant/winter/glacial_fragment"
+    },
+    "GLACIATED_BRAINS": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk1MTQwNCwKICAicHJvZmlsZUlkIiA6ICIxN2Q0ODA1ZDRmMTA0YTA5OWRiYzJmNzYzMDNjYmRkZiIsCiAgInByb2ZpbGVOYW1lIiA6ICJnaWZ0bWV0b25uZXMiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTI1MmMxZGQ5NGE2YTZiNmUwZGI1NmFlYThiMmU5N2E2N2JjZWM1MmUyZDgzODQ2OWQ3YjY1OTExNzZjZjZmOSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "GLACITE": {
+      "item": "minecraft:packed_ice",
+      "glint": false,
+      "model": "hypixel_skyblock:item/glacite/glacite/glacite"
+    },
+    "GLACITE_JEWEL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/glacite_jewel"
+    },
+    "GLASSCORN": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjI2MDY0OCwKICAicHJvZmlsZUlkIiA6ICJmNThkZWJkNTlmNTA0MjIyOGY2MDIyMjExZDRjMTQwYyIsCiAgInByb2ZpbGVOYW1lIiA6ICJ1bnZlbnRpdmV0YWxlbnQiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjk3ZGUyNzMzOGI5Zjg3NmU1NzBkMWNjMDFmZTFiZWNjZmM5NDA0NjdjNWM5N2M0NjdlOTNlNzljODFjMjVlZSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "GLOOMGOURD": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2NTQ2MTk4MiwKICAicHJvZmlsZUlkIiA6ICJhODMwMTUxNzNlOGQ0MWEyOGY0ZDk1ZDM2Njc4MGJmNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTdGFybGl0R2FtZXMiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvN2Y2OTNlNDJiYTNiNzYzMjkyZTdkZTI2ZmQyYjBhMDhmY2VlM2JlYzJlMDE3MDc1ZGM2NmRmYzRhOTMyYWE2NCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "GLOSSY_GEMSTONE": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "hypixel_skyblock:item/community_center/mayor/cole/glossy_gemstone"
+    },
+    "GLOWING_MUSHROOM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/farming_1/glowing_mushroom"
+    },
+    "GLOWSTONE_DUST": {
+      "item": "minecraft:glowstone_dust",
+      "glint": false,
+      "model": "minecraft:glowstone_dust"
+    },
+    "GLOWSTONE_DUST_DISTILLATE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/minion/fuel/distillate/glowstone_distillate"
+    },
+    "GLOWY_CHUM_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/farming_1/glowy_chum_bait"
+    },
+    "GOBLIN_EGG": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/mining_3/goblins/eggs/goblin_egg"
+    },
+    "GOBLIN_EGG_BLUE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/mining_3/goblins/eggs/blue_goblin_egg"
+    },
+    "GOBLIN_EGG_GREEN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/mining_3/goblins/eggs/green_goblin_egg"
+    },
+    "GOBLIN_EGG_RED": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/mining_3/goblins/eggs/red_goblin_egg"
+    },
+    "GOBLIN_EGG_YELLOW": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/mining_3/goblins/eggs/yellow_goblin_egg"
+    },
+    "GODSEED": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MzAyMjQ5NjcyNiwKICAicHJvZmlsZUlkIiA6ICI0NTlhYTA1MmYxMTI0ZmFjYWQ3Y2Y4YjUwM2I2NzJiNiIsCiAgInByb2ZpbGVOYW1lIiA6ICJIdXpoYW4iLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOWQ2YmRkMDdhYmUzZjM5ODcyMGU1ZjAxMDY0OGMyYzE5NGEyYmEwZjVlZjNlMjcwMTNiMDY3MDMzNmViNGYzYyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "GOLDEN_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/golden_bait"
+    },
+    "GOLDEN_CARROT": {
+      "item": "minecraft:golden_carrot",
+      "glint": false,
+      "model": "minecraft:golden_carrot"
+    },
+    "GOLDEN_FISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/golden_fish_bronze"
+    },
+    "GOLDEN_FISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/golden_fish_silver"
+    },
+    "GOLDEN_TOOTH": {
+      "item": "minecraft:gold_nugget",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/wolf/golden_tooth"
+    },
+    "GOLD_INGOT": {
+      "item": "minecraft:gold_ingot",
+      "glint": false,
+      "model": "minecraft:gold_ingot"
+    },
+    "GOLEM_POPPY": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/ancient_rose"
+    },
+    "GRAVEL": {
+      "item": "minecraft:gravel",
+      "glint": false,
+      "model": "minecraft:gravel"
+    },
+    "GREEN_CANDY": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcyMDA0MzA4ODM1NSwKICAicHJvZmlsZUlkIiA6ICIyMWNjMzkxZmNkMjc0NzY5OTg5Y2M3M2VjYWRiNTE3YiIsCiAgInByb2ZpbGVOYW1lIiA6ICJHT1NUTFk5NyIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9lMzFjMGJkNzZhNjU1ZDVkOGZlYTViMDZkYWFmMWZiOGQ4MDYwYmYwODIzZWJiYzZlYjZmOTljOGVlNWEzNWFhIgogICAgfQogIH0KfQ=="
+    },
+    "GREEN_GIFT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTYwNTE4OTkwMTI3MywKICAicHJvZmlsZUlkIiA6ICJmZDYwZjM2ZjU4NjE0ZjEyYjNjZDQ3YzJkODU1Mjk5YSIsCiAgInByb2ZpbGVOYW1lIiA6ICJSZWFkIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzQ2ZjVjMTczOGQ1NTFjY2Y0NGZhYzJlODQ3ZmI1ZDZlOTY4M2E2NmMxZGI0YTAyMjNmZDQ1N2E4YmU5ZWI3NmYiCiAgICB9CiAgfQp9"
+    },
+    "GRIFFIN_FEATHER": {
+      "item": "minecraft:feather",
+      "glint": false,
+      "model": "minecraft:feather"
+    },
+    "GUSHER_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/gusher_bronze"
+    },
+    "GUSHER_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/gusher_silver"
+    },
+    "HALF_EATEN_MUSHROOM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/half_eaten_mushroom"
+    },
+    "HALLOWED_SKULL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/hallowed_skull"
+    },
+    "HARD_STONE": {
+      "item": "minecraft:stone",
+      "glint": false,
+      "model": "minecraft:stone"
+    },
+    "HAY_BLOCK": {
+      "item": "minecraft:hay_block",
+      "glint": false,
+      "model": "minecraft:hay_block"
+    },
+    "HEALING_TISSUE": {
+      "item": "minecraft:rotten_flesh",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/healing_tissue"
+    },
+    "HEAVY_PEARL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/heavy_pearl"
+    },
+    "HELIANTHUS": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/helianthus",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MDk4MzE2ODM3NiwKICAicHJvZmlsZUlkIiA6ICI2NmRmYzFmNTRlNTU0ZTZmODJjNTA5ZjM1NTJiYTkwZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJadWFyaWciLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYTk4YWM5MjI0NDkxYTlkZDQ4MDUzMWJkOTcxNTkxNzI0Y2UyOTkyMWVjOGYxNDE0NjEyNzZmMWJmM2E1OWVkMyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "HELIXIS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_3/logs/helixis"
+    },
+    "HELIX_LOG": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:stripped_mangrove_log"
+    },
+    "HEMOBOMB": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY2MDQ4NzMyNjMxNSwKICAicHJvZmlsZUlkIiA6ICJlM2I0NDVjODQ3ZjU0OGZiOGM4ZmEzZjFmN2VmYmE4ZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJNaW5pRGlnZ2VyVGVzdCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS85MDk4NzhiN2VjMjM5YmMxNTg2ZTIyMGI2YzEzMzdkMjI2MjY4ZWQ5OWQxMWZmZWMwMmRmZTNlNjBjY2I3MDYwIgogICAgfQogIH0KfQ=="
+    },
+    "HEMOGLASS": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTU5NDM0ODQwNjUxNiwKICAicHJvZmlsZUlkIiA6ICI5MWYwNGZlOTBmMzY0M2I1OGYyMGUzMzc1Zjg2ZDM5ZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJTdG9ybVN0b3JteSIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9iNDQ4YTRiYWUxNjQwMmJjOTVmZDJjMWUxYWU2YTYzMmM4NDc1ZDcyYmRmOTg2ZDM2ZjBiNzZiMWI3MDY2NjNjIgogICAgfQogIH0KfQ=="
+    },
+    "HEMOVIBE": {
+      "item": "minecraft:redstone_ore",
+      "glint": false,
+      "model": "minecraft:redstone_ore"
+    },
+    "HIGHLANDS_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/highlands_frog_bronze"
+    },
+    "HIGHLANDS_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/highlands_frog_silver"
+    },
+    "HOLY_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/holy_dragon_fragment"
+    },
+    "HONEYCOMB": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:honeycomb"
+    },
+    "HONEY_JAR": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/pests/honey_jar"
+    },
+    "HORN_OF_TAURUS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/horn_of_taurus"
+    },
+    "HOTSPOT_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/hotspot_bait"
+    },
+    "HOT_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/hot_bait"
+    },
+    "ICE": {
+      "item": "minecraft:ice",
+      "glint": false,
+      "model": "minecraft:ice"
+    },
+    "ICE_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/ice_bait"
+    },
+    "ICE_HUNK": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/hunk_of_ice"
+    },
+    "INFLATABLE_JERRY": {
+      "item": "minecraft:polar_bear_spawn_egg",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/inflatable_jerry"
+    },
+    "INK_SACK": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "minecraft:ink_sac"
+    },
+    "INK_SACK-2": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "minecraft:green_dye"
+    },
+    "INK_SACK-3": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "minecraft:cocoa_beans"
+    },
+    "INK_SACK-4": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "minecraft:lapis_lazuli"
+    },
+    "IRON_INGOT": {
+      "item": "minecraft:iron_ingot",
+      "glint": false,
+      "model": "minecraft:iron_ingot"
+    },
+    "JACK_O_LANTERN": {
+      "item": "minecraft:lit_pumpkin",
+      "glint": false,
+      "model": "minecraft:jack_o_lantern"
+    },
+    "JACOBS_TICKET": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/jacob/jacobs_ticket"
+    },
+    "JAWBREAKER": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk3MzgyNCwKICAicHJvZmlsZUlkIiA6ICJjYzU2NjAzYmZiZjg0OGJmOTM3MzY1N2VjYzUyNGI4NyIsCiAgInByb2ZpbGVOYW1lIiA6ICJpc2FhYWFhYV8iLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNTcwMWM1MDVhZGFjY2VmMGRiOTMzZTBmNDA2MTc2M2Y4MGVjMzUwN2RlZmU1ZGY2OGViMmMyMTgyODE5NmJjMyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "JELLY": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/jelly"
+    },
+    "JUNGLE_KEY": {
+      "item": "minecraft:tripwire_hook",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/jungle_key"
+    },
+    "KADA_LEAD": {
+      "item": "minecraft:lead",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/kada_lead"
+    },
+    "KARATE_FISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/karate_fish_bronze"
+    },
+    "KARATE_FISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/karate_fish_silver"
+    },
+    "KISMET_FEATHER": {
+      "item": "minecraft:feather",
+      "glint": true,
+      "model": "hypixel_skyblock:item/community_center/bits_shop/kismet_feather"
+    },
+    "KUUDRA_TEETH": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/kuudra_teeth"
+    },
+    "LAVA_HORSE_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/lava_horse_bronze"
+    },
+    "LAVA_HORSE_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/lava_horse_silver"
+    },
+    "LAVA_SHELL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/lava_shell"
+    },
+    "LEAP_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/leap_frog_bronze"
+    },
+    "LEAP_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/leap_frog_silver"
+    },
+    "LEATHER": {
+      "item": "minecraft:leather",
+      "glint": false,
+      "model": "minecraft:leather"
+    },
+    "LEATHER_CLOTH": {
+      "item": "minecraft:leather",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/leather_cloth"
+    },
+    "LIGHT_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/light_bait"
+    },
+    "LIVID_FRAGMENT": {
+      "item": "minecraft:netherbrick",
+      "glint": true,
+      "model": "minecraft:nether_brick"
+    },
+    "LOG": {
+      "item": "minecraft:log",
+      "glint": false,
+      "model": "minecraft:oak_log"
+    },
+    "LOG-1": {
+      "item": "minecraft:log",
+      "glint": false,
+      "model": "minecraft:spruce_log"
+    },
+    "LOG-2": {
+      "item": "minecraft:log",
+      "glint": false,
+      "model": "minecraft:birch_log"
+    },
+    "LOG-3": {
+      "item": "minecraft:log",
+      "glint": false,
+      "model": "minecraft:jungle_log"
+    },
+    "LOG_2": {
+      "item": "minecraft:log2",
+      "glint": false,
+      "model": "minecraft:acacia_log"
+    },
+    "LOG_2-1": {
+      "item": "minecraft:log2",
+      "glint": false,
+      "model": "minecraft:dark_oak_log"
+    },
+    "LONELILY": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2NTQ2NDI3NywKICAicHJvZmlsZUlkIiA6ICIwMzQ2N2E0Yzc5ZGU0ZGM5YTQ4NzU5MGY5NmEwODFmMiIsCiAgInByb2ZpbGVOYW1lIiA6ICJTaGFrYVlhbWkiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZjQ2NzJkNWZiMTI4YzYzMTk3ZGEyN2Y0MGQ3MTQzODE4ZDMxODY2NWIzYWIyMzM1MTIxZTlhZThmOWVjYzJlMyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "LOTUS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/lotus/lotus"
+    },
+    "LOTUS_GOLD": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/lotus/gold_lotus"
+    },
+    "LOTUS_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/lotus/silver_lotus"
+    },
+    "LUMINO_FIBER": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/lumino_fiber"
+    },
+    "LUMP_OF_MAGMA": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/lump_of_magma"
+    },
+    "LUSHLILAC": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/salts/lushlilac"
+    },
+    "MAGIC_JELLYBEAN": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MzAyMjYxNTkzNywKICAicHJvZmlsZUlkIiA6ICIzMzU3MWJiY2UyMDE0MTRiYmNkMDYyMjEyZTI4MjBlMyIsCiAgInByb2ZpbGVOYW1lIiA6ICJUaGFkb21JbmF0b3I0NzgiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzUyNmE1NmI4MGY1NmE2ODcwZjg5MWQxZDQ2ZmE3ZjhjNzE0OTRjYWQyNGU5NDMyNmRhODRiMzgyOTQxN2I4MSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "MAGMAG": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/magmag"
+    },
+    "MAGMA_CHUNK": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/magma_chunk"
+    },
+    "MAGMA_CREAM": {
+      "item": "minecraft:magma_cream",
+      "glint": false,
+      "model": "minecraft:magma_cream"
+    },
+    "MAGMA_CREAM_DISTILLATE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/minion/fuel/distillate/magma_cream_distillate"
+    },
+    "MAGMA_FISH": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/magmafish_bronze"
+    },
+    "MAGMA_FISH_GOLD": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/magmafish_gold"
+    },
+    "MAGMA_FISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/magmafish_silver"
+    },
+    "MANA_RAY_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/mana_ray_bronze"
+    },
+    "MANA_RAY_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/mana_ray_silver"
+    },
+    "MANGCORE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/logs/stacked/mangcore"
+    },
+    "MANGROVE_LOG": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:mangrove_log",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcxNjQzNTg1ODY5MCwKICAicHJvZmlsZUlkIiA6ICIyMWUzNjdkNzI1Y2Y0ZTNiYjI2OTJjNGEzMDBhNGRlYiIsCiAgInByb2ZpbGVOYW1lIiA6ICJHZXlzZXJNQyIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9iMTgwZmI4NzA5OGY4YzMxOTM0ODY0OWQxOGEwMmEzYTc3M2EwNTlhNjBhMmNiZTYxMzgwYmFiMTkxZWMwZDdkIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "MATCH_STICKS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/match_sticks"
+    },
+    "MELON": {
+      "item": "minecraft:melon",
+      "glint": false,
+      "model": "minecraft:melon_slice"
+    },
+    "MELON_JUICE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:beetroot_soup"
+    },
+    "MILLENIA_OLD_BLAZE_ASHES": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/millenia_old_blaze_ashes"
+    },
+    "MIMIC_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/mimic_fragment"
+    },
+    "MINNOW_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/minnow_bait"
+    },
+    "MIRIA_COUPON": {
+      "item": "minecraft:name_tag",
+      "glint": false,
+      "model": "minecraft:name_tag"
+    },
+    "MIRIA_PRIZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_3/starlyn/mirias_prize"
+    },
+    "MITE_GEL": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/combat_3/mite_gel"
+    },
+    "MITHRIL_ORE": {
+      "item": "minecraft:prismarine_crystals",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/mithril"
+    },
+    "MOLDFIN_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/moldfin_bronze"
+    },
+    "MOLDFIN_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/moldfin_silver"
+    },
+    "MOLTEN_POWDER": {
+      "item": "minecraft:blaze_powder",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/blaze/tokens/molten_powder"
+    },
+    "MOOGMA_PELT": {
+      "item": "minecraft:leather",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/moogma_pelt"
+    },
+    "MOONFLOWER": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:blue_orchid"
+    },
+    "MUTANT_NETHER_STALK": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/mutant_nether_wart"
+    },
+    "MUTATED_BLAZE_ASHES": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/mutated_blaze_ashes"
+    },
+    "MUTTON": {
+      "item": "minecraft:mutton",
+      "glint": false,
+      "model": "minecraft:mutton"
+    },
+    "MYCEL": {
+      "item": "minecraft:mycelium",
+      "glint": false,
+      "model": "minecraft:mycelium"
+    },
+    "MYTHOS_FRAGMENT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1MjUyMjI2MzU3NCwKICAicHJvZmlsZUlkIiA6ICJmODY0ZjY3ZGJlN2Y0OTBlYTZlODQzMjg2M2NkZWMxOCIsCiAgInByb2ZpbGVOYW1lIiA6ICJCb3lmcmllbmQ1MDY1IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzdjNWUyOTIzYjQ0ZDdjOGZlNzI1NzM1YzM0MTVkNDBjZmM5NWI4ZDcwZGYxMTVmNTYzMzU1MWVjYjFhZTY1ZTQiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "NETHERRACK": {
+      "item": "minecraft:netherrack",
+      "glint": false,
+      "model": "minecraft:netherrack"
+    },
+    "NETHER_STALK": {
+      "item": "minecraft:nether_wart",
+      "glint": false,
+      "model": "minecraft:nether_wart"
+    },
+    "NETHER_STALK_DISTILLATE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/minion/fuel/distillate/nether_wart_distillate"
+    },
+    "NEVER_MELT_ICE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgyMjk1MDI1NCwKICAicHJvZmlsZUlkIiA6ICIzMjFjNTBiMjJhY2Q0OGUxOGEyMGU0N2I2ZThhYjE2ZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJsaWdodDEzMzM3IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzJiOWNkYWJmOGM2ZWZlMGUwMWIwZDhhMzNiNDEyMzI4MDdkMWY1NDYzNTZlY2ZmNjg2YzNiYTJmNDY2ZDhhNjAiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "NOCTILUME": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2Mjc3NjA2Mjk0OCwKICAicHJvZmlsZUlkIiA6ICJmM2VlZmVlYTk1NTU0MzhhODllNWQyNjMwZjVhNDUyNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTcG9va3lBdG9tMDkwNDIiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjFiMTg0OTNkNTBmZjg5NzJmN2VmMzU5ODkzZDkwNjNmZGM1NGNiODIyYzY3OTAwMjk1N2MyOTRmYzhiMDAwNSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "NULL_ATOM": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/enderman/crafts/null_atom"
+    },
+    "NULL_OVOID": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/enderman/null_ovoid"
+    },
+    "NULL_SPHERE": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/enderman/null_sphere"
+    },
+    "NURSE_SHARK_TOOTH": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "hypixel_skyblock:item/community_center/mayor/marina/nurse_shark_tooth"
+    },
+    "OBFUSCATED_FISH_1_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_1_bronze"
+    },
+    "OBFUSCATED_FISH_1_DIAMOND": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_1_diamond"
+    },
+    "OBFUSCATED_FISH_1_GOLD": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_1_gold"
+    },
+    "OBFUSCATED_FISH_1_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_1_silver"
+    },
+    "OBFUSCATED_FISH_2_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_2_bronze"
+    },
+    "OBFUSCATED_FISH_2_DIAMOND": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_2_diamond"
+    },
+    "OBFUSCATED_FISH_2_GOLD": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_2_gold"
+    },
+    "OBFUSCATED_FISH_2_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_2_silver"
+    },
+    "OBFUSCATED_FISH_3_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_3_bronze"
+    },
+    "OBFUSCATED_FISH_3_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/obfuscated_fish_3_silver"
+    },
+    "OBSIDIAN": {
+      "item": "minecraft:obsidian",
+      "glint": false,
+      "model": "minecraft:obsidian"
+    },
+    "OIL_BARREL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/oil_barrel"
+    },
+    "OLD_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/old_dragon_fragment"
+    },
+    "OLD_LEATHER_BOOT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/junk/old_leather_boot"
+    },
+    "ORB_OF_ENERGY": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/orb_of_energy"
+    },
+    "PACKED_ICE": {
+      "item": "minecraft:packed_ice",
+      "glint": false,
+      "model": "minecraft:packed_ice"
+    },
+    "PARTY_GIFT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcyMDA1MjUxMDY0MCwKICAicHJvZmlsZUlkIiA6ICI4YWFlYTdlYjViOWM0ZWEwODUxNWU3MDhhZGIxODBkNyIsCiAgInByb2ZpbGVOYW1lIiA6ICJNYVBhODA3MTEiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNDhhYTJmOWJmZmQ4ODUzNjQ2YzEzNzVkM2RlNzFiODE4N2JkNDI2MzMyZDlmOWQ3MTIyMTZmN2U5MmE5MzBkIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "PHANTOMLEAF": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2Mjc3NjA0MDE3MSwKICAicHJvZmlsZUlkIiA6ICI2NWI5NTU1YWQyMGU0NWM5YjFkNmU3MjQwNjU0NTBkNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJNSEZfTWVybCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9lMWMyMDZhYjA1Y2JhYzRhMjJmNTRmODc3OGMzYmZiZDg3MGYxOWMzODAxNzZmMjg4NjE0Yzc3ZDE5YjVkMTIyIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "PIXIE_DUST": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTU0Mjg1MywKICAicHJvZmlsZUlkIiA6ICI2NmRmYzFmNTRlNTU0ZTZmODJjNTA5ZjM1NTJiYTkwZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJadWFyaWciLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGEwMmExNDQ4ZTJkMDEyYWY2MTRhNjJmYzFhYjBkOWZjNWJhMDVlZDc3N2Y1ZmUxYTM3ZmQ2MmQ2ZDMzYmE3MSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "PLANTBOY_ADVANCE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2NTQ1Mjg5OSwKICAicHJvZmlsZUlkIiA6ICIzZmM3ZmRmOTM5NjM0YzQxOTExOTliYTNmN2NjM2ZlZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJZZWxlaGEiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzY1YWNjYjE5NWFhZDBkNzIxMmVlZGQ2NDdlM2Y4MGVkNWQ0YWNkZmZlNDMyOWVhZDA3NGY3NTg3ZjM2NjQ1NyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "PLANT_MATTER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/pests/plant_matter"
+    },
+    "PLASMA": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/plasma"
+    },
+    "POISONOUS_POTATO": {
+      "item": "minecraft:poisonous_potato",
+      "glint": false,
+      "model": "minecraft:poisonous_potato"
+    },
+    "POLISHED_PUMPKIN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/polished_pumpkin"
+    },
+    "PORK": {
+      "item": "minecraft:porkchop",
+      "glint": false,
+      "model": "minecraft:porkchop"
+    },
+    "POTATO_ITEM": {
+      "item": "minecraft:potato",
+      "glint": false,
+      "model": "minecraft:potato"
+    },
+    "PRECURSOR_APPARATUS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/precursor_apparatus"
+    },
+    "PRISMARINE_CRYSTALS": {
+      "item": "minecraft:prismarine_crystals",
+      "glint": false,
+      "model": "minecraft:prismarine_crystals"
+    },
+    "PRISMARINE_SHARD": {
+      "item": "minecraft:prismarine_shard",
+      "glint": false,
+      "model": "minecraft:prismarine_shard"
+    },
+    "PROTECTOR_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/protector_dragon_fragment"
+    },
+    "PUDDLE_JUMPER_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/puddle_jumper_bronze"
+    },
+    "PUDDLE_JUMPER_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/puddle_jumper_silver"
+    },
+    "PUFFERCLOUD": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjI2Nzg1MywKICAicHJvZmlsZUlkIiA6ICJmODJmNTQ1MDIzZDA0MTFkYmVlYzU4YWI4Y2JlMTNjNyIsCiAgInByb2ZpbGVOYW1lIiA6ICJSZXNwb25kZW50cyIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS85YTQ4ODM0MGMzZDkxMzFiNmU5N2JhZTYyNzlhYWM4NTIwMzczNjdjYjkzYTZiNTBjNjBhN2QzMjhhZWMxNzNlIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "PUMPKIN": {
+      "item": "minecraft:pumpkin",
+      "glint": false,
+      "model": "minecraft:carved_pumpkin"
+    },
+    "PUMPKIN_GUTS": {
+      "item": "minecraft:pumpkin_seeds",
+      "glint": true,
+      "model": "minecraft:pumpkin_seeds"
+    },
+    "PURPLE_CANDY": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTYwMzQxNDc0NTAyNSwKICAicHJvZmlsZUlkIiA6ICIyYzEwNjRmY2Q5MTc0MjgyODRlM2JmN2ZhYTdlM2UxYSIsCiAgInByb2ZpbGVOYW1lIiA6ICJOYWVtZSIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS85MTYxMWQ4NzRlODc0ZTMyMmExMTk5YjNiN2I5ZTkzNGJiYjBkYmVkNTg3ZWU4ZmNkNmNjYzFiMDdlMjgxNjUxIgogICAgfQogIH0KfQ=="
+    },
+    "PYROCLASTIC_SCALE": {
+      "item": "minecraft:prismarine_shard",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/pyroclastic_scale"
+    },
+    "QUARTZ": {
+      "item": "minecraft:quartz",
+      "glint": false,
+      "model": "minecraft:quartz"
+    },
+    "RABBIT": {
+      "item": "minecraft:rabbit",
+      "glint": false,
+      "model": "minecraft:rabbit"
+    },
+    "RABBIT_FOOT": {
+      "item": "minecraft:rabbit_foot",
+      "glint": false,
+      "model": "minecraft:rabbit_foot"
+    },
+    "RABBIT_HIDE": {
+      "item": "minecraft:rabbit_hide",
+      "glint": false,
+      "model": "minecraft:rabbit_hide"
+    },
+    "RAW_BEEF": {
+      "item": "minecraft:beef",
+      "glint": false,
+      "model": "minecraft:beef"
+    },
+    "RAW_CHICKEN": {
+      "item": "minecraft:chicken",
+      "glint": false,
+      "model": "minecraft:chicken"
+    },
+    "RAW_FISH": {
+      "item": "minecraft:fish",
+      "glint": false,
+      "model": "minecraft:cod"
+    },
+    "RAW_FISH-1": {
+      "item": "minecraft:fish",
+      "glint": false,
+      "model": "minecraft:salmon"
+    },
+    "RAW_FISH-2": {
+      "item": "minecraft:fish",
+      "glint": false,
+      "model": "minecraft:tropical_fish"
+    },
+    "RAW_FISH-3": {
+      "item": "minecraft:fish",
+      "glint": false,
+      "model": "minecraft:pufferfish"
+    },
+    "RAW_SOULFLOW": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/raw_soulflow"
+    },
+    "REALITY_HOPPER_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/reality_hopper_bronze"
+    },
+    "REALITY_HOPPER_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/reality_hopper_silver"
+    },
+    "REDSTONE": {
+      "item": "minecraft:redstone",
+      "glint": false,
+      "model": "minecraft:redstone"
+    },
+    "RED_GIFT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTYwMzAwMjIxMjY2MCwKICAicHJvZmlsZUlkIiA6ICJmZDYwZjM2ZjU4NjE0ZjEyYjNjZDQ3YzJkODU1Mjk5YSIsCiAgInByb2ZpbGVOYW1lIiA6ICJSZWFkIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzM0OWIyZjA4YWM0ZTk4NGVjOTk5YjVlZTI2NDg1NGNjNmE2ZGZmMjNjYmM5NzU3OGVkMTA1MjFmZGNkMGU4MzIiCiAgICB9CiAgfQp9"
+    },
+    "RED_MUSHROOM": {
+      "item": "minecraft:red_mushroom",
+      "glint": false,
+      "model": "minecraft:red_mushroom"
+    },
+    "RED_ROSE": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:poppy"
+    },
+    "RED_ROSE-1": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:blue_orchid"
+    },
+    "RED_ROSE-2": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:allium"
+    },
+    "RED_ROSE-3": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:azure_bluet"
+    },
+    "RED_ROSE-4": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:red_tulip"
+    },
+    "RED_ROSE-5": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:orange_tulip"
+    },
+    "RED_ROSE-6": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:white_tulip"
+    },
+    "RED_ROSE-7": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:pink_tulip"
+    },
+    "RED_ROSE-8": {
+      "item": "minecraft:red_flower",
+      "glint": false,
+      "model": "minecraft:oxeye_daisy"
+    },
+    "REFINED_MINERAL": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "hypixel_skyblock:item/community_center/mayor/cole/refined_mineral"
+    },
+    "REKINDLED_EMBER_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/rekindled_ember_fragment"
+    },
+    "REVENANT_CATALYST": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/zombie/catalysts/revenant_catalyst"
+    },
+    "REVENANT_FLESH": {
+      "item": "minecraft:rotten_flesh",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/zombie/revenant_flesh"
+    },
+    "REVENANT_VISCERA": {
+      "item": "minecraft:cooked_porkchop",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/zombie/revenant_viscera"
+    },
+    "REVERSE_REFORGE_STONE_CORE": {
+      "item": "minecraft:clay_ball",
+      "glint": false,
+      "model": "minecraft:popped_chorus_fruit"
+    },
+    "RITUAL_RESIDUE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/combat_3/ritual_residue"
+    },
+    "ROBOTRON_REFLECTOR": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/robotron_reflector"
+    },
+    "ROTTED_LEAF": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2ODg0NjY3ODEzNywKICAicHJvZmlsZUlkIiA6ICIxODEzOTc2N2Q2YjU0N2E5OWY3M2M0ZjRmZjEzOTZhNCIsCiAgInByb2ZpbGVOYW1lIiA6ICJVc2FXaW1hIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzdlNGZmMTExODliZTE4N2U1NmZlNjg2YzQ5MzY0OTA5MjhjZGIzYWRiZjAzNjQ5MzFmZTQ1ODFmNzQyMzFjZGIiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "ROTTEN_FLESH": {
+      "item": "minecraft:rotten_flesh",
+      "glint": false,
+      "model": "minecraft:rotten_flesh"
+    },
+    "ROUGH_AMBER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amber/rough_amber_gem"
+    },
+    "ROUGH_AMETHYST_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amethyst/rough_amethyst_gem"
+    },
+    "ROUGH_AQUAMARINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/aquamarine/rough_aquamarine_gem"
+    },
+    "ROUGH_CITRINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/citrine/rough_citrine_gem"
+    },
+    "ROUGH_JADE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jade/rough_jade_gem"
+    },
+    "ROUGH_JASPER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jasper/rough_jasper_gem"
+    },
+    "ROUGH_ONYX_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/onyx/rough_onyx_gem"
+    },
+    "ROUGH_OPAL_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/gemstones/rough_opal_gem"
+    },
+    "ROUGH_PERIDOT_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/peridot/rough_peridot_gem"
+    },
+    "ROUGH_RUBY_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/ruby/rough_ruby_gem"
+    },
+    "ROUGH_SAPPHIRE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/sapphire/rough_sapphire_gem"
+    },
+    "ROUGH_TOPAZ_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/topaz/rough_topaz_gem"
+    },
+    "RUBY_VEILSHROOM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_3/resources/ruby_veilshroom"
+    },
+    "RUFFLED_FEATHER": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTU0NDAxNiwKICAicHJvZmlsZUlkIiA6ICJhNzdkNmQ2YmFjOWE0NzY3YTFhNzU1NjYxOTllYmY5MiIsCiAgInByb2ZpbGVOYW1lIiA6ICIwOEJFRDUiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjFmMjNlYjM5NWNiNTE2N2VmMzk4NmYwYWZhZWI1NTY1M2M2YTI2OTMwMjE1OGQ2ZmZhNTUxZTE1MWEyNThlZiIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "RUSTY_COIN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/junk/rusty_coin"
+    },
+    "SALTED_SUNFLOWER_SEEDS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "minecraft:yellow_bundle"
+    },
+    "SAND": {
+      "item": "minecraft:sand",
+      "glint": false,
+      "model": "minecraft:sand"
+    },
+    "SAND-1": {
+      "item": "minecraft:sand",
+      "glint": false,
+      "model": "minecraft:red_sand"
+    },
+    "SAPLING": {
+      "item": "minecraft:sapling",
+      "glint": false,
+      "model": "minecraft:oak_sapling"
+    },
+    "SAPLING-1": {
+      "item": "minecraft:sapling",
+      "glint": false,
+      "model": "minecraft:spruce_sapling"
+    },
+    "SAPLING-2": {
+      "item": "minecraft:sapling",
+      "glint": false,
+      "model": "minecraft:birch_sapling"
+    },
+    "SAPLING-3": {
+      "item": "minecraft:sapling",
+      "glint": false,
+      "model": "minecraft:jungle_sapling"
+    },
+    "SAPLING-4": {
+      "item": "minecraft:sapling",
+      "glint": false,
+      "model": "minecraft:acacia_sapling"
+    },
+    "SAPLING-5": {
+      "item": "minecraft:sapling",
+      "glint": false,
+      "model": "minecraft:dark_oak_sapling"
+    },
+    "SCARF_FRAGMENT": {
+      "item": "minecraft:red_flower",
+      "glint": true,
+      "model": "minecraft:poppy"
+    },
+    "SCORCHED_CRAB_STICK": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/scorched_crab_stick"
+    },
+    "SCOURROOT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM5NTE0MCwKICAicHJvZmlsZUlkIiA6ICJiM2E1M2VlMDgwMmI0NzE5OGVkM2VhMjRmYjZmNmQ3YSIsCiAgInByb2ZpbGVOYW1lIiA6ICJ4WF9Kb2JsZXNzX1h4IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2E5ZGEzYjhkY2ZmYmI1ZGQ5NzA4YjgzZTU0NzQ2ZmNlZDQ3NWYwZWUxNmM2YzBjZTQ2NjhjY2E3OTk5YzRkMWUiCiAgICB9CiAgfQp9"
+    },
+    "SEARED_ESCARGOT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/seared_escargot"
+    },
+    "SEA_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/sea_frog_bronze"
+    },
+    "SEA_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/sea_frog_silver"
+    },
+    "SEA_LUMIES": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/resources/sea_lumies"
+    },
+    "SEEDS": {
+      "item": "minecraft:wheat_seeds",
+      "glint": false,
+      "model": "minecraft:wheat_seeds"
+    },
+    "SHADEVINE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2Mjc3NjAyOTgxMSwKICAicHJvZmlsZUlkIiA6ICI1MDMyYTA2NWQ5MWQ0NTgyYjZmODM0MDRlMGYyOTA4MiIsCiAgInByb2ZpbGVOYW1lIiA6ICJNYWNCb29rUHJvTTIiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzNjNmQ5ZGNiOGZiZDczZGU2MTcxYTJjMjE1NTMxNGQwOTdhOWM5OWQwOWM5ZmNlOWNiYTA2OGQ3ZTVhZWRmNyIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "SHARK_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/community_center/mayor/marina/shark_bait"
+    },
+    "SHARK_FIN": {
+      "item": "minecraft:prismarine_shard",
+      "glint": false,
+      "model": "hypixel_skyblock:item/community_center/mayor/marina/shark_fin"
+    },
+    "SHELLFRUIT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjM1Nzk4NSwKICAicHJvZmlsZUlkIiA6ICJkOWYxZDI2ZWFkYjg0MjQ4OTI3NjU1NzYzNWNiMzQyMCIsCiAgInByb2ZpbGVOYW1lIiA6ICJCb2JPbGRmbHkiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNzJkODAyY2QyMDdmMTk3MWEyZWI4MjZmMWE3NDc3NzQwODMzYzkyMGRiMDBjZDVjOTkyMTc2YzY3NjcyZGJmNSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "SHIELD_DUST": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc3MTU5MDgyNDg5OCwKICAicHJvZmlsZUlkIiA6ICIzZGE2ZDgxOTI5MTY0MTNlODhlNzg2MjQ3NzA4YjkzZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJGZXJTdGlsZSIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9iMGJkYmIxYWM1ZTRmNzFkNWFhZTYxOWIwNWNlNTEzMTZhNmFlZWQ0NThmMzEwZGI0NjhlMGVhZDViNDZmMmVlIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "SILVER_FANG": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/silver_fang"
+    },
+    "SINGED_POWDER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/singed_powder"
+    },
+    "SKELETON_FISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/skeleton_fish_bronze"
+    },
+    "SKELETON_FISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/skeleton_fish_silver"
+    },
+    "SLIME_BALL": {
+      "item": "minecraft:slime_ball",
+      "glint": false,
+      "model": "minecraft:slime_ball"
+    },
+    "SLUDGE_JUICE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/sludge_juice"
+    },
+    "SLUGFISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/slugfish_bronze"
+    },
+    "SLUGFISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/slugfish_silver"
+    },
+    "SMOLDERING_EMBERS": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTU3OTk4NywKICAicHJvZmlsZUlkIiA6ICI1OGZmZWI5NTMxNGQ0ODcwYTQwYjVjYjQyZDRlYTU5OCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTa2luREJuZXQiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZmEwYjQ1YjM5YTdiYjY2Zjg0YzE3MjM0ZjgzMDUwY2NhNDU2Zjk4NjE2NjIzMGFmMWQyOTI3MDliOGE3N2U1MSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "SNOOZLING": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MzAyMjYwNDA0NSwKICAicHJvZmlsZUlkIiA6ICIzY2I3YTA3YWY3ZjM0ZWZiYTlkNGI4ODQ3NDM4Mzc0ZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJaZW4xXzAwMSIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS8yNGM2NGFmYTU4YmVmNjlmZjU2N2IwMTJhMmIxNjM4Y2Y0NzVjNWJkYjA1MGQzODIzMDgzOTlmZmEwYjA2YThkIiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "SNOW_BALL": {
+      "item": "minecraft:snowball",
+      "glint": false,
+      "model": "minecraft:snowball"
+    },
+    "SNOW_BLOCK": {
+      "item": "minecraft:snow",
+      "glint": false,
+      "model": "minecraft:snow_block"
+    },
+    "SOGGYBUD": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjMzNzQzNiwKICAicHJvZmlsZUlkIiA6ICI1MjhlYzVmMmEzZmM0MDA0YjYwY2IwOTA5Y2JiMjdjYiIsCiAgInByb2ZpbGVOYW1lIiA6ICJQdWxpenppIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2I0YmRmNDc3ZDJmNDE3Zjc1Nzk4YWQ2Mzc3YjEzMWFjYTc4N2JlOWJjMDVhMmZkZGMxOTcyZDgxZDQwYzczNTYiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "SORROW": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/sorrow"
+    },
+    "SOULFLOW": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/enderman/soulflow"
+    },
+    "SOUL_FISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/soul_fish_bronze"
+    },
+    "SOUL_FISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/soul_fish_silver"
+    },
+    "SOUL_STRING": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/soul_string"
+    },
+    "SPECTRE_DUST": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/spectre_dust"
+    },
+    "SPELL_POWDER": {
+      "item": "minecraft:glowstone_dust",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/spell_powder"
+    },
+    "SPELL_SOOT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTU4MTU2NCwKICAicHJvZmlsZUlkIiA6ICJlOThhZTBlMTI5MDg0ZDA5OTk0MTg4N2Q2YTk0ZTI2NCIsCiAgInByb2ZpbGVOYW1lIiA6ICJTZXh5SGF1c2VNYXN0ZXIiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmQzMGM2MDVkMmMzNDA2MWIxYzUzMmYxNmNlMmQxZDY1YzM5YjQ2ZTU0YzYwNTE5ZGRkZjM3NDIzYTY3MWU0OCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "SPIDER_CATALYST": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/spider/spider_catalyst"
+    },
+    "SPIDER_EGG": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTU4NTc5MywKICAicHJvZmlsZUlkIiA6ICI0N2U2MjJjNmE1OWU0NmNhOWU3OGNjYzE1ZDliNzhhZiIsCiAgInByb2ZpbGVOYW1lIiA6ICJBbnRpbGFmTVgiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTdkYTIxZTI1ZDc2NDkyOThiMTA1NTg1OGFjYjg5ZDNhMmUwOTNkOGRhNzc4NGEzYjFmMjc3MDZkYTY3NmMyOSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "SPIDER_EYE": {
+      "item": "minecraft:spider_eye",
+      "glint": false,
+      "model": "minecraft:spider_eye"
+    },
+    "SPIKED_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/spiked_bait"
+    },
+    "SPIRIT_LEAP": {
+      "item": "minecraft:ender_pearl",
+      "glint": true,
+      "model": "hypixel_skyblock:item/island_relevant/dungeons/spirit_leap"
+    },
+    "SPONGE": {
+      "item": "minecraft:sponge",
+      "glint": false,
+      "model": "minecraft:sponge"
+    },
+    "SPOOKY_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/spooky_bait"
+    },
+    "SPOOKY_SHARD": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY5ODMzMzYxODQyNCwKICAicHJvZmlsZUlkIiA6ICI0YzhjNTIxZjMxZDI0ZDc1OThlNTI4YjRlODExOGMwNiIsCiAgInByb2ZpbGVOYW1lIiA6ICJTZXR5YXdhbiIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9kODg0ZWQxOTUwYmI4YjE5OGFkYTgxOTE2ODQ0MDBiZDY2NDBlMDM3MTA0ODFjODEyMmI3ODBiOWVkMWJkOThjIgogICAgfQogIH0KfQ=="
+    },
+    "SQUASH": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/squash",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY2MjUwMjk0ODA3NCwKICAicHJvZmlsZUlkIiA6ICI2ODAwNzFmZTIxOWE0OWNmYmM3MDIxMjc1NTI0NDIwMiIsCiAgInByb2ZpbGVOYW1lIiA6ICJSZXphYm95ODAiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzZhZTA3NjY0OWVmMjJmNjBlODUxMTgzMWM2OGZkMmI2ZWE2M2MzMjE2NGRhYjMzYThhZWJjMThmZjJhNTRjOCIKICAgIH0KICB9Cn0="
+    },
+    "STARFALL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/starfall"
+    },
+    "STARLYN_PRIZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/starlyn/starlyn_prize"
+    },
+    "STARTLEVINE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjM0MDQ2MywKICAicHJvZmlsZUlkIiA6ICI5ODA4NmFkMDNiZjc0YTA5OGY2YTEyMzkzOWJlZjhlNiIsCiAgInByb2ZpbGVOYW1lIiA6ICJwZXN0aWNpZGEiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjJlOTRmYzJiNjAyNGRiODZiODIyNjZmZWRlZjM5Njk2YWY1OTFiMjc4MzA5NzMxOTlmZTkwOTdhY2MzNDBhMCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "STEAMING_HOT_FLOUNDER_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/steaming_hot_flounder_bronze"
+    },
+    "STEAMING_HOT_FLOUNDER_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/steaming_hot_flounder_silver"
+    },
+    "STICK": {
+      "item": "minecraft:stick",
+      "glint": false,
+      "model": "minecraft:stick"
+    },
+    "STONE": {
+      "item": "minecraft:stone",
+      "glint": false,
+      "model": "minecraft:stone"
+    },
+    "STOPLIGHT_PETAL": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2Mjc3NTk4ODM0MiwKICAicHJvZmlsZUlkIiA6ICI3NjFjOTZhOTgzNzc0ODUwODc4ZjgwYWY4MzIyMzgxZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJzcGlmZnRvcGlhOCIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS80YzJiNzk3ZTcxNzJhMDUxNjllMzEzNzM5OTA4NTE1ODY0ZDZiMzcyZjlhNWVjYzc3MmY4MWQ5YzRlNDAyYTU0IiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "STRETCHING_STICKS": {
+      "item": "minecraft:stick",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/stretching_sticks"
+    },
+    "STRING": {
+      "item": "minecraft:string",
+      "glint": false,
+      "model": "minecraft:string"
+    },
+    "STRONG_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/strong_dragon_fragment"
+    },
+    "STUFFED_CHILI_PEPPER": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY1ODczMDU4NDQ2OCwKICAicHJvZmlsZUlkIiA6ICJjOWRlZTM4MDUzYjg0YzI5YjZlZjA5YjJlMDM5OTc0ZiIsCiAgInByb2ZpbGVOYW1lIiA6ICJTQVJfRGVjZW1iZXI1IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2Y1OTlmOTU5ZjBlYmNiMWViMGYyZTU4NTJkMTIyY2E1NWJmNTI1OGZkNDYxM2FiNTBkNzJhZDhjZjVlMTI2MDMiCiAgICB9CiAgfQp9"
+    },
+    "STURDY_BONE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/sturdy_bone"
+    },
+    "SUGAR_CANE": {
+      "item": "minecraft:reeds",
+      "glint": false,
+      "model": "minecraft:sugar_cane"
+    },
+    "SULPHUR": {
+      "item": "minecraft:gunpowder",
+      "glint": false,
+      "model": "minecraft:gunpowder"
+    },
+    "SULPHURIC_COAL": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTYxOTk1MTA5MTE0MCwKICAicHJvZmlsZUlkIiA6ICJiYzRlZGZiNWYzNmM0OGE3YWM5ZjFhMzlkYzIzZjRmOCIsCiAgInByb2ZpbGVOYW1lIiA6ICI4YWNhNjgwYjIyNDYxMzQwIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2IzM2FmZDU3ZWExNmJjNjZlZWI0NTZhOGE3YzEyMzQ2NzhkNTk1YTk2MDQ2Y2FkMzM2YzRmZGM4MWYwZGZkZjUiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "SULPHUR_ORE": {
+      "item": "minecraft:glowstone_dust",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/sulphur"
+    },
+    "SULPHUR_SKITTER_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/sulphur_skitter_bronze"
+    },
+    "SULPHUR_SKITTER_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/sulphur_skitter_silver"
+    },
+    "SUNFLOWER_OIL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/garden/greenhouse/sunflower/sunflower_oil"
+    },
+    "SUPERBOOM_TNT": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/superboom_tnt"
+    },
+    "SUPERIOR_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/superior_dragon_fragment"
+    },
+    "SUPERLITE_MOTOR": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/superlite_motor"
+    },
+    "SUPER_EGG": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "minecraft:turtle_egg"
+    },
+    "SUSPICIOUS_SCRAP": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/glacite/suspicious_scrap"
+    },
+    "SYNTHETIC_HEART": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/synthetic_heart"
+    },
+    "TARANTULA_CATALYST": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/combat_1/tarantula_catalyst"
+    },
+    "TARANTULA_SILK": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/spider/tarantula_silk"
+    },
+    "TARANTULA_WEB": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/spider/tarantula_web"
+    },
+    "TENDER_WOOD": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/tender_wood"
+    },
+    "TENTACLE_MEAT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/tentacle_meat"
+    },
+    "THORNSHADE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjM0MzI3OSwKICAicHJvZmlsZUlkIiA6ICI0NmNhODkyZTY4ODA0YThmYjFkYzkwYjg0ZTY5ZjVmZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJPbG8xNjA2IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2RjYzlhNGE3YWFkYjM3M2FkYzNiZTA1MjQyOTI0Yzg5ODVlMmY5OTNkZDhlNGQ5NmYyMDcyMTA1MmZmN2U3YTgiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ"
+    },
+    "THORN_FRAGMENT": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "minecraft:ghast_tear"
+    },
+    "THUNDERLING": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2Mjc3NTkzMDQxMywKICAicHJvZmlsZUlkIiA6ICIyZmI1ZGJhYTY2NTA0OGEyYjZhYzU5YWE2Nzk5MDYzNSIsCiAgInByb2ZpbGVOYW1lIiA6ICJkcmFnbG9uZXIiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjM2NTBmYzk1MzQzODc1NWIxM2I2ZDBiNzJlNzdlNDNkMTgzY2Y4ZDkxMWY4ZmUxMmNhNGQ2NjE2ODMwOGQ0NiIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "THUNDER_SHARDS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/thunder_fragment"
+    },
+    "TIGER_SHARK_TOOTH": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "hypixel_skyblock:item/community_center/mayor/marina/tiger_shark_tooth"
+    },
+    "TIMESTALK": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjM0NzQ4NSwKICAicHJvZmlsZUlkIiA6ICJmYzFhOTdlNTgxM2Y0NDI2YTNmZTI4ZjJiNDc1ZjA4ZiIsCiAgInByb2ZpbGVOYW1lIiA6ICJnZXRPbmxpbmVQbGF5ZXJzIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzFiOWFkZDQzZTBlNzcwYjdjNGNjZGNmNjcwOGY4YjllODc1ZmYxM2IyYTc1YWI2M2ZmNjlmMmYwZTU3YWY5ZTUiCiAgICB9CiAgfQp9"
+    },
+    "TITANIUM_ORE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/titanium"
+    },
+    "TOKEN_OF_THE_CENTURY": {
+      "item": "minecraft:skull",
+      "glint": true,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTczNTM3OTQyMzEyNiwKICAicHJvZmlsZUlkIiA6ICI1ODc5MjNlNDkxMzM0ZDMzYWE4ZjQ3ZWJkZTljOTc3MiIsCiAgInByb2ZpbGVOYW1lIiA6ICJFbGV2ZW5mb3VyMTAiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMjA4OGYyZWI4NjI4YzRjOWE5MTM1MDYzNjc2NmRlYTIyY2Q2ZmRlODI0MGM2NGI0M2EyY2NmZmJiYjM2OTI4ZCIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "TORN_CLOTH": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/misc/torn_cloth"
+    },
+    "TOXIC_ARROW_POISON": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/spider/toxic_arrow_poison"
+    },
+    "TREASURE_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/treasure_bait"
+    },
+    "TREASURITE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/treasurite"
+    },
+    "TREE_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/tree_frog_bronze"
+    },
+    "TREE_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/tree_frog_silver"
+    },
+    "TUNGSTEN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/glacite/tungsten/tungsten"
+    },
+    "TUNGSTEN_KEY": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/glacite/tungsten/tungsten_key"
+    },
+    "TURTLELLINI": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2MTkxMjM1MzE2MCwKICAicHJvZmlsZUlkIiA6ICJmNzM0MmExODMxZDA0ZDA5ODc4Y2ViOTVmOTUxYTllMSIsCiAgInByb2ZpbGVOYW1lIiA6ICJOb3RNMWtzIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzFkMWJkMDZhNjczOGQwZGE1MDUzZWFlNDlhMTM2MmI4OTQ4OWQxYWMwMDRjMjIyNTA0NTM2ZjdiY2QwNzY3OWQiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "TWILIGHT_ARROW_POISON": {
+      "item": "minecraft:dye",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/enderman/twilight_arrow_poison"
+    },
+    "UMBER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/glacite/umber/umber"
+    },
+    "UMBER_KEY": {
+      "item": "minecraft:deadbush",
+      "glint": true,
+      "model": "hypixel_skyblock:item/glacite/umber/umber_key"
+    },
+    "UNDEAD_CATALYST": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/zombie/catalysts/undead_catalyst"
+    },
+    "UNSTABLE_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/unstable_dragon_fragment"
+    },
+    "VANILLE_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/vanille_bronze"
+    },
+    "VANILLE_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/vanille_silver"
+    },
+    "VEILSHROOM": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2NTQ1NDE1MCwKICAicHJvZmlsZUlkIiA6ICJkNGUwNTFjZGRhNDU0NTUxYjk1ZWRiZjdkNTM1ZTA3ZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJFbGVtZW50YWxfTWF4IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzI2Njc1NGFmNDg1OWVmNmYwYWRiMDNlNmM1OGU5ZTM0OGE1MDdkZWJjZTZiNWE3ZjY2MGQxMjY5NDAxZGU2NzQiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ"
+    },
+    "VEILSHROOM_BUNCH": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_3/resources/veilshroom_bunch"
+    },
+    "VINESAP": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/vinesap"
+    },
+    "VOID_OOZE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTY5NDIzMCwKICAicHJvZmlsZUlkIiA6ICI2OTU3YjQyOTZiOTI0NGJkOGQzNWJiZGU4M2JiZDI3OSIsCiAgInByb2ZpbGVOYW1lIiA6ICJjb2xpblBBUEEiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzg2NmJkMmZjN2Y5ZWNjNThkYTAxZDg0NmJmZWU3NTFiODgzYTU2NmVlOGMwZjhjYmViYTRjZTMwOTMxNWJiMSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "VOLCANIC_ROCK": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcwNDAzMTg1MzkzMCwKICAicHJvZmlsZUlkIiA6ICIxNDU1MDNhNDRjZmI0NzcwYmM3NWNjMTRjYjUwMDE4NyIsCiAgInByb2ZpbGVOYW1lIiA6ICJMaWtlbHlFcmljIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2I2M2M3ZjE4ODA3MGQxZjI3ZGZmZjhiZTRkNTI1OGM1YTMxNzAwOWY1NjZkZmQ5ZTg2MWNmNmU1ZjhmYjM4ZTIiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "VOLCANIC_STONEFISH_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/volcanic_stonefish_bronze"
+    },
+    "VOLCANIC_STONEFISH_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/lava/volcanic_stonefish_silver"
+    },
+    "VOLTA": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/volta"
+    },
+    "WALNUT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTcyMDA0MjE4ODUzOCwKICAicHJvZmlsZUlkIiA6ICJiZDNhNWRmY2ZkZjg0NDczOTViZDJiZmUwNGY0YzAzMiIsCiAgInByb2ZpbGVOYW1lIiA6ICJwcmVja3Jhc25vIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzMzMGUwMzVkOTk2ZTVlOTU2OWFhMmY1MTI3YmE5ZTUyZmFmNWMxMTVkZGQwODViYzdiNDg1NTgwMjQ4Y2RkMjgiCiAgICB9CiAgfQp9"
+    },
+    "WARMED_FLAKES": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTY5NzIyMSwKICAicHJvZmlsZUlkIiA6ICIxZmVjOTEzN2Q3ZTM0ODk3YTY5OTY0MGJkMTllMGM0MiIsCiAgInByb2ZpbGVOYW1lIiA6ICJzcGlmZnRvcGlhNiIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS81MGY0Nzg1NmYyMjk3NDBkYmJlMmIwODhhZmJiNDEyMDhiODU4M2Q0NTlkOWU1YmFiMTE0YWZmOTIxMDE2OWY1IiwKICAgICAgIm1ldGFkYXRhIiA6IHsKICAgICAgICAibW9kZWwiIDogInNsaW0iCiAgICAgIH0KICAgIH0KICB9Cn0="
+    },
+    "WATERBORNE_LICE": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc2NzgzMTcwMDA4NywKICAicHJvZmlsZUlkIiA6ICJkMTNmODljZmRiMmY0OTUxOWE4YjgxMTUzN2FmZWU2ZSIsCiAgInByb2ZpbGVOYW1lIiA6ICJ2ZXhsZWhhaGEiLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvNjM3MTJlZmExZTdhOGFhYTEwNmExYTI3NzJmNzA3MDhjNzI2NDFmMWU5MjI4ODUzOGUxYzgwNjZjZjFiOGZhOSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "WATER_LILY": {
+      "item": "minecraft:waterlily",
+      "glint": false,
+      "model": "minecraft:lily_pad"
+    },
+    "WEREWOLF_SKIN": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/werewolf_skin"
+    },
+    "WETLANDS_FROG_BRONZE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/wetlands_frog_bronze"
+    },
+    "WETLANDS_FROG_SILVER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/trophy/frog/wetlands_frog_silver"
+    },
+    "WET_WATER": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/wet_water"
+    },
+    "WHALE_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/fishing/bait/whale_bait"
+    },
+    "WHEAT": {
+      "item": "minecraft:wheat",
+      "glint": false,
+      "model": "minecraft:wheat"
+    },
+    "WHIPPED_MAGMA_CREAM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/whipped_magma_cream"
+    },
+    "WHITE_GIFT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "eyJ0aW1lc3RhbXAiOjE1MTQzMjM1NTc0ODYsInByb2ZpbGVJZCI6IjcwOTU2NDU0NTJkOTRiYTI5YzcwZDFmYTY3YjhkYTQyIiwicHJvZmlsZU5hbWUiOiJIaWRkdXMiLCJzaWduYXR1cmVSZXF1aXJlZCI6dHJ1ZSwidGV4dHVyZXMiOnsiU0tJTiI6eyJ1cmwiOiJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzEwZjUzOTg1MTBiMWEwNWFmYzViMjAxZWFkOGJmYzU4M2U1N2Q3MjAyZjUxOTNiMGI3NjFmY2JkMGFlMiJ9fX0="
+    },
+    "WILD_ROSE": {
+      "item": "minecraft:double_plant",
+      "glint": false,
+      "model": "minecraft:rose_bush"
+    },
+    "WINTER_FRAGMENT": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTY3MzQwNDk1NDQxMiwKICAicHJvZmlsZUlkIiA6ICI3MDQ0ZDlkY2I5OGI0YzgzYWFjNjIzNjFlYTY5YmNmOSIsCiAgInByb2ZpbGVOYW1lIiA6ICJfV2F0cnlzaGthXyIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS9lZjc0YzJlNGMwYjIyMmU0MmU4Y2RkZjNiYThmNmI1NDZjNTEwM2FkYTJjOWMxNTQ2MWFiYzNmYTNmNDI1MDkiLAogICAgICAibWV0YWRhdGEiIDogewogICAgICAgICJtb2RlbCIgOiAic2xpbSIKICAgICAgfQogICAgfQogIH0KfQ=="
+    },
+    "WISE_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/wise_dragon_fragment"
+    },
+    "WISHING_COMPASS": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/wishing_compass"
+    },
+    "WITHERBLOOM": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc1OTc2MzM1MjU4OCwKICAicHJvZmlsZUlkIiA6ICI0NDAzZGM1NDc1YmM0YjE1YTU0OGNmZGE2YjBlYjdkOSIsCiAgInByb2ZpbGVOYW1lIiA6ICI4Qml0czFCeXRlIiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlL2VmODMxMDUxY2YxOGE0YzNlYTdhMmE4MzMxMWYyMThmNDNiMDMyNzEyNzk5Y2M4MTkxMGFiNjdlZTczOTdiMzIiCiAgICB9CiAgfQp9"
+    },
+    "WITHER_CATALYST": {
+      "item": "minecraft:paper",
+      "glint": true,
+      "model": "hypixel_skyblock:item/uncategorized/wither_catalyst"
+    },
+    "WITHER_SOUL": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/wither_soul"
+    },
+    "WOLF_TOOTH": {
+      "item": "minecraft:ghast_tear",
+      "glint": true,
+      "model": "hypixel_skyblock:item/slayer/wolf/wolf_tooth"
+    },
+    "WOODEN_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/island_relevant/foraging_2/wooden_bait"
+    },
+    "WOOL": {
+      "item": "minecraft:wool",
+      "glint": false,
+      "model": "minecraft:white_wool"
+    },
+    "WORM_BAIT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/worm_bait"
+    },
+    "WORM_MEMBRANE": {
+      "item": "minecraft:rotten_flesh",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/worm_membrane"
+    },
+    "X": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/x"
+    },
+    "Y": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/y"
+    },
+    "YELLOW_FLOWER": {
+      "item": "minecraft:yellow_flower",
+      "glint": false,
+      "model": "minecraft:dandelion"
+    },
+    "YOGGIE": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/yoggie"
+    },
+    "YOUNG_FRAGMENT": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/young_dragon_fragment"
+    },
+    "Z": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/uncategorized/z"
+    },
+    "ZOMBUD": {
+      "item": "minecraft:skull",
+      "glint": false,
+      "model": "minecraft:player_head",
+      "texture": "ewogICJ0aW1lc3RhbXAiIDogMTc4MzY4NzM4MTg3OSwKICAicHJvZmlsZUlkIiA6ICJiZmQ3MjMxMGNmYWY0Yjc5OTNlYzhiYzU3ODg3YzU5ZCIsCiAgInByb2ZpbGVOYW1lIiA6ICJBbHBoYVNwQW0iLAogICJzaWduYXR1cmVSZXF1aXJlZCIgOiB0cnVlLAogICJ0ZXh0dXJlcyIgOiB7CiAgICAiU0tJTiIgOiB7CiAgICAgICJ1cmwiIDogImh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYzdjNjgzYTk4YjdkNjJjMTA5Y2EzY2Q0Mjg0NTlkZTU3MDg1MzY2YzJlNGU1OTQzNmUxNjFmZjc0YzBiMGQ0YSIsCiAgICAgICJtZXRhZGF0YSIgOiB7CiAgICAgICAgIm1vZGVsIiA6ICJzbGltIgogICAgICB9CiAgICB9CiAgfQp9"
+    },
+    "FLAWLESS_JADE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jade/flawless_jade_gem"
+    },
+    "FLAWLESS_AMBER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amber/flawless_amber_gem"
+    },
+    "FLAWLESS_TOPAZ_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/topaz/flawless_topaz_gem"
+    },
+    "FLAWLESS_SAPPHIRE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/sapphire/flawless_sapphire_gem"
+    },
+    "FLAWLESS_AMETHYST_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/amethyst/flawless_amethyst_gem"
+    },
+    "FLAWLESS_JASPER_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/jasper/flawless_jasper_gem"
+    },
+    "FLAWLESS_RUBY_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/ruby/flawless_ruby_gem"
+    },
+    "FLAWLESS_OPAL_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/slayer/blaze/gemstones/flawless_opal_gem"
+    },
+    "FLAWLESS_ONYX_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/onyx/flawless_onyx_gem"
+    },
+    "FLAWLESS_AQUAMARINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/aquamarine/flawless_aquamarine_gem"
+    },
+    "FLAWLESS_CITRINE_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/citrine/flawless_citrine_gem"
+    },
+    "FLAWLESS_PERIDOT_GEM": {
+      "item": "minecraft:paper",
+      "glint": false,
+      "model": "hypixel_skyblock:item/collections/gemstone/peridot/flawless_peridot_gem"
+    }
+  }
 }
