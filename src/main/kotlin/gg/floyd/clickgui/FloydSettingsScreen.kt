@@ -44,6 +44,8 @@ class FloydSettingsScreen : ComposeScreen(RenderMode.CONTINUOUS) {
     companion object {
         private val rendering = ThreadLocal.withInitial { false }
         @JvmStatic fun isRenderingFloyd(): Boolean = rendering.get()
+        // Compose can recompose controls outside extractRenderState after pointer input.
+        @JvmStatic fun usesFloydAccent(): Boolean = rendering.get() || mc.screen is FloydSettingsScreen
         private inline fun <T> renderScope(block: () -> T): T {
             val previous = rendering.get()
             rendering.set(true)

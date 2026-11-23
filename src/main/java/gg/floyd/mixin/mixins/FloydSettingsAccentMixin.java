@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class FloydSettingsAccentMixin {
     @Inject(method = "getAccent", at = @At("HEAD"), cancellable = true)
     private static void floyd$localAccent(CallbackInfoReturnable<Long> cir) {
-        if (gg.floyd.clickgui.FloydSettingsScreen.isRenderingFloyd()) {
+        if (gg.floyd.clickgui.FloydSettingsScreen.usesFloydAccent()) {
             cir.setReturnValue(FloydOneConfigTheme.packedAccent());
         }
     }

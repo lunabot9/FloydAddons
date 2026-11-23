@@ -186,6 +186,7 @@ object FloydOneConfig {
         "modelPreviews" to FloydSettingsModelPreviews.state(),
         "headTextures" to gg.floyd.features.impl.render.FloydHeadTextureCache.state(),
         "searchableLists" to FloydSearchableListVisualizer.state(),
+        "fontPicker" to FloydFontPickerVisualizer.state(),
         "moduleSections" to FloydModuleExpansion.state(),
     )
 
@@ -232,7 +233,7 @@ object FloydOneConfig {
                 if (inlineCycler && (setting === previous || setting === next)) return@forEach
                 val prop = adapt("${prefix}_${slug(setting.name)}", setting) ?: return@forEach
                 if (inlineCycler && setting === file) {
-                    prop.addMetadata("visualizer", FloydFileSelectorVisualizer(previous!!, next!!))
+                    prop.addMetadata("visualizer", if(module === gg.floyd.features.impl.render.FloydFont) FloydFontPickerVisualizer() else FloydFileSelectorVisualizer(previous!!, next!!))
                     inlineFileSelectors[module.name] = file!!
                 }
                 group(prop, module)

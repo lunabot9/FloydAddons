@@ -19,4 +19,9 @@ public abstract class ScreenMixin {
     private void afterRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci) {
         new ScreenEvent.RenderAfter((Screen) (Object) this, context, mouseX, mouseY).postAndCatch();
     }
+
+    @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;extractDeferredElements(IIF)V"))
+    private void beforeTooltips(GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks, CallbackInfo ci) {
+        new ScreenEvent.RenderOverlay((Screen) (Object) this, context, mouseX, mouseY).postAndCatch();
+    }
 }

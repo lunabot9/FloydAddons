@@ -1,6 +1,7 @@
 package gg.floyd.features.impl.pvp.experiments
 
 import net.fabricmc.fabric.api.event.player.UseBlockCallback
+import net.fabricmc.fabric.api.event.player.UseEntityCallback
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.core.component.DataComponents
@@ -27,15 +28,21 @@ object ExperimentFlowFixture {
     private var invalidClicks = 0
     private var tablePos: BlockPos? = null
     private var installed = false
-    fun state() = mapOf("active" to active, "stage" to stage, "tableOpens" to tableOpens, "claims" to claims, "invalidClicks" to invalidClicks)
-    fun open() {
+    private var furnitureEntity: java.util.UUID? = null
+    fun state() = mapOf("active" to active, "stage" to stage, "tableOpens" to tableOpens, "claims" to claims, "invalidClicks" to invalidClicks, "furnitureEntity" to furnitureEntity?.toString())
+    fun open(furniture: Boolean = false) {
         val mc = Minecraft.getInstance()
         val server = mc.singleplayerServer ?: error("Integrated-server QA only")
         val uuid = mc.player?.uuid ?: error("No player")
-        active = true; stage = 0; tableOpens = 0; claims = 0; invalidClicks = 0
+        active = true; furnitureEntity = null; stage = 0; tableOpens = 0; claims = 0; invalidClicks = 0
         ExperimentFixture.table(false) // Red cooldown text must not prevent continuation of an active set.
         if (!installed) {
             installed = true
+            UseEntityCallback.EVENT.register { player, _, _, entity, _ ->
+                if (active && player is ServerPlayer && entity.uuid == furnitureEntity) {
+                    openTable(player); InteractionResult.SUCCESS
+                } else InteractionResult.PASS
+            }
             UseBlockCallback.EVENT.register { player, _, _, hit ->
                 if (active && player is ServerPlayer && hit.blockPos == tablePos) {
                     openTable(player); InteractionResult.SUCCESS
@@ -45,6 +52,14 @@ object ExperimentFlowFixture {
         server.execute {
             val player = server.playerList.getPlayer(uuid) ?: return@execute
             tablePos = player.blockPosition().offset(0, 0, 2)
+            if (furniture) {
+                val pos = checkNotNull(tablePos)
+                val part = net.minecraft.world.entity.decoration.ArmorStand(player.level(), pos.x + .5, pos.y.toDouble(), pos.z + 2.4)
+                part.isNoGravity = true
+                part.addTag("floyd_experiment_fixture")
+                player.level().addFreshEntity(part)
+                furnitureEntity = part.uuid
+            }
             openTable(player)
         }
     }

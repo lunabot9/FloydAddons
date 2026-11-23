@@ -455,6 +455,7 @@ object FloydLocalControl : Module(
         root["fps"] = mc.fps
         root["scaffold"] = scaffoldPayload()
         root["modules"] = ModuleManager.state()
+        root["itemSearch"] = gg.floyd.features.impl.render.FloydItemSearch.state()
         root["configs"] = mapOf(
             "floydSidecars" to FloydSidecarConfig.state()
         )
@@ -482,6 +483,7 @@ object FloydLocalControl : Module(
             "mobEsp" to FloydMobEsp.state(),
             "sparklingCritterEsp" to FloydSparklingCritterEsp.state(),
             "fellNotification" to FloydFellNotification.state(),
+            "miningAbilityNotification" to gg.floyd.features.impl.render.FloydMiningAbilityNotification.state(),
             "notifier" to FloydNotifier.state(),
             "agent" to gg.floyd.agent.FloydAgent.state(),
             "autoExperiments" to gg.floyd.features.impl.pvp.FloydAutoExperiments.state(),
@@ -493,6 +495,7 @@ object FloydLocalControl : Module(
             "panelStyle" to FloydPanelStyle.state(),
             "customSky" to FloydCustomSky.state()
         )
+        root["font"] = FloydFont.state() + gg.floyd.utils.font.FloydFonts.glyphState()
         root["qol"] = emptyMap<String, Any?>()
         root["cosmetics"] = mapOf(
             "cape" to FloydCape.state(),
@@ -513,6 +516,8 @@ object FloydLocalControl : Module(
         )
         root["legacyGui"] = LegacyFloydClickGUI.debugState()
         root["oneConfigGui"] = FloydOneConfig.state()
+        root["sackTracker"] = gg.floyd.features.impl.render.FloydSackTracker.state()
+        root["calculator"] = mapOf("history" to FloydCalculator.engine.history)
         // ClickGUI deferred-text replay counts (P4): per-layer mc.font runs baked into the NVG PIP
         // last frame; deferralActive=false means FLOYD_NVG_TEXT=1 legacy, null = NVG not yet inited.
         root["nvgText"] = NvgTextReplay.debugState()
@@ -794,6 +799,12 @@ object FloydLocalControl : Module(
                     }
                     if (FloydOneConfig.isFloydSettingsScreen()) FloydOneConfig.refreshSettings()
                 }
+                "runSettingAction" -> {
+                    val module = ModuleManager.modules[requiredString(body, "module")] ?: throw IllegalArgumentException("module_not_found")
+                    val setting = module.settings[requiredString(body, "setting")] as? gg.floyd.clickgui.settings.impl.ActionSetting
+                        ?: throw IllegalArgumentException("action_setting_not_found")
+                    setting.action()
+                }
                 "setModuleEnabled" -> {
                     val moduleName = requiredString(body, "module")
                     val module = ModuleManager.modules[moduleName] ?: throw IllegalArgumentException("module_not_found")
@@ -806,7 +817,7 @@ object FloydLocalControl : Module(
                 "agentStartPetConversation" -> gg.floyd.agent.FloydAgent.startPetConversation()
                 "agentTestVoice" -> gg.floyd.agent.FloydAgent.testVoice()
                 "agentStop" -> gg.floyd.agent.FloydAgent.stopResponse()
-                "experimentsFlowFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFlowFixture.open()
+                "experimentsFlowFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFlowFixture.open(body["furniture"]?.asBoolean ?: false)
                 "sackSupercraftFixture" -> gg.floyd.supercraft.SackSupercraftFixture.open(body["rejectCraft"]?.asBoolean ?: false,body["intoSacks"]?.asBoolean ?: false,body["selectedCrafts"]?.asLong ?: 1L,body["stockAmount"]?.asLong ?: 321L,body["extraStock"]?.asLong ?: 0L,body["rawWart"]?.asLong ?: 0L,body["sugarAmount"]?.asLong ?: 159L,body["closeAfterCraft"]?.asBoolean ?: false,body["ignoreMaximum"]?.asBoolean ?: false,body["scenario"]?.asString ?: "")
                 "sackSupercraftStart" -> gg.floyd.supercraft.SackSupercraft.start(requiredString(body,"sack"))
                 "experimentsBottleFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFixture.bottles()
@@ -820,6 +831,12 @@ object FloydLocalControl : Module(
                 }
                 "experimentsFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFixture.open(requiredString(body, "game"), number(body, "goalRound")?.toInt() ?: 12)
                 "experimentsTableFixture" -> gg.floyd.features.impl.pvp.experiments.ExperimentFixture.table(body["ready"]?.asBoolean ?: true)
+                "miningAbilityTabFixture" -> {
+                    check(mc.singleplayerServer != null) { "Integrated-server QA only" }
+                    val info = mc.connection?.getPlayerInfo(checkNotNull(mc.player).uuid)
+                    checkNotNull(info).setTabListDisplayName(body["text"]?.takeIf { !it.isJsonNull }?.asString?.let(net.minecraft.network.chat.Component::literal))
+                }
+                "fontWorldFixture" -> gg.floyd.utils.font.WorldFontCompatFixture.setEnabled(body["enabled"]?.asBoolean ?: true)
                 "profileSky" -> gg.floyd.utils.render.SkyGpuTimer.start(number(body, "frames")?.toInt() ?: 60)
                 "reloadConfig" -> ModuleManager.loadConfigurations()
                 "reloadMod", "reloadResources" -> {
@@ -844,6 +861,7 @@ object FloydLocalControl : Module(
                 "oneconfig" -> org.polyfrost.oneconfig.api.ui.v1.OneConfigUI.open()
                 "v2", "clickgui", "xrayEditor", "xrayBlocks", "mobEspEditor", "mobEspFilters" -> mc.setScreen(ClickGUI)
                 "hud", "edithud" -> mc.setScreen(HudManager)
+                "chat" -> mc.setScreen(net.minecraft.client.gui.screens.ChatScreen("", false))
                 "calculator", "calc" -> FloydCalculator.toggleVisibility()
                 "pause", "pausemenu", "gamemenu" -> mc.setScreen(net.minecraft.client.gui.screens.PauseScreen(true))
                 "inventory" -> mc.setScreen(net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player ?: throw IllegalArgumentException("not_connected")))
@@ -873,7 +891,8 @@ object FloydLocalControl : Module(
         val dragY = number(body, "deltaY")?.toDouble() ?: 0.0
         val result = callClient {
             val currentScreen = mc.screen ?: throw IllegalArgumentException("no_screen")
-            val click = MouseButtonEvent(x, y, MouseButtonInfo(button, 0))
+            val modifiers = if (body["shift"]?.asBoolean == true) GLFW.GLFW_MOD_SHIFT else 0
+            val click = MouseButtonEvent(x, y, MouseButtonInfo(button, modifiers))
             val handled = when (event) {
                 "clear" -> {
                     clearMouseOverride()

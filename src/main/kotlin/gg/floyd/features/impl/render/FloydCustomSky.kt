@@ -15,13 +15,13 @@ import org.joml.Matrix4fc
 object FloydCustomSky : Module(
     name = "Custom Sky",
     category = Category.RENDER,
-    description = "Six animated 360-degree skies, from auroras and nebulae to an eclipse and rose clouds.",
+    description = "Eight animated 360-degree skies, from auroras and nebulae to sunny clouds.",
 ) {
-    private val styles = listOf("Golden Aurora", "Nebula", "Emerald Aurora", "Crimson Eclipse", "Sapphire Galaxy", "Rose Clouds")
-    private val skyStyle by SelectorSetting("Sky Style", "Golden Aurora", styles, desc = "Choose the animated sky surrounding the world. Golden Aurora matches the main menu.")
-    private val animationSpeed by NumberSetting("Animation Speed", 1f, .1f, 3f, .1f, desc = "Speed of the sky animation. Golden Aurora also follows your menu background settings.")
+    private val styles = listOf("Golden Aurora", "Nebula", "Emerald Aurora", "Crimson Eclipse", "Sapphire Galaxy", "Rose Clouds", "Midnight Aurora", "Cloud Nine")
+    private val skyStyle by SelectorSetting("Sky Style", "Golden Aurora", styles, desc = "Choose the animated sky surrounding the world. Midnight Aurora matches the current main menu palette.")
+    private val animationSpeed by NumberSetting("Animation Speed", 1f, .1f, 3f, .1f, desc = "Speed of the sky animation. Golden Aurora and Midnight Aurora also follow your menu background settings.")
     private val qualities = listOf("Performance", "Balanced", "High")
-    private val quality by SelectorSetting("Render Quality", "Balanced", qualities, desc = "Balanced renders volumetric clouds and nebulae at half resolution with sharp native-resolution stars. Lighter skies remain native. High uses native resolution throughout.")
+    private val quality by SelectorSetting("Render Quality", "Balanced", qualities, desc = "Cloud Nine uses cached procedural noise and dense cloud sampling: Balanced renders at 85% dimensions, Performance at 65%, and High at full resolution. Other volumetric skies use half/third resolution; stars remain sharp and lighter skies stay native.")
     private val inverseProjectionView = Matrix4f()
     private var cameraReady = false
     private var renderedThisFrame = false
@@ -54,9 +54,13 @@ object FloydCustomSky : Module(
         "style" to styles[skyStyle],
         "styles" to styles,
         "quality" to qualities[quality],
+        "resolutionScale" to FloydMenuVideoBackground.worldSkyResolutionScale(skyStyle + 1, quality),
+        "cloudSamples" to if (skyStyle == 7) 112 else null,
+        "history" to if (skyStyle == 7) FloydMenuVideoBackground.cloudHistoryState() else null,
         "gpuProfile" to SkyGpuTimer.state(),
         "renderer" to "procedural",
-        "usesSkyTextures" to false,
+        "usesSkyTextures" to (skyStyle == 7),
+        "usesSkyArtwork" to false,
         "animationSpeed" to animationSpeed,
         "cameraReady" to cameraReady,
         "renderedThisFrame" to renderedThisFrame,

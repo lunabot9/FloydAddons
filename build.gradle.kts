@@ -129,6 +129,9 @@ dependencies {
     include("club.minnced:java-discord-rpc:v2.0.1")
     include("club.minnced:discord-rpc-release:v3.3.0")
 
+    implementation("javazoom:jlayer:1.0.1")
+    include("javazoom:jlayer:1.0.1")
+
     implementation("org.jcodec:jcodec:0.2.5")
     include("org.jcodec:jcodec:0.2.5")
     implementation("org.jcodec:jcodec-javase:0.2.5")
@@ -352,6 +355,27 @@ tasks {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     workingDir = rootProject.projectDir
+}
+
+// Candidate compatibility artifact: keep the normal distribution available until
+// the private UI stack has also passed the Nebula client integration check.
+tasks.register<Exec>("isolatedUiJar") {
+    group = "build"
+    description = "Build a candidate with Floyd-private Compose and OneConfig classes"
+    // Newer unobfuscated targets use jar directly; older Loom targets remap it.
+    val runtimeJar = provider {
+        (tasks.findByName("remapJar") ?: tasks.named("jar").get()) as AbstractArchiveTask
+    }
+    dependsOn(runtimeJar)
+    val sourceJar = runtimeJar.flatMap { it.archiveFile }
+    val isolatedJar = layout.buildDirectory.file("libs/${activeBrand.archiveBaseName}-${artifactVersion}-ui-isolated.jar")
+    inputs.file(sourceJar)
+    inputs.file(rootProject.file("scripts/isolate-ui-libraries.py"))
+    outputs.file(isolatedJar)
+    doFirst {
+        commandLine("python", rootProject.file("scripts/isolate-ui-libraries.py"),
+            sourceJar.get().asFile, "--output", isolatedJar.get().asFile)
+    }
 }
 
 java {

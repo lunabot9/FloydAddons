@@ -2,6 +2,7 @@ package gg.floyd.features.impl.misc
 
 import gg.floyd.clickgui.settings.impl.KeybindSetting
 import gg.floyd.clickgui.settings.impl.HudElement
+import gg.floyd.clickgui.settings.impl.ListSetting
 import gg.floyd.clickgui.HudSizeRegistry
 import gg.floyd.events.ScreenEvent
 import gg.floyd.events.core.on
@@ -26,7 +27,8 @@ object FloydCalculator : Module(
         desc = "Toggles the on-screen calculator.",
     ).onPress(::toggleVisibility)
 
-    internal val engine = FloydCalculatorEngine()
+    private val history by ListSetting("History", mutableListOf<CalculatorHistoryEntry>()).hide()
+    internal val engine = FloydCalculatorEngine(history) { ModuleManager.saveConfigurations() }
 
     internal val calculatorHud: HudElement by HUD(
         "Calculator HUD",

@@ -30,6 +30,10 @@ val mainCommand = Commodore("floydaddons", "floyd", "fa") {
         schedule(0) { mc.setScreen(HudManager) }
     }
 
+    literal("items").runs {
+        schedule(0) { gg.floyd.features.impl.render.FloydItemSearch.openBrowser() }
+    }
+
     literal("clickgui").runs {
         schedule(0) { mc.setScreen(ClickGUI) }
     }

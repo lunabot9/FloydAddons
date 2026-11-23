@@ -10,12 +10,18 @@ uniform vec3 u_grassSecondaryColor;
 uniform vec3 u_sunColor;
 uniform vec3 u_fogColor;
 uniform vec4 u_postFx; // contrast, saturation, brightness, vignette
-uniform int u_worldSkyMode; // 0: menu camera; 1..6: world sky selection
+uniform int u_worldSkyMode; // 0: menu camera; 1..8: world sky selection
 uniform int u_menuSilverPalette;
 uniform int u_backgroundSnow;
 uniform mat4 u_inverseSkyMatrix;
 
 out vec4 outColor;
+uniform sampler3D u_cloudNoise; // generated lattice noise only; never panorama artwork
+uniform sampler2D u_cloudHistory; // previous generated sky, excluding terrain and GUI
+uniform int u_cloudHistoryValid;
+uniform int u_cloudHistoryPhase;
+uniform int u_cloudHistoryStride;
+uniform mat4 u_cloudPreviousProjection;
 uniform int u_skyLayer; // 0: native, 1: soft gas, 2: crisp full-resolution stars
 float starVisibility = 1.0;
 
@@ -42,13 +48,26 @@ vec2 Hash2(vec2 p) {
     )) * 43758.5453123);
 }
 
+// Integer lattice hashing gives adjacent cells exactly the same shared corner.
+// A sin/dot float hash can be rounded differently after driver reassociation,
+// producing hard cell seams that propagate into aurora flow and water normals.
+float LatticeHash(ivec2 cell) {
+    uint h = uint(cell.x) * 0x8da6b343u ^ uint(cell.y) * 0xd8163841u;
+    h ^= h >> 16u;
+    h *= 0x7feb352du;
+    h ^= h >> 15u;
+    h *= 0x846ca68bu;
+    h ^= h >> 16u;
+    return float(h >> 8u) * (1.0 / 16777216.0);
+}
+
 float Noise(vec2 p) {
-    vec2 i = floor(p);
+    ivec2 i = ivec2(floor(p));
     vec2 f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
     return mix(
-        mix(Hash(i), Hash(i + vec2(1.0, 0.0)), f.x),
-        mix(Hash(i + vec2(0.0, 1.0)), Hash(i + vec2(1.0, 1.0)), f.x),
+        mix(LatticeHash(i), LatticeHash(i + ivec2(1, 0)), f.x),
+        mix(LatticeHash(i + ivec2(0, 1)), LatticeHash(i + ivec2(1, 1)), f.x),
         f.y
     );
 }
@@ -158,7 +177,7 @@ vec4 AuroraCurtain(vec3 direction, float time) {
         * curtainStrands * verticalShimmer * breathing * skyMask;
 
     // Distinct ribbon tints retain the original layered aurora variation over the silver base.
-    bool silverMenu = u_worldSkyMode == 0 && u_menuSilverPalette == 1;
+    bool silverMenu = (u_worldSkyMode == 0 || u_worldSkyMode == 7) && u_menuSilverPalette == 1;
     vec3 ribbonA = silverMenu ? vec3(0.42, 0.68, 0.96) : SITE_AMBER;
     vec3 ribbonB = silverMenu ? vec3(0.49, 0.34, 0.76) : SITE_ORANGE;
     vec3 ribbonC = silverMenu ? vec3(0.76, 0.94, 1.00) : SITE_IVORY;
@@ -524,6 +543,166 @@ vec3 RoseCloudSky(vec3 direction, float time) {
     return SpaceTone(color + sky * transmission) + SpaceStars(direction, time) * transmission * 0.25;
 }
 
+float CloudNineNoise(vec3 p) {
+    vec3 cell = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return textureLod(u_cloudNoise, (cell + f + 64.5) / 128.0, 0.0).r;
+}
+
+// Remove only noise octaves that are far beyond the resolvable ray frequency. Otherwise
+// shallow cloud rays alias into horizontal bands resembling water above the horizon.
+float CloudNineFilteredFbm(vec3 p, float footprint) {
+    float value = 0.0;
+    float amplitude = 0.54;
+    for (int octave = 0; octave < 4; ++octave) {
+        float detail = 1.0 - smoothstep(1.0, 2.0, footprint);
+        float noise = detail > 0.0 ? CloudNineNoise(p) : 0.5;
+        value += amplitude * mix(0.5, noise, detail);
+        p = p.yzx * 2.03 + vec3(13.7, 7.1, 19.3);
+        footprint *= 2.03;
+        amplitude *= 0.48;
+    }
+    return value;
+}
+
+// Clean blue daylight and gently drifting cumulus banks, without a visible sun.
+vec3 CloudNineAtmosphere(vec3 direction, vec3 directionDx, vec3 directionDy, float reflectionSpread, float time) {
+    vec3 sun = normalize(vec3(-0.45, 0.48, 0.75));
+    vec3 sky = vec3(0.20, 0.48, 0.84);
+    // A linear elevation offset extends the volume to the horizon without the
+    // zero slope of sqrt(y*y + c), which stretched clouds into vertical streaks.
+    vec3 cloudDirection = vec3(direction.x, max(direction.y, 0.0) + 0.08, direction.z);
+    float rayElevation = max(cloudDirection.y, 0.0001);
+    vec3 wind = vec3(time * 0.018, 0.0, time * 0.009);
+    vec3 color = vec3(0.0);
+    float transmission = 1.0;
+    // Resolve the same cloud volume in both the sky and its glass reflection.
+    int sampleCount = 112;
+    float heightStep = 0.015;
+    vec3 projectionDx = (directionDx - cloudDirection * (directionDx.y / rayElevation)) / rayElevation;
+    vec3 projectionDy = (directionDy - cloudDirection * (directionDy.y / rayElevation)) / rayElevation;
+    float projectedPixel = max(length(projectionDx), length(projectionDy));
+    float rayStepWidth = heightStep * length(cloudDirection) / rayElevation;
+    for (int step = 0; step < 112; ++step) {
+        if (step >= sampleCount) break;
+        float height = 1.12 + (float(step) + 0.5) * heightStep;
+        vec3 p = cloudDirection * (height / rayElevation) + wind;
+        // Integrate a narrow, fixed reflection cone: slightly softer water detail
+        // without extra volume passes or frame-varying noise at the horizon.
+        if (reflectionSpread > 0.0) {
+            vec2 cone = Hash2(vec2(float(step), 41.7)) * 2.0 - 1.0;
+            p.xz += cone * reflectionSpread * (height / rayElevation);
+        }
+        // Differentiate the projection analytically from the unfurled camera ray.
+        // Screen derivatives inside the sky/water branch are undefined at its seam,
+        // and differentiating abs(y) across that seam collapses the filter footprint.
+        float footprint = max(projectedPixel * height,
+            max(rayStepWidth, reflectionSpread * (height / rayElevation)));
+        float distant = smoothstep(0.18, 1.8, footprint);
+        float bank = mix(CloudNineFilteredFbm(vec3(p.x * 0.55, 3.4, p.z * 0.55), footprint * 0.55), 0.54, distant);
+        float billow = mix(CloudNineFilteredFbm(p * 2.1, footprint * 2.1), 0.54, distant);
+        float erosion = mix(CloudNineNoise(p * 9.0), 0.5, smoothstep(0.025, 0.18, footprint));
+        float heightMask = smoothstep(1.1, 1.3, height) * (1.0 - smoothstep(1.65, 2.7, height));
+        float density = max(bank * 0.60 + billow * 0.40 - 0.51 - (1.0 - erosion) * 0.025, 0.0)
+            * 22.0 * heightMask;
+        if (density <= 0.0) continue;
+        float sunSide = mix(CloudNineFilteredFbm((p + sun * 0.26) * 2.1, footprint * 2.1), 0.54, distant);
+        float light = clamp(0.82 + (billow - sunSide) * 2.6 + (height - 1.3) * 0.18, 0.0, 1.0);
+        vec3 cloud = mix(vec3(0.48, 0.62, 0.77), vec3(1.0, 0.995, 0.98), light);
+        float alpha = 1.0 - exp(-density * heightStep * 2.0 / max(rayElevation, 0.18));
+        color += transmission * cloud * alpha;
+        transmission *= 1.0 - alpha;
+        // Remaining light contributes less than one display level once opaque.
+        if (transmission < 0.002) break;
+    }
+    return color + sky * transmission;
+}
+
+// Catmull-Rom reconstruction prevents repeated camera reprojection from softening
+// the cloud edges. The nine bilinear taps stay much cheaper than a volume march.
+vec3 CloudNineHistoryColor(vec2 uv) {
+    vec2 position = uv * u_resolution;
+    vec2 center = floor(position - 0.5) + 0.5;
+    vec2 f = position - center;
+    vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+    vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+    vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+    vec2 w3 = f * f * (-0.5 + 0.5 * f);
+    vec2 w12 = w1 + w2;
+    vec2 p0 = (center - 1.0) / u_resolution;
+    vec2 p12 = (center + w2 / w12) / u_resolution;
+    vec2 p3 = (center + 2.0) / u_resolution;
+    return textureLod(u_cloudHistory, p0, 0.0).rgb * w0.x * w0.y
+        + textureLod(u_cloudHistory, vec2(p12.x, p0.y), 0.0).rgb * w12.x * w0.y
+        + textureLod(u_cloudHistory, vec2(p3.x, p0.y), 0.0).rgb * w3.x * w0.y
+        + textureLod(u_cloudHistory, vec2(p0.x, p12.y), 0.0).rgb * w0.x * w12.y
+        + textureLod(u_cloudHistory, p12, 0.0).rgb * w12.x * w12.y
+        + textureLod(u_cloudHistory, vec2(p3.x, p12.y), 0.0).rgb * w3.x * w12.y
+        + textureLod(u_cloudHistory, vec2(p0.x, p3.y), 0.0).rgb * w0.x * w3.y
+        + textureLod(u_cloudHistory, vec2(p12.x, p3.y), 0.0).rgb * w12.x * w3.y
+        + textureLod(u_cloudHistory, p3, 0.0).rgb * w3.x * w3.y;
+}
+
+vec3 CloudNineSky(vec3 direction, float time) {
+    // Read derivatives before selecting a hemisphere, then evaluate the cloud
+    // volume once for both sides so neighboring pixels use the same filtering.
+    vec3 directionDx = dFdx(direction);
+    vec3 directionDy = dFdy(direction);
+    // Reproject only the sky's own prior color. Complete 16-pixel tiles are
+    // refreshed together so GPU waves can skip the expensive volume march.
+    // Newly exposed pixels and the horizon itself always use fresh samples.
+    if (u_cloudHistoryValid == 1) {
+        ivec2 tile = ivec2(gl_FragCoord.xy) / 16;
+        int rows = u_cloudHistoryStride / 4;
+        int refresh = (tile.x % 4) + (tile.y % rows) * 4;
+        float horizonWidth = max(abs(directionDx.y), abs(directionDy.y)) * 2.0;
+        if (refresh != u_cloudHistoryPhase && abs(direction.y) > horizonWidth) {
+            vec4 previousClip = u_cloudPreviousProjection * vec4(direction, 0.0);
+            vec2 previousUv = previousClip.xy / previousClip.w * 0.5 + 0.5;
+            vec2 border = 2.0 / u_resolution;
+            if (previousClip.w > 0.0 && all(greaterThan(previousUv, border)) &&
+                all(lessThan(previousUv, vec2(1.0) - border))) {
+                return max(CloudNineHistoryColor(previousUv), vec3(0.0));
+            }
+        }
+    }
+    bool waterPixel = direction.y < 0.0;
+    // A level ocean with tiny surface ripples, sharp cloud reflections and blue-teal depth.
+    float downward = max(-direction.y, 0.0);
+    vec2 surface = direction.xz / max(downward, 0.004);
+    // Keep the distant edge perfectly planar; distort only water below it.
+    float rippleFade = smoothstep(0.012, 0.085, downward);
+    vec2 wavePoint = direction.xz * 18.0 + vec2(downward * 34.0, downward * 27.0);
+    vec2 waveDrift = vec2(time * 0.035, -time * 0.025);
+    vec2 ripple = (vec2(Noise(wavePoint + waveDrift + 7.1),
+        Noise(wavePoint * 1.27 - waveDrift + 19.4)) - 0.5) * 0.0024 * rippleFade;
+    // Reflect around a level plane. Ripples vanish at the horizon so the water
+    // cannot lift or bend its boundary across the image.
+    vec3 surfaceNormal = normalize(vec3(ripple.x, 1.0, ripple.y));
+    vec3 reflectedDirection = reflect(direction, surfaceNormal);
+    reflectedDirection.y = max(reflectedDirection.y, 0.0);
+    vec3 cloudRay = waterPixel ? reflectedDirection : direction;
+    vec3 cloudDx = waterPixel ? reflect(directionDx, vec3(0.0, 1.0, 0.0)) : directionDx;
+    vec3 cloudDy = waterPixel ? reflect(directionDy, vec3(0.0, 1.0, 0.0)) : directionDy;
+    float reflectionSpread = waterPixel ? 0.012 * smoothstep(0.015, 0.10, downward) : 0.0;
+    vec3 reflected = CloudNineAtmosphere(cloudRay, cloudDx, cloudDy, reflectionSpread, time);
+    if (!waterPixel) return reflected;
+    float fresnel = 0.52 + 0.46 * pow(1.0 - downward, 5.0);
+    vec3 waterDepth = mix(vec3(0.035, 0.27, 0.36), vec3(0.012, 0.10, 0.20),
+        smoothstep(0.05, 0.9, downward));
+    // A faint cool surface tint starts at the water edge, rather than becoming
+    // indistinguishable from open sky and making reflections appear above it.
+    vec3 reflectionTint = mix(vec3(0.94, 0.98, 1.0), vec3(0.82, 0.95, 1.0), smoothstep(0.0, 0.18, downward));
+    vec3 water = mix(waterDepth, reflected * reflectionTint, fresnel);
+    float sheen = pow(0.5 + 0.5 * sin(surface.y * 180.0 + sin(surface.x * 23.0) * 1.4 + time * 0.26), 18.0);
+    water += vec3(0.10, 0.20, 0.24) * sheen * rippleFade * 0.020;
+    // Antialias the material boundary inside the water hemisphere only.
+    float edgeWidth = max(max(abs(directionDx.y), abs(directionDy.y)), 0.00001);
+    float waterCoverage = smoothstep(0.0, edgeWidth, downward);
+    return mix(reflected, water, waterCoverage);
+}
+
 vec3 EclipseSky(vec3 direction, float time) {
     vec3 sun = normalize(vec3(0.17, 0.55, 1.0));
     vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), sun));
@@ -551,6 +730,7 @@ vec3 EclipseSky(vec3 direction, float time) {
 }
 
 vec3 ProceduralWorldSky(vec3 direction, float time) {
+    if (u_worldSkyMode == 8) return CloudNineSky(direction, time);
     if (u_worldSkyMode == 2) return VolumetricNebula(direction, time, false);
     if (u_worldSkyMode == 3) return EmeraldAuroraSky(direction, time);
     if (u_worldSkyMode == 4) return EclipseSky(direction, time);
@@ -599,11 +779,20 @@ void main() {
     vec2 screenUv = gl_FragCoord.xy / u_resolution.xy;
     vec2 uv = (screenUv * 2.0 - 1.0) * vec2(u_resolution.x / u_resolution.y, 1.0);
 
+    // Midnight Aurora uses the same palette and ribbons as the menu, without its ocean.
+    if (u_worldSkyMode == 7) {
+        SITE_INK = u_skyTopColor;
+        SITE_PANEL = u_skyHorizonColor;
+        SITE_AMBER = u_sunColor;
+        SITE_ORANGE = mix(u_sunColor, u_skyHorizonColor, 0.60);
+        SITE_IVORY = mix(u_sunColor, vec3(1.0), 0.80);
+    }
+
     if (u_worldSkyMode != 0) {
         vec4 ray = u_inverseSkyMatrix * vec4(screenUv * 2.0 - 1.0, 0.5, 1.0);
         vec3 direction = normalize(ray.xyz / ray.w);
         if (u_skyLayer == 2) {
-            vec3 stars = SpaceStars(direction, sceneTime);
+            vec3 stars = u_worldSkyMode == 8 ? vec3(0.0) : SpaceStars(direction, sceneTime);
             if (u_worldSkyMode == 5) {
                 vec3 axis = normalize(vec3(-0.35, 0.83, 0.27));
                 float structure = SkyFbm(direction * 3.8 + vec3(sceneTime * 0.008, 7.3, -sceneTime * 0.004));
@@ -613,7 +802,7 @@ void main() {
             outColor = vec4(stars, 1.0);
             return;
         }
-        vec3 color = u_worldSkyMode >= 2 ? ProceduralWorldSky(direction, sceneTime)
+        vec3 color = ((u_worldSkyMode >= 2 && u_worldSkyMode <= 6) || u_worldSkyMode == 8) ? ProceduralWorldSky(direction, sceneTime)
             : PostEffects(GoldenAuroraWorld(direction, sceneTime), vec2(0.5));
         outColor = vec4(clamp(color, 0.0, 1.0), u_skyLayer == 1 ? starVisibility : 1.0);
         return;

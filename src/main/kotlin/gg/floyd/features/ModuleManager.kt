@@ -55,11 +55,13 @@ import gg.floyd.features.impl.pvp.FloydLoadoutSwapper
 import gg.floyd.features.impl.pvp.FloydPlayerEsp
 import gg.floyd.features.impl.cosmetic.FloydSkin
 import gg.floyd.features.impl.render.FloydBlockSearch
+import gg.floyd.features.impl.render.FloydItemSearch
 import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydCustomSky
 import gg.floyd.features.impl.render.FloydUiTheme
 import gg.floyd.features.impl.render.FloydCrosshairChanger
 import gg.floyd.features.impl.render.FloydDarkMode
+import gg.floyd.features.impl.render.FloydMiningAbilityNotification
 import gg.floyd.features.impl.render.FloydFellNotification
 import gg.floyd.features.impl.render.FloydNotifier
 import gg.floyd.features.impl.render.FloydFont
@@ -68,6 +70,7 @@ import gg.floyd.features.impl.render.FloydHubMap
 import gg.floyd.features.impl.render.FloydTimeChanger
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
+import gg.floyd.features.impl.render.FloydSackTracker
 import gg.floyd.features.impl.render.FloydDayTrackerModule
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydMusicOverlay
@@ -120,9 +123,10 @@ object ModuleManager {
         registerModules(config = ModuleConfig(file = File(FloydAddonsMod.configFile, "floydaddons-config.json")),
             ClickGUIModule, LegacyClickGUIModule,
             gg.floyd.supercraft.SackSupercraft,
+            FloydSackTracker,
 
             // FloydAddons feature groups.
-            gg.floyd.agent.FloydAgent, FloydFont, FloydPanelStyle, FloydUiTheme, FloydCustomSky, FloydNotifier, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
+            gg.floyd.agent.FloydAgent, FloydFont, FloydPanelStyle, FloydUiTheme, FloydCustomSky, FloydNotifier, FloydXray, FloydAnimations, FloydHud, FloydInventoryHud, FloydDayTrackerModule, FloydCustomScoreboard, FloydMusicOverlay, FloydSkyBlockLevel7Guide, FloydTimeChanger, FloydDarkMode, FloydHubMap, FloydMobEsp, FloydSparklingCritterEsp, FloydFellNotification, FloydMiningAbilityNotification, FloydFloorDropEsp, FloydBlockSearch, FloydSkyBlockPackDisabler, FloydCrosshairChanger,
             // Hiders (each feature is its own module).
             FloydNoHurtCamera, FloydRemoveFireOverlay, FloydDisableHungerBar, FloydHidePotionEffects, FloydThirdPersonCrosshair,
             FloydHideEntityFire, FloydDisableArrows, FloydRemoveFallingBlocks, FloydRemoveExplosionParticles, FloydRemoveTabPing,
@@ -132,7 +136,7 @@ object ModuleManager {
             FloydFreecam, FloydFreelook, FloydF5Customizer,
             FloydSkin, FloydCape, FloydConeHat, FloydPlayerModel, FloydSharedCosmetics,
             FloydLoadoutSwapper, FloydAutoTotem, FloydAutoExperiments, FloydPlayerEsp, FloydAutoClicker,
-            FloydDiscordPresence, FloydLocalControl, FloydCalculator,
+            FloydDiscordPresence, FloydLocalControl, FloydCalculator, FloydItemSearch,
             // Misc compatibility (each feature is its own module).
             FloydSpoofClientBrand, FloydCustomMainMenu, FloydTaskbarIconModule, FloydUpdateCheckerModule, FloydWindowModule, FloydFocusLossPrevention,
         )

@@ -56,6 +56,7 @@ import gg.floyd.features.impl.render.FloydCustomScoreboard
 import gg.floyd.features.impl.render.FloydFloorDropEsp
 import gg.floyd.features.impl.render.FloydHud
 import gg.floyd.features.impl.render.FloydInventoryHud
+import gg.floyd.features.impl.render.FloydSackTracker
 import gg.floyd.features.impl.render.FloydTimeChanger
 import gg.floyd.features.impl.render.FloydMobEsp
 import gg.floyd.features.impl.render.FloydSparklingCritterEsp
@@ -4605,6 +4606,7 @@ object LegacyFloydClickGUI : Screen(Component.literal(Branding.COMPACT_NAME)) {
                 moduleEntry(FloydTimeChanger),
                 LegacyModuleBrowserEntry(FloydMobEsp, "Stalk Player", LegacyModuleBrowserKind.RENDER_STALK),
                 LegacyModuleBrowserEntry(FloydInventoryHud, "Inventory HUD", LegacyModuleBrowserKind.RENDER_HUD, "Inventory HUD"),
+                moduleEntry(FloydSackTracker),
                 moduleEntry(FloydCustomScoreboard),
                 LegacyModuleBrowserEntry(FloydWindowModule, "Borderless Window", LegacyModuleBrowserKind.RENDER_BORDERLESS, "Borderless Window"),
                 LegacyModuleBrowserEntry(FloydWindowModule, "Instance Name", LegacyModuleBrowserKind.RENDER_INSTANCE_NAME, "Instance Title"),

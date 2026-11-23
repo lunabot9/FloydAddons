@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import gg.floyd.features.impl.render.FloydUiTheme
@@ -72,7 +73,7 @@ object FloydOneConfigTheme {
         "wordmark" to WORDMARK,
         "label" to "Floyd Addons",
         "accent" to "#%06X".format(palette["Accent"] and 0xFFFFFF),
-        "menuAccent" to "#FFB84D",
+        "controlAccent" to "#%06X".format(org.polyfrost.oneconfig.internal.ui.themes.Accent.toArgb() and 0xFFFFFF),
         "customization" to FloydUiTheme.state(),
         "snowfall" to FloydSnowfallDiagnostics.state(FloydUiTheme.snowfall),
     )

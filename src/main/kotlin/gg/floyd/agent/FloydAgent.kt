@@ -31,6 +31,11 @@ object FloydAgent : Module("Companion", category = Category.custom("Agent"),
     private val claudeSignIn by ActionSetting("Sign in with Claude", "Connect your Claude account through the official Claude Code sign-in.") { signInWith(1) }.withDependency { !connected }
     private val analyzeGameplay by ActionSetting("Analyze Gameplay", "Send one Minecraft screenshot to your connected AI account for analysis. You can also ask me to look at your gameplay in chat or by voice.") { openChat(); send("Look at my gameplay and describe what you see. What could I do next?") }
     private val open by ActionSetting("Open Chat", "Open the bottom-right assistant chat and reposition your companion.") { openChat() }
+    private val voiceEngineSetting = SelectorSetting("Voice Engine", "Chatterbox", listOf("Chatterbox", "OmniVoice"),
+        desc = "Local speech engine. OmniVoice is optional; CPU generation can be slower. Install the selected engine with Install Voice Runtime.")
+    private val voiceEngineIndex by voiceEngineSetting
+    val voiceEngine get() = voiceEngineSetting.selectedOption()
+    private var observedVoiceEngine = "Chatterbox"
     val voiceEnabled by BooleanSetting("Speak Replies", true, desc = "Speak replies sentence by sentence as they arrive, revealing text with playback.")
     private val gameplayComments by BooleanSetting("Gameplay Comments", true, desc = "Occasionally share one gameplay screenshot with your connected AI for a short comment in your pet's personality. Uses your account limits.")
     private val commentaryMinutes by NumberSetting("Comment Interval", 3, 1, 10, 1, desc = "Approximate minutes between comments during active gameplay. Timing varies naturally; pauses during chat, menus, and replies.", unit = "min").withDependency { gameplayComments }
@@ -84,7 +89,8 @@ object FloydAgent : Module("Companion", category = Category.custom("Agent"),
     var petY by NumberSetting("Pet Y", .55f, 0f, 1f, .01f, desc = "Vertical companion position, saved when dragged.").apply { hide() }
     private val connection by ActionSetting("Check Connection", "Check the selected account connection without sending a chat message.") { checkConnection() }
     private val disconnect by ActionSetting("Sign Out", "Sign out of this companion's isolated provider account.") { signOut() }.withDependency { connected }
-    private val testVoiceAction by ActionSetting("Test Voice", "Play the selected companion's ready-to-play introduction.") { testVoice() }
+    private val installVoiceAction by ActionSetting("Install Voice Runtime", "Install or repair the selected local speech engine and Whisper recognition. Model files download on first use; conversations and reference audio stay on this PC.") { installVoiceRuntime() }
+    private val testVoiceAction by ActionSetting("Test Voice", "Generate a short phrase with the selected companion's chosen voice engine.") { testVoice() }
     private val clear by ActionSetting("Clear Chat", "Delete this companion's local chat history and begin a new conversation.") { clearHistory() }
     data class Message(val role: String, val text: String)
     private val messages = mutableListOf<Message>()
@@ -189,6 +195,10 @@ object FloydAgent : Module("Companion", category = Category.custom("Agent"),
                 if (enabled && mc.level != null) introducePet()
                 warmVoice()
                 commentarySchedule.defer(commentaryNow(), commentaryMinutes * 60000L)
+            }
+            if (observedVoiceEngine != voiceEngine) {
+                observedVoiceEngine = voiceEngine
+                stopResponse(); AgentVoiceRuntime.close(); warmVoice()
             }
             tickPetConversation()
             tickGameplayCommentary()
@@ -526,7 +536,13 @@ object FloydAgent : Module("Companion", category = Category.custom("Agent"),
         partial = (partial + delta).take(12000)
         if (streamVoice) queueSpeech(false) else visibleReply = partial
     }
-    fun testVoice() { stopResponse(); introducePet(forceSpeech = true) }
+    fun installVoiceRuntime() {
+        speechPreparation.execute {
+            runCatching { AgentVoiceRuntime.install(); warmVoice() }
+                .onFailure { status = it.message?.take(180) ?: "OmniVoice setup failed." }
+        }
+    }
+    fun testVoice() { stopResponse(); speak("Hello, I am ready to help. This is my local companion voice.") }
     private fun introducePet(forceSpeech: Boolean = false) {
         if (!enabled) return
         val model = PetModel.entries[petModel]
@@ -805,5 +821,5 @@ object FloydAgent : Module("Companion", category = Category.custom("Agent"),
         "firstReplyAudioMs" to firstReplyAudioAt.takeIf { it > 0L }?.let { (it - replyRequestedAt) / 1_000_000L },
         "status" to status, "recording" to AgentAudio.recording, "pushToTalkKey" to pushToTalkKey.name, "pushToTalkLabel" to pushToTalkLabel(), "pushToTalkHeld" to pushToTalkHeld, "microphone" to microphone, "voice" to petName, "petX" to petX, "petY" to petY,
         "mouth" to AgentAudio.mouth, "previewPhase" to previewPhase(), "historyCount" to history().size, "credit" to "Kirk Client", "microphones" to microphoneSetting.optionLabels(), "uiStyle" to "theme-solid", "chatBlurStrength" to 0, "bubbleWidth" to bubbleWidth, "bubbleHeight" to bubbleHeight, "bubbleTextCharacters" to bubbleText().length, "petRenderedRotation" to petRenderedAngle, "petSubpixelMotion" to true, "chatAppearanceEditable" to false, "chatHistoryVisible" to (enabled && showChatHistory && mc.screen == null),
-        "audioPlaying" to AgentAudio.speaking, "introductionStartLatencyMs" to introductionStartedAt.takeIf { it > 0L }?.let { it - introductionRequestedAt }, "introductionPlayback" to "bundled-audio", "introductionCount" to introductionCount, "lastIntroductionModel" to lastIntroductionModel, "voiceEngine" to "Natural", "voiceProfile" to speechVoice(), "voiceRuntime" to AgentVoiceRuntime.status, "voiceQuality" to "Natural", "transcriptionEngine" to "Whisper small.en", "transcriptionRuntime" to AgentTranscription.status, "liveTranscriptCharacters" to liveTranscript.length, "gameplayCaptureMode" to if (gameplayComments) "on-request-and-occasional-comments" else "on-request", "gameplayCaptureCount" to gameplayCaptureCount, "lastGameplayCaptureAt" to lastGameplayCaptureAt, "gameplayImagePending" to (gameplayImage != null), "webSearchEnabled" to true, "webSearchCount" to webSearchCount, "webSourceCount" to Regex("https?://[^\\s)]+").findAll(partial).count(), "independentVoiceVolume" to !respectGameVolume, "voiceVolume" to voiceVolume, "effectiveVoiceVolume" to (voiceVolume * if (respectGameVolume) mc.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MASTER) else 1f), "inlineChatFocused" to inlineFocused, "inlineChatVisible" to (enabled && showChatHistory && mc.screen is ChatScreen), "inlineDraftLength" to inlineChat?.draftLength(), "petDragging" to (petDrag != null), "petName" to petName, "petSize" to petSize(), "petVelocityX" to petVelocityX, "petVelocityY" to petVelocityY, "petRotation" to petAngle, "petAngularSpeed" to petAngularSpeed, "petVisualX" to petDrawX.takeIf { it.isFinite() }, "petVisualY" to petDrawY.takeIf { it.isFinite() }, "topBarVisible" to false, "chatCollapsed" to (mc.screen == null && closingChat == null), "chatClosing" to (mc.screen == null && closingChat?.closingFinished() == false), "responseActive" to responseActive, "providerDone" to providerDone, "replyCharacters" to partial.length, "visibleReplyCharacters" to visibleReply.length, "queuedSpeechChunks" to queuedChunks, "finishedSpeechChunks" to finishedChunks)
+        "audioPlaying" to AgentAudio.speaking, "introductionStartLatencyMs" to introductionStartedAt.takeIf { it > 0L }?.let { it - introductionRequestedAt }, "introductionPlayback" to "bundled-audio", "introductionCount" to introductionCount, "lastIntroductionModel" to lastIntroductionModel, "voiceEngine" to voiceEngine, "voiceSynthesisMs" to AgentVoiceRuntime.lastSynthesisMs, "voiceProfile" to speechVoice(), "voiceRuntime" to AgentVoiceRuntime.status, "voiceQuality" to "Natural", "transcriptionEngine" to "Whisper small.en", "transcriptionRuntime" to AgentTranscription.status, "liveTranscriptCharacters" to liveTranscript.length, "gameplayCaptureMode" to if (gameplayComments) "on-request-and-occasional-comments" else "on-request", "gameplayCaptureCount" to gameplayCaptureCount, "lastGameplayCaptureAt" to lastGameplayCaptureAt, "gameplayImagePending" to (gameplayImage != null), "webSearchEnabled" to true, "webSearchCount" to webSearchCount, "webSourceCount" to Regex("https?://[^\\s)]+").findAll(partial).count(), "independentVoiceVolume" to !respectGameVolume, "voiceVolume" to voiceVolume, "effectiveVoiceVolume" to (voiceVolume * if (respectGameVolume) mc.options.getSoundSourceVolume(net.minecraft.sounds.SoundSource.MASTER) else 1f), "inlineChatFocused" to inlineFocused, "inlineChatVisible" to (enabled && showChatHistory && mc.screen is ChatScreen), "inlineDraftLength" to inlineChat?.draftLength(), "petDragging" to (petDrag != null), "petName" to petName, "petSize" to petSize(), "petVelocityX" to petVelocityX, "petVelocityY" to petVelocityY, "petRotation" to petAngle, "petAngularSpeed" to petAngularSpeed, "petVisualX" to petDrawX.takeIf { it.isFinite() }, "petVisualY" to petDrawY.takeIf { it.isFinite() }, "topBarVisible" to false, "chatCollapsed" to (mc.screen == null && closingChat == null), "chatClosing" to (mc.screen == null && closingChat?.closingFinished() == false), "responseActive" to responseActive, "providerDone" to providerDone, "replyCharacters" to partial.length, "visibleReplyCharacters" to visibleReply.length, "queuedSpeechChunks" to queuedChunks, "finishedSpeechChunks" to finishedChunks)
 }

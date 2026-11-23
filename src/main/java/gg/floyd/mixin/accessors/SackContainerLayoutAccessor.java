@@ -10,4 +10,5 @@ public interface SackContainerLayoutAccessor {
     @Accessor("leftPos") int floyd$sackLeft();
     @Accessor("topPos") int floyd$sackTop();
     @Accessor("imageHeight") int floyd$sackHeight();
+    @Accessor("imageWidth") int floyd$sackWidth();
 }

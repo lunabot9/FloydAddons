@@ -1,5 +1,6 @@
 package gg.floyd.utils.font
 
+import gg.floyd.utils.FloydFontProviders
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
 import gg.floyd.mixin.accessors.FontProviderAccessor
@@ -18,7 +19,7 @@ import net.minecraft.resources.Identifier
  *    untouched by [gg.floyd.utils.FloydFontProviders]); the vanilla bitmap font even while the
  *    global override restyles `minecraft:default`.
  *  - [panelCustom] → `floydaddons:panel` (`font/panel.json` — rewritten by FloydFontProviders with
- *    the SAME runtime-metrics/BYO/MSDF treatment the enabled global override gives the default
+ *    the selected runtime metrics and BYO font, with MSDF confined to this owned
  *    font, but never dropped); the custom font even while `minecraft:default` is vanilla.
  *
  * Scoreboard and inventory HUD use [gg.floyd.features.impl.render.FloydFont.panelFont] to keep
@@ -41,15 +42,49 @@ object FloydFonts {
 
     val panelCustom: Font by lazy(LazyThreadSafetyMode.NONE) { remapped(PANEL_FONT_ID) }
 
+    /** Inspect baked glyphs, rather than settings alone, for shared-font compatibility checks. */
+    fun glyphState(): Map<String, Any> {
+        val base = (mc.font as FontProviderAccessor).`floydaddons$getProvider`()
+        fun glyphs(description: FontDescription) = "Au/016".map { char ->
+            val glyph = base.glyphs(description).getGlyph(char.code)
+            mapOf("character" to char.toString(), "type" to glyph.javaClass.simpleName,
+                "msdf" to (glyph is FloydMsdfGlyph), "advance" to glyph.info().getAdvance(false),
+                "guiMsdf" to ((glyph as? gg.floyd.utils.FloydTtfGlyph)?.`floyd$getGuiGlyph`() is FloydMsdfGlyph),
+                "linearFilteredTtf" to ((glyph as? gg.floyd.utils.FloydTtfGlyph)?.`floyd$usesLinearFiltering`() == true))
+        }
+        return mapOf(
+            "defaultGlyphs" to glyphs(FontDescription.DEFAULT),
+            "panelGlyphs" to glyphs(FontDescription.Resource(PANEL_FONT_ID)),
+            "symbolGlyphs" to listOf(0x263D, 0x23E3, 0xE001).map { cp ->
+                val panel = (panelCustom as FontProviderAccessor).`floydaddons$getProvider`()
+                    .glyphs(FontDescription.DEFAULT).getGlyph(cp)
+                val live = base.glyphs(FontDescription.DEFAULT).getGlyph(cp)
+                mapOf("codepoint" to cp, "usesLiveGlyph" to (panel === live), "advance" to panel.info().getAdvance(false))
+            },
+            "skyblockerMsdf" to SkyblockerMsdfCompat.state(),
+            "worldFixture" to WorldFontCompatFixture.state(),
+        )
+    }
+
     /** A [Font] over mc.font's provider with [FontDescription.DEFAULT] remapped to [target]. */
     internal fun remapped(target: Identifier): Font {
         val base = (mc.font as FontProviderAccessor).`floydaddons$getProvider`()
         val description = FontDescription.Resource(target)
         return Font(object : Font.Provider {
             override fun glyphs(requested: FontDescription): GlyphSource =
-                base.glyphs(if (requested == FontDescription.DEFAULT) description else requested)
+                if (requested == FontDescription.DEFAULT) withLiveSymbols(base.glyphs(description), base.glyphs(requested))
+                else base.glyphs(requested)
 
             override fun effect(): EffectGlyph = base.effect()
         })
     }
+    /** Pinned fonts own letters; server/resource-pack symbols resolve through the live default. */
+    internal fun withLiveSymbols(custom: GlyphSource, live: GlyphSource): GlyphSource = object : GlyphSource {
+        override fun getGlyph(codepoint: Int) =
+            (if (FloydFontProviders.shouldUseCustomFontGlyph(codepoint)) custom else live).getGlyph(codepoint)
+
+        override fun getRandomGlyph(random: net.minecraft.util.RandomSource, codepoint: Int) =
+            (if (FloydFontProviders.shouldUseCustomFontGlyph(codepoint)) custom else live).getRandomGlyph(random, codepoint)
+    }
+
 }

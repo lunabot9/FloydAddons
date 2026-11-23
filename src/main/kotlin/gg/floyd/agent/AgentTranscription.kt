@@ -10,7 +10,7 @@ import javax.sound.sampled.*
 
 /** A persistent local Whisper process. Only model weights are downloaded; audio stays local. */
 object AgentTranscription {
-    private val python = File(System.getProperty("user.home"), ".floydaddons/agent-voice-hq/" + if (System.getProperty("os.name").lowercase().contains("win")) "Scripts/python.exe" else "bin/python")
+    private val python get() = AgentVoiceRuntime.transcriptionPython()
     private var process: Process? = null
     private val replies = LinkedBlockingQueue<String>()
     @Volatile var status = "Not loaded"; private set

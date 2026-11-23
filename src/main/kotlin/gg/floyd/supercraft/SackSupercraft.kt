@@ -101,6 +101,23 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
     fun toggleIgnored(id:String) { if(id in catalog.names)exception(id,id !in protected()) }
     fun sackName(title:String):String? = sackKey(title)
     fun itemBelongsToSack(sack:String,id:String):Boolean = id in catalog.sacks[sackKey(sack) ?: sack].orEmpty()
+    fun readStock(sack: String, stack: ItemStack): Map<String, Long> {
+        if (stack.isEmpty) return emptyMap()
+        val id = itemId(stack)
+        if (sack != "Gemstone") {
+            return if (itemBelongsToSack(sack, id)) SackCraftPlanner.sackStock(id, text(stack), false) else emptyMap()
+        }
+        val name = SackCraftPlanner.displayName(stack.hoverName.string)
+        val family = Regex("""^([A-Za-z]+) Gemstones$""").matchEntire(name)?.groupValues?.get(1)
+        val gemstone = family?.let { "ROUGH_${it.uppercase()}_GEM" } ?: id
+        if (!itemBelongsToSack(sack, gemstone)) return emptyMap()
+        val lore = text(stack)
+        val grades = SackCraftPlanner.sackStock(gemstone, lore, true)
+        if (grades.isNotEmpty()) return grades
+        // A grade-specific card has a plain Amount line. The grouped card uses weighted Stored.
+        if (!name.endsWith(" Gemstone", ignoreCase = true) || id.isEmpty()) return emptyMap()
+        return SackCraftPlanner.stored(lore)?.let { mapOf(id to it) }.orEmpty()
+    }
     fun upgradeTargets(sack:String):Set<String> {
         val name=sackKey(sack) ?: return emptySet()
         return targetCache.getOrPut(name) {
@@ -185,7 +202,7 @@ object SackSupercraft:Module("Sack Supercraft",category=Category.PVP,
         }
     }
     fun stop(reason:String="Stopped") { phase=Phase.IDLE;status=reason;pendingOutput=0;steps=emptyList();remaining=0;navigationClicks=0;pausedAt=0;maxSelected=false;maxButton=-1 }
-    private fun allowed():Boolean {
+    internal fun allowed():Boolean {
         if(mc.singleplayerServer!=null)return true
         val host=mc.currentServer?.ip?.substringBefore(':')?.lowercase() ?: return false
         return host=="hypixel.net" || host.endsWith(".hypixel.net")

@@ -1,5 +1,15 @@
 # Third-Party Notices
 
+## Standalone SkyBlock item search catalog
+
+`assets/floydaddons/data/item_search.json` contains item names, lore, icon metadata,
+and crafting recipe data from [NotEnoughUpdates-REPO](https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO),
+copyright (c) 2020 Moulberry, under the MIT License. The full license is included
+alongside the catalog as `item_search-LICENSE.txt`; the source revision is embedded
+in the catalog. Regenerate with `python scripts/update-item-search-catalog.py`.
+The search implementation and UI are original FloydAddons code; no Firmament or
+Roughly Enough Items code is bundled.
+
 This repository combines:
 
 - OneConfig 1.4.2 by Polyfrost, distributed unmodified as a nested dependency,
@@ -56,6 +66,13 @@ https://sketchfab.com/3d-models/tung-tung-tung-sahur-ffree-fire-skin-1388ca1f7c0
 The reference is licensed under Creative Commons Attribution 4.0:
 https://creativecommons.org/licenses/by/4.0/
 
+## Roboto font presets
+
+Roboto Regular and Roboto Medium are distributed under the Apache License 2.0.
+Source: https://github.com/googlefonts/roboto/tree/38062f4b4a0be4346d07a928408da21602545e9e/src/hinted
+The license is included at `assets/floydaddons/fonts/oringo/LICENSE.txt`.
+Tahoma presets resolve locally installed font files; Tahoma is not bundled or redistributed.
+
 ## Low Poly Tung asset source
 
 The `Low Poly Tung` cosmetic bundles a player OBJ/texture asset adapted from the public
@@ -88,3 +105,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## JLayer 1.0.1
+
+The unmodified JLayer MP3 decoder (`javazoom:jlayer:1.0.1`) is included under the GNU LGPL 2.1.
+Copyright JavaZOOM and contributors. The LGPL license and unmodified corresponding source
+are bundled under `META-INF/licenses/jlayer/`. Upstream source distribution:
+https://repo.maven.apache.org/maven2/javazoom/jlayer/1.0.1/jlayer-1.0.1-sources.jar
+Project: https://central.sonatype.com/artifact/javazoom/jlayer/1.0.1

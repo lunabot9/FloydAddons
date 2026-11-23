@@ -1,5 +1,8 @@
 package gg.floyd.features.impl.misc
 
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import gg.floyd.clickgui.settings.impl.ListSetting
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -82,5 +85,32 @@ class FloydCalculatorEngineTest {
         assertEquals("5", calculator.display)
         calculator.clearHistory()
         assertEquals(emptyList(), calculator.history)
+    }
+
+    @Test
+    fun `recording and clearing history persist to the next engine`() {
+        val gson = Gson()
+        var saved = JsonArray()
+        fun newEngine(): FloydCalculatorEngine {
+            val setting = ListSetting("History", mutableListOf<CalculatorHistoryEntry>())
+            setting.read(saved, gson)
+            return FloydCalculatorEngine(setting.value) { saved = setting.write(gson).asJsonArray }
+        }
+
+        val first = newEngine()
+        first.digit(2)
+        first.binary(CalculatorBinaryOperation.ADD)
+        first.digit(3)
+        first.equals()
+        first.equals()
+
+        val restored = newEngine()
+        assertEquals(
+            listOf(CalculatorHistoryEntry("5 + 3 =", "8"), CalculatorHistoryEntry("2 + 3 =", "5")),
+            restored.history,
+        )
+        assertEquals("0", restored.display)
+        restored.clearHistory()
+        assertEquals(emptyList(), newEngine().history)
     }
 }

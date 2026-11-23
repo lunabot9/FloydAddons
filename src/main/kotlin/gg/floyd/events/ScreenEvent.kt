@@ -24,4 +24,5 @@ abstract class ScreenEvent(val screen: Screen) : CancellableEvent() {
 
     class Render(screen: Screen, val guiGraphics: GuiGraphics, val mouseX: Int, val mouseY: Int) : ScreenEvent(screen)
     class RenderAfter(screen: Screen, val guiGraphics: GuiGraphics, val mouseX: Int, val mouseY: Int) : ScreenEvent(screen)
+    class RenderOverlay(screen: Screen, val guiGraphics: GuiGraphics, val mouseX: Int, val mouseY: Int) : ScreenEvent(screen)
 }

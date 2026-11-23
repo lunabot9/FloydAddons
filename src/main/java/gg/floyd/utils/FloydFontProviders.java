@@ -1,6 +1,8 @@
 package gg.floyd.utils;
 
 import com.mojang.blaze3d.font.GlyphProvider;
+import com.mojang.blaze3d.font.GlyphInfo;
+import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import com.mojang.blaze3d.font.TrueTypeGlyphProvider;
 import com.mojang.blaze3d.font.UnbakedGlyph;
 import com.mojang.blaze3d.platform.TextureUtil;
@@ -111,7 +113,7 @@ public final class FloydFontProviders {
      * stack. Keep Floyd on basic Latin + extended Latin/punctuation and let everything else resolve
      * from the pack stack behind it.
      */
-    static boolean shouldUseCustomFontGlyph(int codepoint) {
+    public static boolean shouldUseCustomFontGlyph(int codepoint) {
         return (codepoint >= 0x20 && codepoint <= 0x7E)
                 || (codepoint >= 0x00A0 && codepoint <= 0x024F)
                 || (codepoint >= 0x2000 && codepoint <= 0x206F);
@@ -241,30 +243,33 @@ public final class FloydFontProviders {
     }
 
     /**
-     * The minecraft:default override uses the same runtime-metrics/BYO/MSDF stack as the panel
-     * font, but FILTERS it to normal text ranges so server-pack emoji/special glyph providers can
-     * win for their codepoints.
+     * Retain standard baked glyph objects for font hooks, with the selected MSDF counterpart
+     * supplying smooth GUI and world rendering. Optional renderer hooks keep third-party shader
+     * selection paired with that texture. Special symbols still fall through to the pack stack.
      */
     private static GlyphProviderDefinition.Conditional customDefaultConditional(
             GlyphProviderDefinition.Conditional original,
             TrueTypeGlyphProviderDefinition bundled,
             boolean latched) {
         Path byoPath = FloydFont.customFontPath();
-        TrueTypeGlyphProviderDefinition runtimeMetrics = withRuntimeMetrics(bundled);
-        if (!latched && msdfAvailable()) {
-            GlyphProviderDefinition.Conditional msdfReplacement =
-                    selectiveMsdfConditional(original, runtimeMetrics, byoPath);
-            if (msdfReplacement != null) return msdfReplacement;
-        }
-        if (byoPath != null) {
-            return selectiveConditional(original, resourceManager -> wrapCustomFontGlyphs(loadFromFile(byoPath, runtimeMetrics)));
-        }
-        return selectiveConditional(original, resourceManager -> wrapCustomFontGlyphs(loadBundled(resourceManager, runtimeMetrics)));
+        TrueTypeGlyphProviderDefinition metrics = withRuntimeMetrics(bundled);
+        return selectiveConditional(original, resources -> {
+            GlyphProvider standard = byoPath != null ? loadFromFile(byoPath, metrics) : loadBundled(resources, metrics);
+            if (!latched && msdfAvailable()) {
+                try {
+                    GlyphProvider msdf = loadMsdfProvider(resources, metrics, byoPath);
+                    return wrapCustomFontGlyphs(new gg.floyd.utils.font.FloydGuiWorldGlyphProvider(standard, msdf));
+                } catch (Throwable failure) {
+                    LOGGER.warn("Floyd GUI MSDF unavailable; keeping standard TTF", failure);
+                }
+            }
+            return wrapCustomFontGlyphs(standard);
+        });
     }
 
     /**
      * The HUD panels' custom font ({@code floydaddons:panel}) follows the Font module's custom
-     * selection (runtime metrics + BYO + MSDF, exactly like the enabled default override) but is
+     * selection (runtime metrics + BYO + MSDF on this Floyd-owned font only) but is
      * NEVER dropped: whether a panel actually shows it is decided per-frame by the per-panel
      * toggles in {@code FloydFont.panelFont}, not at provider-load time — so panel toggles apply
      * instantly, without a resource reload.
@@ -354,7 +359,22 @@ public final class FloydFontProviders {
         return new GlyphProvider() {
             @Override
             public UnbakedGlyph getGlyph(int codepoint) {
-                return shouldUseCustomFontGlyph(codepoint) ? delegate.getGlyph(codepoint) : null;
+                if (!shouldUseCustomFontGlyph(codepoint)) return null;
+                UnbakedGlyph glyph = delegate.getGlyph(codepoint);
+                if (glyph == null) return null;
+                return new UnbakedGlyph() {
+                    @Override
+                    public GlyphInfo info() { return glyph.info(); }
+
+                    @Override
+                    public BakedGlyph bake(Stitcher stitcher) {
+                        BakedGlyph baked = glyph.bake(stitcher);
+                        // Preserve BakedSheetGlyph/GlyphInstance for other mods' text hooks.
+                        // Only the sampler changes: standard TTF coverage, no MSDF shader required.
+                        if (baked instanceof FloydTtfGlyph ttf) ttf.floyd$setLinearFiltering();
+                        return baked;
+                    }
+                };
             }
 
             @Override

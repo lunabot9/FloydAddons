@@ -13,13 +13,15 @@ internal enum class CalculatorBinaryOperation(val symbol: String) {
 internal data class CalculatorHistoryEntry(val expression: String, val result: String)
 
 /** Stateful, immediate-execution arithmetic used by the Standard calculator screen. */
-internal class FloydCalculatorEngine {
+internal class FloydCalculatorEngine(
+    private val historyEntries: MutableList<CalculatorHistoryEntry> = mutableListOf(),
+    private val onHistoryChanged: () -> Unit = {},
+) {
     var display: String = "0"
         private set
     var expression: String = ""
         private set
-    private val historyEntries = ArrayDeque<CalculatorHistoryEntry>()
-    val history: List<CalculatorHistoryEntry> get() = historyEntries.toList()
+    val history: List<CalculatorHistoryEntry> get() = historyEntries.take(MAX_HISTORY_ENTRIES)
 
     private var accumulator: Double? = null
     private var pendingOperation: CalculatorBinaryOperation? = null
@@ -157,7 +159,9 @@ internal class FloydCalculatorEngine {
     }
 
     fun clearHistory() {
+        if (historyEntries.isEmpty()) return
         historyEntries.clear()
+        onHistoryChanged()
     }
 
     private fun applyUnary(label: String, value: Double?, failure: String) {
@@ -217,8 +221,9 @@ internal class FloydCalculatorEngine {
     }
 
     private fun recordHistory(historyExpression: String, result: String) {
-        historyEntries.addFirst(CalculatorHistoryEntry(historyExpression, result))
+        historyEntries.add(0, CalculatorHistoryEntry(historyExpression, result))
         while (historyEntries.size > MAX_HISTORY_ENTRIES) historyEntries.removeLast()
+        onHistoryChanged()
     }
 
     private fun currentValue(): Double? = display.toDoubleOrNull()

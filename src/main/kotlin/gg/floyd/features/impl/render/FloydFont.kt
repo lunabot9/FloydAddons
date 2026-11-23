@@ -2,6 +2,7 @@ package gg.floyd.features.impl.render
 
 import gg.floyd.FloydAddonsMod
 import gg.floyd.FloydAddonsMod.mc
+import gg.floyd.clickgui.settings.AlwaysActive
 import gg.floyd.clickgui.settings.impl.ActionSetting
 import gg.floyd.clickgui.settings.impl.BooleanSetting
 import gg.floyd.clickgui.settings.impl.NumberSetting
@@ -12,6 +13,7 @@ import gg.floyd.features.Category
 import gg.floyd.features.Module
 import gg.floyd.features.ModuleManager
 import gg.floyd.utils.font.FloydFonts
+import gg.floyd.utils.font.OringoFontCatalog
 import gg.floyd.utils.modMessage
 import gg.floyd.utils.openDirectory
 import net.minecraft.client.gui.Font
@@ -35,20 +37,21 @@ import java.nio.file.Path
  * invalid/missing selection resolves to null so the provider path falls back to the bundled font,
  * and nothing touches GL/NVGRenderer at init or config load.
  */
+@AlwaysActive
 object FloydFont : Module(
     name = "Font",
     category = Category.RENDER,
-    description = "Custom font for game text and a .ttf picker from config/floydaddons/fonts. Scoreboard and inventory HUD always use the custom font.",
+    description = "Choose font presets or custom .ttf files. Scoreboard and inventory HUD always use the custom font.",
     toggled = false,
 ) {
     val globalCustomFont by BooleanSetting("Global Custom Font", true, desc = "Applies the custom font to normal Minecraft text. Scoreboard, inventory HUD, and ClickGUI always keep their custom font.")
     private val minecraftFont by BooleanSetting("Minecraft Font", true, desc = "Applies the selected custom font to vanilla game text (chat, hotbar, F3, menus) for normal letters while pack emoji/special glyphs still fall through. OFF restores the live Minecraft/resource-pack font stack for normal game text.")
     private val disableTextShadow by BooleanSetting("Disable Text Shadow", false, desc = "Removes the 1px drop shadow under ALL rendered text (vanilla HUD + every Floyd panel) for a cleaner, sharper look. Applies instantly, no reload needed.")
-    private val fontDisplaySize by NumberSetting("Font Size", 25.0, 6.0, 50.0, 0.5, desc = "Display size for the global TTF provider. 25 matches the Font mod default. Reload resources (F3+T) to apply.")
-    var selectedFont by StringSetting("Font", "", 96, desc = "Optional .ttf in config/floydaddons/fonts to use instead of the bundled font. Reload resources (F3+T) to apply.")
+    private var fontDisplaySize by NumberSetting("Font Size", 25.0, 6.0, 50.0, 0.5, desc = "Display size for the global TTF provider. Presets apply their original sizes. Reload resources (F3+T) after manual changes.")
+    var selectedFont by StringSetting("Font", "", 96, desc = "Search font presets or custom .ttf files. Selecting a font applies it and reloads resources.")
+    private var oringoPreset by StringSetting("Oringo Preset", "", 64, desc = "Saved preset selection.").hide()
     private val listFonts by ActionSetting("List Fonts", desc = "Prints available .ttf files in chat.") {
-        val fonts = availableFonts()
-        modMessage(if (fonts.isEmpty()) "No custom font .ttf files found." else "Available fonts:\n${fonts.joinToString("\n")}")
+        modMessage("Available fonts:\n"+fontChoices().filter { it.available }.joinToString("\n") { it.label })
     }
     private val previousFont by ActionSetting("Previous Font", desc = "Selects the previous available .ttf file.") {
         cycleFont(-1)
@@ -90,15 +93,15 @@ object FloydFont : Module(
     /**
      * The [Font] a HUD panel should draw AND measure with this frame.
      *
-     * When Minecraft already uses the custom font, keep its live provider stack so server-pack
-     * glyphs still fall through. Otherwise use [FloydFonts.panelCustom], including when this module
-     * is disabled. These panels never fall back to the vanilla letter font.
+     * Always use the dedicated [FloydFonts.panelCustom] stack for custom panels. The shared
+     * Minecraft font retains standard baked glyph objects with MSDF rendering counterparts;
+     * Floyd's own panels keep MSDF independently of the global override. Both stacks retain special-glyph fallbacks.
      * Render-thread only.
      */
     fun panelFont(panel: PanelFont): Font {
         val custom = usesCustomFont(panel)
         if (!custom) return FloydAddonsMod.mc.font
-        return if (isGlobalCustomFontEnabled()) FloydAddonsMod.mc.font else FloydFonts.panelCustom
+        return FloydFonts.panelCustom
     }
 
     /** Whether all text drop shadows should be suppressed (drives [gg.floyd.mixin.mixins.FontMixin]). */
@@ -137,6 +140,9 @@ object FloydFont : Module(
         val name = selectedFont.trim()
         if (name.isEmpty()) return null
         return try {
+            OringoFontCatalog.presets.firstOrNull { it.id==oringoPreset && OringoFontCatalog.face(it).fileName==name }?.let {
+                return OringoFontCatalog.materialize(it,fontDir)
+            }
             val path = fontDir.resolve(name).normalize()
             // Keep the resolved file inside the fonts dir and verify it is a readable .ttf.
             if (!path.startsWith(fontDir)) return null
@@ -149,12 +155,34 @@ object FloydFont : Module(
 
     fun availableFontFiles(): List<String> = availableFonts()
 
+    data class FontChoice(val id:String,val label:String,val detail:String,val available:Boolean)
+
+    fun fontChoices():List<FontChoice> = listOf(FontChoice("bundled","Floyd Default (Inter)","Bundled Floyd font",true)) +
+        OringoFontCatalog.presets.map { preset ->
+            val face=OringoFontCatalog.face(preset)
+            FontChoice("oringo:${preset.id}",preset.label,"${face.label} · ${preset.size.toInt()} px"+(if(face.systemFile!=null)" · Windows font" else ""),OringoFontCatalog.available(preset,fontDir))
+        } + availableFonts().filterNot { file -> OringoFontCatalog.faces.any { it.fileName==file } }.map { FontChoice(it,it,"Custom .ttf file",true) }
+
+    fun selectedFontChoice():String = OringoFontCatalog.presets.firstOrNull {
+        it.id==oringoPreset && OringoFontCatalog.face(it).fileName==selectedFont
+    }?.let { "oringo:${it.id}" } ?: selectedFont.ifBlank { "bundled" }
+
+    fun selectedFontLabel():String = fontChoices().firstOrNull { it.id==selectedFontChoice() }?.label ?: selectedFont
+
     fun selectFont(name: String): Boolean {
-        val font = availableFonts().firstOrNull { it.equals(name, ignoreCase = true) } ?: return false
-        selectedFont = font
+        val choice=fontChoices().firstOrNull { it.id.equals(name,true) || it.label.equals(name,true) } ?: return false
+        if(!choice.available)return false
+        val preset=OringoFontCatalog.presets.firstOrNull { "oringo:${it.id}"==choice.id }
+        if(preset!=null) {
+            val path=OringoFontCatalog.materialize(preset,fontDir) ?: return false
+            selectedFont=path.fileName.toString();oringoPreset=preset.id;fontDisplaySize=preset.size
+        } else {
+            selectedFont=if(choice.id=="bundled")"" else choice.id;oringoPreset=""
+            if(choice.id=="bundled")fontDisplaySize=25.0
+        }
         ModuleManager.saveConfigurations()
         reloadResources()
-        modMessage("Selected font: $selectedFont")
+        modMessage("Selected font: ${choice.label}")
         return true
     }
 
@@ -173,23 +201,22 @@ object FloydFont : Module(
         "runtimeFontSize" to runtimeFontSize(),
         "runtimeFontOversample" to runtimeFontOversample(),
         "selectedFont" to selectedFont,
+        "selectedChoice" to selectedFontChoice(),
+        "selectedLabel" to selectedFontLabel(),
+        "oringoPresets" to fontChoices().filter { it.id.startsWith("oringo:") }.map { mapOf("id" to it.id,"label" to it.label,"detail" to it.detail,"available" to it.available) },
         "availableFonts" to availableFonts(),
         "fontDir" to fontDir.toString(),
         "customFontPath" to customFontPath()?.toString()
     )
 
     private fun cycleFont(direction: Int): Boolean {
-        val fonts = availableFonts()
+        val fonts = fontChoices().filter { it.available }
         if (fonts.isEmpty()) {
             modMessage("No custom font .ttf files found.")
             return false
         }
-        val current = fonts.indexOfFirst { it.equals(selectedFont, ignoreCase = true) }.takeIf { it >= 0 } ?: 0
-        selectedFont = fonts[(current + direction).floorMod(fonts.size)]
-        ModuleManager.saveConfigurations()
-        reloadResources()
-        modMessage("Selected font: $selectedFont")
-        return true
+        val current = fonts.indexOfFirst { it.id==selectedFontChoice() }.takeIf { it >= 0 } ?: 0
+        return selectFont(fonts[(current + direction).floorMod(fonts.size)].id)
     }
 
     private fun ensureExternalDir() {

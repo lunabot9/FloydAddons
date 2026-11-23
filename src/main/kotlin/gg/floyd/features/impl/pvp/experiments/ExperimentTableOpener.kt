@@ -43,7 +43,7 @@ class ExperimentTableOpener {
     var attempts = 0; private set
     var status = "Waiting for a nearby table"; private set
     fun reset() { scanAt = 0; stableKey = ""; readySince = 0; attempted = ""; pendingTarget = null; attempts = 0 }
-    fun tick(now: Long, progress: Int, continueRenewal: Boolean = false) {
+    fun tick(now: Long, progress: Int, continuingSession: Boolean = false) {
         val player = mc.player ?: return
         val level = mc.level ?: return
         if (mc.screen != null) { pendingTarget = null; return }
@@ -54,8 +54,7 @@ class ExperimentTableOpener {
             val hit = mc.hitResult
             when {
                 target.entity != null && hit is EntityHitResult && hit.entity.isAlive && hit.entity.isPickable &&
-                    kotlin.math.abs(hit.entity.x - target.entity.x) < 1.6 && kotlin.math.abs(hit.entity.z - target.entity.z) < 1.6 &&
-                    kotlin.math.abs(hit.entity.y - target.entity.y) < 1.5 && hit.entity.customName == null ->
+                    hit.entity === target.entity && hit.entity.customName == null ->
                     mc.gameMode?.interact(player, hit.entity, hit, InteractionHand.MAIN_HAND)
                 target.block != null && hit is BlockHitResult && hit.blockPos == target.block && player.mainHandItem.isEmpty ->
                     mc.gameMode?.useItemOn(player, InteractionHand.MAIN_HAND, hit)
@@ -71,7 +70,7 @@ class ExperimentTableOpener {
             ?: run { stableKey = ""; attempted = ""; status = "Waiting for a nearby table"; return }
         val column = labels.filter { kotlin.math.abs(it.x - anchor.x) < .6 && kotlin.math.abs(it.z - anchor.z) < .6 && kotlin.math.abs(it.y - anchor.y) < 1.6 }
         val availability = ExperimentTableStatus.read(column.map { ExperimentTableStatus.line(it.customName!!) })
-        if (availability != ExperimentTableStatus.Availability.READY && !(continueRenewal && availability == ExperimentTableStatus.Availability.COOLDOWN)) {
+        if (availability != ExperimentTableStatus.Availability.READY && !(continuingSession && availability == ExperimentTableStatus.Availability.COOLDOWN)) {
             stableKey = ""; pendingTarget = null
             if (availability == ExperimentTableStatus.Availability.COOLDOWN) attempted = ""
             status = if (availability == ExperimentTableStatus.Availability.COOLDOWN) "Table is on cooldown" else "Waiting for table availability"
@@ -80,10 +79,16 @@ class ExperimentTableOpener {
         val key = "${anchor.blockPosition()}:$progress"
         if (key != stableKey) { stableKey = key; readySince = now; return }
         if (key == attempted || now - readySince < 500 || now - attemptAt < 3000) return
-        val furniture = level.entitiesForRendering().filter {
-            it !== player && it !in column && it.isPickable && (it !is ArmorStand || !it.isMarker) &&
-                kotlin.math.abs(it.x - anchor.x) < .9 && kotlin.math.abs(it.z - anchor.z) < .9 && it.y <= anchor.y && anchor.y - it.y < 3
-        }.minByOrNull { it.position().distanceToSqr(anchor.position()) }
+        fun eligibleFurniture(entity: Entity): Boolean =
+            entity !== player && entity !in column && entity.customName == null && entity.isPickable &&
+                (entity !is ArmorStand || !entity.isMarker) && ExperimentTableTargetPolicy.contains(
+                    entity.x - anchor.x, entity.y - anchor.y, entity.z - anchor.z, continuingSession)
+        // During a known session, prefer the actual crosshair hitbox over a decorative part
+        // nearer the hologram. Opening still requires the normal crosshair hit and reach check.
+        val aimedFurniture = (mc.hitResult as? EntityHitResult)?.entity?.takeIf(::eligibleFurniture)
+        val furniture = aimedFurniture ?: level.entitiesForRendering().filter(::eligibleFurniture)
+            .minByOrNull { it.position().distanceToSqr(anchor.position()) }
+
         val target = furniture?.let { Target(key, it.boundingBox.center, entity = it) } ?: run {
             // Only an identified table/skull below its hologram can be a block target.
             val origin = anchor.blockPosition()

@@ -36,6 +36,7 @@ object FloydPanelStyle : Module(
         SCOREBOARD("Scoreboard"),
         INVENTORY("Inventory HUD"),
         DAY_TRACKER("Day Tracker"),
+        SACK_TRACKER("Sack Tracker"),
         CALCULATOR("Calculator"),
         MUSIC_OVERLAY("Music Overlay"),
         SKYBLOCK_LEVEL_7_GUIDE("SkyBlock LVL 7 Guide"),
